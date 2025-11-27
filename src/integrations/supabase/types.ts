@@ -87,6 +87,27 @@ export type Database = {
           },
         ]
       }
+      timer_state: {
+        Row: {
+          id: string
+          last_update: string
+          remaining_seconds: number
+          status: string
+        }
+        Insert: {
+          id?: string
+          last_update?: string
+          remaining_seconds?: number
+          status?: string
+        }
+        Update: {
+          id?: string
+          last_update?: string
+          remaining_seconds?: number
+          status?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
