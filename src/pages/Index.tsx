@@ -20,6 +20,7 @@ const Index = () => {
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -135,7 +136,10 @@ const Index = () => {
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onMouseLeave={handleMouseUp}
-        style={{ cursor: isDragging ? "grabbing" : "grab" }}
+        style={{ 
+          cursor: isDragging ? "grabbing" : "grab",
+          pointerEvents: isDialogOpen ? "none" : "auto"
+        }}
       >
         <div
           ref={contentRef}
@@ -146,8 +150,16 @@ const Index = () => {
             minHeight: "max-content",
           }}
         >
-          <NodeBox node={rootNode} onNodeChange={handleNodeChange}>
-            <NodeTree parentId={rootNode.id} onNodeChange={handleNodeChange} />
+          <NodeBox 
+            node={rootNode} 
+            onNodeChange={handleNodeChange}
+            onDialogOpenChange={setIsDialogOpen}
+          >
+            <NodeTree 
+              parentId={rootNode.id} 
+              onNodeChange={handleNodeChange}
+              onDialogOpenChange={setIsDialogOpen}
+            />
           </NodeBox>
         </div>
       </div>

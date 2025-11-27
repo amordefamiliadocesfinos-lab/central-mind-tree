@@ -14,9 +14,10 @@ interface Node {
 interface NodeTreeProps {
   parentId: string | null;
   onNodeChange: () => void;
+  onDialogOpenChange?: (open: boolean) => void;
 }
 
-export function NodeTree({ parentId, onNodeChange }: NodeTreeProps) {
+export function NodeTree({ parentId, onNodeChange, onDialogOpenChange }: NodeTreeProps) {
   const [nodes, setNodes] = useState<Node[]>([]);
   const { toast } = useToast();
 
@@ -75,8 +76,17 @@ export function NodeTree({ parentId, onNodeChange }: NodeTreeProps) {
   return (
     <>
       {nodes.map((node) => (
-        <NodeBox key={node.id} node={node} onNodeChange={handleNodeChange}>
-          <NodeTree parentId={node.id} onNodeChange={onNodeChange} />
+        <NodeBox 
+          key={node.id} 
+          node={node} 
+          onNodeChange={handleNodeChange}
+          onDialogOpenChange={onDialogOpenChange}
+        >
+          <NodeTree 
+            parentId={node.id} 
+            onNodeChange={onNodeChange}
+            onDialogOpenChange={onDialogOpenChange}
+          />
         </NodeBox>
       ))}
     </>
