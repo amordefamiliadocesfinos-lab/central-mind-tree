@@ -29,6 +29,7 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
   const [isTasksDialogOpen, setIsTasksDialogOpen] = useState(false);
   const [hasChildren, setHasChildren] = useState(false);
   const [hasTasks, setHasTasks] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<string | null>(null);
   const [taskCounts, setTaskCounts] = useState({
     estrutural: 0,
     andamento: 0,
@@ -336,48 +337,68 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
               {/* Task Status Indicators */}
               <div className="flex gap-2 justify-center mt-2 pt-2 border-t border-current/20">
                 {/* Estrutural - Roxo */}
-                <div 
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold ${
+                <button 
+                  onClick={() => {
+                    const newFilter = filterStatus === "estrutural" ? null : "estrutural";
+                    setFilterStatus(newFilter);
+                    setIsTasksDialogOpen(true);
+                  }}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity ${
                     taskCounts.estrutural > 0 
                       ? 'bg-node-roxo text-node-roxo-foreground' 
                       : 'bg-background/20 text-current/40'
                   }`}
                 >
                   {taskCounts.estrutural}
-                </div>
+                </button>
                 
                 {/* Em Andamento - Vermelho */}
-                <div 
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold ${
+                <button 
+                  onClick={() => {
+                    const newFilter = filterStatus === "andamento" ? null : "andamento";
+                    setFilterStatus(newFilter);
+                    setIsTasksDialogOpen(true);
+                  }}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity ${
                     taskCounts.andamento > 0 
                       ? 'bg-node-vermelho text-node-vermelho-foreground' 
                       : 'bg-background/20 text-current/40'
                   }`}
                 >
                   {taskCounts.andamento}
-                </div>
+                </button>
                 
                 {/* Pendente - Amarelo */}
-                <div 
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold ${
+                <button 
+                  onClick={() => {
+                    const newFilter = filterStatus === "pendente" ? null : "pendente";
+                    setFilterStatus(newFilter);
+                    setIsTasksDialogOpen(true);
+                  }}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity ${
                     taskCounts.pendente > 0 
                       ? 'bg-node-amarelo text-node-amarelo-foreground' 
                       : 'bg-background/20 text-current/40'
                   }`}
                 >
                   {taskCounts.pendente}
-                </div>
+                </button>
                 
                 {/* Concluído - Verde */}
-                <div 
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold ${
+                <button 
+                  onClick={() => {
+                    const newFilter = filterStatus === "concluído" ? null : "concluído";
+                    setFilterStatus(newFilter);
+                    setIsTasksDialogOpen(true);
+                  }}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity ${
                     taskCounts.concluido > 0 
                       ? 'bg-node-verde text-node-verde-foreground' 
                       : 'bg-background/20 text-current/40'
                   }`}
                 >
                   {taskCounts.concluido}
-                </div>
+                </button>
               </div>
             </div>
           )}
@@ -402,11 +423,15 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
         open={isTasksDialogOpen}
         onOpenChange={(open) => {
           setIsTasksDialogOpen(open);
+          if (!open) {
+            setFilterStatus(null);
+          }
           onDialogOpenChange?.(open);
         }}
         nodeId={node.id}
         nodeTitle={node.title}
         onTasksChange={onNodeChange}
+        filterStatus={filterStatus}
       />
     </div>
   );
