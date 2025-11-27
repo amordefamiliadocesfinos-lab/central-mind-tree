@@ -176,9 +176,9 @@ export function TasksDialog({
   const getStatusBadgeColor = (status: Task["status"]) => {
     switch (status) {
       case "pendente":
-        return "bg-muted text-muted-foreground";
+        return "bg-node-amarelo/20 text-node-amarelo-foreground";
       case "andamento":
-        return "bg-primary/20 text-primary";
+        return "bg-node-vermelho/20 text-node-vermelho-foreground";
       case "concluído":
         return "bg-node-verde/20 text-node-verde-foreground";
     }
