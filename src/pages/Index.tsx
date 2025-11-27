@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { NodeBox } from "@/components/NodeBox";
 import { NodeTree } from "@/components/NodeTree";
+import { TimerWidget } from "@/components/TimerWidget";
 import { useToast } from "@/hooks/use-toast";
 
 interface Node {
@@ -104,30 +105,33 @@ const Index = () => {
   }
 
   return (
-    <div
-      ref={containerRef}
-      className="w-screen h-screen overflow-auto bg-background"
-      onWheel={handleWheel}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-      style={{ cursor: isDragging ? "grabbing" : "grab" }}
-    >
+    <>
       <div
-        ref={contentRef}
-        style={{
-          transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
-          transformOrigin: "0 0",
-          minWidth: "max-content",
-          minHeight: "max-content",
-        }}
+        ref={containerRef}
+        className="w-screen h-screen overflow-auto bg-background"
+        onWheel={handleWheel}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        style={{ cursor: isDragging ? "grabbing" : "grab" }}
       >
-        <NodeBox node={rootNode} onNodeChange={handleNodeChange}>
-          <NodeTree parentId={rootNode.id} onNodeChange={handleNodeChange} />
-        </NodeBox>
+        <div
+          ref={contentRef}
+          style={{
+            transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
+            transformOrigin: "0 0",
+            minWidth: "max-content",
+            minHeight: "max-content",
+          }}
+        >
+          <NodeBox node={rootNode} onNodeChange={handleNodeChange}>
+            <NodeTree parentId={rootNode.id} onNodeChange={handleNodeChange} />
+          </NodeBox>
+        </div>
       </div>
-    </div>
+      <TimerWidget />
+    </>
   );
 };
 
