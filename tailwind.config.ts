@@ -57,6 +57,16 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        node: {
+          roxo: "hsl(var(--node-roxo))",
+          "roxo-foreground": "hsl(var(--node-roxo-foreground))",
+          vermelho: "hsl(var(--node-vermelho))",
+          "vermelho-foreground": "hsl(var(--node-vermelho-foreground))",
+          amarelo: "hsl(var(--node-amarelo))",
+          "amarelo-foreground": "hsl(var(--node-amarelo-foreground))",
+          verde: "hsl(var(--node-verde))",
+          "verde-foreground": "hsl(var(--node-verde-foreground))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",
