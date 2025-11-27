@@ -159,11 +159,11 @@ export function NodeBox({ node, children, onNodeChange }: NodeBoxProps) {
     onNodeChange();
   };
 
-  const showChildren = async () => {
+  const showChildren = async (id: string) => {
     const { error } = await supabase
       .from("nodes")
       .update({ is_visible: true })
-      .eq("parent_id", node.id);
+      .eq("parent_id", id);
 
     if (error) {
       toast({
@@ -233,7 +233,7 @@ export function NodeBox({ node, children, onNodeChange }: NodeBoxProps) {
           ) : (
             <div className="flex flex-col gap-3">
               <div 
-                onClick={showChildren}
+                onClick={() => showChildren(node.id)}
                 className="cursor-pointer hover:opacity-80 transition-opacity"
               >
                 <h3 className="text-lg font-semibold text-center">{node.title}</h3>
