@@ -132,9 +132,11 @@ export function NodeBox({ node, children, onNodeChange }: NodeBoxProps) {
   };
 
   const handleToggleVisibility = async () => {
+    const newVisibility = !node.is_visible;
+    
     const { error } = await supabase
       .from("nodes")
-      .update({ is_visible: !node.is_visible })
+      .update({ is_visible: newVisibility })
       .eq("id", node.id);
 
     if (error) {
@@ -143,6 +145,14 @@ export function NodeBox({ node, children, onNodeChange }: NodeBoxProps) {
         title: "Erro ao alterar visibilidade",
       });
       return;
+    }
+
+    // If making visible, also make all children visible
+    if (newVisibility) {
+      await supabase
+        .from("nodes")
+        .update({ is_visible: true })
+        .eq("parent_id", node.id);
     }
 
     toast({ title: node.is_visible ? "Nó ocultado" : "Nó revelado" });
