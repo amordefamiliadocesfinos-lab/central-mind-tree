@@ -31,26 +31,38 @@ export function NodeBox({ node, children, onNodeChange }: NodeBoxProps) {
   const { toast } = useToast();
 
   useEffect(() => {
-    const checkChildren = async () => {
-      const { count } = await supabase
-        .from("nodes")
-        .select("*", { count: "exact", head: true })
-        .eq("parent_id", node.id);
-      
-      setHasChildren((count || 0) > 0);
+    let mounted = true;
+    
+    const checkData = async () => {
+      try {
+        // Delay aleatório para evitar sobrecarga
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 150));
+        
+        if (!mounted) return;
+
+        // Combinar as duas verificações em uma única chamada
+        const [childrenResult, tasksResult] = await Promise.all([
+          supabase
+            .from("nodes")
+            .select("*", { count: "exact", head: true })
+            .eq("parent_id", node.id),
+          supabase
+            .from("tasks")
+            .select("*", { count: "exact", head: true })
+            .eq("node_id", node.id)
+        ]);
+
+        if (mounted) {
+          setHasChildren((childrenResult.count || 0) > 0);
+          setHasTasks((tasksResult.count || 0) > 0);
+        }
+      } catch (error) {
+        console.error("Erro ao verificar nó:", error);
+      }
     };
 
-    const checkTasks = async () => {
-      const { count } = await supabase
-        .from("tasks")
-        .select("*", { count: "exact", head: true })
-        .eq("node_id", node.id);
-      
-      setHasTasks((count || 0) > 0);
-    };
-
-    checkChildren();
-    checkTasks();
+    checkData();
+    return () => { mounted = false; };
   }, [node.id, onNodeChange]);
 
   const colorMap = {
