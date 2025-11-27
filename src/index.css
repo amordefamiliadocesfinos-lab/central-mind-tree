@@ -53,6 +53,16 @@ All colors MUST be HSL.
     --sidebar-border: 220 13% 91%;
 
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Node colors for the tree */
+    --node-roxo: 270 70% 65%;
+    --node-roxo-foreground: 0 0% 100%;
+    --node-vermelho: 0 75% 60%;
+    --node-vermelho-foreground: 0 0% 100%;
+    --node-amarelo: 45 95% 60%;
+    --node-amarelo-foreground: 222.2 84% 4.9%;
+    --node-verde: 145 70% 50%;
+    --node-verde-foreground: 0 0% 100%;
   }
 
   .dark {
@@ -91,6 +101,16 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+
+    /* Node colors for dark mode */
+    --node-roxo: 270 65% 55%;
+    --node-roxo-foreground: 0 0% 100%;
+    --node-vermelho: 0 70% 55%;
+    --node-vermelho-foreground: 0 0% 100%;
+    --node-amarelo: 45 90% 55%;
+    --node-amarelo-foreground: 222.2 84% 4.9%;
+    --node-verde: 145 65% 45%;
+    --node-verde-foreground: 0 0% 100%;
   }
 }
 
