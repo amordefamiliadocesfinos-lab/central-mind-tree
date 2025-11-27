@@ -184,6 +184,17 @@ export function TasksDialog({
     }
   };
 
+  const getStatusBorderColor = (status: Task["status"]) => {
+    switch (status) {
+      case "pendente":
+        return "border-l-4 border-l-node-amarelo";
+      case "andamento":
+        return "border-l-4 border-l-node-vermelho";
+      case "concluído":
+        return "border-l-4 border-l-node-verde";
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -259,7 +270,7 @@ export function TasksDialog({
             {tasks.map((task) => (
               <div
                 key={task.id}
-                className="border rounded-lg p-4 space-y-2 hover:bg-muted/30 transition-colors"
+                className={`border rounded-lg p-4 space-y-2 hover:bg-muted/30 transition-colors ${getStatusBorderColor(task.status)}`}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
