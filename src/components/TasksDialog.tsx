@@ -35,6 +35,7 @@ interface TasksDialogProps {
   nodeId: string;
   nodeTitle: string;
   onTasksChange: () => void;
+  filterStatus?: string | null;
 }
 
 export function TasksDialog({
@@ -43,6 +44,7 @@ export function TasksDialog({
   nodeId,
   nodeTitle,
   onTasksChange,
+  filterStatus,
 }: TasksDialogProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isCreating, setIsCreating] = useState(false);
@@ -81,7 +83,14 @@ export function TasksDialog({
         pendente: 3,
         concluído: 4,
       };
-      const sortedTasks = (data || []).sort(
+      let filteredTasks = data || [];
+      
+      // Apply filter if filterStatus is set
+      if (filterStatus) {
+        filteredTasks = filteredTasks.filter((task) => task.status === filterStatus);
+      }
+      
+      const sortedTasks = filteredTasks.sort(
         (a, b) => statusOrder[a.status as keyof typeof statusOrder] - statusOrder[b.status as keyof typeof statusOrder]
       );
       setTasks(sortedTasks as Task[]);
