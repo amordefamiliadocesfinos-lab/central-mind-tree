@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil, Plus, Trash2, X, Check, Move } from "lucide-react";
+import { Pencil, Plus, Trash2, X, Check, Move, ListTodo } from "lucide-react";
 import { MoveNodeDialog } from "./MoveNodeDialog";
+import { TasksDialog } from "./TasksDialog";
 
 interface Node {
   id: string;
@@ -24,7 +25,9 @@ export function NodeBox({ node, children, onNodeChange }: NodeBoxProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(node.title);
   const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
+  const [isTasksDialogOpen, setIsTasksDialogOpen] = useState(false);
   const [hasChildren, setHasChildren] = useState(false);
+  const [hasTasks, setHasTasks] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -37,7 +40,17 @@ export function NodeBox({ node, children, onNodeChange }: NodeBoxProps) {
       setHasChildren((count || 0) > 0);
     };
 
+    const checkTasks = async () => {
+      const { count } = await supabase
+        .from("tasks")
+        .select("*", { count: "exact", head: true })
+        .eq("node_id", node.id);
+      
+      setHasTasks((count || 0) > 0);
+    };
+
     checkChildren();
+    checkTasks();
   }, [node.id, onNodeChange]);
 
   const colorMap = {
@@ -124,6 +137,9 @@ export function NodeBox({ node, children, onNodeChange }: NodeBoxProps) {
         <div
           className={`${colors.bg} ${colors.text} rounded-lg p-4 min-w-[200px] shadow-md border-2 border-background relative`}
         >
+          {hasTasks && (
+            <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-muted-foreground/50"></div>
+          )}
           {hasChildren && (
             <div className="absolute bottom-1 right-1/2 translate-x-1/2 text-muted-foreground/50 text-xs">
               ▾
@@ -185,6 +201,14 @@ export function NodeBox({ node, children, onNodeChange }: NodeBoxProps) {
                 >
                   <Move className="h-4 w-4" />
                 </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 hover:bg-background/20"
+                  onClick={() => setIsTasksDialogOpen(true)}
+                >
+                  <ListTodo className="h-4 w-4" />
+                </Button>
                 {node.parent_id !== null && (
                   <Button
                     size="icon"
@@ -210,6 +234,14 @@ export function NodeBox({ node, children, onNodeChange }: NodeBoxProps) {
         onOpenChange={setIsMoveDialogOpen}
         node={node}
         onNodeMoved={onNodeChange}
+      />
+
+      <TasksDialog
+        open={isTasksDialogOpen}
+        onOpenChange={setIsTasksDialogOpen}
+        nodeId={node.id}
+        nodeTitle={node.title}
+        onTasksChange={onNodeChange}
       />
     </div>
   );
