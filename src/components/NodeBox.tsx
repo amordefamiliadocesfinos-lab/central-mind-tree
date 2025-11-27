@@ -141,12 +141,12 @@ export function NodeBox({ node, children, onNodeChange }: NodeBoxProps) {
       toast({
         variant: "destructive",
         title: "Erro ao alterar visibilidade",
-        description: error.message,
       });
-    } else {
-      toast({ title: node.is_visible ? "Nó ocultado" : "Nó visível" });
-      onNodeChange();
+      return;
     }
+
+    toast({ title: node.is_visible ? "Nó ocultado" : "Nó revelado" });
+    onNodeChange();
   };
 
   return (
