@@ -29,6 +29,12 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
   const [isTasksDialogOpen, setIsTasksDialogOpen] = useState(false);
   const [hasChildren, setHasChildren] = useState(false);
   const [hasTasks, setHasTasks] = useState(false);
+  const [taskCounts, setTaskCounts] = useState({
+    estrutural: 0,
+    andamento: 0,
+    pendente: 0,
+    concluido: 0
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -41,8 +47,8 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
         
         if (!mounted) return;
 
-        // Combinar as duas verificações em uma única chamada
-        const [childrenResult, tasksResult] = await Promise.all([
+        // Combinar as três verificações em uma única chamada
+        const [childrenResult, tasksResult, allTasks] = await Promise.all([
           supabase
             .from("nodes")
             .select("*", { count: "exact", head: true })
@@ -50,12 +56,33 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
           supabase
             .from("tasks")
             .select("*", { count: "exact", head: true })
+            .eq("node_id", node.id),
+          supabase
+            .from("tasks")
+            .select("status")
             .eq("node_id", node.id)
         ]);
 
         if (mounted) {
           setHasChildren((childrenResult.count || 0) > 0);
           setHasTasks((tasksResult.count || 0) > 0);
+          
+          // Contar tarefas por status
+          const counts = {
+            estrutural: 0,
+            andamento: 0,
+            pendente: 0,
+            concluido: 0
+          };
+          
+          (allTasks.data || []).forEach((task: { status: string }) => {
+            if (task.status === "estrutural") counts.estrutural++;
+            else if (task.status === "andamento") counts.andamento++;
+            else if (task.status === "pendente") counts.pendente++;
+            else if (task.status === "concluído") counts.concluido++;
+          });
+          
+          setTaskCounts(counts);
         }
       } catch (error) {
         console.error("Erro ao verificar nó:", error);
@@ -304,6 +331,53 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
                     </Button>
                   </>
                 )}
+              </div>
+              
+              {/* Task Status Indicators */}
+              <div className="flex gap-2 justify-center mt-2 pt-2 border-t border-current/20">
+                {/* Estrutural - Roxo */}
+                <div 
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold ${
+                    taskCounts.estrutural > 0 
+                      ? 'bg-node-roxo text-node-roxo-foreground' 
+                      : 'bg-background/20 text-current/40'
+                  }`}
+                >
+                  {taskCounts.estrutural}
+                </div>
+                
+                {/* Em Andamento - Vermelho */}
+                <div 
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold ${
+                    taskCounts.andamento > 0 
+                      ? 'bg-node-vermelho text-node-vermelho-foreground' 
+                      : 'bg-background/20 text-current/40'
+                  }`}
+                >
+                  {taskCounts.andamento}
+                </div>
+                
+                {/* Pendente - Amarelo */}
+                <div 
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold ${
+                    taskCounts.pendente > 0 
+                      ? 'bg-node-amarelo text-node-amarelo-foreground' 
+                      : 'bg-background/20 text-current/40'
+                  }`}
+                >
+                  {taskCounts.pendente}
+                </div>
+                
+                {/* Concluído - Verde */}
+                <div 
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold ${
+                    taskCounts.concluido > 0 
+                      ? 'bg-node-verde text-node-verde-foreground' 
+                      : 'bg-background/20 text-current/40'
+                  }`}
+                >
+                  {taskCounts.concluido}
+                </div>
               </div>
             </div>
           )}
