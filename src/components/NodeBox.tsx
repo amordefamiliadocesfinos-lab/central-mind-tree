@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil, Plus, Trash2, X, Check, Move, ListTodo } from "lucide-react";
+import { Pencil, Plus, Trash2, X, Check, Move, ListTodo, Eye } from "lucide-react";
 import { MoveNodeDialog } from "./MoveNodeDialog";
 import { TasksDialog } from "./TasksDialog";
 
@@ -131,6 +131,24 @@ export function NodeBox({ node, children, onNodeChange }: NodeBoxProps) {
     }
   };
 
+  const handleToggleVisibility = async () => {
+    const { error } = await supabase
+      .from("nodes")
+      .update({ is_visible: !node.is_visible })
+      .eq("id", node.id);
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao alterar visibilidade",
+        description: error.message,
+      });
+    } else {
+      toast({ title: node.is_visible ? "Nó ocultado" : "Nó visível" });
+      onNodeChange();
+    }
+  };
+
   return (
     <div className="flex flex-col items-center gap-4">
       <div className="flex flex-col items-center">
@@ -210,14 +228,24 @@ export function NodeBox({ node, children, onNodeChange }: NodeBoxProps) {
                   <ListTodo className="h-4 w-4" />
                 </Button>
                 {node.parent_id !== null && (
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 hover:bg-background/20"
-                    onClick={handleDelete}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 hover:bg-background/20"
+                      onClick={handleToggleVisibility}
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 hover:bg-background/20"
+                      onClick={handleDelete}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </>
                 )}
               </div>
             </div>
