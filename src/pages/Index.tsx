@@ -30,7 +30,7 @@ const Index = () => {
       .select("*")
       .is("parent_id", null)
       .eq("is_visible", true)
-      .single();
+      .maybeSingle();
 
     if (error) {
       toast({
@@ -38,7 +38,7 @@ const Index = () => {
         title: "Erro ao carregar nó raiz",
         description: error.message,
       });
-    } else {
+    } else if (data) {
       setRootNode(data as Node);
     }
   };
