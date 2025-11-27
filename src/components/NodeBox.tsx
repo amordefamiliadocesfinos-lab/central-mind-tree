@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,7 +24,21 @@ export function NodeBox({ node, children, onNodeChange }: NodeBoxProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(node.title);
   const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
+  const [hasChildren, setHasChildren] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const checkChildren = async () => {
+      const { count } = await supabase
+        .from("nodes")
+        .select("*", { count: "exact", head: true })
+        .eq("parent_id", node.id);
+      
+      setHasChildren((count || 0) > 0);
+    };
+
+    checkChildren();
+  }, [node.id, onNodeChange]);
 
   const colorMap = {
     roxo: { bg: "bg-node-roxo", text: "text-node-roxo-foreground" },
@@ -108,8 +122,13 @@ export function NodeBox({ node, children, onNodeChange }: NodeBoxProps) {
     <div className="flex flex-col items-center gap-4">
       <div className="flex flex-col items-center">
         <div
-          className={`${colors.bg} ${colors.text} rounded-lg p-4 min-w-[200px] shadow-md border-2 border-background`}
+          className={`${colors.bg} ${colors.text} rounded-lg p-4 min-w-[200px] shadow-md border-2 border-background relative`}
         >
+          {hasChildren && (
+            <div className="absolute bottom-1 right-1/2 translate-x-1/2 text-muted-foreground/50 text-xs">
+              ▾
+            </div>
+          )}
           {isEditing ? (
             <div className="flex items-center gap-2">
               <Input
