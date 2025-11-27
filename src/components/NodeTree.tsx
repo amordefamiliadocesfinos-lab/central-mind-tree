@@ -41,6 +41,28 @@ export function NodeTree({ parentId, onNodeChange }: NodeTreeProps) {
 
   useEffect(() => {
     fetchChildren();
+
+    // Configurar realtime para atualizações automáticas
+    const filter = parentId ? `parent_id=eq.${parentId}` : 'parent_id=is.null';
+    const channel = supabase
+      .channel(`nodes-${parentId || 'root'}`)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'nodes',
+          filter: filter
+        },
+        () => {
+          fetchChildren();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [parentId]);
 
   const handleNodeChange = () => {

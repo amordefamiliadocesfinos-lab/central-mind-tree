@@ -45,6 +45,27 @@ const Index = () => {
 
   useEffect(() => {
     fetchRootNode();
+
+    // Configurar realtime para atualizações do nó raiz
+    const channel = supabase
+      .channel('root-node')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'nodes',
+          filter: 'parent_id=is.null'
+        },
+        () => {
+          fetchRootNode();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [refreshKey]);
 
   // Centralizar o nó raiz apenas na primeira renderização
