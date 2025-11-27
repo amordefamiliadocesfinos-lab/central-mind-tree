@@ -3,7 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Pencil, Plus, Trash2, X, Check } from "lucide-react";
+import { Pencil, Plus, Trash2, X, Check, Move } from "lucide-react";
+import { MoveNodeDialog } from "./MoveNodeDialog";
 
 interface Node {
   id: string;
@@ -22,6 +23,7 @@ interface NodeBoxProps {
 export function NodeBox({ node, children, onNodeChange }: NodeBoxProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(node.title);
+  const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const colorMap = {
@@ -156,6 +158,14 @@ export function NodeBox({ node, children, onNodeChange }: NodeBoxProps) {
                 >
                   <Pencil className="h-4 w-4" />
                 </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 hover:bg-background/20"
+                  onClick={() => setIsMoveDialogOpen(true)}
+                >
+                  <Move className="h-4 w-4" />
+                </Button>
                 {node.parent_id !== null && (
                   <Button
                     size="icon"
@@ -170,15 +180,18 @@ export function NodeBox({ node, children, onNodeChange }: NodeBoxProps) {
             </div>
           )}
         </div>
-        {children && (
-          <div className="w-px h-8 bg-border"></div>
-        )}
+        {children && <div className="w-px h-8 bg-border"></div>}
       </div>
       {children && (
-        <div className="flex gap-8 items-start relative">
-          {children}
-        </div>
+        <div className="flex gap-8 items-start relative">{children}</div>
       )}
+
+      <MoveNodeDialog
+        open={isMoveDialogOpen}
+        onOpenChange={setIsMoveDialogOpen}
+        node={node}
+        onNodeMoved={onNodeChange}
+      />
     </div>
   );
 }
