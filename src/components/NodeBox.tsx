@@ -149,6 +149,17 @@ export function NodeBox({ node, children, onNodeChange }: NodeBoxProps) {
     onNodeChange();
   };
 
+  if (!node.is_visible) {
+    return (
+      <button
+        onClick={handleToggleVisibility}
+        className="w-8 h-8 rounded-full border-2 border-muted-foreground/30 flex items-center justify-center hover:bg-muted/20 text-muted-foreground"
+      >
+        ○
+      </button>
+    );
+  }
+
   return (
     <div className="flex flex-col items-center gap-4">
       <div className="flex flex-col items-center">
