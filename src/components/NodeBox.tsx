@@ -159,6 +159,24 @@ export function NodeBox({ node, children, onNodeChange }: NodeBoxProps) {
     onNodeChange();
   };
 
+  const showChildren = async () => {
+    const { error } = await supabase
+      .from("nodes")
+      .update({ is_visible: true })
+      .eq("parent_id", node.id);
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao mostrar filhos",
+      });
+      return;
+    }
+
+    toast({ title: "Filhos revelados" });
+    onNodeChange();
+  };
+
   if (!node.is_visible) {
     return (
       <button
@@ -214,7 +232,12 @@ export function NodeBox({ node, children, onNodeChange }: NodeBoxProps) {
             </div>
           ) : (
             <div className="flex flex-col gap-3">
-              <h3 className="text-lg font-semibold text-center">{node.title}</h3>
+              <div 
+                onClick={showChildren}
+                className="cursor-pointer hover:opacity-80 transition-opacity"
+              >
+                <h3 className="text-lg font-semibold text-center">{node.title}</h3>
+              </div>
               <div className="flex gap-2 justify-center">
                 <Button
                   size="icon"
