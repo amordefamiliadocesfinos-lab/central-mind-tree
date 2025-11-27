@@ -24,7 +24,7 @@ interface Task {
   node_id: string;
   title: string;
   description: string | null;
-  status: "pendente" | "andamento" | "concluído";
+  status: "estrutural" | "andamento" | "pendente" | "concluído";
   created_at: string;
   updated_at: string;
 }
@@ -74,7 +74,17 @@ export function TasksDialog({
         description: error.message,
       });
     } else {
-      setTasks((data || []) as Task[]);
+      // Sort tasks by status priority
+      const statusOrder = {
+        estrutural: 1,
+        andamento: 2,
+        pendente: 3,
+        concluído: 4,
+      };
+      const sortedTasks = (data || []).sort(
+        (a, b) => statusOrder[a.status as keyof typeof statusOrder] - statusOrder[b.status as keyof typeof statusOrder]
+      );
+      setTasks(sortedTasks as Task[]);
     }
   };
 
@@ -175,10 +185,12 @@ export function TasksDialog({
 
   const getStatusBadgeColor = (status: Task["status"]) => {
     switch (status) {
-      case "pendente":
-        return "bg-node-amarelo/20 text-node-amarelo-foreground";
+      case "estrutural":
+        return "bg-node-roxo/20 text-node-roxo-foreground";
       case "andamento":
         return "bg-node-vermelho/20 text-node-vermelho-foreground";
+      case "pendente":
+        return "bg-node-amarelo/20 text-node-amarelo-foreground";
       case "concluído":
         return "bg-node-verde/20 text-node-verde-foreground";
     }
@@ -186,10 +198,12 @@ export function TasksDialog({
 
   const getStatusBorderColor = (status: Task["status"]) => {
     switch (status) {
-      case "pendente":
-        return "border-l-4 border-l-node-amarelo";
+      case "estrutural":
+        return "border-l-4 border-l-node-roxo";
       case "andamento":
         return "border-l-4 border-l-node-vermelho";
+      case "pendente":
+        return "border-l-4 border-l-node-amarelo";
       case "concluído":
         return "border-l-4 border-l-node-verde";
     }
@@ -243,8 +257,9 @@ export function TasksDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pendente">Pendente</SelectItem>
+                  <SelectItem value="estrutural">Estrutural</SelectItem>
                   <SelectItem value="andamento">Em Andamento</SelectItem>
+                  <SelectItem value="pendente">Pendente</SelectItem>
                   <SelectItem value="concluído">Concluído</SelectItem>
                 </SelectContent>
               </Select>
@@ -306,8 +321,9 @@ export function TasksDialog({
                       task.status
                     )}`}
                   >
-                    {task.status === "pendente" && "Pendente"}
+                    {task.status === "estrutural" && "Estrutural"}
                     {task.status === "andamento" && "Em Andamento"}
+                    {task.status === "pendente" && "Pendente"}
                     {task.status === "concluído" && "Concluído"}
                   </span>
                   <span className="text-xs text-muted-foreground">
