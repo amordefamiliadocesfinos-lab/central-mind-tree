@@ -19,9 +19,10 @@ interface NodeBoxProps {
   node: Node;
   children?: React.ReactNode;
   onNodeChange: () => void;
+  onDialogOpenChange?: (open: boolean) => void;
 }
 
-export function NodeBox({ node, children, onNodeChange }: NodeBoxProps) {
+export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: NodeBoxProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(node.title);
   const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
@@ -315,14 +316,20 @@ export function NodeBox({ node, children, onNodeChange }: NodeBoxProps) {
 
       <MoveNodeDialog
         open={isMoveDialogOpen}
-        onOpenChange={setIsMoveDialogOpen}
+        onOpenChange={(open) => {
+          setIsMoveDialogOpen(open);
+          onDialogOpenChange?.(open);
+        }}
         node={node}
         onNodeMoved={onNodeChange}
       />
 
       <TasksDialog
         open={isTasksDialogOpen}
-        onOpenChange={setIsTasksDialogOpen}
+        onOpenChange={(open) => {
+          setIsTasksDialogOpen(open);
+          onDialogOpenChange?.(open);
+        }}
         nodeId={node.id}
         nodeTitle={node.title}
         onTasksChange={onNodeChange}
