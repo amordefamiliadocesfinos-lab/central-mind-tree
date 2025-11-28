@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Play, Pause, RotateCcw, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { TaskBar } from "./TaskBar";
 
 export function TimerWidget() {
   const [remainingSeconds, setRemainingSeconds] = useState(0);
@@ -151,10 +152,7 @@ export function TimerWidget() {
   return (
     <Card className="fixed left-5 bottom-5 z-[9999] p-4 shadow-lg min-w-[240px]">
       <div className="space-y-3">
-        <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-          <Clock className="h-4 w-4" />
-          <span>Timer</span>
-        </div>
+        <TaskBar />
 
         {isEditing ? (
           <div className="space-y-2">

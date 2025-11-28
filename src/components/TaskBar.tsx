@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Network, List } from "lucide-react";
 
 interface Task {
   id: string;
@@ -78,59 +76,57 @@ export function TaskBar() {
   if (tasks.length === 0) return null;
 
   return (
-    <Card className="fixed left-5 bottom-[120px] z-[9999] p-2 shadow-lg">
-      <div className="flex items-center gap-2">
-        {/* Status counter buttons */}
-        <button
-          className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold ${
-            statusCounts.estrutural > 0 ? "bg-node-roxo text-white" : "bg-muted text-muted-foreground"
-          }`}
-          title={`Estrutural: ${statusCounts.estrutural}`}
-        >
-          {statusCounts.estrutural}
-        </button>
-        
-        <button
-          className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold ${
-            statusCounts.andamento > 0 ? "bg-node-vermelho text-white" : "bg-muted text-muted-foreground"
-          }`}
-          title={`Em andamento: ${statusCounts.andamento}`}
-        >
-          {statusCounts.andamento}
-        </button>
-        
-        <button
-          className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold ${
-            statusCounts.pendente > 0 ? "bg-node-amarelo text-white" : "bg-muted text-muted-foreground"
-          }`}
-          title={`Pendente: ${statusCounts.pendente}`}
-        >
-          {statusCounts.pendente}
-        </button>
-        
-        <button
-          className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold ${
-            statusCounts.concluído > 0 ? "bg-node-verde text-white" : "bg-muted text-muted-foreground"
-          }`}
-          title={`Concluído: ${statusCounts.concluído}`}
-        >
-          {statusCounts.concluído}
-        </button>
+    <div className="flex items-center gap-2 pb-3 border-b">
+      {/* Status counter buttons */}
+      <button
+        className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold ${
+          statusCounts.estrutural > 0 ? "bg-node-roxo text-white" : "bg-muted text-muted-foreground"
+        }`}
+        title={`Estrutural: ${statusCounts.estrutural}`}
+      >
+        {statusCounts.estrutural}
+      </button>
+      
+      <button
+        className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold ${
+          statusCounts.andamento > 0 ? "bg-node-vermelho text-white" : "bg-muted text-muted-foreground"
+        }`}
+        title={`Em andamento: ${statusCounts.andamento}`}
+      >
+        {statusCounts.andamento}
+      </button>
+      
+      <button
+        className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold ${
+          statusCounts.pendente > 0 ? "bg-node-amarelo text-white" : "bg-muted text-muted-foreground"
+        }`}
+        title={`Pendente: ${statusCounts.pendente}`}
+      >
+        {statusCounts.pendente}
+      </button>
+      
+      <button
+        className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold ${
+          statusCounts.concluído > 0 ? "bg-node-verde text-white" : "bg-muted text-muted-foreground"
+        }`}
+        title={`Concluído: ${statusCounts.concluído}`}
+      >
+        {statusCounts.concluído}
+      </button>
 
-        {/* Divider */}
-        <div className="h-6 w-px bg-border mx-1" />
+      {/* Divider */}
+      <div className="h-6 w-px bg-border mx-1" />
 
-        {/* Toggle connections button */}
-        <Button
-          size="sm"
-          variant={showConnections ? "default" : "ghost"}
-          className="h-8 px-3 text-xs"
-          onClick={() => setShowConnections(!showConnections)}
-          title={showConnections ? "Ocultar linhas" : "Mostrar linhas"}
-        >
-          Linhas
-        </Button>
-      </div>
-    </Card>
+      {/* Toggle connections button */}
+      <Button
+        size="sm"
+        variant={showConnections ? "default" : "ghost"}
+        className="h-8 px-3 text-xs"
+        onClick={() => setShowConnections(!showConnections)}
+        title={showConnections ? "Ocultar linhas" : "Mostrar linhas"}
+      >
+        Linhas
+      </Button>
+    </div>
   );
 }

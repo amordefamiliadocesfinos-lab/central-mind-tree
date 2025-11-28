@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { NodeBox } from "@/components/NodeBox";
 import { NodeTree } from "@/components/NodeTree";
 import { TimerWidget } from "@/components/TimerWidget";
-import { TaskBar } from "@/components/TaskBar";
 import { TasksDialog } from "@/components/TasksDialog";
 import { useToast } from "@/hooks/use-toast";
 
@@ -200,7 +199,6 @@ const Index = () => {
           onTasksChange={handleNodeChange}
         />
       )}
-      <TaskBar />
       <TimerWidget />
     </>
   );
