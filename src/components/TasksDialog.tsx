@@ -26,6 +26,7 @@ interface Task {
   description: string | null;
   status: "estrutural" | "andamento" | "pendente" | "concluído";
   dependency_id: string | null;
+  progress: number;
   created_at: string;
   updated_at: string;
 }
@@ -55,6 +56,7 @@ export function TasksDialog({
     description: "",
     status: "pendente" as Task["status"],
     dependency_id: null as string | null,
+    progress: 0,
   });
   const { toast } = useToast();
 
@@ -114,6 +116,7 @@ export function TasksDialog({
       description: formData.description || null,
       status: formData.status,
       dependency_id: formData.dependency_id,
+      progress: formData.progress,
     });
 
     if (error) {
@@ -124,7 +127,7 @@ export function TasksDialog({
       });
     } else {
       toast({ title: "Tarefa criada" });
-      setFormData({ title: "", description: "", status: "pendente", dependency_id: null });
+      setFormData({ title: "", description: "", status: "pendente", dependency_id: null, progress: 0 });
       setIsCreating(false);
       fetchTasks();
       onTasksChange();
@@ -147,6 +150,7 @@ export function TasksDialog({
         description: formData.description || null,
         status: formData.status,
         dependency_id: formData.dependency_id,
+        progress: formData.progress,
       })
       .eq("id", taskId);
 
@@ -159,7 +163,7 @@ export function TasksDialog({
     } else {
       toast({ title: "Tarefa atualizada" });
       setEditingId(null);
-      setFormData({ title: "", description: "", status: "pendente", dependency_id: null });
+      setFormData({ title: "", description: "", status: "pendente", dependency_id: null, progress: 0 });
       fetchTasks();
       onTasksChange();
     }
@@ -188,13 +192,14 @@ export function TasksDialog({
       description: task.description || "",
       status: task.status,
       dependency_id: task.dependency_id,
+      progress: task.progress,
     });
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setIsCreating(false);
-    setFormData({ title: "", description: "", status: "pendente", dependency_id: null });
+    setFormData({ title: "", description: "", status: "pendente", dependency_id: null, progress: 0 });
   };
 
   const getStatusBadgeColor = (status: Task["status"]) => {
@@ -297,6 +302,21 @@ export function TasksDialog({
                     ))}
                 </SelectContent>
               </Select>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium">Progresso</label>
+                  <span className="text-sm text-muted-foreground">{formData.progress}%</span>
+                </div>
+                <Input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={formData.progress}
+                  onChange={(e) =>
+                    setFormData({ ...formData, progress: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)) })
+                  }
+                />
+              </div>
               <div className="flex gap-2">
                 <Button
                   onClick={() =>
@@ -346,7 +366,17 @@ export function TasksDialog({
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-medium">{task.title}</h4>
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <h4 className="font-medium">{task.title}</h4>
+                          <span className="text-xs text-muted-foreground font-medium">{task.progress}%</span>
+                        </div>
+                        {/* Progress bar */}
+                        <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden mb-2">
+                          <div 
+                            className="h-full bg-primary transition-all duration-300"
+                            style={{ width: `${task.progress}%` }}
+                          />
+                        </div>
                         {task.description && (
                           <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
                             {task.description}
