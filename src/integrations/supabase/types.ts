@@ -52,6 +52,7 @@ export type Database = {
       tasks: {
         Row: {
           created_at: string
+          dependency_id: string | null
           description: string | null
           id: string
           node_id: string
@@ -61,6 +62,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          dependency_id?: string | null
           description?: string | null
           id?: string
           node_id: string
@@ -70,6 +72,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          dependency_id?: string | null
           description?: string | null
           id?: string
           node_id?: string
@@ -78,6 +81,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "tasks_dependency_id_fkey"
+            columns: ["dependency_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tasks_node_id_fkey"
             columns: ["node_id"]
