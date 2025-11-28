@@ -155,14 +155,15 @@ const Index = () => {
       <div
         ref={containerRef}
         className="w-screen h-screen overflow-auto bg-background"
-        onWheel={handleWheel}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
+        onWheel={isDialogOpen ? undefined : handleWheel}
+        onMouseDown={isDialogOpen ? undefined : handleMouseDown}
+        onMouseMove={isDialogOpen ? undefined : handleMouseMove}
+        onMouseUp={isDialogOpen ? undefined : handleMouseUp}
+        onMouseLeave={isDialogOpen ? undefined : handleMouseUp}
         style={{ 
           cursor: isDragging ? "grabbing" : "grab",
-          pointerEvents: isDialogOpen ? "none" : "auto"
+          pointerEvents: isDialogOpen ? "none" : "auto",
+          userSelect: isDialogOpen ? "none" : "auto"
         }}
       >
         <div
