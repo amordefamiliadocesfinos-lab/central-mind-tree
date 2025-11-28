@@ -5,6 +5,7 @@ import { NodeBox } from "@/components/NodeBox";
 import { NodeTree } from "@/components/NodeTree";
 import { TimerWidget } from "@/components/TimerWidget";
 import { TasksDialog } from "@/components/TasksDialog";
+import { NodeConnectionsOverlay } from "@/components/NodeConnectionsOverlay";
 import { useToast } from "@/hooks/use-toast";
 
 interface Node {
@@ -24,6 +25,7 @@ const Index = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [showNodeLines, setShowNodeLines] = useState(false);
   const [tasksDialogState, setTasksDialogState] = useState<{
     open: boolean;
     nodeId: string;
@@ -199,7 +201,11 @@ const Index = () => {
           onTasksChange={handleNodeChange}
         />
       )}
-      <TimerWidget />
+      <NodeConnectionsOverlay visible={showNodeLines} />
+      <TimerWidget 
+        showNodeLines={showNodeLines}
+        onToggleNodeLines={() => setShowNodeLines(!showNodeLines)}
+      />
     </>
   );
 };
