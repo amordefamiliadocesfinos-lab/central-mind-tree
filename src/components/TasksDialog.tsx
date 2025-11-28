@@ -378,57 +378,44 @@ export function TasksDialog({
                     onClick={() => navigate(`/task/${task.id}`, { 
                       state: { nodeId, nodeTitle } 
                     })}
-                    className={`border rounded-lg p-4 space-y-2 hover:bg-muted/30 transition-colors cursor-pointer ${getStatusBorderColor(task.status)} ${
-                      draggedTask === task.id ? 'opacity-50' : ''
+                    className={`border rounded-lg p-3 hover:bg-muted/30 transition-colors cursor-pointer ${getStatusBorderColor(task.status)} ${
+                      draggedTask === task.id ? "opacity-50" : ""
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <h4 className="font-medium">{task.title}</h4>
-                          <span className="text-xs text-muted-foreground font-medium">{task.progress}%</span>
-                        </div>
-                        {/* Progress bar */}
-                        <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden mb-2">
-                          <div 
-                            className="h-full bg-primary transition-all duration-300"
-                            style={{ width: `${task.progress}%` }}
-                          />
-                        </div>
-                        {task.description && (
-                          <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
-                            {task.description}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex gap-1">
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <h4 className="font-medium flex-1 min-w-0 truncate">{task.title}</h4>
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        <span
+                          className={`text-xs px-2 py-1 rounded-full ${getStatusBadgeColor(
+                            task.status
+                          )}`}
+                        >
+                          {task.status === "estrutural" && "Estrutural"}
+                          {task.status === "andamento" && "Em Andamento"}
+                          {task.status === "pendente" && "Pendente"}
+                          {task.status === "concluído" && "Concluído"}
+                        </span>
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="h-8 w-8"
+                          className="h-7 w-7"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDelete(task.id);
                           }}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span
-                        className={`text-xs px-2 py-1 rounded-full ${getStatusBadgeColor(
-                          task.status
-                        )}`}
-                      >
-                        {task.status === "estrutural" && "Estrutural"}
-                        {task.status === "andamento" && "Em Andamento"}
-                        {task.status === "pendente" && "Pendente"}
-                        {task.status === "concluído" && "Concluído"}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(task.created_at).toLocaleDateString("pt-BR")}
-                      </span>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-primary transition-all duration-300"
+                          style={{ width: `${task.progress}%` }}
+                        />
+                      </div>
+                      <span className="text-xs text-muted-foreground font-medium flex-shrink-0">{task.progress}%</span>
                     </div>
                   </div>
                 </div>
