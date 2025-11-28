@@ -12,6 +12,7 @@ interface Task {
   status: "estrutural" | "andamento" | "pendente" | "concluído";
   dependency_id: string | null;
   progress: number;
+  order_index: number;
   created_at: string;
   updated_at: string;
 }
