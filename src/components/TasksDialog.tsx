@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -49,9 +50,9 @@ export function TasksDialog({
   onTasksChange,
   filterStatus,
 }: TasksDialogProps) {
+  const navigate = useNavigate();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isCreating, setIsCreating] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
   const [draggedTask, setDraggedTask] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: "",
@@ -130,41 +131,6 @@ export function TasksDialog({
     }
   };
 
-  const handleUpdate = async (taskId: string) => {
-    if (!formData.title.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Título não pode estar vazio",
-      });
-      return;
-    }
-
-    const { error } = await supabase
-      .from("tasks")
-      .update({
-        title: formData.title,
-        description: formData.description || null,
-        status: formData.status,
-        dependency_id: formData.dependency_id,
-        progress: formData.progress,
-      })
-      .eq("id", taskId);
-
-    if (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao atualizar tarefa",
-        description: error.message,
-      });
-    } else {
-      toast({ title: "Tarefa atualizada" });
-      setEditingId(null);
-      setFormData({ title: "", description: "", status: "pendente", dependency_id: null, progress: 0 });
-      fetchTasks();
-      onTasksChange();
-    }
-  };
-
   const handleDelete = async (taskId: string) => {
     const { error } = await supabase.from("tasks").delete().eq("id", taskId);
 
@@ -181,19 +147,7 @@ export function TasksDialog({
     }
   };
 
-  const startEdit = (task: Task) => {
-    setEditingId(task.id);
-    setFormData({
-      title: task.title,
-      description: task.description || "",
-      status: task.status,
-      dependency_id: task.dependency_id,
-      progress: task.progress,
-    });
-  };
-
   const cancelEdit = () => {
-    setEditingId(null);
     setIsCreating(false);
     setFormData({ title: "", description: "", status: "pendente", dependency_id: null, progress: 0 });
   };
@@ -295,7 +249,7 @@ export function TasksDialog({
 
         <div className="space-y-4">
           {/* Create new task button */}
-          {!isCreating && !editingId && (
+          {!isCreating && (
             <Button
               onClick={() => setIsCreating(true)}
               className="w-full"
@@ -306,8 +260,8 @@ export function TasksDialog({
             </Button>
           )}
 
-          {/* Create/Edit form */}
-          {(isCreating || editingId) && (
+          {/* Create form */}
+          {isCreating && (
             <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
               <Input
                 placeholder="Título da tarefa"
@@ -352,7 +306,6 @@ export function TasksDialog({
                 <SelectContent>
                   <SelectItem value="none">Nenhuma dependência</SelectItem>
                   {tasks
-                    .filter(t => t.id !== editingId)
                     .map((task) => (
                       <SelectItem key={task.id} value={task.id}>
                         {task.title}
@@ -377,13 +330,11 @@ export function TasksDialog({
               </div>
               <div className="flex gap-2">
                 <Button
-                  onClick={() =>
-                    editingId ? handleUpdate(editingId) : handleCreate()
-                  }
+                  onClick={handleCreate}
                   className="flex-1"
                 >
                   <Check className="h-4 w-4 mr-2" />
-                  {editingId ? "Salvar" : "Criar"}
+                  Criar
                 </Button>
                 <Button onClick={cancelEdit} variant="outline">
                   <X className="h-4 w-4" />
@@ -452,7 +403,7 @@ export function TasksDialog({
                           size="icon"
                           variant="ghost"
                           className="h-8 w-8"
-                          onClick={() => startEdit(task)}
+                          onClick={() => navigate(`/task/${task.id}`)}
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
