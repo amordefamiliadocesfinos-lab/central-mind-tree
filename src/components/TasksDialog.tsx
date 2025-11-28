@@ -375,7 +375,8 @@ export function TasksDialog({
                     onDragStart={(e) => handleDragStart(e, task.id)}
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, task.id)}
-                    className={`border rounded-lg p-4 space-y-2 hover:bg-muted/30 transition-colors cursor-move ${getStatusBorderColor(task.status)} ${
+                    onClick={() => navigate(`/task/${task.id}`)}
+                    className={`border rounded-lg p-4 space-y-2 hover:bg-muted/30 transition-colors cursor-pointer ${getStatusBorderColor(task.status)} ${
                       draggedTask === task.id ? 'opacity-50' : ''
                     }`}
                   >
@@ -403,15 +404,10 @@ export function TasksDialog({
                           size="icon"
                           variant="ghost"
                           className="h-8 w-8"
-                          onClick={() => navigate(`/task/${task.id}`)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8"
-                          onClick={() => handleDelete(task.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(task.id);
+                          }}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
