@@ -143,7 +143,7 @@ const TaskEdit = () => {
       if (error) throw error;
 
       toast({ title: "Tarefa atualizada com sucesso" });
-      navigate("/");
+      navigate(-1);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -173,7 +173,7 @@ const TaskEdit = () => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate("/")}
+            onClick={() => navigate(-1)}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -284,7 +284,7 @@ const TaskEdit = () => {
             <Save className="h-4 w-4 mr-2" />
             Salvar e Voltar
           </Button>
-          <Button variant="outline" onClick={() => navigate("/")}>
+          <Button variant="outline" onClick={() => navigate(-1)}>
             Cancelar
           </Button>
         </div>
