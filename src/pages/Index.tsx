@@ -1,9 +1,11 @@
 import { useEffect, useState, useRef } from "react";
+import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { NodeBox } from "@/components/NodeBox";
 import { NodeTree } from "@/components/NodeTree";
 import { TimerWidget } from "@/components/TimerWidget";
 import { TaskBar } from "@/components/TaskBar";
+import { TasksDialog } from "@/components/TasksDialog";
 import { useToast } from "@/hooks/use-toast";
 
 interface Node {
@@ -15,6 +17,7 @@ interface Node {
 }
 
 const Index = () => {
+  const location = useLocation();
   const [rootNode, setRootNode] = useState<Node | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [scale, setScale] = useState(1);
@@ -22,9 +25,29 @@ const Index = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [tasksDialogState, setTasksDialogState] = useState<{
+    open: boolean;
+    nodeId: string;
+    nodeTitle: string;
+  } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Detectar se devemos reabrir o diálogo de tarefas ao voltar da página de edição
+  useEffect(() => {
+    const state = location.state as any;
+    if (state?.openTasksDialog && state?.nodeId && state?.nodeTitle) {
+      setTasksDialogState({
+        open: true,
+        nodeId: state.nodeId,
+        nodeTitle: state.nodeTitle,
+      });
+      setIsDialogOpen(true);
+      // Limpar o state da navegação
+      window.history.replaceState({}, document.title);
+    }
+  }, [location]);
 
   const fetchRootNode = async () => {
     const { data, error } = await supabase
@@ -164,6 +187,18 @@ const Index = () => {
           </NodeBox>
         </div>
       </div>
+      {tasksDialogState && (
+        <TasksDialog
+          open={tasksDialogState.open}
+          onOpenChange={(open) => {
+            setTasksDialogState(open ? tasksDialogState : null);
+            setIsDialogOpen(open);
+          }}
+          nodeId={tasksDialogState.nodeId}
+          nodeTitle={tasksDialogState.nodeTitle}
+          onTasksChange={handleNodeChange}
+        />
+      )}
       <TaskBar />
       <TimerWidget />
     </>

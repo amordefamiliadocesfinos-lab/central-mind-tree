@@ -375,7 +375,9 @@ export function TasksDialog({
                     onDragStart={(e) => handleDragStart(e, task.id)}
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, task.id)}
-                    onClick={() => navigate(`/task/${task.id}`)}
+                    onClick={() => navigate(`/task/${task.id}`, { 
+                      state: { nodeId, nodeTitle } 
+                    })}
                     className={`border rounded-lg p-4 space-y-2 hover:bg-muted/30 transition-colors cursor-pointer ${getStatusBorderColor(task.status)} ${
                       draggedTask === task.id ? 'opacity-50' : ''
                     }`}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,10 @@ interface Node {
 const TaskEdit = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+  
+  const { nodeId: locationNodeId, nodeTitle: locationNodeTitle } = location.state || {};
   
   const [task, setTask] = useState<Task | null>(null);
   const [node, setNode] = useState<Node | null>(null);
@@ -64,7 +67,7 @@ const TaskEdit = () => {
         .from("tasks")
         .select("*")
         .eq("id", id)
-        .single();
+        .maybeSingle();
 
       if (taskError) throw taskError;
       if (!taskData) {
@@ -72,7 +75,7 @@ const TaskEdit = () => {
           variant: "destructive",
           title: "Tarefa não encontrada",
         });
-        navigate("/");
+        navigate(-1);
         return;
       }
 
@@ -90,7 +93,7 @@ const TaskEdit = () => {
         .from("nodes")
         .select("id, title")
         .eq("id", taskData.node_id)
-        .single();
+        .maybeSingle();
 
       if (nodeError) throw nodeError;
       setNode(nodeData as Node);
@@ -111,7 +114,7 @@ const TaskEdit = () => {
         title: "Erro ao carregar tarefa",
         description: error.message,
       });
-      navigate("/");
+      navigate(-1);
     } finally {
       setLoading(false);
     }
@@ -143,7 +146,13 @@ const TaskEdit = () => {
       if (error) throw error;
 
       toast({ title: "Tarefa atualizada com sucesso" });
-      navigate(-1);
+      navigate("/", { 
+        state: { 
+          openTasksDialog: true, 
+          nodeId: task?.node_id,
+          nodeTitle: node?.title 
+        } 
+      });
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -173,7 +182,13 @@ const TaskEdit = () => {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => navigate(-1)}
+            onClick={() => navigate("/", { 
+              state: { 
+                openTasksDialog: true, 
+                nodeId: task?.node_id,
+                nodeTitle: node?.title 
+              } 
+            })}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
@@ -284,7 +299,13 @@ const TaskEdit = () => {
             <Save className="h-4 w-4 mr-2" />
             Salvar e Voltar
           </Button>
-          <Button variant="outline" onClick={() => navigate(-1)}>
+          <Button variant="outline" onClick={() => navigate("/", { 
+            state: { 
+              openTasksDialog: true, 
+              nodeId: task?.node_id,
+              nodeTitle: node?.title 
+            } 
+          })}>
             Cancelar
           </Button>
         </div>
