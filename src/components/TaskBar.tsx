@@ -131,45 +131,6 @@ export function TaskBar() {
           Linhas
         </Button>
       </div>
-
-      {/* Connection visualization - only when enabled */}
-      {showConnections && (
-        <div className="mt-3 pt-3 border-t max-h-[200px] overflow-auto">
-          <svg width="100%" height="auto" className="min-h-[100px]">
-            {tasks.map((task) => {
-              if (!task.dependency_id) return null;
-              const dependencyTask = tasks.find(t => t.id === task.dependency_id);
-              if (!dependencyTask) return null;
-              
-              const taskIndex = tasks.indexOf(task);
-              const depIndex = tasks.indexOf(dependencyTask);
-              
-              return (
-                <line
-                  key={`${task.id}-${task.dependency_id}`}
-                  x1="10"
-                  y1={depIndex * 20 + 10}
-                  x2="10"
-                  y2={taskIndex * 20 + 10}
-                  stroke="hsl(var(--muted-foreground))"
-                  strokeWidth="1"
-                  opacity="0.3"
-                />
-              );
-            })}
-            {tasks.map((task, index) => (
-              <circle
-                key={task.id}
-                cx="10"
-                cy={index * 20 + 10}
-                r="4"
-                className={getStatusColor(task.status).replace('bg-', 'fill-')}
-                opacity="0.8"
-              />
-            ))}
-          </svg>
-        </div>
-      )}
     </Card>
   );
 }
