@@ -68,79 +68,108 @@ export function TaskBar() {
     }
   };
 
-  const renderTasksWithConnections = () => {
-    if (!showConnections) {
-      return (
-        <div className="flex gap-2 flex-wrap">
-          {tasks.map((task) => (
-            <div
-              key={task.id}
-              className={`h-6 w-6 rounded-full ${getStatusColor(task.status)}`}
-              title={task.title}
-            />
-          ))}
-        </div>
-      );
-    }
-
-    // Simple dependency visualization
-    const taskMap = new Map(tasks.map(t => [t.id, t]));
-    const rendered = new Set<string>();
-
-    const renderTaskChain = (task: Task, level = 0) => {
-      if (rendered.has(task.id)) return null;
-      rendered.add(task.id);
-
-      const dependentTasks = tasks.filter(t => t.dependency_id === task.id);
-
-      return (
-        <div key={task.id} className="flex items-center gap-2" style={{ marginLeft: level * 32 }}>
-          <div
-            className={`h-6 w-6 rounded-full ${getStatusColor(task.status)} flex-shrink-0`}
-            title={task.title}
-          />
-          {dependentTasks.length > 0 && (
-            <svg width="20" height="2" className="flex-shrink-0">
-              <line x1="0" y1="1" x2="20" y2="1" stroke="currentColor" strokeWidth="1" opacity="0.3" />
-            </svg>
-          )}
-          <div className="flex flex-col gap-1">
-            {dependentTasks.map(dt => renderTaskChain(dt, level + 1))}
-          </div>
-        </div>
-      );
-    };
-
-    const rootTasks = tasks.filter(t => !t.dependency_id);
-
-    return (
-      <div className="flex flex-col gap-2">
-        {rootTasks.map(task => renderTaskChain(task))}
-      </div>
-    );
+  const statusCounts = {
+    estrutural: tasks.filter(t => t.status === "estrutural").length,
+    andamento: tasks.filter(t => t.status === "andamento").length,
+    pendente: tasks.filter(t => t.status === "pendente").length,
+    concluído: tasks.filter(t => t.status === "concluído").length,
   };
 
   if (tasks.length === 0) return null;
 
   return (
-    <Card className="fixed left-5 bottom-[120px] z-[9999] p-3 shadow-lg max-w-[400px] max-h-[300px] overflow-auto">
-      <div className="space-y-2">
-        <div className="flex items-center justify-between gap-2">
-          <div className="text-xs font-semibold text-muted-foreground">
-            Tarefas ({tasks.length})
-          </div>
-          <Button
-            size="sm"
-            variant="ghost"
-            className="h-6 w-6 p-0"
-            onClick={() => setShowConnections(!showConnections)}
-            title={showConnections ? "Ocultar conexões" : "Mostrar conexões"}
-          >
-            {showConnections ? <Network className="h-3 w-3" /> : <List className="h-3 w-3" />}
-          </Button>
-        </div>
-        {renderTasksWithConnections()}
+    <Card className="fixed left-5 bottom-[120px] z-[9999] p-2 shadow-lg">
+      <div className="flex items-center gap-2">
+        {/* Status counter buttons */}
+        <button
+          className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold ${
+            statusCounts.estrutural > 0 ? "bg-node-roxo text-white" : "bg-muted text-muted-foreground"
+          }`}
+          title={`Estrutural: ${statusCounts.estrutural}`}
+        >
+          {statusCounts.estrutural}
+        </button>
+        
+        <button
+          className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold ${
+            statusCounts.andamento > 0 ? "bg-node-vermelho text-white" : "bg-muted text-muted-foreground"
+          }`}
+          title={`Em andamento: ${statusCounts.andamento}`}
+        >
+          {statusCounts.andamento}
+        </button>
+        
+        <button
+          className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold ${
+            statusCounts.pendente > 0 ? "bg-node-amarelo text-white" : "bg-muted text-muted-foreground"
+          }`}
+          title={`Pendente: ${statusCounts.pendente}`}
+        >
+          {statusCounts.pendente}
+        </button>
+        
+        <button
+          className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold ${
+            statusCounts.concluído > 0 ? "bg-node-verde text-white" : "bg-muted text-muted-foreground"
+          }`}
+          title={`Concluído: ${statusCounts.concluído}`}
+        >
+          {statusCounts.concluído}
+        </button>
+
+        {/* Divider */}
+        <div className="h-6 w-px bg-border mx-1" />
+
+        {/* Toggle connections button */}
+        <Button
+          size="sm"
+          variant={showConnections ? "default" : "ghost"}
+          className="h-8 px-3 text-xs"
+          onClick={() => setShowConnections(!showConnections)}
+          title={showConnections ? "Ocultar linhas" : "Mostrar linhas"}
+        >
+          Linhas
+        </Button>
       </div>
+
+      {/* Connection visualization - only when enabled */}
+      {showConnections && (
+        <div className="mt-3 pt-3 border-t max-h-[200px] overflow-auto">
+          <svg width="100%" height="auto" className="min-h-[100px]">
+            {tasks.map((task) => {
+              if (!task.dependency_id) return null;
+              const dependencyTask = tasks.find(t => t.id === task.dependency_id);
+              if (!dependencyTask) return null;
+              
+              const taskIndex = tasks.indexOf(task);
+              const depIndex = tasks.indexOf(dependencyTask);
+              
+              return (
+                <line
+                  key={`${task.id}-${task.dependency_id}`}
+                  x1="10"
+                  y1={depIndex * 20 + 10}
+                  x2="10"
+                  y2={taskIndex * 20 + 10}
+                  stroke="hsl(var(--muted-foreground))"
+                  strokeWidth="1"
+                  opacity="0.3"
+                />
+              );
+            })}
+            {tasks.map((task, index) => (
+              <circle
+                key={task.id}
+                cx="10"
+                cy={index * 20 + 10}
+                r="4"
+                className={getStatusColor(task.status).replace('bg-', 'fill-')}
+                opacity="0.8"
+              />
+            ))}
+          </svg>
+        </div>
+      )}
     </Card>
   );
 }
