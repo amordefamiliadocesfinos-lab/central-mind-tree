@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Pencil, Trash2, X, Check } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Check, MoveHorizontal } from "lucide-react";
 
 interface Task {
   id: string;
@@ -54,6 +54,8 @@ export function TasksDialog({
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [draggedTask, setDraggedTask] = useState<string | null>(null);
+  const [nodes, setNodes] = useState<{ id: string; title: string }[]>([]);
+  const [movingTaskId, setMovingTaskId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -66,8 +68,27 @@ export function TasksDialog({
   useEffect(() => {
     if (open) {
       fetchTasks();
+      fetchNodes();
     }
   }, [open, nodeId]);
+
+  const fetchNodes = async () => {
+    const { data, error } = await supabase
+      .from("nodes")
+      .select("id, title")
+      .eq("is_visible", true)
+      .order("title", { ascending: true });
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao carregar nós",
+        description: error.message,
+      });
+    } else {
+      setNodes(data || []);
+    }
+  };
 
   const fetchTasks = async () => {
     const { data, error } = await supabase
@@ -143,6 +164,37 @@ export function TasksDialog({
     } else {
       toast({ title: "Tarefa excluída" });
       fetchTasks();
+      onTasksChange();
+    }
+  };
+
+  const handleMoveTask = async (taskId: string, newNodeId: string) => {
+    if (newNodeId === nodeId) {
+      setMovingTaskId(null);
+      return;
+    }
+
+    const { error } = await supabase
+      .from("tasks")
+      .update({ node_id: newNodeId })
+      .eq("id", taskId);
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao mover tarefa",
+        description: error.message,
+      });
+    } else {
+      const targetNode = nodes.find(n => n.id === newNodeId);
+      toast({ 
+        title: "Tarefa movida",
+        description: `Tarefa movida para ${targetNode?.title || "outro nó"}` 
+      });
+      
+      // Update UI immediately by removing the task from the list
+      setTasks(prevTasks => prevTasks.filter(t => t.id !== taskId));
+      setMovingTaskId(null);
       onTasksChange();
     }
   };
@@ -378,48 +430,101 @@ export function TasksDialog({
                     onDragStart={(e) => handleDragStart(e, task.id)}
                     onDragOver={handleDragOver}
                     onDrop={(e) => handleDrop(e, task.id)}
-                    onClick={() => navigate(`/task/${task.id}`, { 
-                      state: { nodeId, nodeTitle } 
-                    })}
-                    className={`border rounded-lg p-2 hover:bg-muted/30 transition-colors cursor-pointer ${getStatusBorderColor(task.status)} ${
+                    className={`border rounded-lg p-2 hover:bg-muted/30 transition-colors ${getStatusBorderColor(task.status)} ${
                       draggedTask === task.id ? "opacity-50" : ""
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-2 mb-1.5">
-                      <h4 className="text-sm font-medium flex-1 min-w-0 truncate">{task.title}</h4>
-                      <div className="flex items-center gap-1.5 flex-shrink-0">
-                        <span
-                          className={`text-[10px] px-1.5 py-0.5 rounded-full ${getStatusBadgeColor(
-                            task.status
-                          )}`}
-                        >
-                          {task.status === "estrutural" && "Estrutural"}
-                          {task.status === "andamento" && "Em Andamento"}
-                          {task.status === "pendente" && "Pendente"}
-                          {task.status === "concluído" && "Concluído"}
-                        </span>
+                    <div 
+                      className="cursor-pointer"
+                      onClick={() => navigate(`/task/${task.id}`, { 
+                        state: { nodeId, nodeTitle } 
+                      })}
+                    >
+                      <div className="flex items-center justify-between gap-2 mb-1.5">
+                        <h4 className="text-sm font-medium flex-1 min-w-0 truncate">{task.title}</h4>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded-full ${getStatusBadgeColor(
+                              task.status
+                            )}`}
+                          >
+                            {task.status === "estrutural" && "Estrutural"}
+                            {task.status === "andamento" && "Em Andamento"}
+                            {task.status === "pendente" && "Pendente"}
+                            {task.status === "concluído" && "Concluído"}
+                          </span>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(task.id);
+                            }}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-primary transition-all duration-300"
+                            style={{ width: `${task.progress}%` }}
+                          />
+                        </div>
+                        <span className="text-[10px] text-muted-foreground font-medium flex-shrink-0 w-8 text-right">{task.progress}%</span>
+                      </div>
+                    </div>
+
+                    {/* Move task section */}
+                    {movingTaskId === task.id ? (
+                      <div className="mt-2 pt-2 border-t" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex gap-2 items-center">
+                          <Select
+                            value={nodeId}
+                            onValueChange={(value) => handleMoveTask(task.id, value)}
+                          >
+                            <SelectTrigger className="h-7 text-xs flex-1">
+                              <SelectValue placeholder="Selecione o novo nó" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {nodes.map((node) => (
+                                <SelectItem key={node.id} value={node.id}>
+                                  {node.title}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setMovingTaskId(null);
+                            }}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-2 pt-2 border-t">
                         <Button
-                          size="icon"
+                          size="sm"
                           variant="ghost"
-                          className="h-6 w-6"
+                          className="h-7 w-full text-xs"
                           onClick={(e) => {
                             e.stopPropagation();
-                            handleDelete(task.id);
+                            setMovingTaskId(task.id);
                           }}
                         >
-                          <Trash2 className="h-3 w-3" />
+                          <MoveHorizontal className="h-3 w-3 mr-1" />
+                          Alterar Nó Pai
                         </Button>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-primary transition-all duration-300"
-                          style={{ width: `${task.progress}%` }}
-                        />
-                      </div>
-                      <span className="text-[10px] text-muted-foreground font-medium flex-shrink-0 w-8 text-right">{task.progress}%</span>
-                    </div>
+                    )}
                   </div>
                 </div>
               );
