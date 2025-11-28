@@ -7,7 +7,12 @@ import { Play, Pause, RotateCcw, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { TaskBar } from "./TaskBar";
 
-export function TimerWidget() {
+interface TimerWidgetProps {
+  showNodeLines: boolean;
+  onToggleNodeLines: () => void;
+}
+
+export function TimerWidget({ showNodeLines, onToggleNodeLines }: TimerWidgetProps) {
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [status, setStatus] = useState<"stopped" | "running" | "paused">("stopped");
   const [isEditing, setIsEditing] = useState(false);
@@ -236,6 +241,19 @@ export function TimerWidget() {
             </div>
           </>
         )}
+
+        {/* Node lines toggle button */}
+        <div className="pt-3 border-t">
+          <Button
+            size="sm"
+            variant={showNodeLines ? "default" : "ghost"}
+            className="w-full h-8 text-xs"
+            onClick={onToggleNodeLines}
+            title={showNodeLines ? "Ocultar linhas entre nós" : "Mostrar linhas entre nós"}
+          >
+            Linhas
+          </Button>
+        </div>
       </div>
     </Card>
   );

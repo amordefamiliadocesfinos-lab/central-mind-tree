@@ -241,6 +241,7 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
     <div className="flex flex-col items-center gap-4">
       <div className="flex flex-col items-center">
         <div
+          data-node-id={node.id}
           className={`${colors.bg} ${colors.text} rounded-lg p-4 min-w-[200px] shadow-md border-2 border-background relative`}
         >
           {hasTasks && (
