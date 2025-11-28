@@ -27,6 +27,7 @@ interface Task {
   status: "estrutural" | "andamento" | "pendente" | "concluído";
   dependency_id: string | null;
   progress: number;
+  order_index: number;
   created_at: string;
   updated_at: string;
 }
@@ -51,6 +52,7 @@ export function TasksDialog({
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isCreating, setIsCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [draggedTask, setDraggedTask] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -71,7 +73,7 @@ export function TasksDialog({
       .from("tasks")
       .select("*")
       .eq("node_id", nodeId)
-      .order("created_at", { ascending: false });
+      .order("order_index", { ascending: true });
 
     if (error) {
       toast({
@@ -80,13 +82,6 @@ export function TasksDialog({
         description: error.message,
       });
     } else {
-      // Sort tasks by status priority
-      const statusOrder = {
-        estrutural: 1,
-        andamento: 2,
-        pendente: 3,
-        concluído: 4,
-      };
       let filteredTasks = data || [];
       
       // Apply filter if filterStatus is set
@@ -94,10 +89,7 @@ export function TasksDialog({
         filteredTasks = filteredTasks.filter((task) => task.status === filterStatus);
       }
       
-      const sortedTasks = filteredTasks.sort(
-        (a, b) => statusOrder[a.status as keyof typeof statusOrder] - statusOrder[b.status as keyof typeof statusOrder]
-      );
-      setTasks(sortedTasks as Task[]);
+      setTasks(filteredTasks as Task[]);
     }
   };
 
@@ -110,6 +102,9 @@ export function TasksDialog({
       return;
     }
 
+    // Get max order_index and add 1
+    const maxOrder = tasks.length > 0 ? Math.max(...tasks.map(t => t.order_index)) : -1;
+
     const { error } = await supabase.from("tasks").insert({
       node_id: nodeId,
       title: formData.title,
@@ -117,6 +112,7 @@ export function TasksDialog({
       status: formData.status,
       dependency_id: formData.dependency_id,
       progress: formData.progress,
+      order_index: maxOrder + 1,
     });
 
     if (error) {
@@ -226,6 +222,68 @@ export function TasksDialog({
       case "concluído":
         return "border-l-4 border-l-node-verde";
     }
+  };
+
+  const handleDragStart = (e: React.DragEvent, taskId: string) => {
+    setDraggedTask(taskId);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetTaskId: string) => {
+    e.preventDefault();
+    
+    if (!draggedTask || draggedTask === targetTaskId) {
+      setDraggedTask(null);
+      return;
+    }
+
+    const draggedIndex = tasks.findIndex(t => t.id === draggedTask);
+    const targetIndex = tasks.findIndex(t => t.id === targetTaskId);
+
+    if (draggedIndex === -1 || targetIndex === -1) {
+      setDraggedTask(null);
+      return;
+    }
+
+    // Reorder tasks array
+    const newTasks = [...tasks];
+    const [removed] = newTasks.splice(draggedIndex, 1);
+    newTasks.splice(targetIndex, 0, removed);
+
+    // Update order_index for all affected tasks
+    const updates = newTasks.map((task, index) => ({
+      id: task.id,
+      order_index: index,
+    }));
+
+    // Update UI immediately
+    setTasks(newTasks.map((task, index) => ({ ...task, order_index: index })));
+
+    // Update database
+    try {
+      for (const update of updates) {
+        await supabase
+          .from("tasks")
+          .update({ order_index: update.order_index })
+          .eq("id", update.id);
+      }
+      
+      toast({ title: "Tarefas reordenadas" });
+      onTasksChange();
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao reordenar tarefas",
+      });
+      fetchTasks();
+    }
+
+    setDraggedTask(null);
   };
 
   return (
@@ -362,7 +420,13 @@ export function TasksDialog({
                   )}
                   
                   <div
-                    className={`border rounded-lg p-4 space-y-2 hover:bg-muted/30 transition-colors ${getStatusBorderColor(task.status)}`}
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, task.id)}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, task.id)}
+                    className={`border rounded-lg p-4 space-y-2 hover:bg-muted/30 transition-colors cursor-move ${getStatusBorderColor(task.status)} ${
+                      draggedTask === task.id ? 'opacity-50' : ''
+                    }`}
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
