@@ -25,6 +25,7 @@ interface Task {
   title: string;
   description: string | null;
   status: "estrutural" | "andamento" | "pendente" | "concluído";
+  dependency_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -53,6 +54,7 @@ export function TasksDialog({
     title: "",
     description: "",
     status: "pendente" as Task["status"],
+    dependency_id: null as string | null,
   });
   const { toast } = useToast();
 
@@ -111,6 +113,7 @@ export function TasksDialog({
       title: formData.title,
       description: formData.description || null,
       status: formData.status,
+      dependency_id: formData.dependency_id,
     });
 
     if (error) {
@@ -121,7 +124,7 @@ export function TasksDialog({
       });
     } else {
       toast({ title: "Tarefa criada" });
-      setFormData({ title: "", description: "", status: "pendente" });
+      setFormData({ title: "", description: "", status: "pendente", dependency_id: null });
       setIsCreating(false);
       fetchTasks();
       onTasksChange();
@@ -143,6 +146,7 @@ export function TasksDialog({
         title: formData.title,
         description: formData.description || null,
         status: formData.status,
+        dependency_id: formData.dependency_id,
       })
       .eq("id", taskId);
 
@@ -155,7 +159,7 @@ export function TasksDialog({
     } else {
       toast({ title: "Tarefa atualizada" });
       setEditingId(null);
-      setFormData({ title: "", description: "", status: "pendente" });
+      setFormData({ title: "", description: "", status: "pendente", dependency_id: null });
       fetchTasks();
       onTasksChange();
     }
@@ -183,13 +187,14 @@ export function TasksDialog({
       title: task.title,
       description: task.description || "",
       status: task.status,
+      dependency_id: task.dependency_id,
     });
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setIsCreating(false);
-    setFormData({ title: "", description: "", status: "pendente" });
+    setFormData({ title: "", description: "", status: "pendente", dependency_id: null });
   };
 
   const getStatusBadgeColor = (status: Task["status"]) => {
@@ -270,6 +275,26 @@ export function TasksDialog({
                   <SelectItem value="andamento">Em Andamento</SelectItem>
                   <SelectItem value="pendente">Pendente</SelectItem>
                   <SelectItem value="concluído">Concluído</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={formData.dependency_id || "none"}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, dependency_id: value === "none" ? null : value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Depende de..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhuma dependência</SelectItem>
+                  {tasks
+                    .filter(t => t.id !== editingId)
+                    .map((task) => (
+                      <SelectItem key={task.id} value={task.id}>
+                        {task.title}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
               <div className="flex gap-2">

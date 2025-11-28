@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { NodeBox } from "@/components/NodeBox";
 import { NodeTree } from "@/components/NodeTree";
 import { TimerWidget } from "@/components/TimerWidget";
+import { TaskBar } from "@/components/TaskBar";
 import { useToast } from "@/hooks/use-toast";
 
 interface Node {
@@ -163,6 +164,7 @@ const Index = () => {
           </NodeBox>
         </div>
       </div>
+      <TaskBar />
       <TimerWidget />
     </>
   );
