@@ -314,58 +314,83 @@ export function TasksDialog({
             </div>
           )}
 
-          {/* Tasks list */}
-          <div className="space-y-3">
-            {tasks.map((task) => (
-              <div
-                key={task.id}
-                className={`border rounded-lg p-4 space-y-2 hover:bg-muted/30 transition-colors ${getStatusBorderColor(task.status)}`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-medium">{task.title}</h4>
-                    {task.description && (
-                      <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
-                        {task.description}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex gap-1">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8"
-                      onClick={() => startEdit(task)}
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8"
-                      onClick={() => handleDelete(task.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span
-                    className={`text-xs px-2 py-1 rounded-full ${getStatusBadgeColor(
-                      task.status
-                    )}`}
+          {/* Tasks list with dependency connections */}
+          <div className="space-y-3 relative">
+            {tasks.map((task, index) => {
+              const dependencyTask = task.dependency_id 
+                ? tasks.find(t => t.id === task.dependency_id)
+                : null;
+              
+              return (
+                <div key={task.id} className="relative">
+                  {/* Connection line if task has a dependency */}
+                  {dependencyTask && (
+                    <div className="absolute -top-3 left-4 flex items-center gap-1 text-xs text-muted-foreground">
+                      <svg width="20" height="12" className="opacity-50">
+                        <line 
+                          x1="10" 
+                          y1="0" 
+                          x2="10" 
+                          y2="12" 
+                          stroke="currentColor" 
+                          strokeWidth="1.5"
+                          strokeDasharray="3,3"
+                        />
+                      </svg>
+                      <span className="text-[10px]">depende de: {dependencyTask.title}</span>
+                    </div>
+                  )}
+                  
+                  <div
+                    className={`border rounded-lg p-4 space-y-2 hover:bg-muted/30 transition-colors ${getStatusBorderColor(task.status)}`}
                   >
-                    {task.status === "estrutural" && "Estrutural"}
-                    {task.status === "andamento" && "Em Andamento"}
-                    {task.status === "pendente" && "Pendente"}
-                    {task.status === "concluído" && "Concluído"}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {new Date(task.created_at).toLocaleDateString("pt-BR")}
-                  </span>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium">{task.title}</h4>
+                        {task.description && (
+                          <p className="text-sm text-muted-foreground mt-1 whitespace-pre-wrap">
+                            {task.description}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
+                          onClick={() => startEdit(task)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
+                          onClick={() => handleDelete(task.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span
+                        className={`text-xs px-2 py-1 rounded-full ${getStatusBadgeColor(
+                          task.status
+                        )}`}
+                      >
+                        {task.status === "estrutural" && "Estrutural"}
+                        {task.status === "andamento" && "Em Andamento"}
+                        {task.status === "pendente" && "Pendente"}
+                        {task.status === "concluído" && "Concluído"}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(task.created_at).toLocaleDateString("pt-BR")}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
             {tasks.length === 0 && !isCreating && (
               <p className="text-center text-muted-foreground py-8">
                 Nenhuma tarefa criada ainda
