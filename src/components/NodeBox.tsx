@@ -333,7 +333,10 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
                   size="icon"
                   variant="ghost"
                   className="h-8 w-8 hover:bg-background/20"
-                  onClick={() => setIsTasksDialogOpen(true)}
+                  onClick={() => {
+                    setIsTasksDialogOpen(true);
+                    onDialogOpenChange?.(true);
+                  }}
                 >
                   <ListTodo className="h-4 w-4" />
                 </Button>
@@ -367,6 +370,7 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
                     const newFilter = filterStatus === "estrutural" ? null : "estrutural";
                     setFilterStatus(newFilter);
                     setIsTasksDialogOpen(true);
+                    onDialogOpenChange?.(true);
                   }}
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity ${
                     taskCounts.estrutural > 0 
@@ -383,6 +387,7 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
                     const newFilter = filterStatus === "andamento" ? null : "andamento";
                     setFilterStatus(newFilter);
                     setIsTasksDialogOpen(true);
+                    onDialogOpenChange?.(true);
                   }}
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity ${
                     taskCounts.andamento > 0 
@@ -399,6 +404,7 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
                     const newFilter = filterStatus === "pendente" ? null : "pendente";
                     setFilterStatus(newFilter);
                     setIsTasksDialogOpen(true);
+                    onDialogOpenChange?.(true);
                   }}
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity ${
                     taskCounts.pendente > 0 
@@ -415,6 +421,7 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
                     const newFilter = filterStatus === "concluído" ? null : "concluído";
                     setFilterStatus(newFilter);
                     setIsTasksDialogOpen(true);
+                    onDialogOpenChange?.(true);
                   }}
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity ${
                     taskCounts.concluido > 0 
