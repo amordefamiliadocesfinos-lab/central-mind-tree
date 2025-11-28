@@ -242,12 +242,12 @@ export function TasksDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-2xl h-[90vh] flex flex-col p-4">
+        <DialogHeader className="pb-3">
           <DialogTitle>Tarefas - {nodeTitle}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="flex-1 flex flex-col space-y-3 min-h-0">
           {/* Create new task button */}
           {!isCreating && (
             <Button
@@ -344,7 +344,7 @@ export function TasksDialog({
           )}
 
           {/* Tasks list with dependency connections */}
-          <div className="space-y-3 relative">
+          <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-0">
             {tasks.map((task, index) => {
               const dependencyTask = task.dependency_id 
                 ? tasks.find(t => t.id === task.dependency_id)
@@ -378,15 +378,15 @@ export function TasksDialog({
                     onClick={() => navigate(`/task/${task.id}`, { 
                       state: { nodeId, nodeTitle } 
                     })}
-                    className={`border rounded-lg p-3 hover:bg-muted/30 transition-colors cursor-pointer ${getStatusBorderColor(task.status)} ${
+                    className={`border rounded-lg p-2 hover:bg-muted/30 transition-colors cursor-pointer ${getStatusBorderColor(task.status)} ${
                       draggedTask === task.id ? "opacity-50" : ""
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-3 mb-2">
-                      <h4 className="font-medium flex-1 min-w-0 truncate">{task.title}</h4>
-                      <div className="flex items-center gap-2 flex-shrink-0">
+                    <div className="flex items-center justify-between gap-2 mb-1.5">
+                      <h4 className="text-sm font-medium flex-1 min-w-0 truncate">{task.title}</h4>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
                         <span
-                          className={`text-xs px-2 py-1 rounded-full ${getStatusBadgeColor(
+                          className={`text-[10px] px-1.5 py-0.5 rounded-full ${getStatusBadgeColor(
                             task.status
                           )}`}
                         >
@@ -398,24 +398,24 @@ export function TasksDialog({
                         <Button
                           size="icon"
                           variant="ghost"
-                          className="h-7 w-7"
+                          className="h-6 w-6"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDelete(task.id);
                           }}
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
+                          <Trash2 className="h-3 w-3" />
                         </Button>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
+                      <div className="flex-1 h-1 bg-muted rounded-full overflow-hidden">
                         <div 
                           className="h-full bg-primary transition-all duration-300"
                           style={{ width: `${task.progress}%` }}
                         />
                       </div>
-                      <span className="text-xs text-muted-foreground font-medium flex-shrink-0">{task.progress}%</span>
+                      <span className="text-[10px] text-muted-foreground font-medium flex-shrink-0 w-8 text-right">{task.progress}%</span>
                     </div>
                   </div>
                 </div>
