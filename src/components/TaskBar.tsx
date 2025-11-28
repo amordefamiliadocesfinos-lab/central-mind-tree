@@ -15,9 +15,13 @@ interface Task {
   updated_at: string;
 }
 
-export function TaskBar() {
+interface TaskBarProps {
+  showNodeLines: boolean;
+  onToggleNodeLines: () => void;
+}
+
+export function TaskBar({ showNodeLines, onToggleNodeLines }: TaskBarProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [showConnections, setShowConnections] = useState(true);
 
   useEffect(() => {
     fetchTasks();
@@ -120,10 +124,10 @@ export function TaskBar() {
       {/* Toggle connections button */}
       <Button
         size="sm"
-        variant={showConnections ? "default" : "ghost"}
+        variant={showNodeLines ? "default" : "ghost"}
         className="h-8 px-3 text-xs"
-        onClick={() => setShowConnections(!showConnections)}
-        title={showConnections ? "Ocultar linhas" : "Mostrar linhas"}
+        onClick={onToggleNodeLines}
+        title={showNodeLines ? "Ocultar linhas" : "Mostrar linhas"}
       >
         Linhas
       </Button>

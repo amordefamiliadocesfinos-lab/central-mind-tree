@@ -157,7 +157,10 @@ export function TimerWidget({ showNodeLines, onToggleNodeLines }: TimerWidgetPro
   return (
     <Card className="fixed left-5 bottom-5 z-[9999] p-4 shadow-lg min-w-[240px]">
       <div className="space-y-3">
-        <TaskBar />
+        <TaskBar 
+          showNodeLines={showNodeLines}
+          onToggleNodeLines={onToggleNodeLines}
+        />
 
         {isEditing ? (
           <div className="space-y-2">
@@ -241,19 +244,6 @@ export function TimerWidget({ showNodeLines, onToggleNodeLines }: TimerWidgetPro
             </div>
           </>
         )}
-
-        {/* Node lines toggle button */}
-        <div className="pt-3 border-t">
-          <Button
-            size="sm"
-            variant={showNodeLines ? "default" : "ghost"}
-            className="w-full h-8 text-xs"
-            onClick={onToggleNodeLines}
-            title={showNodeLines ? "Ocultar linhas entre nós" : "Mostrar linhas entre nós"}
-          >
-            Linhas
-          </Button>
-        </div>
       </div>
     </Card>
   );
