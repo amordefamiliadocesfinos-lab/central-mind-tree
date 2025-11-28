@@ -17,10 +17,47 @@ export function NodeConnectionsOverlay({ visible }: NodeConnectionsOverlayProps)
   const [nodes, setNodes] = useState<Node[]>([]);
   const [nodePositions, setNodePositions] = useState<Map<string, { x: number; y: number }>>(new Map());
 
+  const calculateNodePositions = () => {
+    const positions = new Map<string, { x: number; y: number }>();
+    
+    // Encontrar todos os elementos de nó no DOM
+    const nodeElements = document.querySelectorAll('[data-node-id]');
+    
+    nodeElements.forEach((element) => {
+      const nodeId = element.getAttribute('data-node-id');
+      if (!nodeId) return;
+
+      const rect = element.getBoundingClientRect();
+
+      positions.set(nodeId, {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      });
+    });
+
+    if (positions.size > 0) {
+      setNodePositions(positions);
+    }
+  };
+
+  const fetchNodes = async () => {
+    const { data, error } = await supabase
+      .from("nodes")
+      .select("*")
+      .eq("is_visible", true);
+
+    if (!error && data) {
+      setNodes(data as Node[]);
+      // Aguardar renderização dos nós antes de calcular posições
+      setTimeout(() => {
+        calculateNodePositions();
+      }, 100);
+    }
+  };
+
   useEffect(() => {
     if (visible) {
       fetchNodes();
-      calculateNodePositions();
     }
 
     const channel = supabase
@@ -34,7 +71,6 @@ export function NodeConnectionsOverlay({ visible }: NodeConnectionsOverlayProps)
         },
         () => {
           fetchNodes();
-          calculateNodePositions();
         }
       )
       .subscribe();
@@ -44,52 +80,26 @@ export function NodeConnectionsOverlay({ visible }: NodeConnectionsOverlayProps)
     };
   }, [visible]);
 
-  const fetchNodes = async () => {
-    const { data, error } = await supabase
-      .from("nodes")
-      .select("*")
-      .eq("is_visible", true);
-
-    if (!error && data) {
-      setNodes(data as Node[]);
-    }
-  };
-
-  const calculateNodePositions = () => {
-    const positions = new Map<string, { x: number; y: number }>();
-    
-    // Encontrar todos os elementos de nó no DOM
-    document.querySelectorAll('[data-node-id]').forEach((element) => {
-      const nodeId = element.getAttribute('data-node-id');
-      if (!nodeId) return;
-
-      const rect = element.getBoundingClientRect();
-      const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
-      const scrollY = window.pageYOffset || document.documentElement.scrollTop;
-
-      positions.set(nodeId, {
-        x: rect.left + rect.width / 2 + scrollX,
-        y: rect.top + rect.height / 2 + scrollY,
-      });
-    });
-
-    setNodePositions(positions);
-  };
-
   // Recalcular posições quando a visibilidade muda ou quando há scroll/zoom
   useEffect(() => {
     if (!visible) return;
 
-    const handleUpdate = () => calculateNodePositions();
+    const handleUpdate = () => {
+      requestAnimationFrame(calculateNodePositions);
+    };
     
     window.addEventListener('scroll', handleUpdate, true);
     window.addEventListener('resize', handleUpdate);
     
+    // Calcular posições iniciais após um pequeno delay
+    const timer = setTimeout(calculateNodePositions, 200);
+    
     return () => {
+      clearTimeout(timer);
       window.removeEventListener('scroll', handleUpdate, true);
       window.removeEventListener('resize', handleUpdate);
     };
-  }, [visible]);
+  }, [visible, nodes]);
 
   if (!visible || nodes.length === 0) return null;
 
@@ -115,10 +125,10 @@ export function NodeConnectionsOverlay({ visible }: NodeConnectionsOverlayProps)
         position: 'fixed',
         top: 0,
         left: 0,
-        width: '100%',
-        height: '100%',
+        width: '100vw',
+        height: '100vh',
         pointerEvents: 'none',
-        zIndex: 1,
+        zIndex: 9998,
       }}
     >
       {connections.map(conn => (
@@ -128,10 +138,10 @@ export function NodeConnectionsOverlay({ visible }: NodeConnectionsOverlayProps)
           y1={conn.y1}
           x2={conn.x2}
           y2={conn.y2}
-          stroke="hsl(var(--muted-foreground))"
+          stroke="hsl(var(--foreground))"
           strokeWidth="2"
-          opacity="0.3"
-          strokeDasharray="4 4"
+          opacity="0.4"
+          strokeDasharray="5 5"
         />
       ))}
     </svg>
