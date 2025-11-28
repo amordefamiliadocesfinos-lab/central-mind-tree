@@ -242,7 +242,10 @@ export function TasksDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl h-[90vh] flex flex-col p-4">
+      <DialogContent 
+        className="max-w-2xl h-[90vh] flex flex-col p-4"
+        style={{ pointerEvents: "auto" }}
+      >
         <DialogHeader className="pb-3">
           <DialogTitle>Tarefas - {nodeTitle}</DialogTitle>
         </DialogHeader>
