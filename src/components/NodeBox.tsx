@@ -36,6 +36,7 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
     pendente: 0,
     concluido: 0
   });
+  const [averageProgress, setAverageProgress] = useState<number | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -60,7 +61,7 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
             .eq("node_id", node.id),
           supabase
             .from("tasks")
-            .select("status")
+            .select("status, progress")
             .eq("node_id", node.id)
         ]);
 
@@ -68,7 +69,7 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
           setHasChildren((childrenResult.count || 0) > 0);
           setHasTasks((tasksResult.count || 0) > 0);
           
-          // Contar tarefas por status
+          // Contar tarefas por status e calcular progresso médio
           const counts = {
             estrutural: 0,
             andamento: 0,
@@ -76,14 +77,21 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
             concluido: 0
           };
           
-          (allTasks.data || []).forEach((task: { status: string }) => {
+          let totalProgress = 0;
+          let taskCount = 0;
+          
+          (allTasks.data || []).forEach((task: { status: string; progress: number }) => {
             if (task.status === "estrutural") counts.estrutural++;
             else if (task.status === "andamento") counts.andamento++;
             else if (task.status === "pendente") counts.pendente++;
             else if (task.status === "concluído") counts.concluido++;
+            
+            totalProgress += task.progress || 0;
+            taskCount++;
           });
           
           setTaskCounts(counts);
+          setAverageProgress(taskCount > 0 ? Math.round(totalProgress / taskCount) : null);
         }
       } catch (error) {
         console.error("Erro ao verificar nó:", error);
@@ -279,6 +287,23 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
               >
                 <h3 className="text-lg font-semibold text-center">{node.title}</h3>
               </div>
+              
+              {/* Progress Indicator */}
+              {averageProgress !== null && (
+                <div className="px-2">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="text-xs opacity-70">Progresso</span>
+                    <span className="text-xs font-semibold">{averageProgress}%</span>
+                  </div>
+                  <div className="w-full h-2 bg-background/30 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-background transition-all duration-300"
+                      style={{ width: `${averageProgress}%` }}
+                    />
+                  </div>
+                </div>
+              )}
+              
               <div className="flex gap-2 justify-center">
                 <Button
                   size="icon"
