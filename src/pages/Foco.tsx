@@ -2,8 +2,9 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, RotateCcw, ArrowLeft } from "lucide-react";
+import { Play, Pause, RotateCcw, ArrowLeft, CalendarCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { ReplanningModal } from "@/components/ReplanningModal";
 
 interface Task {
   id: string;
@@ -26,6 +27,13 @@ export default function Foco() {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [timerRunning, setTimerRunning] = useState(false);
+  const [replanningOpen, setReplanningOpen] = useState(false);
+
+  // Verifica se é sexta ou segunda para mostrar lembrete
+  const isReplanningDay = () => {
+    const day = new Date().getDay();
+    return day === 1 || day === 5; // 1 = Segunda, 5 = Sexta
+  };
 
   useEffect(() => {
     fetchTasks();
@@ -93,11 +101,21 @@ export default function Foco() {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-2xl mx-auto">
-        <div className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
-            <ArrowLeft className="h-5 w-5" />
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <h1 className="text-2xl font-bold text-foreground">Foco — Em andamento</h1>
+          </div>
+          <Button 
+            variant={isReplanningDay() ? "default" : "outline"} 
+            size="sm"
+            onClick={() => setReplanningOpen(true)}
+          >
+            <CalendarCheck className="h-4 w-4 mr-2" />
+            Replanejar
           </Button>
-          <h1 className="text-2xl font-bold text-foreground">Foco — Em andamento</h1>
         </div>
 
         {/* Timer fixo */}
@@ -164,6 +182,8 @@ export default function Foco() {
             ))
           )}
         </div>
+
+        <ReplanningModal open={replanningOpen} onOpenChange={setReplanningOpen} />
       </div>
     </div>
   );
