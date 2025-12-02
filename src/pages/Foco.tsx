@@ -82,6 +82,46 @@ export default function Foco() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      
+      switch (e.code) {
+        case 'Space':
+          e.preventDefault();
+          if (!activeTaskId) return;
+          if (isRunning) {
+            handlePause();
+          } else if (isPaused) {
+            handleResume();
+          } else {
+            handleStart();
+          }
+          break;
+        case 'Enter':
+          e.preventDefault();
+          // Select next task in queue
+          if (queue.length > 0 && activeTaskId) {
+            const currentIndex = queue.indexOf(activeTaskId);
+            const nextIndex = (currentIndex + 1) % queue.length;
+            setActiveTaskId(queue[nextIndex]);
+          }
+          break;
+        case 'KeyC':
+          e.preventDefault();
+          if (activeTaskId) {
+            handleCompleteTask();
+          }
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeTaskId, isRunning, isPaused, queue]);
+
   // Calculate display time based on session state
   useEffect(() => {
     const calculateElapsed = () => {
