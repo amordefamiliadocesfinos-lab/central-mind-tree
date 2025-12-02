@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Node {
@@ -27,6 +27,18 @@ interface BundledConnection {
   targetNodeId: string;
   count: number;
   dominantStatus: Task["status"];
+  tasks: { taskId: string; status: Task["status"] }[];
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+}
+
+interface IndividualConnection {
+  taskId: string;
+  sourceNodeId: string;
+  targetNodeId: string;
+  status: Task["status"];
   x1: number;
   y1: number;
   x2: number;
@@ -72,6 +84,8 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
   const [nodes, setNodes] = useState<Node[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [nodePositions, setNodePositions] = useState<Map<string, { x: number; y: number }>>(new Map());
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [expandedPairs, setExpandedPairs] = useState<Set<string>>(new Set());
 
   const calculateNodePositions = () => {
     const positions = new Map<string, { x: number; y: number }>();
@@ -111,6 +125,19 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
     setTimeout(calculateNodePositions, 100);
   };
 
+  // Handle node hover detection
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    const target = e.target as HTMLElement;
+    const nodeElement = target.closest('[data-node-id]');
+    
+    if (nodeElement) {
+      const nodeId = nodeElement.getAttribute('data-node-id');
+      setHoveredNodeId(nodeId);
+    } else {
+      setHoveredNodeId(null);
+    }
+  }, []);
+
   useEffect(() => {
     if (linesMode !== "off") {
       fetchData();
@@ -142,24 +169,32 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
     window.addEventListener('scroll', handleUpdate, true);
     window.addEventListener('resize', handleUpdate);
     
+    // Add mouse move listener for hover detection
+    document.addEventListener('mousemove', handleMouseMove);
+    
     const timer = setTimeout(calculateNodePositions, 200);
     
     return () => {
       clearTimeout(timer);
       window.removeEventListener('scroll', handleUpdate, true);
       window.removeEventListener('resize', handleUpdate);
+      document.removeEventListener('mousemove', handleMouseMove);
     };
-  }, [linesMode, nodes, tasks]);
+  }, [linesMode, nodes, tasks, handleMouseMove]);
+
+  // Reset expanded pairs when mode changes
+  useEffect(() => {
+    setExpandedPairs(new Set());
+  }, [linesMode]);
 
   if (linesMode === "off" || nodes.length === 0) return null;
 
   // Create task map for quick lookup
   const taskMap = new Map(tasks.map(t => [t.id, t]));
 
-  // Build bundled connections for "resumo" mode
-  const getBundledConnections = (): BundledConnection[] => {
-    // Group by (sourceNodeId, targetNodeId) pair
-    const pairMap = new Map<string, { statuses: Task["status"][] }>();
+  // Get all individual task connections
+  const getIndividualConnections = (): IndividualConnection[] => {
+    const connections: IndividualConnection[] = [];
 
     tasks.forEach(task => {
       if (!task.dependency_id) return;
@@ -170,27 +205,58 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
       const sourceNodeId = depTask.node_id;
       const targetNodeId = task.node_id;
 
-      // Skip if same node
       if (sourceNodeId === targetNodeId) return;
+      if (!nodePositions.has(sourceNodeId) || !nodePositions.has(targetNodeId)) return;
 
-      // Skip if positions not available
+      const sourcePos = nodePositions.get(sourceNodeId)!;
+      const targetPos = nodePositions.get(targetNodeId)!;
+
+      connections.push({
+        taskId: task.id,
+        sourceNodeId,
+        targetNodeId,
+        status: task.status,
+        x1: sourcePos.x,
+        y1: sourcePos.y,
+        x2: targetPos.x,
+        y2: targetPos.y,
+      });
+    });
+
+    return connections;
+  };
+
+  // Build bundled connections for "resumo" mode
+  const getBundledConnections = (): BundledConnection[] => {
+    const pairMap = new Map<string, { statuses: Task["status"][]; tasks: { taskId: string; status: Task["status"] }[] }>();
+
+    tasks.forEach(task => {
+      if (!task.dependency_id) return;
+      
+      const depTask = taskMap.get(task.dependency_id);
+      if (!depTask) return;
+
+      const sourceNodeId = depTask.node_id;
+      const targetNodeId = task.node_id;
+
+      if (sourceNodeId === targetNodeId) return;
       if (!nodePositions.has(sourceNodeId) || !nodePositions.has(targetNodeId)) return;
 
       const pairKey = `${sourceNodeId}->${targetNodeId}`;
       
       if (!pairMap.has(pairKey)) {
-        pairMap.set(pairKey, { statuses: [] });
+        pairMap.set(pairKey, { statuses: [], tasks: [] });
       }
-      pairMap.get(pairKey)!.statuses.push(task.status);
+      const pair = pairMap.get(pairKey)!;
+      pair.statuses.push(task.status);
+      pair.tasks.push({ taskId: task.id, status: task.status });
     });
 
-    // Convert to bundled connections
     const bundled: BundledConnection[] = [];
     
     pairMap.forEach((data, pairKey) => {
       const [sourceNodeId, targetNodeId] = pairKey.split('->');
       
-      // Calculate dominant status (most frequent, ties broken by priority)
       const statusCounts = new Map<Task["status"], number>();
       data.statuses.forEach(s => {
         statusCounts.set(s, (statusCounts.get(s) || 0) + 1);
@@ -214,6 +280,7 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
         targetNodeId,
         count: data.statuses.length,
         dominantStatus,
+        tasks: data.tasks,
         x1: sourcePos.x,
         y1: sourcePos.y,
         x2: targetPos.x,
@@ -224,50 +291,53 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
     return bundled;
   };
 
-  // Detalhe mode: show parent-child node connections
-  const getDetailConnections = () => {
-    return nodes
-      .filter(node => node.parent_id && nodePositions.has(node.id) && nodePositions.has(node.parent_id))
-      .map(node => {
-        const childPos = nodePositions.get(node.id)!;
-        const parentPos = nodePositions.get(node.parent_id!)!;
-
-        return {
-          id: `${node.parent_id}-${node.id}`,
-          x1: parentPos.x,
-          y1: parentPos.y,
-          x2: childPos.x,
-          y2: childPos.y,
-        };
-      });
-  };
-
+  const allIndividualConnections = getIndividualConnections();
   const bundledConnections = linesMode === "resumo" ? getBundledConnections() : [];
-  const detailConnections = linesMode === "detalhe" ? getDetailConnections() : [];
 
-  // Generate Bezier path for bundled connection
-  const getBezierPath = (x1: number, y1: number, x2: number, y2: number) => {
+  // Generate Bezier path
+  const getBezierPath = (x1: number, y1: number, x2: number, y2: number, offset = 0) => {
     const dx = x2 - x1;
     const dy = y2 - y1;
     const midX = (x1 + x2) / 2;
     const midY = (y1 + y2) / 2;
     
-    // Control points for smooth curve
+    // Add perpendicular offset for multiple lines
+    const len = Math.sqrt(dx * dx + dy * dy);
+    const perpX = len > 0 ? (-dy / len) * offset : 0;
+    const perpY = len > 0 ? (dx / len) * offset : 0;
+    
     const curvature = 0.2;
-    const cx1 = x1 + dx * curvature;
-    const cy1 = y1 + dy * 0.5;
-    const cx2 = x2 - dx * curvature;
-    const cy2 = y2 - dy * 0.5;
+    const cx1 = x1 + dx * curvature + perpX;
+    const cy1 = y1 + dy * 0.5 + perpY;
+    const cx2 = x2 - dx * curvature + perpX;
+    const cy2 = y2 - dy * 0.5 + perpY;
 
     return {
-      path: `M ${x1} ${y1} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${x2} ${y2}`,
-      midX,
-      midY,
+      path: `M ${x1 + perpX} ${y1 + perpY} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${x2 + perpX} ${y2 + perpY}`,
+      midX: midX + perpX,
+      midY: midY + perpY,
     };
   };
 
-  // Arrow marker ID
-  const getArrowId = (status: Task["status"]) => `arrow-${status}`;
+  const getArrowId = (status: Task["status"], faded = false) => `arrow-${status}${faded ? '-faded' : ''}`;
+
+  const togglePairExpansion = (pairKey: string) => {
+    setExpandedPairs(prev => {
+      const next = new Set(prev);
+      if (next.has(pairKey)) {
+        next.delete(pairKey);
+      } else {
+        next.add(pairKey);
+      }
+      return next;
+    });
+  };
+
+  // Check if connection involves hovered node
+  const isConnectionRelevant = (sourceNodeId: string, targetNodeId: string) => {
+    if (!hoveredNodeId) return true;
+    return sourceNodeId === hoveredNodeId || targetNodeId === hoveredNodeId;
+  };
 
   return (
     <svg
@@ -282,44 +352,145 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
       }}
     >
       <defs>
-        {/* Arrow markers for each status */}
+        {/* Arrow markers for each status (normal and faded) */}
         {(["estrutural", "andamento", "pendente", "concluído"] as const).map(status => (
-          <marker
-            key={status}
-            id={getArrowId(status)}
-            viewBox="0 0 10 10"
-            refX="9"
-            refY="5"
-            markerWidth="6"
-            markerHeight="6"
-            orient="auto-start-reverse"
-          >
-            <path d="M 0 0 L 10 5 L 0 10 z" fill={STATUS_COLORS[status]} />
-          </marker>
+          <>
+            <marker
+              key={status}
+              id={getArrowId(status)}
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="6"
+              markerHeight="6"
+              orient="auto-start-reverse"
+            >
+              <path d="M 0 0 L 10 5 L 0 10 z" fill={STATUS_COLORS[status]} />
+            </marker>
+            <marker
+              key={`${status}-faded`}
+              id={getArrowId(status, true)}
+              viewBox="0 0 10 10"
+              refX="9"
+              refY="5"
+              markerWidth="6"
+              markerHeight="6"
+              orient="auto-start-reverse"
+            >
+              <path d="M 0 0 L 10 5 L 0 10 z" fill={STATUS_COLORS[status]} opacity="0.1" />
+            </marker>
+          </>
         ))}
+        {/* Generic faded arrow for detalhe mode */}
+        <marker
+          id="arrow-faded"
+          viewBox="0 0 10 10"
+          refX="9"
+          refY="5"
+          markerWidth="6"
+          markerHeight="6"
+          orient="auto-start-reverse"
+        >
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="hsl(var(--foreground))" opacity="0.1" />
+        </marker>
+        <marker
+          id="arrow-normal"
+          viewBox="0 0 10 10"
+          refX="9"
+          refY="5"
+          markerWidth="6"
+          markerHeight="6"
+          orient="auto-start-reverse"
+        >
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="hsl(var(--foreground))" opacity="0.6" />
+        </marker>
       </defs>
 
-      {/* Resumo mode: Bundled connections with Bezier curves */}
+      {/* Resumo mode: Bundled connections with expandable pills */}
       {linesMode === "resumo" && bundledConnections.map(conn => {
+        const pairKey = `${conn.sourceNodeId}->${conn.targetNodeId}`;
+        const isExpanded = expandedPairs.has(pairKey);
+        const isRelevant = isConnectionRelevant(conn.sourceNodeId, conn.targetNodeId);
+        const baseOpacity = isRelevant ? 1 : 0.1;
+
+        if (isExpanded) {
+          // Render individual lines for this pair
+          return (
+            <g key={pairKey}>
+              {conn.tasks.map((task, index) => {
+                const offset = (index - (conn.tasks.length - 1) / 2) * 12;
+                const { path, midX, midY } = getBezierPath(conn.x1, conn.y1, conn.x2, conn.y2, offset);
+                const color = STATUS_COLORS[task.status];
+                const strokeWidth = STATUS_STROKE_WIDTH[task.status];
+                const opacity = STATUS_OPACITY[task.status] * baseOpacity;
+                const isDashed = STATUS_DASHED[task.status];
+                const haloWidth = strokeWidth + 6;
+
+                return (
+                  <g key={task.taskId}>
+                    <path d={path} fill="none" stroke="white" strokeWidth={haloWidth} strokeLinecap="round" opacity={baseOpacity} />
+                    <path
+                      d={path}
+                      fill="none"
+                      stroke={color}
+                      strokeWidth={strokeWidth}
+                      opacity={opacity}
+                      strokeDasharray={isDashed ? "6 4" : undefined}
+                      strokeLinecap="round"
+                      markerEnd={`url(#${getArrowId(task.status, !isRelevant)})`}
+                    />
+                  </g>
+                );
+              })}
+              {/* Collapse pill */}
+              <g 
+                style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+                onClick={() => togglePairExpansion(pairKey)}
+              >
+                {(() => {
+                  const { midX, midY } = getBezierPath(conn.x1, conn.y1, conn.x2, conn.y2);
+                  const color = STATUS_COLORS[conn.dominantStatus];
+                  return (
+                    <>
+                      <rect
+                        x={midX - 14}
+                        y={midY - 10}
+                        width="28"
+                        height="20"
+                        rx="10"
+                        fill={color}
+                        opacity={0.9 * baseOpacity}
+                      />
+                      <text
+                        x={midX}
+                        y={midY + 4}
+                        textAnchor="middle"
+                        fontSize="11"
+                        fontWeight="600"
+                        fill="white"
+                        opacity={baseOpacity}
+                      >
+                        ×
+                      </text>
+                    </>
+                  );
+                })()}
+              </g>
+            </g>
+          );
+        }
+
+        // Render bundled line
         const { path, midX, midY } = getBezierPath(conn.x1, conn.y1, conn.x2, conn.y2);
         const color = STATUS_COLORS[conn.dominantStatus];
         const strokeWidth = STATUS_STROKE_WIDTH[conn.dominantStatus];
-        const opacity = STATUS_OPACITY[conn.dominantStatus];
+        const opacity = STATUS_OPACITY[conn.dominantStatus] * baseOpacity;
         const isDashed = STATUS_DASHED[conn.dominantStatus];
         const haloWidth = strokeWidth + 6;
 
         return (
-          <g key={`${conn.sourceNodeId}->${conn.targetNodeId}`}>
-            {/* White halo for readability */}
-            <path
-              d={path}
-              fill="none"
-              stroke="white"
-              strokeWidth={haloWidth}
-              strokeLinecap="round"
-            />
-            
-            {/* Bezier path with arrow */}
+          <g key={pairKey}>
+            <path d={path} fill="none" stroke="white" strokeWidth={haloWidth} strokeLinecap="round" opacity={baseOpacity} />
             <path
               d={path}
               fill="none"
@@ -328,59 +499,67 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
               opacity={opacity}
               strokeDasharray={isDashed ? "6 4" : undefined}
               strokeLinecap="round"
-              markerEnd={`url(#${getArrowId(conn.dominantStatus)})`}
+              markerEnd={`url(#${getArrowId(conn.dominantStatus, !isRelevant)})`}
             />
             
-            {/* Count pill */}
-            <rect
-              x={midX - 14}
-              y={midY - 10}
-              width="28"
-              height="20"
-              rx="10"
-              fill={color}
-              opacity="0.9"
-            />
-            <text
-              x={midX}
-              y={midY + 4}
-              textAnchor="middle"
-              fontSize="11"
-              fontWeight="600"
-              fill="white"
+            {/* Clickable pill */}
+            <g 
+              style={{ pointerEvents: 'auto', cursor: 'pointer' }}
+              onClick={() => togglePairExpansion(pairKey)}
             >
-              x{conn.count}
-            </text>
+              <rect
+                x={midX - 14}
+                y={midY - 10}
+                width="28"
+                height="20"
+                rx="10"
+                fill={color}
+                opacity={0.9 * baseOpacity}
+              />
+              <text
+                x={midX}
+                y={midY + 4}
+                textAnchor="middle"
+                fontSize="11"
+                fontWeight="600"
+                fill="white"
+                opacity={baseOpacity}
+              >
+                x{conn.count}
+              </text>
+            </g>
           </g>
         );
       })}
 
-      {/* Detalhe mode: Simple dashed lines with halo */}
-      {linesMode === "detalhe" && detailConnections.map(conn => (
-        <g key={conn.id}>
-          {/* White halo for readability */}
-          <line
-            x1={conn.x1}
-            y1={conn.y1}
-            x2={conn.x2}
-            y2={conn.y2}
-            stroke="white"
-            strokeWidth="8"
-            strokeLinecap="round"
-          />
-          <line
-            x1={conn.x1}
-            y1={conn.y1}
-            x2={conn.x2}
-            y2={conn.y2}
-            stroke="hsl(var(--foreground))"
-            strokeWidth="2"
-            opacity="0.4"
-            strokeDasharray="5 5"
-            strokeLinecap="round"
-          />
-        </g>
-      ))}
+      {/* Detalhe mode: Individual task connections with hover focus */}
+      {linesMode === "detalhe" && allIndividualConnections.map((conn, index) => {
+        const isRelevant = isConnectionRelevant(conn.sourceNodeId, conn.targetNodeId);
+        const baseOpacity = isRelevant ? 1 : 0.1;
+        
+        const { path } = getBezierPath(conn.x1, conn.y1, conn.x2, conn.y2);
+        const color = STATUS_COLORS[conn.status];
+        const strokeWidth = STATUS_STROKE_WIDTH[conn.status];
+        const opacity = STATUS_OPACITY[conn.status] * baseOpacity;
+        const isDashed = STATUS_DASHED[conn.status];
+        const haloWidth = strokeWidth + 6;
+
+        return (
+          <g key={conn.taskId}>
+            <path d={path} fill="none" stroke="white" strokeWidth={haloWidth} strokeLinecap="round" opacity={baseOpacity} />
+            <path
+              d={path}
+              fill="none"
+              stroke={color}
+              strokeWidth={strokeWidth}
+              opacity={opacity}
+              strokeDasharray={isDashed ? "6 4" : undefined}
+              strokeLinecap="round"
+              markerEnd={`url(#${getArrowId(conn.status, !isRelevant)})`}
+            />
+          </g>
+        );
+      })}
     </svg>
   );
 }
