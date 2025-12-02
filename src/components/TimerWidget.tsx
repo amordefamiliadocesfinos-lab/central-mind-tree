@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from "react";
+import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Play, Pause, RotateCcw, Clock } from "lucide-react";
+import { Play, Pause, RotateCcw, Clock, Focus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { TaskBar } from "./TaskBar";
 
@@ -157,10 +158,24 @@ export function TimerWidget({ showNodeLines, onToggleNodeLines }: TimerWidgetPro
   return (
     <Card className="fixed left-5 bottom-5 z-[9999] p-4 shadow-lg min-w-[240px]">
       <div className="space-y-3">
-        <TaskBar 
-          showNodeLines={showNodeLines}
-          onToggleNodeLines={onToggleNodeLines}
-        />
+        <div className="flex items-center gap-2 mb-2">
+          <TaskBar 
+            showNodeLines={showNodeLines}
+            onToggleNodeLines={onToggleNodeLines}
+          />
+          <Button
+            asChild
+            size="sm"
+            variant="outline"
+            className="h-8 px-3 text-xs"
+            title="Modo Foco"
+          >
+            <Link to="/foco">
+              <Focus className="h-4 w-4 mr-1" />
+              Foco
+            </Link>
+          </Button>
+        </div>
 
         {isEditing ? (
           <div className="space-y-2">
