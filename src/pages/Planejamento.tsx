@@ -6,9 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Trash2, Star, Check, Save } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Star, Check, Save, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
-import { format, startOfWeek, endOfWeek } from "date-fns";
+import { format, startOfWeek, endOfWeek, subWeeks } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ReplanningBanner } from "@/components/ReplanningBanner";
 
@@ -18,6 +18,7 @@ interface Task {
   status: string;
   node_id: string;
   progress: number;
+  updated_at: string;
 }
 
 interface Node {
@@ -64,6 +65,9 @@ const Planejamento = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [nodes, setNodes] = useState<Node[]>([]);
   const [loading, setLoading] = useState(true);
+  const [completedThisWeek, setCompletedThisWeek] = useState(0);
+  const [closingTaskIds, setClosingTaskIds] = useState<string[]>([]);
+  const [closingAction, setClosingAction] = useState<"keep" | "pending" | null>(null);
 
   // Template (customizable areas)
   const [template, setTemplate] = useState<PlanTemplate>(() => {
@@ -113,15 +117,21 @@ const Planejamento = () => {
   // Load tasks and nodes
   useEffect(() => {
     const loadData = async () => {
-      const [tasksRes, nodesRes] = await Promise.all([
+      const [tasksRes, completedRes, nodesRes] = await Promise.all([
         supabase
           .from("tasks")
-          .select("id, title, status, node_id, progress")
+          .select("id, title, status, node_id, progress, updated_at")
           .in("status", ["andamento", "pendente"]),
+        supabase
+          .from("tasks")
+          .select("id, title, status, updated_at")
+          .eq("status", "concluído")
+          .gte("updated_at", weekStart.toISOString()),
         supabase.from("nodes").select("id, title, color"),
       ]);
 
       if (tasksRes.data) setTasks(tasksRes.data);
+      if (completedRes.data) setCompletedThisWeek(completedRes.data.length);
       if (nodesRes.data) setNodes(nodesRes.data);
       setLoading(false);
     };
@@ -147,7 +157,17 @@ const Planejamento = () => {
   // Week period display
   const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
   const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
+  const prevWeekStart = subWeeks(weekStart, 1);
   const weekPeriod = `${format(weekStart, "dd/MM", { locale: ptBR })} - ${format(weekEnd, "dd/MM", { locale: ptBR })}`;
+
+  // Tasks from previous week still in "andamento"
+  const previousWeekAndamentoTasks = useMemo(() => {
+    return tasks.filter(
+      (t) =>
+        t.status === "andamento" &&
+        new Date(t.updated_at) < weekStart
+    );
+  }, [tasks, weekStart]);
 
   // Area handlers
   const addArea = () => {
@@ -236,6 +256,40 @@ const Planejamento = () => {
   const handleCompletePlanning = () => {
     localStorage.setItem("pc.plan.lastCompletedAt", Date.now().toString());
     toast.success("Planejamento concluído!");
+  };
+
+  // Quick closing handler
+  const handleQuickClose = async (action: "keep" | "pending") => {
+    if (previousWeekAndamentoTasks.length === 0) return;
+    
+    const taskIds = previousWeekAndamentoTasks.map((t) => t.id);
+    
+    if (action === "pending") {
+      const { error } = await supabase
+        .from("tasks")
+        .update({ status: "pendente" })
+        .in("id", taskIds);
+      
+      if (error) {
+        toast.error("Erro ao atualizar tarefas");
+        return;
+      }
+      
+      // Update local state
+      setTasks((prev) =>
+        prev.map((t) =>
+          taskIds.includes(t.id) ? { ...t, status: "pendente" } : t
+        )
+      );
+    }
+    
+    localStorage.setItem("pc.plan.lastCompletedAt", Date.now().toString());
+    setClosingAction(null);
+    toast.success(
+      action === "keep"
+        ? "Tarefas mantidas em andamento. Semana fechada!"
+        : "Tarefas movidas para pendente. Semana fechada!"
+    );
   };
 
   if (loading) {
@@ -451,6 +505,82 @@ const Planejamento = () => {
                 Concluir
               </Button>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Block 4: Fechamento Rápido */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <RotateCcw className="h-5 w-5" />
+              Fechamento Rápido
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="p-3 rounded-lg border">
+                <p className="text-muted-foreground mb-1">Concluídas esta semana</p>
+                <p className="text-2xl font-bold text-green-500">
+                  {completedThisWeek}
+                </p>
+              </div>
+              <div className="p-3 rounded-lg border">
+                <p className="text-muted-foreground mb-1">Em andamento (semana anterior)</p>
+                <p className="text-2xl font-bold text-red-500">
+                  {previousWeekAndamentoTasks.length}
+                </p>
+              </div>
+            </div>
+
+            {previousWeekAndamentoTasks.length > 0 && (
+              <div className="space-y-3">
+                <p className="text-sm font-medium text-muted-foreground">
+                  Tarefas em andamento da semana passada:
+                </p>
+                <div className="space-y-1 max-h-40 overflow-y-auto">
+                  {previousWeekAndamentoTasks.map((task) => {
+                    const node = nodesMap[task.node_id];
+                    return (
+                      <div
+                        key={task.id}
+                        className="flex items-center gap-2 text-sm p-2 rounded bg-red-500/10"
+                      >
+                        <div className="w-2 h-2 rounded-full bg-red-500" />
+                        <span className="flex-1">{task.title}</span>
+                        {node && (
+                          <span className="text-xs text-muted-foreground">
+                            {node.title}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <Button
+                    onClick={() => handleQuickClose("keep")}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    Manter em Andamento
+                  </Button>
+                  <Button
+                    onClick={() => handleQuickClose("pending")}
+                    variant="secondary"
+                    className="flex-1"
+                  >
+                    Mover para Pendente
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {previousWeekAndamentoTasks.length === 0 && (
+              <p className="text-muted-foreground text-center py-4">
+                Nenhuma tarefa pendente de fechamento.
+              </p>
+            )}
           </CardContent>
         </Card>
       </div>
