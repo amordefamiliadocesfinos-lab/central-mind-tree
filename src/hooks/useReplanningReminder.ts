@@ -14,22 +14,17 @@ export const useReplanningReminder = () => {
 
   useEffect(() => {
     const checkReminder = () => {
-      // Test mode: localStorage.setItem("pc.plan.testBanner", "true")
-      const testMode = localStorage.getItem("pc.plan.testBanner") === "true";
-      
-      if (!testMode) {
-        const now = new Date();
-        const dayOfWeek = now.getDay(); // 0=Sunday, 1=Monday, 5=Friday
-        const hour = now.getHours();
+      const now = new Date();
+      const dayOfWeek = now.getDay(); // 0=Sunday, 1=Monday, 5=Friday
+      const hour = now.getHours();
 
-        // Check if it's Friday after 16:00 or Monday between 08:00-12:00
-        const isFridayAfternoon = dayOfWeek === 5 && hour >= 16;
-        const isMondayMorning = dayOfWeek === 1 && hour >= 8 && hour < 12;
+      // Check if it's Friday after 16:00 or Monday between 08:00-12:00
+      const isFridayAfternoon = dayOfWeek === 5 && hour >= 16;
+      const isMondayMorning = dayOfWeek === 1 && hour >= 8 && hour < 12;
 
-        if (!isFridayAfternoon && !isMondayMorning) {
-          setShowReminder(false);
-          return;
-        }
+      if (!isFridayAfternoon && !isMondayMorning) {
+        setShowReminder(false);
+        return;
       }
 
       // Check if planning was completed this week
