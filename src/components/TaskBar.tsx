@@ -14,7 +14,7 @@ interface Task {
   updated_at: string;
 }
 
-type LinesMode = "off" | "resumo" | "detalhe";
+type LinesMode = "off" | "resumo" | "detalhe" | "ceo";
 
 interface TaskBarProps {
   linesMode: LinesMode;
@@ -153,6 +153,16 @@ export function TaskBar({ linesMode, onLinesModeChange }: TaskBarProps) {
           }`}
         >
           Detalhe
+        </button>
+        <button
+          onClick={() => onLinesModeChange("ceo")}
+          className={`px-2 py-1 text-xs rounded transition-colors ${
+            linesMode === "ceo" 
+              ? "bg-node-vermelho text-white shadow-sm" 
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          CEO
         </button>
       </div>
     </div>

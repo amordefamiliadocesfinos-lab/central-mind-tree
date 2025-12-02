@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Node {
@@ -16,7 +16,7 @@ interface Task {
   status: "estrutural" | "andamento" | "pendente" | "concluído";
 }
 
-type LinesMode = "off" | "resumo" | "detalhe";
+type LinesMode = "off" | "resumo" | "detalhe" | "ceo";
 
 interface NodeConnectionsOverlayProps {
   linesMode: LinesMode;
@@ -91,8 +91,14 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
   }>>(new Map());
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [expandedPairs, setExpandedPairs] = useState<Set<string>>(new Set());
+  const lastUpdateRef = useRef<number>(0);
+  const throttleMs = 100;
 
-  const calculateNodePositions = () => {
+  const calculateNodePositions = useCallback(() => {
+    const now = Date.now();
+    if (now - lastUpdateRef.current < throttleMs) return;
+    lastUpdateRef.current = now;
+
     const positions = new Map<string, { 
       x: number; y: number; 
       left: number; right: number; 
@@ -123,7 +129,7 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
     if (positions.size > 0) {
       setNodePositions(positions);
     }
-  };
+  }, []);
 
   const fetchData = async () => {
     const [nodesResult, tasksResult] = await Promise.all([
@@ -384,6 +390,27 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
     return sourceNodeId === hoveredNodeId || targetNodeId === hoveredNodeId;
   };
 
+  // CEO mode opacity based on status
+  const getCEOOpacity = (status: Task["status"]) => {
+    if (linesMode !== "ceo") return 1;
+    if (status === "estrutural" || status === "andamento") return 1;
+    return 0.15;
+  };
+
+  // Viewport culling - check if connection is visible
+  const isInViewport = (x1: number, y1: number, x2: number, y2: number) => {
+    const padding = 100; // Extra padding for curves
+    const minX = Math.min(x1, x2) - padding;
+    const maxX = Math.max(x1, x2) + padding;
+    const minY = Math.min(y1, y2) - padding;
+    const maxY = Math.max(y1, y2) + padding;
+    
+    return !(maxX < 0 || minX > window.innerWidth || maxY < 0 || minY > window.innerHeight);
+  };
+
+  // Effective mode: CEO uses resumo rendering
+  const effectiveMode = linesMode === "ceo" ? "resumo" : linesMode;
+
   return (
     <svg
       style={{
@@ -451,13 +478,17 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
         </marker>
       </defs>
 
-      {/* Resumo mode: Bundled connections with expandable pills */}
-      {linesMode === "resumo" && bundledConnections.map(conn => {
+      {/* Resumo/CEO mode: Bundled connections with expandable pills */}
+      {(effectiveMode === "resumo") && bundledConnections.map(conn => {
         const pairKey = `${conn.sourceNodeId}->${conn.targetNodeId}`;
         const isExpanded = expandedPairs.has(pairKey);
         const isRelevant = isConnectionRelevant(conn.sourceNodeId, conn.targetNodeId);
-        const baseOpacity = isRelevant ? 1 : 0.1;
+        const ceoOpacity = getCEOOpacity(conn.dominantStatus);
+        const baseOpacity = (isRelevant ? 1 : 0.1) * ceoOpacity;
         const anchors = getAnchorPoints(conn.sourceNodeId, conn.targetNodeId);
+
+        // Culling: skip if outside viewport
+        if (!isInViewport(anchors.x1, anchors.y1, anchors.x2, anchors.y2)) return null;
 
         if (isExpanded) {
           // Render individual lines for this pair
@@ -468,7 +499,8 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
                 const { path, midX, midY } = getBezierPath(anchors.x1, anchors.y1, anchors.x2, anchors.y2, offset);
                 const color = STATUS_COLORS[task.status];
                 const strokeWidth = STATUS_STROKE_WIDTH[task.status];
-                const opacity = STATUS_OPACITY[task.status] * baseOpacity;
+                const taskCeoOpacity = getCEOOpacity(task.status);
+                const opacity = STATUS_OPACITY[task.status] * (isRelevant ? 1 : 0.1) * taskCeoOpacity;
                 const isDashed = STATUS_DASHED[task.status];
                 const haloWidth = strokeWidth + 6;
 
@@ -579,10 +611,13 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
       })}
 
       {/* Detalhe mode: Individual task connections with hover focus */}
-      {linesMode === "detalhe" && allIndividualConnections.map((conn, index) => {
+      {effectiveMode === "detalhe" && allIndividualConnections.map((conn, index) => {
         const isRelevant = isConnectionRelevant(conn.sourceNodeId, conn.targetNodeId);
         const baseOpacity = isRelevant ? 1 : 0.1;
         const anchors = getAnchorPoints(conn.sourceNodeId, conn.targetNodeId);
+        
+        // Culling: skip if outside viewport
+        if (!isInViewport(anchors.x1, anchors.y1, anchors.x2, anchors.y2)) return null;
         
         const { path } = getBezierPath(anchors.x1, anchors.y1, anchors.x2, anchors.y2);
         const color = STATUS_COLORS[conn.status];
