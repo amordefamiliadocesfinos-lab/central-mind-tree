@@ -26,7 +26,7 @@ const Index = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [showNodeLines, setShowNodeLines] = useState(false);
+  const [linesMode, setLinesMode] = useState<"off" | "resumo" | "detalhe">("off");
   const [tasksDialogState, setTasksDialogState] = useState<{
     open: boolean;
     nodeId: string;
@@ -202,10 +202,10 @@ const Index = () => {
           onTasksChange={handleNodeChange}
         />
       )}
-      <NodeConnectionsOverlay visible={showNodeLines} />
+      <NodeConnectionsOverlay linesMode={linesMode} />
       <TimerWidget 
-        showNodeLines={showNodeLines}
-        onToggleNodeLines={() => setShowNodeLines(!showNodeLines)}
+        linesMode={linesMode}
+        onLinesModeChange={setLinesMode}
       />
       <ReplanningBanner />
     </>

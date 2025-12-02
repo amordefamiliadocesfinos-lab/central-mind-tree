@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
 
 interface Task {
   id: string;
@@ -15,12 +14,14 @@ interface Task {
   updated_at: string;
 }
 
+type LinesMode = "off" | "resumo" | "detalhe";
+
 interface TaskBarProps {
-  showNodeLines: boolean;
-  onToggleNodeLines: () => void;
+  linesMode: LinesMode;
+  onLinesModeChange: (mode: LinesMode) => void;
 }
 
-export function TaskBar({ showNodeLines, onToggleNodeLines }: TaskBarProps) {
+export function TaskBar({ linesMode, onLinesModeChange }: TaskBarProps) {
   const [tasks, setTasks] = useState<Task[]>([]);
 
   useEffect(() => {
@@ -121,16 +122,39 @@ export function TaskBar({ showNodeLines, onToggleNodeLines }: TaskBarProps) {
       {/* Divider */}
       <div className="h-6 w-px bg-border mx-1" />
 
-      {/* Toggle connections button */}
-      <Button
-        size="sm"
-        variant={showNodeLines ? "default" : "ghost"}
-        className="h-8 px-3 text-xs"
-        onClick={onToggleNodeLines}
-        title={showNodeLines ? "Ocultar linhas" : "Mostrar linhas"}
-      >
-        Linhas
-      </Button>
+      {/* Lines mode selector */}
+      <div className="flex items-center gap-1 bg-muted rounded-md p-0.5">
+        <button
+          onClick={() => onLinesModeChange("off")}
+          className={`px-2 py-1 text-xs rounded transition-colors ${
+            linesMode === "off" 
+              ? "bg-background text-foreground shadow-sm" 
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Off
+        </button>
+        <button
+          onClick={() => onLinesModeChange("resumo")}
+          className={`px-2 py-1 text-xs rounded transition-colors ${
+            linesMode === "resumo" 
+              ? "bg-background text-foreground shadow-sm" 
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Resumo
+        </button>
+        <button
+          onClick={() => onLinesModeChange("detalhe")}
+          className={`px-2 py-1 text-xs rounded transition-colors ${
+            linesMode === "detalhe" 
+              ? "bg-background text-foreground shadow-sm" 
+              : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          Detalhe
+        </button>
+      </div>
     </div>
   );
 }
