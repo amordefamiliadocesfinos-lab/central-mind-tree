@@ -83,12 +83,22 @@ const STATUS_DASHED: Record<Task["status"], boolean> = {
 export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProps) {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [nodePositions, setNodePositions] = useState<Map<string, { x: number; y: number }>>(new Map());
+  const [nodePositions, setNodePositions] = useState<Map<string, { 
+    x: number; y: number; 
+    left: number; right: number; 
+    top: number; bottom: number;
+    width: number; height: number;
+  }>>(new Map());
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [expandedPairs, setExpandedPairs] = useState<Set<string>>(new Set());
 
   const calculateNodePositions = () => {
-    const positions = new Map<string, { x: number; y: number }>();
+    const positions = new Map<string, { 
+      x: number; y: number; 
+      left: number; right: number; 
+      top: number; bottom: number;
+      width: number; height: number;
+    }>();
     
     const nodeElements = document.querySelectorAll('[data-node-id]');
     
@@ -101,6 +111,12 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
       positions.set(nodeId, {
         x: rect.left + rect.width / 2,
         y: rect.top + rect.height / 2,
+        left: rect.left,
+        right: rect.right,
+        top: rect.top,
+        bottom: rect.bottom,
+        width: rect.width,
+        height: rect.height,
       });
     });
 
@@ -294,28 +310,57 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
   const allIndividualConnections = getIndividualConnections();
   const bundledConnections = linesMode === "resumo" ? getBundledConnections() : [];
 
-  // Generate Bezier path
+  // Calculate anchor points based on relative positions
+  const getAnchorPoints = (sourceNodeId: string, targetNodeId: string) => {
+    const source = nodePositions.get(sourceNodeId);
+    const target = nodePositions.get(targetNodeId);
+    
+    if (!source || !target) {
+      return { x1: 0, y1: 0, x2: 0, y2: 0 };
+    }
+
+    // Determine exit/entry sides based on relative horizontal position
+    const exitRight = target.x > source.x;
+    
+    const x1 = exitRight ? source.right : source.left;
+    const y1 = source.y;
+    const x2 = exitRight ? target.left : target.right;
+    const y2 = target.y;
+
+    return { x1, y1, x2, y2 };
+  };
+
+  // Generate Bezier path with horizontal control points
   const getBezierPath = (x1: number, y1: number, x2: number, y2: number, offset = 0) => {
     const dx = x2 - x1;
     const dy = y2 - y1;
-    const midX = (x1 + x2) / 2;
-    const midY = (y1 + y2) / 2;
     
     // Add perpendicular offset for multiple lines
     const len = Math.sqrt(dx * dx + dy * dy);
     const perpX = len > 0 ? (-dy / len) * offset : 0;
     const perpY = len > 0 ? (dx / len) * offset : 0;
     
-    const curvature = 0.2;
-    const cx1 = x1 + dx * curvature + perpX;
-    const cy1 = y1 + dy * 0.5 + perpY;
-    const cx2 = x2 - dx * curvature + perpX;
-    const cy2 = y2 - dy * 0.5 + perpY;
+    // Horizontal control = 0.3 × horizontal distance
+    const controlOffset = Math.abs(dx) * 0.3;
+    
+    // Control points extend horizontally from anchors
+    const cx1 = x1 + (dx > 0 ? controlOffset : -controlOffset) + perpX;
+    const cy1 = y1 + perpY;
+    const cx2 = x2 - (dx > 0 ? controlOffset : -controlOffset) + perpX;
+    const cy2 = y2 + perpY;
+
+    const startX = x1 + perpX;
+    const startY = y1 + perpY;
+    const endX = x2 + perpX;
+    const endY = y2 + perpY;
+
+    const midX = (startX + endX) / 2;
+    const midY = (startY + endY) / 2;
 
     return {
-      path: `M ${x1 + perpX} ${y1 + perpY} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${x2 + perpX} ${y2 + perpY}`,
-      midX: midX + perpX,
-      midY: midY + perpY,
+      path: `M ${startX} ${startY} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${endX} ${endY}`,
+      midX,
+      midY,
     };
   };
 
@@ -412,6 +457,7 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
         const isExpanded = expandedPairs.has(pairKey);
         const isRelevant = isConnectionRelevant(conn.sourceNodeId, conn.targetNodeId);
         const baseOpacity = isRelevant ? 1 : 0.1;
+        const anchors = getAnchorPoints(conn.sourceNodeId, conn.targetNodeId);
 
         if (isExpanded) {
           // Render individual lines for this pair
@@ -419,7 +465,7 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
             <g key={pairKey}>
               {conn.tasks.map((task, index) => {
                 const offset = (index - (conn.tasks.length - 1) / 2) * 12;
-                const { path, midX, midY } = getBezierPath(conn.x1, conn.y1, conn.x2, conn.y2, offset);
+                const { path, midX, midY } = getBezierPath(anchors.x1, anchors.y1, anchors.x2, anchors.y2, offset);
                 const color = STATUS_COLORS[task.status];
                 const strokeWidth = STATUS_STROKE_WIDTH[task.status];
                 const opacity = STATUS_OPACITY[task.status] * baseOpacity;
@@ -448,7 +494,7 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
                 onClick={() => togglePairExpansion(pairKey)}
               >
                 {(() => {
-                  const { midX, midY } = getBezierPath(conn.x1, conn.y1, conn.x2, conn.y2);
+                  const { midX, midY } = getBezierPath(anchors.x1, anchors.y1, anchors.x2, anchors.y2);
                   const color = STATUS_COLORS[conn.dominantStatus];
                   return (
                     <>
@@ -481,7 +527,7 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
         }
 
         // Render bundled line
-        const { path, midX, midY } = getBezierPath(conn.x1, conn.y1, conn.x2, conn.y2);
+        const { path, midX, midY } = getBezierPath(anchors.x1, anchors.y1, anchors.x2, anchors.y2);
         const color = STATUS_COLORS[conn.dominantStatus];
         const strokeWidth = STATUS_STROKE_WIDTH[conn.dominantStatus];
         const opacity = STATUS_OPACITY[conn.dominantStatus] * baseOpacity;
@@ -536,8 +582,9 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
       {linesMode === "detalhe" && allIndividualConnections.map((conn, index) => {
         const isRelevant = isConnectionRelevant(conn.sourceNodeId, conn.targetNodeId);
         const baseOpacity = isRelevant ? 1 : 0.1;
+        const anchors = getAnchorPoints(conn.sourceNodeId, conn.targetNodeId);
         
-        const { path } = getBezierPath(conn.x1, conn.y1, conn.x2, conn.y2);
+        const { path } = getBezierPath(anchors.x1, anchors.y1, anchors.x2, anchors.y2);
         const color = STATUS_COLORS[conn.status];
         const strokeWidth = STATUS_STROKE_WIDTH[conn.status];
         const opacity = STATUS_OPACITY[conn.status] * baseOpacity;
