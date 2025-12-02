@@ -23,6 +23,27 @@ interface Node {
 const STORAGE_KEYS = {
   queue: 'pc.focus.queue',
   currentTaskId: 'pc.focus.currentTaskId',
+  session: 'pc.focus.session',
+};
+
+interface SessionState {
+  startedAt: number | null;
+  pausedAt: number | null;
+  elapsedMs: number;
+}
+
+const SESSION_DURATION_MS = 25 * 60 * 1000; // 25 minutes
+
+const loadSession = (): SessionState => {
+  const stored = localStorage.getItem(STORAGE_KEYS.session);
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch {
+      return { startedAt: null, pausedAt: null, elapsedMs: 0 };
+    }
+  }
+  return { startedAt: null, pausedAt: null, elapsedMs: 0 };
 };
 
 export default function Foco() {
@@ -36,9 +57,12 @@ export default function Foco() {
     const stored = localStorage.getItem(STORAGE_KEYS.queue);
     return stored ? JSON.parse(stored) : [];
   });
-  const [timerSeconds, setTimerSeconds] = useState(0);
-  const [timerRunning, setTimerRunning] = useState(false);
+  const [session, setSession] = useState<SessionState>(loadSession);
+  const [displayMs, setDisplayMs] = useState(0);
   const [replanningOpen, setReplanningOpen] = useState(false);
+
+  const isRunning = session.startedAt !== null && session.pausedAt === null;
+  const isPaused = session.startedAt !== null && session.pausedAt !== null;
 
   // Verifica se é sexta ou segunda para mostrar lembrete
   const isReplanningDay = () => {
@@ -57,13 +81,34 @@ export default function Foco() {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
+  // Calculate display time based on session state
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (timerRunning) {
-      interval = setInterval(() => setTimerSeconds(s => s + 1), 1000);
+    const calculateElapsed = () => {
+      if (!session.startedAt) return 0;
+      if (session.pausedAt) {
+        return session.elapsedMs;
+      }
+      return session.elapsedMs + (Date.now() - session.startedAt);
+    };
+
+    const updateDisplay = () => {
+      const elapsed = calculateElapsed();
+      setDisplayMs(Math.min(elapsed, SESSION_DURATION_MS));
+    };
+
+    updateDisplay();
+
+    let interval: NodeJS.Timeout | undefined;
+    if (isRunning) {
+      interval = setInterval(updateDisplay, 100);
     }
-    return () => clearInterval(interval);
-  }, [timerRunning]);
+    return () => { if (interval) clearInterval(interval); };
+  }, [session, isRunning]);
+
+  // Persist session
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.session, JSON.stringify(session));
+  }, [session]);
 
   // Persist activeTaskId
   useEffect(() => {
@@ -101,26 +146,49 @@ export default function Foco() {
     }
   };
 
-  const formatTime = (seconds: number) => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  const formatTime = (ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const m = Math.floor(totalSeconds / 60);
+    const s = totalSeconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
   const handleSelectTask = (taskId: string) => {
     setActiveTaskId(taskId);
-    setTimerSeconds(0);
-    setTimerRunning(true);
   };
 
-  const handleToggleTimer = () => {
-    setTimerRunning(!timerRunning);
+  const handleStart = () => {
+    setSession({
+      startedAt: Date.now(),
+      pausedAt: null,
+      elapsedMs: 0,
+    });
   };
 
-  const handleResetTimer = () => {
-    setTimerSeconds(0);
-    setTimerRunning(false);
+  const handlePause = () => {
+    if (!session.startedAt) return;
+    const elapsed = session.elapsedMs + (Date.now() - session.startedAt);
+    setSession({
+      startedAt: session.startedAt,
+      pausedAt: Date.now(),
+      elapsedMs: elapsed,
+    });
+  };
+
+  const handleResume = () => {
+    setSession({
+      startedAt: Date.now(),
+      pausedAt: null,
+      elapsedMs: session.elapsedMs,
+    });
+  };
+
+  const handleReset = () => {
+    setSession({
+      startedAt: null,
+      pausedAt: null,
+      elapsedMs: 0,
+    });
   };
 
   const handleAddToQueue = (taskId: string, e: React.MouseEvent) => {
@@ -162,18 +230,41 @@ export default function Foco() {
         <Card className="p-4 mb-6 bg-destructive/10 border-destructive/30">
           <div className="flex items-center justify-between">
             <div className="text-3xl font-mono font-bold text-destructive">
-              {formatTime(timerSeconds)}
+              {formatTime(displayMs)}
             </div>
             <div className="flex gap-2">
-              <Button
-                size="icon"
-                variant={timerRunning ? "destructive" : "default"}
-                onClick={handleToggleTimer}
-                disabled={!activeTaskId}
-              >
-                {timerRunning ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
-              </Button>
-              <Button size="icon" variant="outline" onClick={handleResetTimer}>
+              {!isRunning && !isPaused && (
+                <Button
+                  size="icon"
+                  variant="default"
+                  onClick={handleStart}
+                  disabled={!activeTaskId}
+                  title="Iniciar"
+                >
+                  <Play className="h-4 w-4" />
+                </Button>
+              )}
+              {isRunning && (
+                <Button
+                  size="icon"
+                  variant="destructive"
+                  onClick={handlePause}
+                  title="Pausar"
+                >
+                  <Pause className="h-4 w-4" />
+                </Button>
+              )}
+              {isPaused && (
+                <Button
+                  size="icon"
+                  variant="default"
+                  onClick={handleResume}
+                  title="Retomar"
+                >
+                  <Play className="h-4 w-4" />
+                </Button>
+              )}
+              <Button size="icon" variant="outline" onClick={handleReset} title="Zerar">
                 <RotateCcw className="h-4 w-4" />
               </Button>
             </div>
