@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, RotateCcw, ArrowLeft, CalendarCheck, Plus, X } from "lucide-react";
+import { Play, Pause, RotateCcw, ArrowLeft, CalendarCheck, Plus, X, Check, Clock, ExternalLink } from "lucide-react";
+import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { ReplanningModal } from "@/components/ReplanningModal";
 
@@ -191,6 +192,60 @@ export default function Foco() {
     });
   };
 
+  const handleCompleteTask = async () => {
+    if (!activeTaskId) return;
+    
+    await supabase
+      .from('tasks')
+      .update({ status: 'concluído', progress: 100 })
+      .eq('id', activeTaskId);
+    
+    // Remove from queue and select next
+    const currentIndex = queue.indexOf(activeTaskId);
+    const newQueue = queue.filter(id => id !== activeTaskId);
+    setQueue(newQueue);
+    
+    // Select next task from queue
+    if (newQueue.length > 0) {
+      const nextIndex = Math.min(currentIndex, newQueue.length - 1);
+      setActiveTaskId(newQueue[nextIndex]);
+    } else {
+      setActiveTaskId(null);
+    }
+    
+    handleReset();
+    toast.success("Tarefa concluída!");
+  };
+
+  const handleMoveToPending = async () => {
+    if (!activeTaskId) return;
+    
+    await supabase
+      .from('tasks')
+      .update({ status: 'pendente' })
+      .eq('id', activeTaskId);
+    
+    // Remove from queue and select next
+    const currentIndex = queue.indexOf(activeTaskId);
+    const newQueue = queue.filter(id => id !== activeTaskId);
+    setQueue(newQueue);
+    
+    if (newQueue.length > 0) {
+      const nextIndex = Math.min(currentIndex, newQueue.length - 1);
+      setActiveTaskId(newQueue[nextIndex]);
+    } else {
+      setActiveTaskId(null);
+    }
+    
+    handleReset();
+    toast.info("Tarefa movida para pendente");
+  };
+
+  const handleOpenEdit = () => {
+    if (!activeTaskId) return;
+    window.open(`/task/${activeTaskId}`, '_blank');
+  };
+
   const handleAddToQueue = (taskId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!queue.includes(taskId)) {
@@ -273,6 +328,35 @@ export default function Foco() {
             <p className="text-sm text-muted-foreground mt-2">
               {tasks.find(t => t.id === activeTaskId)?.title}
             </p>
+          )}
+          {activeTaskId && (
+            <div className="flex gap-2 mt-3 pt-3 border-t border-destructive/20">
+              <Button
+                size="sm"
+                variant="default"
+                onClick={handleCompleteTask}
+                className="flex-1"
+              >
+                <Check className="h-4 w-4 mr-1" />
+                Concluir
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleMoveToPending}
+                className="flex-1"
+              >
+                <Clock className="h-4 w-4 mr-1" />
+                Pendente
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={handleOpenEdit}
+              >
+                <ExternalLink className="h-4 w-4" />
+              </Button>
+            </div>
           )}
         </Card>
 
