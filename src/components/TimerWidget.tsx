@@ -8,12 +8,14 @@ import { Play, Pause, RotateCcw, Clock, Focus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { TaskBar } from "./TaskBar";
 
+type LinesMode = "off" | "resumo" | "detalhe";
+
 interface TimerWidgetProps {
-  showNodeLines: boolean;
-  onToggleNodeLines: () => void;
+  linesMode: LinesMode;
+  onLinesModeChange: (mode: LinesMode) => void;
 }
 
-export function TimerWidget({ showNodeLines, onToggleNodeLines }: TimerWidgetProps) {
+export function TimerWidget({ linesMode, onLinesModeChange }: TimerWidgetProps) {
   const [remainingSeconds, setRemainingSeconds] = useState(0);
   const [status, setStatus] = useState<"stopped" | "running" | "paused">("stopped");
   const [isEditing, setIsEditing] = useState(false);
@@ -160,8 +162,8 @@ export function TimerWidget({ showNodeLines, onToggleNodeLines }: TimerWidgetPro
       <div className="space-y-3">
         <div className="flex items-center gap-2 mb-2">
           <TaskBar 
-            showNodeLines={showNodeLines}
-            onToggleNodeLines={onToggleNodeLines}
+            linesMode={linesMode}
+            onLinesModeChange={onLinesModeChange}
           />
           <Button
             asChild

@@ -9,11 +9,13 @@ interface Node {
   is_visible: boolean;
 }
 
+type LinesMode = "off" | "resumo" | "detalhe";
+
 interface NodeConnectionsOverlayProps {
-  visible: boolean;
+  linesMode: LinesMode;
 }
 
-export function NodeConnectionsOverlay({ visible }: NodeConnectionsOverlayProps) {
+export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProps) {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [nodePositions, setNodePositions] = useState<Map<string, { x: number; y: number }>>(new Map());
 
@@ -56,7 +58,7 @@ export function NodeConnectionsOverlay({ visible }: NodeConnectionsOverlayProps)
   };
 
   useEffect(() => {
-    if (visible) {
+    if (linesMode !== "off") {
       fetchNodes();
     }
 
@@ -78,11 +80,11 @@ export function NodeConnectionsOverlay({ visible }: NodeConnectionsOverlayProps)
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [visible]);
+  }, [linesMode]);
 
-  // Recalcular posições quando a visibilidade muda ou quando há scroll/zoom
+  // Recalcular posições quando o modo muda ou quando há scroll/zoom
   useEffect(() => {
-    if (!visible) return;
+    if (linesMode === "off") return;
 
     const handleUpdate = () => {
       requestAnimationFrame(calculateNodePositions);
@@ -99,9 +101,9 @@ export function NodeConnectionsOverlay({ visible }: NodeConnectionsOverlayProps)
       window.removeEventListener('scroll', handleUpdate, true);
       window.removeEventListener('resize', handleUpdate);
     };
-  }, [visible, nodes]);
+  }, [linesMode, nodes]);
 
-  if (!visible || nodes.length === 0) return null;
+  if (linesMode === "off" || nodes.length === 0) return null;
 
   // Renderizar linhas de conexão entre parent e child
   const connections = nodes
