@@ -56,7 +56,25 @@ export default function Foco() {
   });
   const [queue, setQueue] = useState<string[]>(() => {
     const stored = localStorage.getItem(STORAGE_KEYS.queue);
-    return stored ? JSON.parse(stored) : [];
+    const parsed = stored ? JSON.parse(stored) : [];
+    
+    // Auto-load from plan if queue is empty
+    if (parsed.length === 0) {
+      const planStored = localStorage.getItem('pc.plan.current');
+      if (planStored) {
+        try {
+          const plan = JSON.parse(planStored);
+          if (plan.prioritizedTaskIds && plan.prioritizedTaskIds.length > 0) {
+            localStorage.setItem(STORAGE_KEYS.queue, JSON.stringify(plan.prioritizedTaskIds));
+            if (plan.prioritizedTaskIds[0]) {
+              localStorage.setItem(STORAGE_KEYS.currentTaskId, plan.prioritizedTaskIds[0]);
+            }
+            return plan.prioritizedTaskIds;
+          }
+        } catch {}
+      }
+    }
+    return parsed;
   });
   const [session, setSession] = useState<SessionState>(loadSession);
   const [displayMs, setDisplayMs] = useState(0);

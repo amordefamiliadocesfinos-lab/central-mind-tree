@@ -255,7 +255,12 @@ const Planejamento = () => {
 
   const handleCompletePlanning = () => {
     localStorage.setItem("pc.plan.lastCompletedAt", Date.now().toString());
-    toast.success("Planejamento concluído!");
+    toast.success("Planejamento concluído!", {
+      action: {
+        label: "Ir para Foco",
+        onClick: () => window.location.href = "/foco",
+      },
+    });
   };
 
   // Quick closing handler
