@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, RotateCcw, ArrowLeft, CalendarCheck } from "lucide-react";
+import { Play, Pause, RotateCcw, ArrowLeft, CalendarCheck, Plus, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ReplanningModal } from "@/components/ReplanningModal";
 
@@ -20,11 +20,22 @@ interface Node {
   title: string;
 }
 
+const STORAGE_KEYS = {
+  queue: 'pc.focus.queue',
+  currentTaskId: 'pc.focus.currentTaskId',
+};
+
 export default function Foco() {
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [nodes, setNodes] = useState<Record<string, Node>>({});
-  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+  const [activeTaskId, setActiveTaskId] = useState<string | null>(() => {
+    return localStorage.getItem(STORAGE_KEYS.currentTaskId) || null;
+  });
+  const [queue, setQueue] = useState<string[]>(() => {
+    const stored = localStorage.getItem(STORAGE_KEYS.queue);
+    return stored ? JSON.parse(stored) : [];
+  });
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [timerRunning, setTimerRunning] = useState(false);
   const [replanningOpen, setReplanningOpen] = useState(false);
@@ -53,6 +64,20 @@ export default function Foco() {
     }
     return () => clearInterval(interval);
   }, [timerRunning]);
+
+  // Persist activeTaskId
+  useEffect(() => {
+    if (activeTaskId) {
+      localStorage.setItem(STORAGE_KEYS.currentTaskId, activeTaskId);
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.currentTaskId);
+    }
+  }, [activeTaskId]);
+
+  // Persist queue
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.queue, JSON.stringify(queue));
+  }, [queue]);
 
   const fetchTasks = async () => {
     const { data: tasksData } = await supabase
@@ -83,7 +108,7 @@ export default function Foco() {
     return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  const handleStartTask = (taskId: string) => {
+  const handleSelectTask = (taskId: string) => {
     setActiveTaskId(taskId);
     setTimerSeconds(0);
     setTimerRunning(true);
@@ -97,6 +122,21 @@ export default function Foco() {
     setTimerSeconds(0);
     setTimerRunning(false);
   };
+
+  const handleAddToQueue = (taskId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!queue.includes(taskId)) {
+      setQueue([...queue, taskId]);
+    }
+  };
+
+  const handleRemoveFromQueue = (taskId: string) => {
+    setQueue(queue.filter(id => id !== taskId));
+  };
+
+  const queuedTasks = queue
+    .map(id => tasks.find(t => t.id === id))
+    .filter((t): t is Task => t !== undefined);
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -145,6 +185,39 @@ export default function Foco() {
           )}
         </Card>
 
+        {/* Fila ativa */}
+        {queuedTasks.length > 0 && (
+          <div className="mb-6">
+            <h2 className="text-sm font-medium text-muted-foreground mb-2">Fila ativa</h2>
+            <div className="flex flex-wrap gap-2">
+              {queuedTasks.map((task, index) => (
+                <div
+                  key={task.id}
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm ${
+                    activeTaskId === task.id 
+                      ? 'bg-destructive/20 text-destructive border border-destructive/30' 
+                      : 'bg-muted text-muted-foreground'
+                  }`}
+                >
+                  <span className="text-xs opacity-60">{index + 1}.</span>
+                  <span 
+                    className="cursor-pointer hover:underline"
+                    onClick={() => handleSelectTask(task.id)}
+                  >
+                    {task.title}
+                  </span>
+                  <button
+                    onClick={() => handleRemoveFromQueue(task.id)}
+                    className="ml-1 hover:text-destructive"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Lista de tarefas */}
         <div className="space-y-3">
           {tasks.length === 0 ? (
@@ -160,7 +233,7 @@ export default function Foco() {
                     ? 'border-destructive bg-destructive/5' 
                     : 'hover:border-muted-foreground/30'
                 }`}
-                onClick={() => handleStartTask(task.id)}
+                onClick={() => handleSelectTask(task.id)}
               >
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
@@ -174,8 +247,21 @@ export default function Foco() {
                       {nodes[task.node_id]?.title || 'Nó desconhecido'}
                     </p>
                   </div>
-                  <div className="text-sm text-muted-foreground">
-                    {task.progress}%
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm text-muted-foreground">
+                      {task.progress}%
+                    </span>
+                    {!queue.includes(task.id) && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 px-2"
+                        onClick={(e) => handleAddToQueue(task.id, e)}
+                        title="Adicionar à fila"
+                      >
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </Card>
