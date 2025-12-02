@@ -8,7 +8,7 @@ import { Play, Pause, RotateCcw, Clock, Focus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { TaskBar } from "./TaskBar";
 
-type LinesMode = "off" | "resumo" | "detalhe";
+type LinesMode = "off" | "resumo" | "detalhe" | "ceo";
 
 interface TimerWidgetProps {
   linesMode: LinesMode;

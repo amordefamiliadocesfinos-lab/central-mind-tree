@@ -7,6 +7,7 @@ import { TimerWidget } from "@/components/TimerWidget";
 import { TasksDialog } from "@/components/TasksDialog";
 import { NodeConnectionsOverlay } from "@/components/NodeConnectionsOverlay";
 import { ReplanningBanner } from "@/components/ReplanningBanner";
+import { CEOLegend } from "@/components/CEOLegend";
 import { useToast } from "@/hooks/use-toast";
 
 interface Node {
@@ -26,7 +27,7 @@ const Index = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [linesMode, setLinesMode] = useState<"off" | "resumo" | "detalhe">("off");
+  const [linesMode, setLinesMode] = useState<"off" | "resumo" | "detalhe" | "ceo">("off");
   const [tasksDialogState, setTasksDialogState] = useState<{
     open: boolean;
     nodeId: string;
@@ -203,6 +204,7 @@ const Index = () => {
         />
       )}
       <NodeConnectionsOverlay linesMode={linesMode} />
+      <CEOLegend visible={linesMode === "ceo"} />
       <TimerWidget 
         linesMode={linesMode}
         onLinesModeChange={setLinesMode}
