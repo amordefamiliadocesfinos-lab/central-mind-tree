@@ -48,10 +48,24 @@ const STATUS_COLORS: Record<Task["status"], string> = {
 };
 
 const STATUS_STROKE_WIDTH: Record<Task["status"], number> = {
-  estrutural: 3,
-  andamento: 2.5,
-  pendente: 2,
-  concluído: 1.5,
+  estrutural: 1.5,
+  andamento: 2,
+  pendente: 1.5,
+  concluído: 1,
+};
+
+const STATUS_OPACITY: Record<Task["status"], number> = {
+  estrutural: 1,
+  andamento: 1,
+  pendente: 1,
+  concluído: 0.4,
+};
+
+const STATUS_DASHED: Record<Task["status"], boolean> = {
+  estrutural: false,
+  andamento: false,
+  pendente: true,
+  concluído: false,
 };
 
 export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProps) {
@@ -290,16 +304,30 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
         const { path, midX, midY } = getBezierPath(conn.x1, conn.y1, conn.x2, conn.y2);
         const color = STATUS_COLORS[conn.dominantStatus];
         const strokeWidth = STATUS_STROKE_WIDTH[conn.dominantStatus];
+        const opacity = STATUS_OPACITY[conn.dominantStatus];
+        const isDashed = STATUS_DASHED[conn.dominantStatus];
+        const haloWidth = strokeWidth + 6;
 
         return (
           <g key={`${conn.sourceNodeId}->${conn.targetNodeId}`}>
+            {/* White halo for readability */}
+            <path
+              d={path}
+              fill="none"
+              stroke="white"
+              strokeWidth={haloWidth}
+              strokeLinecap="round"
+            />
+            
             {/* Bezier path with arrow */}
             <path
               d={path}
               fill="none"
               stroke={color}
               strokeWidth={strokeWidth}
-              opacity="0.7"
+              opacity={opacity}
+              strokeDasharray={isDashed ? "6 4" : undefined}
+              strokeLinecap="round"
               markerEnd={`url(#${getArrowId(conn.dominantStatus)})`}
             />
             
@@ -327,19 +355,31 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
         );
       })}
 
-      {/* Detalhe mode: Simple dashed lines */}
+      {/* Detalhe mode: Simple dashed lines with halo */}
       {linesMode === "detalhe" && detailConnections.map(conn => (
-        <line
-          key={conn.id}
-          x1={conn.x1}
-          y1={conn.y1}
-          x2={conn.x2}
-          y2={conn.y2}
-          stroke="hsl(var(--foreground))"
-          strokeWidth="2"
-          opacity="0.4"
-          strokeDasharray="5 5"
-        />
+        <g key={conn.id}>
+          {/* White halo for readability */}
+          <line
+            x1={conn.x1}
+            y1={conn.y1}
+            x2={conn.x2}
+            y2={conn.y2}
+            stroke="white"
+            strokeWidth="8"
+            strokeLinecap="round"
+          />
+          <line
+            x1={conn.x1}
+            y1={conn.y1}
+            x2={conn.x2}
+            y2={conn.y2}
+            stroke="hsl(var(--foreground))"
+            strokeWidth="2"
+            opacity="0.4"
+            strokeDasharray="5 5"
+            strokeLinecap="round"
+          />
+        </g>
       ))}
     </svg>
   );
