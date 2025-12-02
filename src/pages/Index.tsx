@@ -6,6 +6,7 @@ import { NodeTree } from "@/components/NodeTree";
 import { TimerWidget } from "@/components/TimerWidget";
 import { TasksDialog } from "@/components/TasksDialog";
 import { NodeConnectionsOverlay } from "@/components/NodeConnectionsOverlay";
+import { ReplanningBanner } from "@/components/ReplanningBanner";
 import { useToast } from "@/hooks/use-toast";
 
 interface Node {
@@ -206,6 +207,7 @@ const Index = () => {
         showNodeLines={showNodeLines}
         onToggleNodeLines={() => setShowNodeLines(!showNodeLines)}
       />
+      <ReplanningBanner />
     </>
   );
 };

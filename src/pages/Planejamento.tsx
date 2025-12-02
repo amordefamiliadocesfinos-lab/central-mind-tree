@@ -10,6 +10,7 @@ import { ArrowLeft, Plus, Trash2, Star, Check, Save } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfWeek, endOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { ReplanningBanner } from "@/components/ReplanningBanner";
 
 interface Task {
   id: string;
@@ -453,6 +454,7 @@ const Planejamento = () => {
           </CardContent>
         </Card>
       </div>
+      <ReplanningBanner />
     </div>
   );
 };

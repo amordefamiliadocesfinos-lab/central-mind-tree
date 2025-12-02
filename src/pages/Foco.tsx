@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Play, Pause, RotateCcw, ArrowLeft, CalendarCheck, Plus, X, Check, Clock, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { ReplanningModal } from "@/components/ReplanningModal";
+import { ReplanningBanner } from "@/components/ReplanningBanner";
 
 interface Task {
   id: string;
@@ -60,7 +60,6 @@ export default function Foco() {
   });
   const [session, setSession] = useState<SessionState>(loadSession);
   const [displayMs, setDisplayMs] = useState(0);
-  const [replanningOpen, setReplanningOpen] = useState(false);
 
   const isRunning = session.startedAt !== null && session.pausedAt === null;
   const isPaused = session.startedAt !== null && session.pausedAt !== null;
@@ -314,7 +313,7 @@ export default function Foco() {
           <Button 
             variant={isReplanningDay() ? "default" : "outline"} 
             size="sm"
-            onClick={() => setReplanningOpen(true)}
+            onClick={() => navigate('/planejamento')}
           >
             <CalendarCheck className="h-4 w-4 mr-2" />
             Replanejar
@@ -484,7 +483,7 @@ export default function Foco() {
           )}
         </div>
 
-        <ReplanningModal open={replanningOpen} onOpenChange={setReplanningOpen} />
+        <ReplanningBanner />
       </div>
     </div>
   );
