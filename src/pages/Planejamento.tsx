@@ -4,9 +4,23 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Trash2, Star, Check, Save, RotateCcw } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ArrowLeft, Plus, Trash2, Star, Check, Save, RotateCcw, Pencil } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfWeek, endOfWeek, subWeeks } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -15,6 +29,7 @@ import { ReplanningBanner } from "@/components/ReplanningBanner";
 interface Task {
   id: string;
   title: string;
+  description?: string | null;
   status: string;
   node_id: string;
   progress: number;
@@ -104,6 +119,17 @@ const Planejamento = () => {
 
   const [newAreaName, setNewAreaName] = useState("");
 
+  // Task form state
+  const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [taskForm, setTaskForm] = useState({
+    title: "",
+    description: "",
+    status: "pendente",
+    node_id: "",
+    progress: 0,
+  });
+
   // Persist template
   useEffect(() => {
     localStorage.setItem("pc.plan.template", JSON.stringify(template));
@@ -116,27 +142,28 @@ const Planejamento = () => {
 
   // Load tasks and nodes
   useEffect(() => {
-    const loadData = async () => {
-      const [tasksRes, completedRes, nodesRes] = await Promise.all([
-        supabase
-          .from("tasks")
-          .select("id, title, status, node_id, progress, updated_at")
-          .in("status", ["andamento", "pendente"]),
-        supabase
-          .from("tasks")
-          .select("id, title, status, updated_at")
-          .eq("status", "concluído")
-          .gte("updated_at", weekStart.toISOString()),
-        supabase.from("nodes").select("id, title, color"),
-      ]);
-
-      if (tasksRes.data) setTasks(tasksRes.data);
-      if (completedRes.data) setCompletedThisWeek(completedRes.data.length);
-      if (nodesRes.data) setNodes(nodesRes.data);
-      setLoading(false);
-    };
     loadData();
   }, []);
+
+  const loadData = async () => {
+    const [tasksRes, completedRes, nodesRes] = await Promise.all([
+      supabase
+        .from("tasks")
+        .select("id, title, description, status, node_id, progress, updated_at")
+        .in("status", ["andamento", "pendente"]),
+      supabase
+        .from("tasks")
+        .select("id, title, status, updated_at")
+        .eq("status", "concluído")
+        .gte("updated_at", weekStart.toISOString()),
+      supabase.from("nodes").select("id, title, color"),
+    ]);
+
+    if (tasksRes.data) setTasks(tasksRes.data);
+    if (completedRes.data) setCompletedThisWeek(completedRes.data.length);
+    if (nodesRes.data) setNodes(nodesRes.data);
+    setLoading(false);
+  };
 
   // Group tasks by node
   const tasksByNode = useMemo(() => {
@@ -297,6 +324,80 @@ const Planejamento = () => {
     );
   };
 
+  // Task form handlers
+  const openNewTaskForm = (preselectedNodeId?: string) => {
+    setEditingTask(null);
+    setTaskForm({
+      title: "",
+      description: "",
+      status: "pendente",
+      node_id: preselectedNodeId || "",
+      progress: 0,
+    });
+    setIsTaskFormOpen(true);
+  };
+
+  const openEditTaskForm = (task: Task) => {
+    setEditingTask(task);
+    setTaskForm({
+      title: task.title,
+      description: task.description || "",
+      status: task.status,
+      node_id: task.node_id,
+      progress: task.progress,
+    });
+    setIsTaskFormOpen(true);
+  };
+
+  const handleSaveTask = async () => {
+    if (!taskForm.title.trim()) {
+      toast.error("Título é obrigatório");
+      return;
+    }
+    if (!taskForm.node_id) {
+      toast.error("Nó-pai é obrigatório");
+      return;
+    }
+
+    if (editingTask) {
+      // Update existing task
+      const { error } = await supabase
+        .from("tasks")
+        .update({
+          title: taskForm.title,
+          description: taskForm.description || null,
+          status: taskForm.status,
+          node_id: taskForm.node_id,
+          progress: taskForm.progress,
+        })
+        .eq("id", editingTask.id);
+
+      if (error) {
+        toast.error("Erro ao atualizar tarefa");
+        return;
+      }
+      toast.success("Tarefa atualizada!");
+    } else {
+      // Create new task
+      const { error } = await supabase.from("tasks").insert({
+        title: taskForm.title,
+        description: taskForm.description || null,
+        status: taskForm.status,
+        node_id: taskForm.node_id,
+        progress: taskForm.progress,
+      });
+
+      if (error) {
+        toast.error("Erro ao criar tarefa");
+        return;
+      }
+      toast.success("Tarefa criada!");
+    }
+
+    setIsTaskFormOpen(false);
+    loadData();
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -381,8 +482,12 @@ const Planejamento = () => {
 
         {/* Block 2: Seleção de Tarefas */}
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">Seleção de Tarefas para a Semana</CardTitle>
+            <Button size="sm" onClick={() => openNewTaskForm()}>
+              <Plus className="h-4 w-4 mr-1" />
+              Nova tarefa
+            </Button>
           </CardHeader>
           <CardContent className="space-y-4">
             {Object.entries(tasksByNode).map(([nodeId, nodeTasks]) => {
@@ -390,22 +495,39 @@ const Planejamento = () => {
               if (!node) return null;
               return (
                 <div key={nodeId} className="space-y-2">
-                  <h3
-                    className="font-semibold px-2 py-1 rounded text-sm"
-                    style={{ backgroundColor: node.color + "33" }}
-                  >
-                    {node.title}
-                  </h3>
+                  <div className="flex items-center justify-between">
+                    <h3
+                      className="font-semibold px-2 py-1 rounded text-sm"
+                      style={{ backgroundColor: node.color + "33" }}
+                    >
+                      {node.title}
+                    </h3>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => openNewTaskForm(nodeId)}
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
                   <div className="space-y-1 pl-2">
                     {nodeTasks.map((task) => (
                       <div
                         key={task.id}
-                        className="flex items-center gap-3 p-2 rounded border bg-card hover:bg-accent/50 transition-colors"
+                        className="flex items-center gap-2 p-2 rounded border bg-card hover:bg-accent/50 transition-colors"
                       >
                         <div
-                          className={`w-2 h-2 rounded-full ${STATUS_COLORS[task.status]}`}
+                          className={`w-2 h-2 rounded-full flex-shrink-0 ${STATUS_COLORS[task.status]}`}
                         />
-                        <span className="flex-1 text-sm">{task.title}</span>
+                        <span className="flex-1 text-sm truncate">{task.title}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEditTaskForm(task)}
+                          className="h-7 w-7 p-0"
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </Button>
                         <Button
                           variant={
                             currentPlan.selectedTaskIds.includes(task.id)
@@ -590,6 +712,112 @@ const Planejamento = () => {
         </Card>
       </div>
       <ReplanningBanner />
+
+      {/* Task Form Dialog */}
+      <Dialog open={isTaskFormOpen} onOpenChange={setIsTaskFormOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {editingTask ? "Editar Tarefa" : "Nova Tarefa"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Título *</label>
+              <Input
+                placeholder="Título da tarefa"
+                value={taskForm.title}
+                onChange={(e) =>
+                  setTaskForm({ ...taskForm, title: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Descrição</label>
+              <Textarea
+                placeholder="Descrição (opcional)"
+                value={taskForm.description}
+                onChange={(e) =>
+                  setTaskForm({ ...taskForm, description: e.target.value })
+                }
+                rows={3}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nó-pai *</label>
+              <Select
+                value={taskForm.node_id}
+                onValueChange={(value) =>
+                  setTaskForm({ ...taskForm, node_id: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o nó" />
+                </SelectTrigger>
+                <SelectContent className="bg-background border">
+                  {nodes.map((node) => (
+                    <SelectItem key={node.id} value={node.id}>
+                      {node.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Status</label>
+              <Select
+                value={taskForm.status}
+                onValueChange={(value) =>
+                  setTaskForm({ ...taskForm, status: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-background border">
+                  <SelectItem value="estrutural">Estrutural</SelectItem>
+                  <SelectItem value="andamento">Em Andamento</SelectItem>
+                  <SelectItem value="pendente">Pendente</SelectItem>
+                  <SelectItem value="concluído">Concluído</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Progresso</label>
+                <span className="text-sm text-muted-foreground">
+                  {taskForm.progress}%
+                </span>
+              </div>
+              <Input
+                type="number"
+                min="0"
+                max="100"
+                value={taskForm.progress}
+                onChange={(e) =>
+                  setTaskForm({
+                    ...taskForm,
+                    progress: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)),
+                  })
+                }
+              />
+            </div>
+            <div className="flex gap-3 pt-4">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setIsTaskFormOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button className="flex-1" onClick={handleSaveTask}>
+                <Save className="h-4 w-4 mr-2" />
+                Salvar
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
