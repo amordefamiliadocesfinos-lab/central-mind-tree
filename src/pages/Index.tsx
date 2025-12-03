@@ -8,6 +8,7 @@ import { TasksDialog } from "@/components/TasksDialog";
 import { NodeConnectionsOverlay } from "@/components/NodeConnectionsOverlay";
 import { ReplanningBanner } from "@/components/ReplanningBanner";
 import { CEOLegend } from "@/components/CEOLegend";
+import { SearchBar } from "@/components/SearchBar";
 import { useToast } from "@/hooks/use-toast";
 
 interface Node {
@@ -119,6 +120,37 @@ const Index = () => {
     setRefreshKey((prev) => prev + 1);
   };
 
+  // Handle search result click
+  const handleSearchResultClick = (result: { type: "node" | "task"; id: string; nodeId?: string; title: string; parentTitle?: string }) => {
+    if (result.type === "node") {
+      // Scroll to node element
+      const nodeElement = document.querySelector(`[data-node-id="${result.id}"]`);
+      if (nodeElement) {
+        nodeElement.scrollIntoView({ behavior: "smooth", block: "center" });
+        // Briefly highlight the node
+        nodeElement.classList.add("ring-2", "ring-primary");
+        setTimeout(() => nodeElement.classList.remove("ring-2", "ring-primary"), 2000);
+      }
+    } else if (result.type === "task" && result.nodeId) {
+      // Open tasks dialog for the task's node
+      const fetchNodeTitle = async () => {
+        const { data } = await supabase
+          .from("nodes")
+          .select("title")
+          .eq("id", result.nodeId)
+          .maybeSingle();
+        
+        setTasksDialogState({
+          open: true,
+          nodeId: result.nodeId!,
+          nodeTitle: data?.title || result.parentTitle || "Nó",
+        });
+        setIsDialogOpen(true);
+      };
+      fetchNodeTitle();
+    }
+  };
+
   const handleWheel = (e: React.WheelEvent) => {
     e.preventDefault();
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
@@ -210,6 +242,7 @@ const Index = () => {
         onLinesModeChange={setLinesMode}
       />
       <ReplanningBanner />
+      <SearchBar onResultClick={handleSearchResultClick} />
     </>
   );
 };
