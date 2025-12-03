@@ -90,12 +90,27 @@ export function TasksDialog({
     }
   };
 
+  // Status hierarchy order: estrutural (0), andamento (1), pendente (2), concluído (3)
+  const STATUS_ORDER: Record<string, number> = {
+    estrutural: 0,
+    andamento: 1,
+    pendente: 2,
+    "concluído": 3,
+  };
+
+  const STATUS_LABELS: Record<string, string> = {
+    estrutural: "Estrutural",
+    andamento: "Em Andamento",
+    pendente: "Pendente",
+    "concluído": "Concluído",
+  };
+
   const fetchTasks = async () => {
     const { data, error } = await supabase
       .from("tasks")
       .select("*")
       .eq("node_id", nodeId)
-      .order("order_index", { ascending: true });
+      .order("updated_at", { ascending: false });
 
     if (error) {
       toast({
@@ -110,6 +125,14 @@ export function TasksDialog({
       if (filterStatus) {
         filteredTasks = filteredTasks.filter((task) => task.status === filterStatus);
       }
+      
+      // Sort by status hierarchy, then by updated_at desc (already sorted from DB)
+      filteredTasks.sort((a, b) => {
+        const statusDiff = (STATUS_ORDER[a.status] ?? 99) - (STATUS_ORDER[b.status] ?? 99);
+        if (statusDiff !== 0) return statusDiff;
+        // Within same status, keep updated_at desc order (already from DB)
+        return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+      });
       
       setTasks(filteredTasks as Task[]);
     }
@@ -398,9 +421,26 @@ export function TasksDialog({
             </div>
           )}
 
-          {/* Tasks list with dependency connections */}
+          {/* Tasks list grouped by status */}
           <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-0">
-            {tasks.map((task, index) => {
+            {/* Group tasks by status */}
+            {(["estrutural", "andamento", "pendente", "concluído"] as const).map((status) => {
+              const statusTasks = tasks.filter((t) => t.status === status);
+              if (statusTasks.length === 0) return null;
+              
+              return (
+                <div key={status} className="space-y-2">
+                  {/* Group subtitle with counter */}
+                  <div className="flex items-center gap-2 pt-2 first:pt-0">
+                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      {STATUS_LABELS[status]}
+                    </h3>
+                    <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
+                      {statusTasks.length}
+                    </span>
+                  </div>
+                  
+                  {statusTasks.map((task) => {
               const dependencyTask = task.dependency_id 
                 ? tasks.find(t => t.id === task.dependency_id)
                 : null;
@@ -526,6 +566,9 @@ export function TasksDialog({
                       </div>
                     )}
                   </div>
+                </div>
+                  );
+                })}
                 </div>
               );
             })}
