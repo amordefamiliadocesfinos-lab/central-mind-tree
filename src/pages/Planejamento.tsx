@@ -740,7 +740,8 @@ const Planejamento = () => {
                 onChange={(e) =>
                   setTaskForm({ ...taskForm, description: e.target.value })
                 }
-                rows={3}
+                rows={6}
+                className="min-h-[120px]"
               />
             </div>
             <div className="space-y-2">
