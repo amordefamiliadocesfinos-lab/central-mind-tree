@@ -264,34 +264,48 @@ const Planejamento = () => {
   };
 
   // Drag & drop handlers for priority reordering
-  const handlePriorityDragStart = (e: React.DragEvent, index: number) => {
+  const handlePriorityDragStart = (e: React.DragEvent<HTMLDivElement>, index: number) => {
     setDraggedPriorityIndex(index);
     e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(index));
+    // Make the dragged element semi-transparent
+    if (e.currentTarget) {
+      e.currentTarget.style.opacity = "0.5";
+    }
   };
 
-  const handlePriorityDragOver = (e: React.DragEvent, index: number) => {
+  const handlePriorityDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
+    e.stopPropagation();
     e.dataTransfer.dropEffect = "move";
   };
 
-  const handlePriorityDrop = (e: React.DragEvent, dropIndex: number) => {
+  const handlePriorityDrop = (e: React.DragEvent<HTMLDivElement>, dropIndex: number) => {
     e.preventDefault();
-    if (draggedPriorityIndex === null || draggedPriorityIndex === dropIndex) {
+    e.stopPropagation();
+    
+    const dragIndex = draggedPriorityIndex ?? parseInt(e.dataTransfer.getData("text/plain"), 10);
+    
+    if (isNaN(dragIndex) || dragIndex === dropIndex) {
       setDraggedPriorityIndex(null);
       return;
     }
 
     setCurrentPlan((prev) => {
       const newOrder = [...prev.prioritizedTaskIds];
-      const [removed] = newOrder.splice(draggedPriorityIndex, 1);
+      const [removed] = newOrder.splice(dragIndex, 1);
       newOrder.splice(dropIndex, 0, removed);
       return { ...prev, prioritizedTaskIds: newOrder };
     });
     setDraggedPriorityIndex(null);
   };
 
-  const handlePriorityDragEnd = () => {
+  const handlePriorityDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
     setDraggedPriorityIndex(null);
+    // Reset opacity
+    if (e.currentTarget) {
+      e.currentTarget.style.opacity = "1";
+    }
   };
 
   // Action handlers
@@ -638,18 +652,18 @@ const Planejamento = () => {
                   return task ? (
                     <div
                       key={id}
-                      draggable
+                      draggable={true}
                       onDragStart={(e) => handlePriorityDragStart(e, i)}
-                      onDragOver={(e) => handlePriorityDragOver(e, i)}
+                      onDragOver={handlePriorityDragOver}
                       onDrop={(e) => handlePriorityDrop(e, i)}
                       onDragEnd={handlePriorityDragEnd}
-                      className={`flex items-center gap-2 text-sm p-2 rounded bg-amber-500/10 cursor-grab active:cursor-grabbing transition-opacity ${
+                      className={`flex items-center gap-2 text-sm p-2 rounded bg-amber-500/10 cursor-grab active:cursor-grabbing select-none ${
                         draggedPriorityIndex === i ? "opacity-50" : ""
                       }`}
                     >
-                      <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                      <span className="text-muted-foreground font-medium w-6">{i + 1}.</span>
-                      <span className="flex-1">{task.title}</span>
+                      <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0 pointer-events-none" />
+                      <span className="text-muted-foreground font-medium w-6 pointer-events-none">{i + 1}.</span>
+                      <span className="flex-1 pointer-events-none">{task.title}</span>
                     </div>
                   ) : null;
                 })}
