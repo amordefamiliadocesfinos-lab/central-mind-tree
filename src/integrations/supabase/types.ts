@@ -51,6 +51,7 @@ export type Database = {
       }
       tasks: {
         Row: {
+          checklist: Json | null
           created_at: string
           dependency_id: string | null
           description: string | null
@@ -61,8 +62,10 @@ export type Database = {
           status: string
           title: string
           updated_at: string
+          use_checklist_progress: boolean | null
         }
         Insert: {
+          checklist?: Json | null
           created_at?: string
           dependency_id?: string | null
           description?: string | null
@@ -73,8 +76,10 @@ export type Database = {
           status?: string
           title: string
           updated_at?: string
+          use_checklist_progress?: boolean | null
         }
         Update: {
+          checklist?: Json | null
           created_at?: string
           dependency_id?: string | null
           description?: string | null
@@ -85,6 +90,7 @@ export type Database = {
           status?: string
           title?: string
           updated_at?: string
+          use_checklist_progress?: boolean | null
         }
         Relationships: [
           {

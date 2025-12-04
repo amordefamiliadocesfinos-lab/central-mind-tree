@@ -5,6 +5,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -12,7 +14,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, ListChecks } from "lucide-react";
+import type { Json } from "@/integrations/supabase/types";
+
+interface ChecklistItem {
+  id: string;
+  text: string;
+  done: boolean;
+}
 
 interface Task {
   id: string;
@@ -25,6 +34,8 @@ interface Task {
   order_index: number;
   created_at: string;
   updated_at: string;
+  checklist: ChecklistItem[];
+  use_checklist_progress: boolean;
 }
 
 interface Node {
@@ -50,7 +61,19 @@ const TaskEdit = () => {
     dependency_id: null as string | null,
     progress: 0,
   });
+  const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
+  const [useChecklistProgress, setUseChecklistProgress] = useState(false);
+  const [showChecklist, setShowChecklist] = useState(false);
+  const [newItemText, setNewItemText] = useState("");
   const [loading, setLoading] = useState(true);
+
+  // Calculate progress from checklist
+  const calculatedProgress = checklist.length > 0
+    ? Math.floor((checklist.filter(item => item.done).length / checklist.length) * 100)
+    : 0;
+
+  // Effective progress based on toggle
+  const effectiveProgress = useChecklistProgress ? calculatedProgress : formData.progress;
 
   useEffect(() => {
     if (id) {
@@ -79,7 +102,11 @@ const TaskEdit = () => {
         return;
       }
 
-      setTask(taskData as Task);
+      const taskChecklist = Array.isArray(taskData.checklist) 
+        ? (taskData.checklist as unknown as ChecklistItem[])
+        : [];
+
+      setTask(taskData as unknown as Task);
       setFormData({
         title: taskData.title,
         description: taskData.description || "",
@@ -87,6 +114,9 @@ const TaskEdit = () => {
         dependency_id: taskData.dependency_id,
         progress: taskData.progress,
       });
+      setChecklist(taskChecklist);
+      setUseChecklistProgress(taskData.use_checklist_progress || false);
+      setShowChecklist(taskChecklist.length > 0);
 
       // Fetch node data
       const { data: nodeData, error: nodeError } = await supabase
@@ -107,7 +137,7 @@ const TaskEdit = () => {
         .order("order_index", { ascending: true });
 
       if (tasksError) throw tasksError;
-      setAvailableTasks(tasksData as Task[]);
+      setAvailableTasks(tasksData as unknown as Task[]);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -139,7 +169,9 @@ const TaskEdit = () => {
           description: formData.description || null,
           status: formData.status,
           dependency_id: formData.dependency_id,
-          progress: formData.progress,
+          progress: effectiveProgress,
+          checklist: JSON.parse(JSON.stringify(checklist)) as Json,
+          use_checklist_progress: useChecklistProgress,
         })
         .eq("id", id);
 
@@ -160,6 +192,27 @@ const TaskEdit = () => {
         description: error.message,
       });
     }
+  };
+
+  const addChecklistItem = () => {
+    if (!newItemText.trim()) return;
+    const newItem: ChecklistItem = {
+      id: crypto.randomUUID(),
+      text: newItemText.trim(),
+      done: false,
+    };
+    setChecklist([...checklist, newItem]);
+    setNewItemText("");
+  };
+
+  const toggleChecklistItem = (itemId: string) => {
+    setChecklist(checklist.map(item =>
+      item.id === itemId ? { ...item, done: !item.done } : item
+    ));
+  };
+
+  const removeChecklistItem = (itemId: string) => {
+    setChecklist(checklist.filter(item => item.id !== itemId));
   };
 
   if (loading) {
@@ -214,16 +267,93 @@ const TaskEdit = () => {
           </div>
 
           <div className="space-y-2">
-            <label className="text-sm font-medium">Descrição</label>
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium">Descrição</label>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowChecklist(!showChecklist)}
+                className="gap-1"
+              >
+                <ListChecks className="h-4 w-4" />
+                Check-list
+              </Button>
+            </div>
             <Textarea
               placeholder="Descrição da tarefa (opcional)"
               value={formData.description}
               onChange={(e) =>
                 setFormData({ ...formData, description: e.target.value })
               }
-              rows={6}
+              rows={12}
+              className="min-h-[200px]"
             />
           </div>
+
+          {/* Checklist Section */}
+          {showChecklist && (
+            <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-medium">Check-list</h3>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">
+                    Usar check-list para calcular progresso
+                  </span>
+                  <Switch
+                    checked={useChecklistProgress}
+                    onCheckedChange={setUseChecklistProgress}
+                  />
+                </div>
+              </div>
+
+              {/* Checklist Items */}
+              <div className="space-y-2">
+                {checklist.map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center gap-2 p-2 rounded bg-background border"
+                  >
+                    <Checkbox
+                      checked={item.done}
+                      onCheckedChange={() => toggleChecklistItem(item.id)}
+                    />
+                    <span className={`flex-1 text-sm ${item.done ? 'line-through text-muted-foreground' : ''}`}>
+                      {item.text}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6 text-destructive hover:text-destructive"
+                      onClick={() => removeChecklistItem(item.id)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Add new item */}
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Novo item..."
+                  value={newItemText}
+                  onChange={(e) => setNewItemText(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addChecklistItem()}
+                  className="flex-1"
+                />
+                <Button size="icon" onClick={addChecklistItem}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+
+              {checklist.length > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {checklist.filter(i => i.done).length}/{checklist.length} itens concluídos
+                  {useChecklistProgress && ` (${calculatedProgress}%)`}
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Status</label>
@@ -270,7 +400,7 @@ const TaskEdit = () => {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium">Progresso</label>
-              <span className="text-sm text-muted-foreground">{formData.progress}%</span>
+              <span className="text-sm text-muted-foreground">{effectiveProgress}%</span>
             </div>
             <Input
               type="number"
@@ -283,13 +413,19 @@ const TaskEdit = () => {
                   progress: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)) 
                 })
               }
+              disabled={useChecklistProgress}
             />
             <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
               <div 
                 className="h-full bg-primary transition-all duration-300"
-                style={{ width: `${formData.progress}%` }}
+                style={{ width: `${effectiveProgress}%` }}
               />
             </div>
+            {useChecklistProgress && (
+              <p className="text-xs text-muted-foreground">
+                Progresso calculado automaticamente pelo check-list
+              </p>
+            )}
           </div>
         </div>
 
