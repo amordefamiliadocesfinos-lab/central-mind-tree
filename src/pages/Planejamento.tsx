@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Plus, Trash2, Star, Check, Save, RotateCcw, Pencil } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Star, Check, Save, RotateCcw, Pencil, GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfWeek, endOfWeek, subWeeks } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -118,6 +118,9 @@ const Planejamento = () => {
   });
 
   const [newAreaName, setNewAreaName] = useState("");
+
+  // Drag & drop state for priority reordering
+  const [draggedPriorityIndex, setDraggedPriorityIndex] = useState<number | null>(null);
 
   // Task form state
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
@@ -258,6 +261,37 @@ const Planejamento = () => {
         prioritizedTaskIds: newPrioritized,
       };
     });
+  };
+
+  // Drag & drop handlers for priority reordering
+  const handlePriorityDragStart = (e: React.DragEvent, index: number) => {
+    setDraggedPriorityIndex(index);
+    e.dataTransfer.effectAllowed = "move";
+  };
+
+  const handlePriorityDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handlePriorityDrop = (e: React.DragEvent, dropIndex: number) => {
+    e.preventDefault();
+    if (draggedPriorityIndex === null || draggedPriorityIndex === dropIndex) {
+      setDraggedPriorityIndex(null);
+      return;
+    }
+
+    setCurrentPlan((prev) => {
+      const newOrder = [...prev.prioritizedTaskIds];
+      const [removed] = newOrder.splice(draggedPriorityIndex, 1);
+      newOrder.splice(dropIndex, 0, removed);
+      return { ...prev, prioritizedTaskIds: newOrder };
+    });
+    setDraggedPriorityIndex(null);
+  };
+
+  const handlePriorityDragEnd = () => {
+    setDraggedPriorityIndex(null);
   };
 
   // Action handlers
@@ -597,17 +631,25 @@ const Planejamento = () => {
             {currentPlan.prioritizedTaskIds.length > 0 && (
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">
-                  Fila de prioridades:
+                  Fila de prioridades (arraste para reordenar):
                 </p>
                 {currentPlan.prioritizedTaskIds.map((id, i) => {
                   const task = tasks.find((t) => t.id === id);
                   return task ? (
                     <div
                       key={id}
-                      className="flex items-center gap-2 text-sm p-2 rounded bg-amber-500/10"
+                      draggable
+                      onDragStart={(e) => handlePriorityDragStart(e, i)}
+                      onDragOver={(e) => handlePriorityDragOver(e, i)}
+                      onDrop={(e) => handlePriorityDrop(e, i)}
+                      onDragEnd={handlePriorityDragEnd}
+                      className={`flex items-center gap-2 text-sm p-2 rounded bg-amber-500/10 cursor-grab active:cursor-grabbing transition-opacity ${
+                        draggedPriorityIndex === i ? "opacity-50" : ""
+                      }`}
                     >
-                      <span className="text-muted-foreground">{i + 1}.</span>
-                      <span>{task.title}</span>
+                      <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                      <span className="text-muted-foreground font-medium w-6">{i + 1}.</span>
+                      <span className="flex-1">{task.title}</span>
                     </div>
                   ) : null;
                 })}
