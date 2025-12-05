@@ -6,6 +6,7 @@ import { Play, Pause, RotateCcw, ArrowLeft, CalendarCheck, Plus, X, Check, Clock
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { ReplanningBanner } from "@/components/ReplanningBanner";
+import { DueDateBanner } from "@/components/DueDateBanner";
 
 interface Task {
   id: string;
@@ -502,6 +503,7 @@ export default function Foco() {
         </div>
 
         <ReplanningBanner />
+        <DueDateBanner />
       </div>
     </div>
   );

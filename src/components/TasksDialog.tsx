@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Pencil, Trash2, X, Check, MoveHorizontal } from "lucide-react";
+import { DueDatePill } from "@/components/DueDatePill";
 
 interface Task {
   id: string;
@@ -31,6 +32,7 @@ interface Task {
   order_index: number;
   created_at: string;
   updated_at: string;
+  due_date: string | null;
 }
 
 interface TasksDialogProps {
@@ -483,6 +485,7 @@ export function TasksDialog({
                       <div className="flex items-center justify-between gap-2 mb-1.5">
                         <h4 className="text-sm font-medium flex-1 min-w-0 truncate">{task.title}</h4>
                         <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <DueDatePill dueDate={task.due_date} />
                           <span
                             className={`text-[10px] px-1.5 py-0.5 rounded-full ${getStatusBadgeColor(
                               task.status
