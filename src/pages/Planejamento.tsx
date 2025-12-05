@@ -643,7 +643,13 @@ const Planejamento = () => {
             </div>
 
             {currentPlan.prioritizedTaskIds.length > 0 && (
-              <div className="space-y-1">
+              <div 
+                className="space-y-1"
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                }}
+              >
                 <p className="text-sm font-medium text-muted-foreground">
                   Fila de prioridades (arraste para reordenar):
                 </p>
@@ -653,13 +659,38 @@ const Planejamento = () => {
                     <div
                       key={id}
                       draggable={true}
-                      onDragStart={(e) => handlePriorityDragStart(e, i)}
-                      onDragOver={handlePriorityDragOver}
-                      onDrop={(e) => handlePriorityDrop(e, i)}
-                      onDragEnd={handlePriorityDragEnd}
-                      className={`flex items-center gap-2 text-sm p-2 rounded bg-amber-500/10 cursor-grab active:cursor-grabbing select-none ${
+                      onDragStart={(e) => {
+                        setDraggedPriorityIndex(i);
+                        e.dataTransfer.effectAllowed = "move";
+                        e.dataTransfer.setData("text/plain", String(i));
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      onDragEnter={(e) => {
+                        e.preventDefault();
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const dragIndex = draggedPriorityIndex;
+                        if (dragIndex === null || dragIndex === i) {
+                          setDraggedPriorityIndex(null);
+                          return;
+                        }
+                        setCurrentPlan((prev) => {
+                          const newOrder = [...prev.prioritizedTaskIds];
+                          const [removed] = newOrder.splice(dragIndex, 1);
+                          newOrder.splice(i, 0, removed);
+                          return { ...prev, prioritizedTaskIds: newOrder };
+                        });
+                        setDraggedPriorityIndex(null);
+                      }}
+                      onDragEnd={() => setDraggedPriorityIndex(null)}
+                      className={`flex items-center gap-2 text-sm p-2 rounded bg-amber-500/10 cursor-grab active:cursor-grabbing select-none border-2 border-transparent ${
                         draggedPriorityIndex === i ? "opacity-50" : ""
-                      }`}
+                      } ${draggedPriorityIndex !== null && draggedPriorityIndex !== i ? "border-dashed border-amber-500/30" : ""}`}
                     >
                       <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0 pointer-events-none" />
                       <span className="text-muted-foreground font-medium w-6 pointer-events-none">{i + 1}.</span>
