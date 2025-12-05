@@ -20,7 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Plus, Trash2, Star, Check, Save, RotateCcw, Pencil, GripVertical } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Star, Check, Save, RotateCcw, Pencil, GripVertical, ChevronUp, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { format, startOfWeek, endOfWeek, subWeeks } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -651,10 +651,31 @@ const Planejamento = () => {
                 }}
               >
                 <p className="text-sm font-medium text-muted-foreground">
-                  Fila de prioridades (arraste para reordenar):
+                  Fila de prioridades (arraste ou use as setas):
                 </p>
                 {currentPlan.prioritizedTaskIds.map((id, i) => {
                   const task = tasks.find((t) => t.id === id);
+                  const isFirst = i === 0;
+                  const isLast = i === currentPlan.prioritizedTaskIds.length - 1;
+                  
+                  const moveUp = () => {
+                    if (isFirst) return;
+                    setCurrentPlan((prev) => {
+                      const newOrder = [...prev.prioritizedTaskIds];
+                      [newOrder[i - 1], newOrder[i]] = [newOrder[i], newOrder[i - 1]];
+                      return { ...prev, prioritizedTaskIds: newOrder };
+                    });
+                  };
+                  
+                  const moveDown = () => {
+                    if (isLast) return;
+                    setCurrentPlan((prev) => {
+                      const newOrder = [...prev.prioritizedTaskIds];
+                      [newOrder[i], newOrder[i + 1]] = [newOrder[i + 1], newOrder[i]];
+                      return { ...prev, prioritizedTaskIds: newOrder };
+                    });
+                  };
+                  
                   return task ? (
                     <div
                       key={id}
@@ -688,11 +709,27 @@ const Planejamento = () => {
                         setDraggedPriorityIndex(null);
                       }}
                       onDragEnd={() => setDraggedPriorityIndex(null)}
-                      className={`flex items-center gap-2 text-sm p-2 rounded bg-amber-500/10 cursor-grab active:cursor-grabbing select-none border-2 border-transparent ${
+                      className={`flex items-center gap-2 text-sm p-2 rounded bg-amber-500/10 select-none border-2 border-transparent ${
                         draggedPriorityIndex === i ? "opacity-50" : ""
                       } ${draggedPriorityIndex !== null && draggedPriorityIndex !== i ? "border-dashed border-amber-500/30" : ""}`}
                     >
-                      <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0 pointer-events-none" />
+                      <div className="flex flex-col gap-0.5">
+                        <button
+                          onClick={moveUp}
+                          disabled={isFirst}
+                          className={`p-0.5 rounded hover:bg-amber-500/20 transition-colors ${isFirst ? "opacity-30 cursor-not-allowed" : "cursor-pointer"}`}
+                        >
+                          <ChevronUp className="h-3 w-3" />
+                        </button>
+                        <button
+                          onClick={moveDown}
+                          disabled={isLast}
+                          className={`p-0.5 rounded hover:bg-amber-500/20 transition-colors ${isLast ? "opacity-30 cursor-not-allowed" : "cursor-pointer"}`}
+                        >
+                          <ChevronDown className="h-3 w-3" />
+                        </button>
+                      </div>
+                      <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0 pointer-events-none cursor-grab" />
                       <span className="text-muted-foreground font-medium w-6 pointer-events-none">{i + 1}.</span>
                       <span className="flex-1 pointer-events-none">{task.title}</span>
                     </div>
