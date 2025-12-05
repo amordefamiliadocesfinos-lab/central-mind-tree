@@ -7,6 +7,12 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -14,7 +20,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Save, Plus, Trash2, ListChecks } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, ListChecks, CalendarIcon, X } from "lucide-react";
+import { format, parseISO } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import type { Json } from "@/integrations/supabase/types";
 
 interface ChecklistItem {
@@ -36,6 +45,7 @@ interface Task {
   updated_at: string;
   checklist: ChecklistItem[];
   use_checklist_progress: boolean;
+  due_date: string | null;
 }
 
 interface Node {
@@ -60,6 +70,7 @@ const TaskEdit = () => {
     status: "pendente" as Task["status"],
     dependency_id: null as string | null,
     progress: 0,
+    due_date: null as Date | null,
   });
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [useChecklistProgress, setUseChecklistProgress] = useState(false);
@@ -113,6 +124,7 @@ const TaskEdit = () => {
         status: taskData.status as Task["status"],
         dependency_id: taskData.dependency_id,
         progress: taskData.progress,
+        due_date: taskData.due_date ? parseISO(taskData.due_date) : null,
       });
       setChecklist(taskChecklist);
       setUseChecklistProgress(taskData.use_checklist_progress || false);
@@ -172,6 +184,7 @@ const TaskEdit = () => {
           progress: effectiveProgress,
           checklist: JSON.parse(JSON.stringify(checklist)) as Json,
           use_checklist_progress: useChecklistProgress,
+          due_date: formData.due_date ? format(formData.due_date, "yyyy-MM-dd") : null,
         })
         .eq("id", id);
 
@@ -373,6 +386,45 @@ const TaskEdit = () => {
                 <SelectItem value="concluído">Concluído</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Data Limite</label>
+            <div className="flex gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "flex-1 justify-start text-left font-normal",
+                      !formData.due_date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formData.due_date ? format(formData.due_date, "PPP", { locale: ptBR }) : "Selecionar data"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.due_date || undefined}
+                    onSelect={(date) => setFormData({ ...formData, due_date: date || null })}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+              {formData.due_date && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setFormData({ ...formData, due_date: null })}
+                  className="text-muted-foreground hover:text-destructive"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
           </div>
 
           <div className="space-y-2">

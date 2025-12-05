@@ -7,6 +7,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Dialog,
   DialogContent,
@@ -20,11 +26,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Plus, Trash2, Star, Check, Save, RotateCcw, Pencil, GripVertical, ChevronUp, ChevronDown } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Star, Check, Save, RotateCcw, Pencil, GripVertical, ChevronUp, ChevronDown, CalendarIcon, X } from "lucide-react";
 import { toast } from "sonner";
-import { format, startOfWeek, endOfWeek, subWeeks } from "date-fns";
+import { format, startOfWeek, endOfWeek, subWeeks, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 import { ReplanningBanner } from "@/components/ReplanningBanner";
+import { DueDateBanner } from "@/components/DueDateBanner";
+import { DueDatePill } from "@/components/DueDatePill";
 
 interface Task {
   id: string;
@@ -34,6 +43,7 @@ interface Task {
   node_id: string;
   progress: number;
   updated_at: string;
+  due_date?: string | null;
 }
 
 interface Node {
@@ -131,6 +141,7 @@ const Planejamento = () => {
     status: "pendente",
     node_id: "",
     progress: 0,
+    due_date: null as Date | null,
   });
 
   // Persist template
@@ -381,6 +392,7 @@ const Planejamento = () => {
       status: "pendente",
       node_id: preselectedNodeId || "",
       progress: 0,
+      due_date: null,
     });
     setIsTaskFormOpen(true);
   };
@@ -393,6 +405,7 @@ const Planejamento = () => {
       status: task.status,
       node_id: task.node_id,
       progress: task.progress,
+      due_date: task.due_date ? parseISO(task.due_date) : null,
     });
     setIsTaskFormOpen(true);
   };
@@ -417,6 +430,7 @@ const Planejamento = () => {
           status: taskForm.status,
           node_id: taskForm.node_id,
           progress: taskForm.progress,
+          due_date: taskForm.due_date ? format(taskForm.due_date, "yyyy-MM-dd") : null,
         })
         .eq("id", editingTask.id);
 
@@ -433,6 +447,7 @@ const Planejamento = () => {
         status: taskForm.status,
         node_id: taskForm.node_id,
         progress: taskForm.progress,
+        due_date: taskForm.due_date ? format(taskForm.due_date, "yyyy-MM-dd") : null,
       });
 
       if (error) {
@@ -568,6 +583,7 @@ const Planejamento = () => {
                           className={`w-2 h-2 rounded-full flex-shrink-0 ${STATUS_COLORS[task.status]}`}
                         />
                         <span className="flex-1 text-sm truncate">{task.title}</span>
+                        <DueDatePill dueDate={task.due_date || null} />
                         <Button
                           variant="ghost"
                           size="sm"
@@ -908,6 +924,44 @@ const Planejamento = () => {
               </Select>
             </div>
             <div className="space-y-2">
+              <label className="text-sm font-medium">Data Limite</label>
+              <div className="flex gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "flex-1 justify-start text-left font-normal",
+                        !taskForm.due_date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {taskForm.due_date ? format(taskForm.due_date, "PPP", { locale: ptBR }) : "Selecionar data"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={taskForm.due_date || undefined}
+                      onSelect={(date) => setTaskForm({ ...taskForm, due_date: date || null })}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+                {taskForm.due_date && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setTaskForm({ ...taskForm, due_date: null })}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className="text-sm font-medium">Progresso</label>
                 <span className="text-sm text-muted-foreground">
@@ -943,6 +997,7 @@ const Planejamento = () => {
           </div>
         </DialogContent>
       </Dialog>
+      <DueDateBanner />
     </div>
   );
 };

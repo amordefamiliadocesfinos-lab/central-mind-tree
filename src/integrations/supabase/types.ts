@@ -55,6 +55,7 @@ export type Database = {
           created_at: string
           dependency_id: string | null
           description: string | null
+          due_date: string | null
           id: string
           node_id: string
           order_index: number
@@ -69,6 +70,7 @@ export type Database = {
           created_at?: string
           dependency_id?: string | null
           description?: string | null
+          due_date?: string | null
           id?: string
           node_id: string
           order_index?: number
@@ -83,6 +85,7 @@ export type Database = {
           created_at?: string
           dependency_id?: string | null
           description?: string | null
+          due_date?: string | null
           id?: string
           node_id?: string
           order_index?: number
