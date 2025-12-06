@@ -427,9 +427,8 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
       <defs>
         {/* Arrow markers for each status (normal and faded) */}
         {(["estrutural", "andamento", "pendente", "concluído"] as const).map(status => (
-          <>
+          <g key={status}>
             <marker
-              key={status}
               id={getArrowId(status)}
               viewBox="0 0 10 10"
               refX="9"
@@ -441,7 +440,6 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
               <path d="M 0 0 L 10 5 L 0 10 z" fill={STATUS_COLORS[status]} />
             </marker>
             <marker
-              key={`${status}-faded`}
               id={getArrowId(status, true)}
               viewBox="0 0 10 10"
               refX="9"
@@ -452,7 +450,7 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
             >
               <path d="M 0 0 L 10 5 L 0 10 z" fill={STATUS_COLORS[status]} opacity="0.1" />
             </marker>
-          </>
+          </g>
         ))}
         {/* Generic faded arrow for detalhe mode */}
         <marker
