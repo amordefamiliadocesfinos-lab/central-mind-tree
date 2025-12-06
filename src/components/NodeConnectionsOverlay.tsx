@@ -314,7 +314,8 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
   };
 
   const allIndividualConnections = getIndividualConnections();
-  const bundledConnections = linesMode === "resumo" ? getBundledConnections() : [];
+  // Build bundled connections for resumo AND ceo modes (ceo uses resumo rendering)
+  const bundledConnections = (linesMode === "resumo" || linesMode === "ceo") ? getBundledConnections() : [];
 
   // Calculate anchor points based on relative positions
   const getAnchorPoints = (sourceNodeId: string, targetNodeId: string) => {
