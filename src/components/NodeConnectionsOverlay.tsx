@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface Node {
@@ -209,13 +209,13 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
     setExpandedPairs(new Set());
   }, [linesMode]);
 
-  if (linesMode === "off" || nodes.length === 0) return null;
+  // Create task map for quick lookup - memoized
+  const taskMap = useMemo(() => new Map(tasks.map(t => [t.id, t])), [tasks]);
 
-  // Create task map for quick lookup
-  const taskMap = new Map(tasks.map(t => [t.id, t]));
-
-  // Get all individual task connections
-  const getIndividualConnections = (): IndividualConnection[] => {
+  // Memoized individual connections
+  const allIndividualConnections = useMemo((): IndividualConnection[] => {
+    if (linesMode === "off" || nodes.length === 0) return [];
+    
     const connections: IndividualConnection[] = [];
 
     tasks.forEach(task => {
@@ -246,10 +246,13 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
     });
 
     return connections;
-  };
+  }, [tasks, taskMap, nodePositions, linesMode, nodes.length]);
 
-  // Build bundled connections for "resumo" mode
-  const getBundledConnections = (): BundledConnection[] => {
+  // Memoized bundled connections for resumo/ceo modes
+  const bundledConnections = useMemo((): BundledConnection[] => {
+    if (linesMode !== "resumo" && linesMode !== "ceo") return [];
+    if (nodes.length === 0) return [];
+    
     const pairMap = new Map<string, { statuses: Task["status"][]; tasks: { taskId: string; status: Task["status"] }[] }>();
 
     tasks.forEach(task => {
@@ -311,14 +314,12 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
     });
 
     return bundled;
-  };
+  }, [tasks, taskMap, nodePositions, linesMode, nodes.length]);
 
-  const allIndividualConnections = getIndividualConnections();
-  // Build bundled connections for resumo AND ceo modes (ceo uses resumo rendering)
-  const bundledConnections = (linesMode === "resumo" || linesMode === "ceo") ? getBundledConnections() : [];
+  if (linesMode === "off" || nodes.length === 0) return null;
 
-  // Calculate anchor points based on relative positions
-  const getAnchorPoints = (sourceNodeId: string, targetNodeId: string) => {
+  // Memoized anchor points calculator
+  const getAnchorPoints = useCallback((sourceNodeId: string, targetNodeId: string) => {
     const source = nodePositions.get(sourceNodeId);
     const target = nodePositions.get(targetNodeId);
     
@@ -335,10 +336,10 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
     const y2 = target.y;
 
     return { x1, y1, x2, y2 };
-  };
+  }, [nodePositions]);
 
-  // Generate Bezier path with horizontal control points
-  const getBezierPath = (x1: number, y1: number, x2: number, y2: number, offset = 0) => {
+  // Generate Bezier path with horizontal control points - pure function, no deps needed
+  const getBezierPath = useCallback((x1: number, y1: number, x2: number, y2: number, offset = 0) => {
     const dx = x2 - x1;
     const dy = y2 - y1;
     
@@ -369,11 +370,11 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
       midX,
       midY,
     };
-  };
+  }, []);
 
-  const getArrowId = (status: Task["status"], faded = false) => `arrow-${status}${faded ? '-faded' : ''}`;
+  const getArrowId = useCallback((status: Task["status"], faded = false) => `arrow-${status}${faded ? '-faded' : ''}`, []);
 
-  const togglePairExpansion = (pairKey: string) => {
+  const togglePairExpansion = useCallback((pairKey: string) => {
     setExpandedPairs(prev => {
       const next = new Set(prev);
       if (next.has(pairKey)) {
@@ -383,31 +384,36 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
       }
       return next;
     });
-  };
+  }, []);
 
   // Check if connection involves hovered node
-  const isConnectionRelevant = (sourceNodeId: string, targetNodeId: string) => {
+  const isConnectionRelevant = useCallback((sourceNodeId: string, targetNodeId: string) => {
     if (!hoveredNodeId) return true;
     return sourceNodeId === hoveredNodeId || targetNodeId === hoveredNodeId;
-  };
+  }, [hoveredNodeId]);
 
   // CEO mode opacity based on status
-  const getCEOOpacity = (status: Task["status"]) => {
+  const getCEOOpacity = useCallback((status: Task["status"]) => {
     if (linesMode !== "ceo") return 1;
     if (status === "estrutural" || status === "andamento") return 1;
     return 0.15;
-  };
+  }, [linesMode]);
 
-  // Viewport culling - check if connection is visible
-  const isInViewport = (x1: number, y1: number, x2: number, y2: number) => {
+  // Viewport culling - check if connection is visible (memoized dimensions)
+  const viewportDimensions = useMemo(() => ({
+    width: typeof window !== 'undefined' ? window.innerWidth : 1920,
+    height: typeof window !== 'undefined' ? window.innerHeight : 1080,
+  }), [nodePositions]); // Recalculate when positions change
+
+  const isInViewport = useCallback((x1: number, y1: number, x2: number, y2: number) => {
     const padding = 100; // Extra padding for curves
     const minX = Math.min(x1, x2) - padding;
     const maxX = Math.max(x1, x2) + padding;
     const minY = Math.min(y1, y2) - padding;
     const maxY = Math.max(y1, y2) + padding;
     
-    return !(maxX < 0 || minX > window.innerWidth || maxY < 0 || minY > window.innerHeight);
-  };
+    return !(maxX < 0 || minX > viewportDimensions.width || maxY < 0 || minY > viewportDimensions.height);
+  }, [viewportDimensions]);
 
   // Effective mode: CEO uses resumo rendering
   const effectiveMode = linesMode === "ceo" ? "resumo" : linesMode;
