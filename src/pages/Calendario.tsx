@@ -2,7 +2,23 @@ import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Plus } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { toast } from "sonner";
 
 interface Task {
   id: string;
@@ -35,6 +51,14 @@ const Calendario = () => {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  
+  // Quick create task state
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [newTaskTitle, setNewTaskTitle] = useState("");
+  const [newTaskNodeId, setNewTaskNodeId] = useState("");
+  const [newTaskStatus, setNewTaskStatus] = useState("pendente");
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -52,6 +76,46 @@ const Calendario = () => {
     if (tasksRes.data) setTasks(tasksRes.data);
     if (nodesRes.data) setNodes(nodesRes.data);
     setLoading(false);
+  };
+
+  const handleDayClick = (dateKey: string) => {
+    setSelectedDate(dateKey);
+    setNewTaskTitle("");
+    setNewTaskNodeId(nodes[0]?.id || "");
+    setNewTaskStatus("pendente");
+    setCreateDialogOpen(true);
+  };
+
+  const handleCreateTask = async () => {
+    if (!newTaskTitle.trim() || !newTaskNodeId) {
+      toast.error("Preencha o título e selecione um nó");
+      return;
+    }
+
+    setCreating(true);
+    const { data, error } = await supabase
+      .from("tasks")
+      .insert({
+        title: newTaskTitle.trim(),
+        node_id: newTaskNodeId,
+        status: newTaskStatus,
+        scheduled_date: selectedDate,
+      })
+      .select("id, title, scheduled_date, status, node_id")
+      .single();
+
+    if (error) {
+      toast.error("Erro ao criar tarefa");
+      setCreating(false);
+      return;
+    }
+
+    if (data) {
+      setTasks((prev) => [...prev, data]);
+      toast.success("Tarefa criada");
+    }
+    setCreating(false);
+    setCreateDialogOpen(false);
   };
 
   const nodesMap = useMemo(() => {
@@ -185,11 +249,12 @@ const Calendario = () => {
                     return (
                       <div
                         key={day}
-                        title={tooltipContent}
+                        title={tooltipContent || "Clique para agendar tarefa"}
+                        onClick={() => handleDayClick(dateKey)}
                         className={`
-                          relative w-6 h-6 flex items-center justify-center text-[10px] rounded
+                          relative w-6 h-6 flex items-center justify-center text-[10px] rounded cursor-pointer
                           ${todayHighlight ? "ring-2 ring-primary ring-offset-1" : ""}
-                          ${hasScheduledTasks ? "cursor-pointer hover:opacity-80" : "text-muted-foreground"}
+                          ${hasScheduledTasks ? "hover:opacity-80" : "text-muted-foreground hover:bg-muted"}
                         `}
                         style={{
                           backgroundColor: hasScheduledTasks ? dominantColor : undefined,
@@ -220,6 +285,78 @@ const Calendario = () => {
           </p>
         </div>
       </div>
+
+      {/* Quick Create Task Dialog */}
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Plus className="h-5 w-5" />
+              Nova Tarefa - {selectedDate}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label htmlFor="task-title">Título</Label>
+              <Input
+                id="task-title"
+                value={newTaskTitle}
+                onChange={(e) => setNewTaskTitle(e.target.value)}
+                placeholder="Nome da tarefa"
+                autoFocus
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Nó</Label>
+              <Select value={newTaskNodeId} onValueChange={setNewTaskNodeId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione um nó" />
+                </SelectTrigger>
+                <SelectContent>
+                  {nodes.map((node) => (
+                    <SelectItem key={node.id} value={node.id}>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: node.color }}
+                        />
+                        {node.title}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Status</Label>
+              <Select value={newTaskStatus} onValueChange={setNewTaskStatus}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="estrutural">Estrutural</SelectItem>
+                  <SelectItem value="andamento">Em Andamento</SelectItem>
+                  <SelectItem value="pendente">Pendente</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setCreateDialogOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button onClick={handleCreateTask} disabled={creating}>
+                {creating ? "Criando..." : "Criar Tarefa"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
