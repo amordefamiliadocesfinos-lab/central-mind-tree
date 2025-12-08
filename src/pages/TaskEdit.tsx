@@ -46,6 +46,7 @@ interface Task {
   checklist: ChecklistItem[];
   use_checklist_progress: boolean;
   due_date: string | null;
+  scheduled_date: string | null;
 }
 
 interface Node {
@@ -71,6 +72,7 @@ const TaskEdit = () => {
     dependency_id: null as string | null,
     progress: 0,
     due_date: null as Date | null,
+    scheduled_date: null as Date | null,
   });
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [useChecklistProgress, setUseChecklistProgress] = useState(false);
@@ -125,6 +127,7 @@ const TaskEdit = () => {
         dependency_id: taskData.dependency_id,
         progress: taskData.progress,
         due_date: taskData.due_date ? parseISO(taskData.due_date) : null,
+        scheduled_date: taskData.scheduled_date ? parseISO(taskData.scheduled_date) : null,
       });
       setChecklist(taskChecklist);
       setUseChecklistProgress(taskData.use_checklist_progress || false);
@@ -185,6 +188,7 @@ const TaskEdit = () => {
           checklist: JSON.parse(JSON.stringify(checklist)) as Json,
           use_checklist_progress: useChecklistProgress,
           due_date: formData.due_date ? format(formData.due_date, "yyyy-MM-dd") : null,
+          scheduled_date: formData.scheduled_date ? format(formData.scheduled_date, "yyyy-MM-dd") : null,
         })
         .eq("id", id);
 
@@ -419,6 +423,48 @@ const TaskEdit = () => {
                   variant="ghost"
                   size="icon"
                   onClick={() => setFormData({ ...formData, due_date: null })}
+                  className="text-muted-foreground hover:text-destructive"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Data de Agendamento</label>
+            <p className="text-xs text-muted-foreground">
+              Quando esta data chegar, a tarefa será promovida automaticamente para "Em Andamento"
+            </p>
+            <div className="flex gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "flex-1 justify-start text-left font-normal",
+                      !formData.scheduled_date && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {formData.scheduled_date ? format(formData.scheduled_date, "PPP", { locale: ptBR }) : "Selecionar data"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={formData.scheduled_date || undefined}
+                    onSelect={(date) => setFormData({ ...formData, scheduled_date: date || null })}
+                    initialFocus
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+              {formData.scheduled_date && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setFormData({ ...formData, scheduled_date: null })}
                   className="text-muted-foreground hover:text-destructive"
                 >
                   <X className="h-4 w-4" />

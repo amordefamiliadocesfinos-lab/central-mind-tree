@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Play, Pause, RotateCcw, Clock, Focus } from "lucide-react";
+import { Play, Pause, RotateCcw, Clock, Focus, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { TaskBar } from "./TaskBar";
 
@@ -175,6 +175,18 @@ export function TimerWidget({ linesMode, onLinesModeChange }: TimerWidgetProps) 
             <Link to="/foco">
               <Focus className="h-4 w-4 mr-1" />
               Foco
+            </Link>
+          </Button>
+          <Button
+            asChild
+            size="sm"
+            variant="outline"
+            className="h-8 px-3 text-xs"
+            title="Calendário"
+          >
+            <Link to="/calendario">
+              <Calendar className="h-4 w-4 mr-1" />
+              Cal
             </Link>
           </Button>
         </div>

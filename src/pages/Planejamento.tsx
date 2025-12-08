@@ -44,6 +44,7 @@ interface Task {
   progress: number;
   updated_at: string;
   due_date?: string | null;
+  scheduled_date?: string | null;
 }
 
 interface Node {
@@ -142,6 +143,7 @@ const Planejamento = () => {
     node_id: "",
     progress: 0,
     due_date: null as Date | null,
+    scheduled_date: null as Date | null,
   });
 
   // Persist template
@@ -393,6 +395,7 @@ const Planejamento = () => {
       node_id: preselectedNodeId || "",
       progress: 0,
       due_date: null,
+      scheduled_date: null,
     });
     setIsTaskFormOpen(true);
   };
@@ -406,6 +409,7 @@ const Planejamento = () => {
       node_id: task.node_id,
       progress: task.progress,
       due_date: task.due_date ? parseISO(task.due_date) : null,
+      scheduled_date: task.scheduled_date ? parseISO(task.scheduled_date) : null,
     });
     setIsTaskFormOpen(true);
   };
@@ -431,6 +435,7 @@ const Planejamento = () => {
           node_id: taskForm.node_id,
           progress: taskForm.progress,
           due_date: taskForm.due_date ? format(taskForm.due_date, "yyyy-MM-dd") : null,
+          scheduled_date: taskForm.scheduled_date ? format(taskForm.scheduled_date, "yyyy-MM-dd") : null,
         })
         .eq("id", editingTask.id);
 
@@ -448,6 +453,7 @@ const Planejamento = () => {
         node_id: taskForm.node_id,
         progress: taskForm.progress,
         due_date: taskForm.due_date ? format(taskForm.due_date, "yyyy-MM-dd") : null,
+        scheduled_date: taskForm.scheduled_date ? format(taskForm.scheduled_date, "yyyy-MM-dd") : null,
       });
 
       if (error) {
@@ -954,6 +960,47 @@ const Planejamento = () => {
                     variant="ghost"
                     size="icon"
                     onClick={() => setTaskForm({ ...taskForm, due_date: null })}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Data de Agendamento</label>
+              <p className="text-xs text-muted-foreground">
+                Tarefa será promovida para "Em Andamento" nesta data
+              </p>
+              <div className="flex gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "flex-1 justify-start text-left font-normal",
+                        !taskForm.scheduled_date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {taskForm.scheduled_date ? format(taskForm.scheduled_date, "PPP", { locale: ptBR }) : "Selecionar data"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={taskForm.scheduled_date || undefined}
+                      onSelect={(date) => setTaskForm({ ...taskForm, scheduled_date: date || null })}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+                {taskForm.scheduled_date && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setTaskForm({ ...taskForm, scheduled_date: null })}
                     className="text-muted-foreground hover:text-destructive"
                   >
                     <X className="h-4 w-4" />
