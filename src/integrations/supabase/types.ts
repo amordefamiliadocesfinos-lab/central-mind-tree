@@ -60,6 +60,7 @@ export type Database = {
           node_id: string
           order_index: number
           progress: number
+          scheduled_date: string | null
           status: string
           title: string
           updated_at: string
@@ -75,6 +76,7 @@ export type Database = {
           node_id: string
           order_index?: number
           progress?: number
+          scheduled_date?: string | null
           status?: string
           title: string
           updated_at?: string
@@ -90,6 +92,7 @@ export type Database = {
           node_id?: string
           order_index?: number
           progress?: number
+          scheduled_date?: string | null
           status?: string
           title?: string
           updated_at?: string
