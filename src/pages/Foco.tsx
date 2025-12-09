@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, RotateCcw, ArrowLeft, CalendarCheck, Plus, X, Check, Clock, ExternalLink } from "lucide-react";
+import { Play, Pause, RotateCcw, ArrowLeft, CalendarCheck, Plus, X, Check, Clock, ExternalLink, AlertTriangle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { ReplanningBanner } from "@/components/ReplanningBanner";
@@ -15,6 +16,8 @@ interface Task {
   node_id: string;
   progress: number;
   order_index: number;
+  dependency_id: string | null;
+  status: string;
 }
 
 interface Node {
@@ -52,6 +55,7 @@ export default function Foco() {
   const navigate = useNavigate();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [nodes, setNodes] = useState<Record<string, Node>>({});
+  const [dependencyTasks, setDependencyTasks] = useState<Record<string, { id: string; title: string; status: string }>>({});
   const [activeTaskId, setActiveTaskId] = useState<string | null>(() => {
     return localStorage.getItem(STORAGE_KEYS.currentTaskId) || null;
   });
@@ -186,7 +190,7 @@ export default function Foco() {
   const fetchTasks = async () => {
     const { data: tasksData } = await supabase
       .from('tasks')
-      .select('id, title, description, node_id, progress, order_index')
+      .select('id, title, description, node_id, progress, order_index, dependency_id, status')
       .eq('status', 'andamento')
       .order('order_index');
 
@@ -200,6 +204,18 @@ export default function Foco() {
           .in('id', nodeIds);
         if (nodesData) {
           setNodes(Object.fromEntries(nodesData.map(n => [n.id, n])));
+        }
+      }
+      
+      // Fetch dependency tasks info
+      const depIds = tasksData.filter(t => t.dependency_id).map(t => t.dependency_id!);
+      if (depIds.length > 0) {
+        const { data: depTasks } = await supabase
+          .from('tasks')
+          .select('id, title, status')
+          .in('id', depIds);
+        if (depTasks) {
+          setDependencyTasks(Object.fromEntries(depTasks.map(t => [t.id, t])));
         }
       }
     }
@@ -382,11 +398,34 @@ export default function Foco() {
               </Button>
             </div>
           </div>
-          {activeTaskId && (
-            <p className="text-sm text-muted-foreground mt-2">
-              {tasks.find(t => t.id === activeTaskId)?.title}
-            </p>
-          )}
+          {activeTaskId && (() => {
+            const activeTask = tasks.find(t => t.id === activeTaskId);
+            const dep = activeTask?.dependency_id ? dependencyTasks[activeTask.dependency_id] : null;
+            return (
+              <div className="mt-2">
+                <p className="text-sm text-muted-foreground">
+                  {activeTask?.title}
+                </p>
+                {dep && (
+                  <Badge
+                    variant="outline"
+                    className={`mt-1 cursor-pointer text-xs ${
+                      dep.status !== 'concluído' 
+                        ? 'bg-amber-500/20 border-amber-500/50 text-amber-600 hover:bg-amber-500/30' 
+                        : 'hover:bg-muted'
+                    }`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.open(`/task/${dep.id}`, '_blank');
+                    }}
+                  >
+                    {dep.status !== 'concluído' && <AlertTriangle className="h-3 w-3 mr-1" />}
+                    Depende de: {dep.title}
+                  </Badge>
+                )}
+              </div>
+            );
+          })()}
           {activeTaskId && (
             <div className="flex gap-2 mt-3 pt-3 border-t border-destructive/20">
               <Button
@@ -476,6 +515,26 @@ export default function Foco() {
                         {task.description}
                       </p>
                     )}
+                    {task.dependency_id && dependencyTasks[task.dependency_id] && (() => {
+                      const dep = dependencyTasks[task.dependency_id];
+                      return (
+                        <Badge
+                          variant="outline"
+                          className={`mt-2 cursor-pointer text-xs ${
+                            dep.status !== 'concluído' 
+                              ? 'bg-amber-500/20 border-amber-500/50 text-amber-600 hover:bg-amber-500/30' 
+                              : 'hover:bg-muted'
+                          }`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.open(`/task/${dep.id}`, '_blank');
+                          }}
+                        >
+                          {dep.status !== 'concluído' && <AlertTriangle className="h-3 w-3 mr-1" />}
+                          Depende de: {dep.title}
+                        </Badge>
+                      );
+                    })()}
                     <p className="text-xs text-muted-foreground mt-2">
                       {nodes[task.node_id]?.title || 'Nó desconhecido'}
                     </p>
