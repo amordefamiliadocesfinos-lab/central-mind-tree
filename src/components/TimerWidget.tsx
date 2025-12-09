@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card } from "@/components/ui/card";
 import { Play, Pause, RotateCcw, Clock, Focus, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { TaskBar } from "./TaskBar";
@@ -158,9 +157,10 @@ export function TimerWidget({ linesMode, onLinesModeChange }: TimerWidgetProps) 
   };
 
   return (
-    <Card className="fixed left-5 bottom-5 z-[9999] p-4 shadow-lg min-w-[240px]">
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 mb-2">
+    <div className="fixed bottom-0 left-0 right-0 z-[9999] h-12 bg-background border-t border-border shadow-lg">
+      <div className="h-full flex items-center justify-between px-4 gap-4">
+        {/* Left section: Navigation and TaskBar */}
+        <div className="flex items-center gap-2">
           <TaskBar 
             linesMode={linesMode}
             onLinesModeChange={onLinesModeChange}
@@ -168,8 +168,8 @@ export function TimerWidget({ linesMode, onLinesModeChange }: TimerWidgetProps) 
           <Button
             asChild
             size="sm"
-            variant="outline"
-            className="h-8 px-3 text-xs"
+            variant="ghost"
+            className="h-8 px-2 text-xs"
             title="Modo Foco"
           >
             <Link to="/foco">
@@ -180,8 +180,8 @@ export function TimerWidget({ linesMode, onLinesModeChange }: TimerWidgetProps) 
           <Button
             asChild
             size="sm"
-            variant="outline"
-            className="h-8 px-3 text-xs"
+            variant="ghost"
+            className="h-8 px-2 text-xs"
             title="Calendário"
           >
             <Link to="/calendario">
@@ -191,89 +191,93 @@ export function TimerWidget({ linesMode, onLinesModeChange }: TimerWidgetProps) 
           </Button>
         </div>
 
-        {isEditing ? (
-          <div className="space-y-2">
-            <Input
-              placeholder="hh:mm:ss"
-              value={timeInput}
-              onChange={(e) => setTimeInput(e.target.value)}
-              className="text-center"
-            />
-            <div className="flex gap-2">
-              <Button onClick={handleSetTime} size="sm" className="flex-1">
-                Definir
+        {/* Center section: Timer display and controls */}
+        <div className="flex items-center gap-3">
+          {isEditing ? (
+            <div className="flex items-center gap-2">
+              <Input
+                placeholder="hh:mm:ss"
+                value={timeInput}
+                onChange={(e) => setTimeInput(e.target.value)}
+                className="text-center w-24 h-8 text-sm"
+              />
+              <Button onClick={handleSetTime} size="sm" className="h-8 px-3">
+                OK
               </Button>
               <Button
                 onClick={() => setIsEditing(false)}
                 size="sm"
-                variant="outline"
+                variant="ghost"
+                className="h-8 px-2"
               >
-                Cancelar
+                ✕
               </Button>
             </div>
-          </div>
-        ) : (
-          <>
-            <div
-              className="text-3xl font-mono text-center py-2 cursor-pointer hover:bg-muted/50 rounded transition-colors"
-              onClick={() => {
-                if (status === "stopped") {
-                  setIsEditing(true);
-                  setTimeInput(formatTime(remainingSeconds));
-                }
-              }}
-            >
-              {formatTime(remainingSeconds)}
-            </div>
+          ) : (
+            <>
+              <div
+                className="text-xl font-mono cursor-pointer hover:text-primary transition-colors px-2"
+                onClick={() => {
+                  if (status === "stopped") {
+                    setIsEditing(true);
+                    setTimeInput(formatTime(remainingSeconds));
+                  }
+                }}
+                title={status === "stopped" ? "Clique para ajustar tempo" : undefined}
+              >
+                {formatTime(remainingSeconds)}
+              </div>
 
-            <div className="flex gap-2 flex-wrap">
-              {status === "stopped" && (
-                <>
-                  <Button onClick={handleStart} size="sm" className="flex-1">
-                    <Play className="h-4 w-4 mr-1" />
-                    Iniciar
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      setIsEditing(true);
-                      setTimeInput(formatTime(remainingSeconds));
-                    }}
-                    size="sm"
-                    variant="outline"
-                  >
-                    <Clock className="h-4 w-4" />
-                  </Button>
-                </>
-              )}
+              <div className="flex items-center gap-1">
+                {status === "stopped" && (
+                  <>
+                    <Button onClick={handleStart} size="sm" variant="ghost" className="h-8 w-8 p-0">
+                      <Play className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setIsEditing(true);
+                        setTimeInput(formatTime(remainingSeconds));
+                      }}
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0"
+                    >
+                      <Clock className="h-4 w-4" />
+                    </Button>
+                  </>
+                )}
 
-              {status === "running" && (
-                <Button onClick={handlePause} size="sm" className="flex-1">
-                  <Pause className="h-4 w-4 mr-1" />
-                  Pausar
-                </Button>
-              )}
-
-              {status === "paused" && (
-                <>
-                  <Button onClick={handleResume} size="sm" className="flex-1">
-                    <Play className="h-4 w-4 mr-1" />
-                    Retomar
+                {status === "running" && (
+                  <Button onClick={handlePause} size="sm" variant="ghost" className="h-8 w-8 p-0">
+                    <Pause className="h-4 w-4" />
                   </Button>
-                  <Button onClick={handleStop} size="sm" variant="outline">
-                    Parar
-                  </Button>
-                </>
-              )}
+                )}
 
-              {(status === "running" || status === "paused") && (
-                <Button onClick={handleReset} size="sm" variant="outline">
-                  <RotateCcw className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </>
-        )}
+                {status === "paused" && (
+                  <>
+                    <Button onClick={handleResume} size="sm" variant="ghost" className="h-8 w-8 p-0">
+                      <Play className="h-4 w-4" />
+                    </Button>
+                    <Button onClick={handleStop} size="sm" variant="ghost" className="h-8 w-8 p-0 text-destructive">
+                      ■
+                    </Button>
+                  </>
+                )}
+
+                {(status === "running" || status === "paused") && (
+                  <Button onClick={handleReset} size="sm" variant="ghost" className="h-8 w-8 p-0">
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Right section: Spacer for balance */}
+        <div className="w-32" />
       </div>
-    </Card>
+    </div>
   );
 }
