@@ -123,3 +123,57 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+/* Canvas background pattern for organogram */
+.canvas-grid {
+  background-image: 
+    radial-gradient(circle, hsl(var(--muted-foreground) / 0.1) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Node box enhanced styling */
+.node-box-enhanced {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 
+    0 4px 6px -1px hsl(var(--foreground) / 0.1),
+    0 2px 4px -2px hsl(var(--foreground) / 0.1);
+}
+
+.node-box-enhanced:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 10px 15px -3px hsl(var(--foreground) / 0.15),
+    0 4px 6px -4px hsl(var(--foreground) / 0.1);
+}
+
+/* Smooth viewport transition for auto-centering */
+.viewport-transition {
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Node tree connector lines */
+.node-connector {
+  background: linear-gradient(
+    to bottom,
+    hsl(var(--border)),
+    hsl(var(--muted-foreground) / 0.3)
+  );
+}
+
+/* Pulse animation for initial load emphasis */
+@keyframes node-pulse {
+  0%, 100% {
+    box-shadow: 
+      0 4px 6px -1px hsl(var(--foreground) / 0.1),
+      0 2px 4px -2px hsl(var(--foreground) / 0.1);
+  }
+  50% {
+    box-shadow: 
+      0 0 0 4px hsl(var(--primary) / 0.2),
+      0 10px 15px -3px hsl(var(--foreground) / 0.15);
+  }
+}
+
+.node-emphasis {
+  animation: node-pulse 1.5s ease-in-out;
+}
