@@ -242,13 +242,13 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
       <div className="flex flex-col items-center">
         <div
           data-node-id={node.id}
-          className={`${colors.bg} ${colors.text} rounded-lg p-4 min-w-[200px] shadow-md border-2 border-background relative`}
+          className={`${colors.bg} ${colors.text} rounded-xl p-4 min-w-[220px] node-box-enhanced border-2 border-background/50 relative backdrop-blur-sm`}
         >
           {hasTasks && (
-            <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-muted-foreground/50"></div>
+            <div className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-background/60 ring-2 ring-background/30"></div>
           )}
           {hasChildren && (
-            <div className="absolute bottom-1 right-1/2 translate-x-1/2 text-muted-foreground/50 text-xs">
+            <div className="absolute bottom-1.5 right-1/2 translate-x-1/2 text-background/60 text-xs font-medium">
               ▾
             </div>
           )}
@@ -436,10 +436,10 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
             </div>
           )}
         </div>
-        {children && <div className="w-px h-8 bg-border"></div>}
+        {children && <div className="w-0.5 h-8 node-connector rounded-full"></div>}
       </div>
       {children && (
-        <div className="flex gap-8 items-start relative">{children}</div>
+        <div className="flex gap-10 items-start relative">{children}</div>
       )}
 
       <MoveNodeDialog

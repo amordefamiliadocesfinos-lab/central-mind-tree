@@ -98,29 +98,31 @@ const Index = () => {
     };
   }, [refreshKey]);
 
+  // Centralizar automaticamente na montagem inicial
+  const initializedRef = useRef(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+  
   // Função para calcular bounding box de todos os nós visíveis
-  const calculateNodesBoundingBox = () => {
+  const calculateNodesBoundingBox = (container: HTMLElement) => {
     const nodeElements = document.querySelectorAll('[data-node-id]');
     
     if (nodeElements.length === 0) {
-      return { centerX: 0, centerY: 0, width: 0, height: 0 };
+      return null;
     }
 
+    const containerRect = container.getBoundingClientRect();
     let minX = Infinity, maxX = -Infinity;
     let minY = Infinity, maxY = -Infinity;
 
     nodeElements.forEach((el) => {
       const rect = el.getBoundingClientRect();
-      // Converter para coordenadas do conteúdo (remover scale e position)
-      const x = (rect.left - position.x) / scale;
-      const y = (rect.top - position.y) / scale;
-      const width = rect.width / scale;
-      const height = rect.height / scale;
-
+      const x = rect.left - containerRect.left;
+      const y = rect.top - containerRect.top;
+      
       minX = Math.min(minX, x);
-      maxX = Math.max(maxX, x + width);
+      maxX = Math.max(maxX, x + rect.width);
       minY = Math.min(minY, y);
-      maxY = Math.max(maxY, y + height);
+      maxY = Math.max(maxY, y + rect.height);
     });
 
     return {
@@ -131,61 +133,65 @@ const Index = () => {
     };
   };
 
-  // Centralizar automaticamente na montagem inicial
-  const initializedRef = useRef(false);
-  
+  // Função para centralizar e dar ênfase na árvore
+  const centerAndEmphasizeTree = () => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const containerWidth = container.clientWidth;
+    const containerHeight = container.clientHeight;
+    const bounds = calculateNodesBoundingBox(container);
+
+    if (bounds) {
+      // Calcular escala ideal baseado no tamanho da árvore
+      const padding = 100; // Margem ao redor
+      const availableWidth = containerWidth - padding * 2;
+      const availableHeight = containerHeight - padding * 2 - 48; // -48 para barra inferior
+      
+      // Calcular escala que faz a árvore caber na tela
+      const scaleX = availableWidth / bounds.width;
+      const scaleY = availableHeight / bounds.height;
+      const optimalScale = Math.min(scaleX, scaleY, 1); // Máximo de 1 para não ampliar demais
+      const finalScale = Math.max(optimalScale, 0.5); // Mínimo de 0.5 para não ficar muito pequeno
+
+      // Centralizar o conteúdo na viewport
+      const newX = (containerWidth / 2) - bounds.centerX;
+      const newY = (containerHeight / 2) - bounds.centerY - 24;
+
+      // Aplicar com animação suave
+      setIsAnimating(true);
+      setPosition({ x: newX, y: newY });
+      setScale(finalScale);
+
+      // Adicionar ênfase aos nós após centralização
+      setTimeout(() => {
+        setIsAnimating(false);
+        const nodeElements = document.querySelectorAll('[data-node-id]');
+        nodeElements.forEach((el, index) => {
+          const element = el as HTMLElement;
+          element.classList.add('node-emphasis');
+          setTimeout(() => {
+            element.classList.remove('node-emphasis');
+          }, 1500 + index * 100);
+        });
+      }, 600);
+    } else {
+      // Fallback se não houver nós ainda
+      setPosition({
+        x: containerWidth / 2,
+        y: 100,
+      });
+      setScale(0.9);
+    }
+  };
+
   useEffect(() => {
     if (rootNode && containerRef.current && !initializedRef.current) {
-      // Aguardar um tick para os nós serem renderizados
+      // Aguardar os nós serem renderizados
       const timer = setTimeout(() => {
-        const container = containerRef.current;
-        if (!container) return;
-
-        const containerWidth = container.clientWidth;
-        const containerHeight = container.clientHeight;
-
-        // Verificar se há nós renderizados
-        const nodeElements = document.querySelectorAll('[data-node-id]');
-        
-        if (nodeElements.length > 0) {
-          // Calcular bounding box
-          let minX = Infinity, maxX = -Infinity;
-          let minY = Infinity, maxY = -Infinity;
-
-          // Na primeira renderização, os nós ainda não têm transformação aplicada
-          // Então pegamos as posições relativas ao container
-          nodeElements.forEach((el) => {
-            const rect = el.getBoundingClientRect();
-            const containerRect = container.getBoundingClientRect();
-            
-            const x = rect.left - containerRect.left;
-            const y = rect.top - containerRect.top;
-            
-            minX = Math.min(minX, x);
-            maxX = Math.max(maxX, x + rect.width);
-            minY = Math.min(minY, y);
-            maxY = Math.max(maxY, y + rect.height);
-          });
-
-          const contentCenterX = (minX + maxX) / 2;
-          const contentCenterY = (minY + maxY) / 2;
-
-          // Centralizar o conteúdo na viewport
-          const newX = (containerWidth / 2) - contentCenterX;
-          const newY = (containerHeight / 2) - contentCenterY - 24; // -24 para compensar barra inferior
-
-          setPosition({ x: newX, y: newY });
-          setScale(0.9); // Zoom inicial com margem de respiro
-        } else {
-          // Fallback se não houver nós ainda
-          setPosition({
-            x: containerWidth / 2,
-            y: 100,
-          });
-        }
-
+        centerAndEmphasizeTree();
         initializedRef.current = true;
-      }, 100);
+      }, 150);
 
       return () => clearTimeout(timer);
     }
@@ -264,7 +270,7 @@ const Index = () => {
     <>
       <div
         ref={containerRef}
-        className="w-screen h-screen overflow-auto bg-background"
+        className="w-screen h-screen overflow-hidden bg-background canvas-grid"
         onWheel={isDialogOpen ? undefined : handleWheel}
         onMouseDown={isDialogOpen ? undefined : handleMouseDown}
         onMouseMove={isDialogOpen ? undefined : handleMouseMove}
@@ -278,6 +284,7 @@ const Index = () => {
       >
         <div
           ref={contentRef}
+          className={isAnimating ? "viewport-transition" : ""}
           style={{
             transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
             transformOrigin: "0 0",
