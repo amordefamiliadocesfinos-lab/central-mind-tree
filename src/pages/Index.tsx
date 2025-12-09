@@ -98,22 +98,96 @@ const Index = () => {
     };
   }, [refreshKey]);
 
-  // Centralizar o nó raiz apenas na primeira renderização
+  // Função para calcular bounding box de todos os nós visíveis
+  const calculateNodesBoundingBox = () => {
+    const nodeElements = document.querySelectorAll('[data-node-id]');
+    
+    if (nodeElements.length === 0) {
+      return { centerX: 0, centerY: 0, width: 0, height: 0 };
+    }
+
+    let minX = Infinity, maxX = -Infinity;
+    let minY = Infinity, maxY = -Infinity;
+
+    nodeElements.forEach((el) => {
+      const rect = el.getBoundingClientRect();
+      // Converter para coordenadas do conteúdo (remover scale e position)
+      const x = (rect.left - position.x) / scale;
+      const y = (rect.top - position.y) / scale;
+      const width = rect.width / scale;
+      const height = rect.height / scale;
+
+      minX = Math.min(minX, x);
+      maxX = Math.max(maxX, x + width);
+      minY = Math.min(minY, y);
+      maxY = Math.max(maxY, y + height);
+    });
+
+    return {
+      centerX: (minX + maxX) / 2,
+      centerY: (minY + maxY) / 2,
+      width: maxX - minX,
+      height: maxY - minY,
+    };
+  };
+
+  // Centralizar automaticamente na montagem inicial
+  const initializedRef = useRef(false);
+  
   useEffect(() => {
-    if (rootNode && containerRef.current && contentRef.current) {
-      const container = containerRef.current;
-      const content = contentRef.current;
-      
-      // Centralizar apenas se ainda não foi posicionado
-      if (position.x === 0 && position.y === 0) {
+    if (rootNode && containerRef.current && !initializedRef.current) {
+      // Aguardar um tick para os nós serem renderizados
+      const timer = setTimeout(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
         const containerWidth = container.clientWidth;
         const containerHeight = container.clientHeight;
+
+        // Verificar se há nós renderizados
+        const nodeElements = document.querySelectorAll('[data-node-id]');
         
-        setPosition({
-          x: containerWidth / 2,
-          y: 100, // Posição vertical inicial
-        });
-      }
+        if (nodeElements.length > 0) {
+          // Calcular bounding box
+          let minX = Infinity, maxX = -Infinity;
+          let minY = Infinity, maxY = -Infinity;
+
+          // Na primeira renderização, os nós ainda não têm transformação aplicada
+          // Então pegamos as posições relativas ao container
+          nodeElements.forEach((el) => {
+            const rect = el.getBoundingClientRect();
+            const containerRect = container.getBoundingClientRect();
+            
+            const x = rect.left - containerRect.left;
+            const y = rect.top - containerRect.top;
+            
+            minX = Math.min(minX, x);
+            maxX = Math.max(maxX, x + rect.width);
+            minY = Math.min(minY, y);
+            maxY = Math.max(maxY, y + rect.height);
+          });
+
+          const contentCenterX = (minX + maxX) / 2;
+          const contentCenterY = (minY + maxY) / 2;
+
+          // Centralizar o conteúdo na viewport
+          const newX = (containerWidth / 2) - contentCenterX;
+          const newY = (containerHeight / 2) - contentCenterY - 24; // -24 para compensar barra inferior
+
+          setPosition({ x: newX, y: newY });
+          setScale(0.9); // Zoom inicial com margem de respiro
+        } else {
+          // Fallback se não houver nós ainda
+          setPosition({
+            x: containerWidth / 2,
+            y: 100,
+          });
+        }
+
+        initializedRef.current = true;
+      }, 100);
+
+      return () => clearTimeout(timer);
     }
   }, [rootNode]);
 
