@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { NodeBox } from "@/components/NodeBox";
 import { NodeTree } from "@/components/NodeTree";
@@ -21,6 +21,7 @@ interface Node {
 
 const Index = () => {
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [rootNode, setRootNode] = useState<Node | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [scale, setScale] = useState(1);
@@ -195,6 +196,20 @@ const Index = () => {
       return () => clearTimeout(timer);
     }
   }, [rootNode]);
+
+  // Handle highlight query parameter from search
+  useEffect(() => {
+    const highlightId = searchParams.get("highlight");
+    if (highlightId && rootNode) {
+      // Wait for nodes to render before centering
+      const timer = setTimeout(() => {
+        centerOnNode(highlightId);
+        // Clear the highlight param after processing
+        setSearchParams({}, { replace: true });
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [searchParams, rootNode]);
 
   const handleNodeChange = () => {
     setRefreshKey((prev) => prev + 1);
