@@ -200,11 +200,34 @@ const Index = () => {
   // Handle highlight query parameter from search
   useEffect(() => {
     const highlightId = searchParams.get("highlight");
+    const openTasks = searchParams.get("openTasks");
+    const taskId = searchParams.get("taskId");
+    
     if (highlightId && rootNode) {
       // Wait for nodes to render before centering
-      const timer = setTimeout(() => {
+      const timer = setTimeout(async () => {
         centerOnNode(highlightId);
-        // Clear the highlight param after processing
+        
+        // If openTasks is set, open the tasks dialog for that node
+        if (openTasks === "true") {
+          // Fetch node title
+          const { data: nodeData } = await supabase
+            .from("nodes")
+            .select("title")
+            .eq("id", highlightId)
+            .maybeSingle();
+          
+          if (nodeData) {
+            setTasksDialogState({
+              open: true,
+              nodeId: highlightId,
+              nodeTitle: nodeData.title,
+            });
+            setIsDialogOpen(true);
+          }
+        }
+        
+        // Clear the params after processing
         setSearchParams({}, { replace: true });
       }, 300);
       return () => clearTimeout(timer);
