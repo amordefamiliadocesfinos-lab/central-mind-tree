@@ -177,11 +177,11 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
   return (
     <div
       ref={containerRef}
-      className="fixed top-0 left-0 right-0 z-[9999] bg-background/95 backdrop-blur-sm border-b shadow-sm"
+      className="fixed top-4 right-4 z-50 w-80"
     >
-      <div className="max-w-2xl mx-auto px-4 py-2">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+      <div className="bg-background/95 backdrop-blur-sm border rounded-lg shadow-lg">
+        <div className="relative p-2">
+          <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             ref={inputRef}
             value={query}
@@ -190,8 +190,8 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
               if (e.target.value.length >= 2) setIsOpen(true);
             }}
             onFocus={() => query.length >= 2 && setIsOpen(true)}
-            placeholder='Pesquisar nós e tarefas... (pressione "/")'
-            className="pl-10 pr-10"
+            placeholder='Pesquisar... ("/")'
+            className="pl-9 pr-8 h-9 text-sm"
           />
           {query && (
             <button
@@ -199,7 +199,7 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
                 setQuery("");
                 setIsOpen(false);
               }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              className="absolute right-5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
               <X className="h-4 w-4" />
             </button>
@@ -207,7 +207,7 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
         </div>
 
         {isOpen && query.length >= 2 && (
-          <div className="absolute left-4 right-4 mt-1 bg-popover border rounded-lg shadow-lg max-h-80 overflow-y-auto">
+          <div className="border-t max-h-64 overflow-y-auto">
             <div className="flex gap-4 p-2 border-b text-sm">
               <label className="flex items-center gap-1 cursor-pointer">
                 <input
