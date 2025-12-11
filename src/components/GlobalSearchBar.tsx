@@ -220,9 +220,20 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
   }, [query, nodes, tasks, nodeTitleMap, showNodes, showTasks, visibleNodeIds, showHidden]);
 
   const handleResultClick = useCallback(
-    (result: SearchResult) => {
+    async (result: SearchResult) => {
       setQuery("");
       setIsOpen(false);
+
+      // If the node is hidden, make it visible first
+      if (result.isHidden) {
+        const nodeIdToShow = result.type === "node" ? result.id : result.nodeId;
+        if (nodeIdToShow) {
+          await supabase
+            .from("nodes")
+            .update({ is_visible: true })
+            .eq("id", nodeIdToShow);
+        }
+      }
 
       if (result.type === "node") {
         if (onNodeSelect) {
