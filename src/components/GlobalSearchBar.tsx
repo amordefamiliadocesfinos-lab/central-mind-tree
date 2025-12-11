@@ -177,7 +177,7 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
   return (
     <div
       ref={containerRef}
-      className="fixed top-4 right-4 z-50 w-80"
+      className="fixed top-4 right-4 z-50 w-40"
     >
       <div className="bg-background/95 backdrop-blur-sm border rounded-lg shadow-lg">
         <div className="relative p-2">
