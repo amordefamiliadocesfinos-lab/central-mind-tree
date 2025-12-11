@@ -25,6 +25,7 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { Json } from "@/integrations/supabase/types";
+import { MediaUploader, MediaItem } from "@/components/MediaUploader";
 
 interface ChecklistItem {
   id: string;
@@ -79,6 +80,7 @@ const TaskEdit = () => {
   const [showChecklist, setShowChecklist] = useState(false);
   const [newItemText, setNewItemText] = useState("");
   const [loading, setLoading] = useState(true);
+  const [media, setMedia] = useState<MediaItem[]>([]);
 
   // Calculate progress from checklist
   const calculatedProgress = checklist.length > 0
@@ -524,6 +526,12 @@ const TaskEdit = () => {
                 Progresso calculado automaticamente pelo check-list
               </p>
             )}
+          </div>
+
+          {/* Media Attachments */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Anexos de Mídia</label>
+            <MediaUploader media={media} onChange={setMedia} />
           </div>
         </div>
 

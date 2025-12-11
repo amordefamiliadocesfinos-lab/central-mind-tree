@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Pencil, Plus, Trash2, X, Check, Move, ListTodo, Eye } from "lucide-react";
 import { MoveNodeDialog } from "./MoveNodeDialog";
 import { TasksDialog } from "./TasksDialog";
+import { NodeEditDialog } from "./NodeEditDialog";
 
 interface Node {
   id: string;
@@ -27,6 +28,7 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
   const [editedTitle, setEditedTitle] = useState(node.title);
   const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
   const [isTasksDialogOpen, setIsTasksDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [hasChildren, setHasChildren] = useState(false);
   const [hasTasks, setHasTasks] = useState(false);
   const [filterStatus, setFilterStatus] = useState<string | null>(null);
@@ -318,7 +320,10 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
                   size="icon"
                   variant="ghost"
                   className="h-8 w-8 hover:bg-background/20"
-                  onClick={() => setIsEditing(true)}
+                  onClick={() => {
+                    setIsEditDialogOpen(true);
+                    onDialogOpenChange?.(true);
+                  }}
                 >
                   <Pencil className="h-4 w-4" />
                 </Button>
@@ -465,6 +470,16 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
         nodeTitle={node.title}
         onTasksChange={onNodeChange}
         filterStatus={filterStatus}
+      />
+
+      <NodeEditDialog
+        open={isEditDialogOpen}
+        onOpenChange={(open) => {
+          setIsEditDialogOpen(open);
+          onDialogOpenChange?.(open);
+        }}
+        node={node}
+        onNodeChange={onNodeChange}
       />
     </div>
   );
