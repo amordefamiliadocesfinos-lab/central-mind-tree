@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { Search, FileText, Box, X } from "lucide-react";
+import { Search, FileText, Box, X, GripVertical } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -47,6 +47,8 @@ function matchesQuery(queryTokens: string[], ...fields: (string | null)[]): bool
   return queryTokens.every((token) => normalized.includes(token));
 }
 
+const POSITION_KEY = "pc.searchbar.position";
+
 export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
   const [query, setQuery] = useState("");
   const [nodes, setNodes] = useState<NodeItem[]>([]);
@@ -55,6 +57,19 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [showNodes, setShowNodes] = useState(true);
   const [showTasks, setShowTasks] = useState(true);
+  const [position, setPosition] = useState(() => {
+    const saved = localStorage.getItem(POSITION_KEY);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return { x: window.innerWidth - 180, y: 16 };
+      }
+    }
+    return { x: window.innerWidth - 180, y: 16 };
+  });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
@@ -116,6 +131,38 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Drag handlers
+  const handleDragStart = useCallback((e: React.MouseEvent) => {
+    if (containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      setDragOffset({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+      setIsDragging(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const newX = Math.max(0, Math.min(window.innerWidth - 160, e.clientX - dragOffset.x));
+      const newY = Math.max(0, Math.min(window.innerHeight - 50, e.clientY - dragOffset.y));
+      setPosition({ x: newX, y: newY });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      localStorage.setItem(POSITION_KEY, JSON.stringify(position));
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    document.addEventListener("mouseup", handleMouseUp);
+
+    return () => {
+      document.removeEventListener("mousemove", handleMouseMove);
+      document.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, [isDragging, dragOffset, position]);
 
   const nodeTitleMap = useMemo(() => {
     const map: Record<string, string> = {};
@@ -179,39 +226,55 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
   return (
     <div
       ref={containerRef}
-      className={`fixed top-4 right-4 z-50 transition-all duration-200 ${isFocused ? 'w-80' : 'w-40'}`}
+      style={{
+        left: position.x,
+        top: position.y,
+        width: isFocused ? 320 : 160,
+      }}
+      className={`fixed z-50 transition-[width] duration-200 ${isDragging ? 'cursor-grabbing' : ''}`}
     >
       <div className="bg-background/95 backdrop-blur-sm border rounded-lg shadow-lg">
-        <div className="relative p-2">
-          <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            ref={inputRef}
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              if (e.target.value.length >= 2) setIsOpen(true);
-            }}
-            onFocus={() => {
-              setIsFocused(true);
-              if (query.length >= 2) setIsOpen(true);
-            }}
-            onBlur={() => {
-              if (!query) setIsFocused(false);
-            }}
-            placeholder={isFocused ? 'Pesquisar nós e tarefas...' : '/'}
-            className="pl-9 pr-8 h-9 text-sm"
-          />
-          {query && (
-            <button
-              onClick={() => {
-                setQuery("");
-                setIsOpen(false);
+        <div className="relative p-2 flex items-center gap-1">
+          {/* Drag handle */}
+          <div
+            onMouseDown={handleDragStart}
+            className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded touch-none"
+            title="Arrastar"
+          >
+            <GripVertical className="h-4 w-4 text-muted-foreground" />
+          </div>
+          
+          <div className="relative flex-1">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              ref={inputRef}
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                if (e.target.value.length >= 2) setIsOpen(true);
               }}
-              className="absolute right-5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
+              onFocus={() => {
+                setIsFocused(true);
+                if (query.length >= 2) setIsOpen(true);
+              }}
+              onBlur={() => {
+                if (!query) setIsFocused(false);
+              }}
+              placeholder={isFocused ? 'Pesquisar...' : '/'}
+              className="pl-7 pr-7 h-8 text-sm"
+            />
+            {query && (
+              <button
+                onClick={() => {
+                  setQuery("");
+                  setIsOpen(false);
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         </div>
 
         {isOpen && query.length >= 2 && (
