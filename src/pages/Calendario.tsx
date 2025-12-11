@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import { DayTasksModal } from "@/components/DayTasksModal";
 
 interface Task {
   id: string;
@@ -59,6 +60,10 @@ const Calendario = () => {
   const [newTaskNodeId, setNewTaskNodeId] = useState("");
   const [newTaskStatus, setNewTaskStatus] = useState("pendente");
   const [creating, setCreating] = useState(false);
+  
+  // Day tasks modal state
+  const [dayTasksModalOpen, setDayTasksModalOpen] = useState(false);
+  const [dayTasksModalDate, setDayTasksModalDate] = useState<string>("");
 
   useEffect(() => {
     loadData();
@@ -79,7 +84,25 @@ const Calendario = () => {
   };
 
   const handleDayClick = (dateKey: string) => {
-    setSelectedDate(dateKey);
+    const dayTasks = tasksByDate[dateKey] || [];
+    
+    if (dayTasks.length > 0) {
+      // Se há tarefas, abrir modal de visualização
+      setDayTasksModalDate(dateKey);
+      setDayTasksModalOpen(true);
+    } else {
+      // Se não há tarefas, abrir dialog de criação
+      setSelectedDate(dateKey);
+      setNewTaskTitle("");
+      setNewTaskNodeId(nodes[0]?.id || "");
+      setNewTaskStatus("pendente");
+      setCreateDialogOpen(true);
+    }
+  };
+
+  const handleOpenCreateFromModal = () => {
+    setDayTasksModalOpen(false);
+    setSelectedDate(dayTasksModalDate);
     setNewTaskTitle("");
     setNewTaskNodeId(nodes[0]?.id || "");
     setNewTaskStatus("pendente");
@@ -357,6 +380,16 @@ const Calendario = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Day Tasks Modal */}
+      <DayTasksModal
+        isOpen={dayTasksModalOpen}
+        onClose={() => setDayTasksModalOpen(false)}
+        date={dayTasksModalDate}
+        tasks={tasksByDate[dayTasksModalDate] || []}
+        nodesMap={nodesMap}
+        onTaskUpdated={loadData}
+      />
     </div>
   );
 };

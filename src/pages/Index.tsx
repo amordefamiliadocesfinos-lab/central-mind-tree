@@ -201,19 +201,53 @@ const Index = () => {
     setRefreshKey((prev) => prev + 1);
   };
 
+  // Função para centralizar em um nó específico
+  const centerOnNode = (nodeId: string) => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const nodeElement = document.querySelector(`[data-node-id="${nodeId}"]`) as HTMLElement;
+    if (!nodeElement) {
+      // Nó pode não estar visível ainda, tentar novamente após refresh
+      setTimeout(() => centerOnNode(nodeId), 300);
+      return;
+    }
+
+    const containerRect = container.getBoundingClientRect();
+    const nodeRect = nodeElement.getBoundingClientRect();
+
+    // Calcular posição central do nó relativo ao container
+    const nodeCenterX = nodeRect.left - containerRect.left + nodeRect.width / 2;
+    const nodeCenterY = nodeRect.top - containerRect.top + nodeRect.height / 2;
+
+    // Calcular novo offset para centralizar o nó
+    const targetX = containerRect.width / 2 - nodeCenterX + position.x;
+    const targetY = containerRect.height / 2 - nodeCenterY + position.y;
+
+    // Aplicar com animação
+    setIsAnimating(true);
+    setPosition({ x: targetX, y: targetY });
+
+    // Dar ênfase no nó
+    setTimeout(() => {
+      setIsAnimating(false);
+      nodeElement.classList.add('node-emphasis', 'ring-2', 'ring-primary');
+      setTimeout(() => {
+        nodeElement.classList.remove('node-emphasis', 'ring-2', 'ring-primary');
+      }, 2000);
+    }, 500);
+  };
+
   // Handle search result click
   const handleSearchResultClick = (result: { type: "node" | "task"; id: string; nodeId?: string; title: string; parentTitle?: string }) => {
     if (result.type === "node") {
-      // Scroll to node element
-      const nodeElement = document.querySelector(`[data-node-id="${result.id}"]`);
-      if (nodeElement) {
-        nodeElement.scrollIntoView({ behavior: "smooth", block: "center" });
-        // Briefly highlight the node
-        nodeElement.classList.add("ring-2", "ring-primary");
-        setTimeout(() => nodeElement.classList.remove("ring-2", "ring-primary"), 2000);
-      }
+      // Centralizar e destacar o nó
+      centerOnNode(result.id);
     } else if (result.type === "task" && result.nodeId) {
-      // Open tasks dialog for the task's node
+      // Centralizar no nó da tarefa e abrir dialog
+      centerOnNode(result.nodeId);
+      
+      // Abrir tasks dialog após centralizar
       const fetchNodeTitle = async () => {
         const { data } = await supabase
           .from("nodes")
@@ -221,12 +255,14 @@ const Index = () => {
           .eq("id", result.nodeId)
           .maybeSingle();
         
-        setTasksDialogState({
-          open: true,
-          nodeId: result.nodeId!,
-          nodeTitle: data?.title || result.parentTitle || "Nó",
-        });
-        setIsDialogOpen(true);
+        setTimeout(() => {
+          setTasksDialogState({
+            open: true,
+            nodeId: result.nodeId!,
+            nodeTitle: data?.title || result.parentTitle || "Nó",
+          });
+          setIsDialogOpen(true);
+        }, 600);
       };
       fetchNodeTitle();
     }

@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { GlobalSearchBar } from "@/components/GlobalSearchBar";
 import Index from "./pages/Index";
 import TaskEdit from "./pages/TaskEdit";
 import Foco from "./pages/Foco";
@@ -19,6 +20,7 @@ function AppContent() {
 
   return (
     <BrowserRouter>
+      <GlobalSearchBar />
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/foco" element={<Foco />} />
