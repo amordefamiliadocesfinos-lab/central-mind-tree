@@ -171,6 +171,11 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
     return map;
   }, [nodes]);
 
+  // Build set of visible node IDs for filtering
+  const visibleNodeIds = useMemo(() => {
+    return new Set(nodes.filter((n) => n.is_visible).map((n) => n.id));
+  }, [nodes]);
+
   const results = useMemo<SearchResult[]>(() => {
     if (query.length < 2) return [];
     const queryTokens = tokenize(query);
@@ -178,7 +183,8 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
 
     if (showNodes) {
       nodes.forEach((node) => {
-        if (matchesQuery(queryTokens, node.title)) {
+        // Only show visible nodes
+        if (node.is_visible && matchesQuery(queryTokens, node.title)) {
           const parentTitle = node.parent_id ? nodeTitleMap[node.parent_id] : undefined;
           out.push({ type: "node", id: node.id, title: node.title, parentTitle });
         }
@@ -187,7 +193,8 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
 
     if (showTasks) {
       tasks.forEach((task) => {
-        if (matchesQuery(queryTokens, task.title, task.description)) {
+        // Only show tasks whose parent node is visible
+        if (visibleNodeIds.has(task.node_id) && matchesQuery(queryTokens, task.title, task.description)) {
           out.push({
             type: "task",
             id: task.id,
@@ -200,7 +207,7 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
     }
 
     return out.slice(0, 20);
-  }, [query, nodes, tasks, nodeTitleMap, showNodes, showTasks]);
+  }, [query, nodes, tasks, nodeTitleMap, showNodes, showTasks, visibleNodeIds]);
 
   const handleResultClick = useCallback(
     (result: SearchResult) => {
@@ -214,10 +221,10 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
           navigate(`/?highlight=${result.id}`);
         }
       } else if (result.type === "task") {
-        if (result.nodeId && onNodeSelect) {
-          onNodeSelect(result.nodeId);
-        } else {
-          navigate(`/?highlight=${result.nodeId}`);
+        // For tasks, navigate to the node and open tasks dialog with the task highlighted
+        const nodeId = result.nodeId;
+        if (nodeId) {
+          navigate(`/?highlight=${nodeId}&openTasks=true&taskId=${result.id}`);
         }
       }
     },
