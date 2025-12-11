@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Play, Pause, RotateCcw, Clock, Focus, Calendar } from "lucide-react";
+import { Play, Pause, RotateCcw, Clock, Focus, Calendar, Timer, ShoppingCart, FileText } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { TaskBar } from "./TaskBar";
 
@@ -187,6 +187,42 @@ export function TimerWidget({ linesMode, onLinesModeChange }: TimerWidgetProps) 
             <Link to="/calendario">
               <Calendar className="h-4 w-4 mr-1" />
               Cal
+            </Link>
+          </Button>
+          <Button
+            asChild
+            size="sm"
+            variant="ghost"
+            className="h-8 px-2 text-xs"
+            title="Rotina"
+          >
+            <Link to="/rotina">
+              <Timer className="h-4 w-4 mr-1" />
+              Rotina
+            </Link>
+          </Button>
+          <Button
+            asChild
+            size="sm"
+            variant="ghost"
+            className="h-8 px-2 text-xs"
+            title="Operações"
+          >
+            <Link to="/operacoes">
+              <ShoppingCart className="h-4 w-4 mr-1" />
+              Ops
+            </Link>
+          </Button>
+          <Button
+            asChild
+            size="sm"
+            variant="ghost"
+            className="h-8 px-2 text-xs"
+            title="Conteúdo"
+          >
+            <Link to="/conteudo">
+              <FileText className="h-4 w-4 mr-1" />
+              Post
             </Link>
           </Button>
         </div>
