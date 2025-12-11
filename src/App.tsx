@@ -9,13 +9,15 @@ import TaskEdit from "./pages/TaskEdit";
 import Foco from "./pages/Foco";
 import Planejamento from "./pages/Planejamento";
 import Calendario from "./pages/Calendario";
+import Rotina from "./pages/Rotina";
+import Operacoes from "./pages/Operacoes";
+import Conteudo from "./pages/Conteudo";
 import NotFound from "./pages/NotFound";
 import { useScheduledTaskPromotion } from "./hooks/useScheduledTaskPromotion";
 
 const queryClient = new QueryClient();
 
 function AppContent() {
-  // Check and promote scheduled tasks on app load
   useScheduledTaskPromotion();
 
   return (
@@ -26,8 +28,10 @@ function AppContent() {
         <Route path="/foco" element={<Foco />} />
         <Route path="/planejamento" element={<Planejamento />} />
         <Route path="/calendario" element={<Calendario />} />
+        <Route path="/rotina" element={<Rotina />} />
+        <Route path="/operacoes" element={<Operacoes />} />
+        <Route path="/conteudo" element={<Conteudo />} />
         <Route path="/task/:id" element={<TaskEdit />} />
-        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>

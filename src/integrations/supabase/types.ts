@@ -14,6 +14,38 @@ export type Database = {
   }
   public: {
     Tables: {
+      inventory: {
+        Row: {
+          id: string
+          location: string | null
+          product_id: string
+          quantity: number
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          location?: string | null
+          product_id: string
+          quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          location?: string | null
+          product_id?: string
+          quantity?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       nodes: {
         Row: {
           color: string
@@ -43,6 +75,311 @@ export type Database = {
           {
             foreignKeyName: "nodes_parent_id_fkey"
             columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_items: {
+        Row: {
+          id: string
+          notes: string | null
+          order_id: string
+          product_id: string
+          quantity: number
+          unit_price: number | null
+        }
+        Insert: {
+          id?: string
+          notes?: string | null
+          order_id: string
+          product_id: string
+          quantity?: number
+          unit_price?: number | null
+        }
+        Update: {
+          id?: string
+          notes?: string | null
+          order_id?: string
+          product_id?: string
+          quantity?: number
+          unit_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      orders: {
+        Row: {
+          channel: string | null
+          created_at: string
+          customer_contact: string | null
+          customer_name: string | null
+          due_date: string | null
+          id: string
+          notes: string | null
+          order_date: string
+          order_number: string | null
+          status: string
+          total_value: number | null
+          updated_at: string
+        }
+        Insert: {
+          channel?: string | null
+          created_at?: string
+          customer_contact?: string | null
+          customer_name?: string | null
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          order_date?: string
+          order_number?: string | null
+          status?: string
+          total_value?: number | null
+          updated_at?: string
+        }
+        Update: {
+          channel?: string | null
+          created_at?: string
+          customer_contact?: string | null
+          customer_name?: string | null
+          due_date?: string | null
+          id?: string
+          notes?: string | null
+          order_date?: string
+          order_number?: string | null
+          status?: string
+          total_value?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      posts: {
+        Row: {
+          channel_data: Json | null
+          channels: Json | null
+          checklist: Json | null
+          content: string | null
+          created_at: string
+          id: string
+          media_urls: Json | null
+          node_id: string | null
+          scheduled_date: string | null
+          scheduled_time: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          channel_data?: Json | null
+          channels?: Json | null
+          checklist?: Json | null
+          content?: string | null
+          created_at?: string
+          id?: string
+          media_urls?: Json | null
+          node_id?: string | null
+          scheduled_date?: string | null
+          scheduled_time?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          channel_data?: Json | null
+          channels?: Json | null
+          checklist?: Json | null
+          content?: string | null
+          created_at?: string
+          id?: string
+          media_urls?: Json | null
+          node_id?: string | null
+          scheduled_date?: string | null
+          scheduled_time?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "posts_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          cost: number | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          min_stock: number | null
+          name: string
+          price: number | null
+          sku: string
+          unit: string | null
+          updated_at: string
+        }
+        Insert: {
+          cost?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          min_stock?: number | null
+          name: string
+          price?: number | null
+          sku: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cost?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          min_stock?: number | null
+          name?: string
+          price?: number | null
+          sku?: string
+          unit?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      routine_blocks: {
+        Row: {
+          actual_end: string | null
+          actual_start: string | null
+          block_type: string
+          created_at: string
+          date: string
+          duration_minutes: number
+          id: string
+          node_id: string | null
+          notes: string | null
+          planned_end: string | null
+          planned_start: string | null
+          status: string
+          task_id: string | null
+          template_id: string | null
+          title: string
+        }
+        Insert: {
+          actual_end?: string | null
+          actual_start?: string | null
+          block_type?: string
+          created_at?: string
+          date?: string
+          duration_minutes?: number
+          id?: string
+          node_id?: string | null
+          notes?: string | null
+          planned_end?: string | null
+          planned_start?: string | null
+          status?: string
+          task_id?: string | null
+          template_id?: string | null
+          title: string
+        }
+        Update: {
+          actual_end?: string | null
+          actual_start?: string | null
+          block_type?: string
+          created_at?: string
+          date?: string
+          duration_minutes?: number
+          id?: string
+          node_id?: string | null
+          notes?: string | null
+          planned_end?: string | null
+          planned_start?: string | null
+          status?: string
+          task_id?: string | null
+          template_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routine_blocks_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "routine_blocks_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "routine_blocks_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "routine_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      routine_templates: {
+        Row: {
+          block_type: string
+          created_at: string
+          duration_minutes: number
+          id: string
+          is_active: boolean
+          node_id: string | null
+          order_index: number
+          start_time: string | null
+          title: string
+        }
+        Insert: {
+          block_type?: string
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          is_active?: boolean
+          node_id?: string | null
+          order_index?: number
+          start_time?: string | null
+          title: string
+        }
+        Update: {
+          block_type?: string
+          created_at?: string
+          duration_minutes?: number
+          id?: string
+          is_active?: boolean
+          node_id?: string | null
+          order_index?: number
+          start_time?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routine_templates_node_id_fkey"
+            columns: ["node_id"]
             isOneToOne: false
             referencedRelation: "nodes"
             referencedColumns: ["id"]
