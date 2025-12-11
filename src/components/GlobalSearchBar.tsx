@@ -128,8 +128,9 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
         setIsFocused(false);
       }
     };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    // Use 'click' instead of 'mousedown' to allow result buttons to complete their click first
+    document.addEventListener("click", handleClickOutside);
+    return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
   // Drag handlers
