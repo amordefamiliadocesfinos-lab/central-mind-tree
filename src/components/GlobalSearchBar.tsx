@@ -224,14 +224,29 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
       setQuery("");
       setIsOpen(false);
 
-      // If the node is hidden, make it visible first
-      if (result.isHidden) {
-        const nodeIdToShow = result.type === "node" ? result.id : result.nodeId;
-        if (nodeIdToShow) {
+      const nodeIdToNavigate = result.type === "node" ? result.id : result.nodeId;
+
+      // If the node is hidden, make it and all ancestors visible first
+      if (result.isHidden && nodeIdToNavigate) {
+        // Collect all ancestor IDs
+        const ancestorIds: string[] = [];
+        let currentId: string | null = nodeIdToNavigate;
+        
+        while (currentId) {
+          ancestorIds.push(currentId);
+          const node = nodes.find(n => n.id === currentId);
+          currentId = node?.parent_id || null;
+        }
+
+        // Make all ancestors visible
+        if (ancestorIds.length > 0) {
           await supabase
             .from("nodes")
             .update({ is_visible: true })
-            .eq("id", nodeIdToShow);
+            .in("id", ancestorIds);
+          
+          // Small delay to ensure realtime updates propagate
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
 
@@ -243,13 +258,12 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
         }
       } else if (result.type === "task") {
         // For tasks, navigate to the node and open tasks dialog with the task highlighted
-        const nodeId = result.nodeId;
-        if (nodeId) {
-          navigate(`/?highlight=${nodeId}&openTasks=true&taskId=${result.id}`);
+        if (nodeIdToNavigate) {
+          navigate(`/?highlight=${nodeIdToNavigate}&openTasks=true&taskId=${result.id}`);
         }
       }
     },
-    [onNodeSelect, navigate]
+    [onNodeSelect, navigate, nodes]
   );
 
   return (
