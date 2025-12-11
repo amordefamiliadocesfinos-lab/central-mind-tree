@@ -52,6 +52,7 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
   const [nodes, setNodes] = useState<NodeItem[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isOpen, setIsOpen] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const [showNodes, setShowNodes] = useState(true);
   const [showTasks, setShowTasks] = useState(true);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -109,6 +110,7 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
+        setIsFocused(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -177,7 +179,7 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
   return (
     <div
       ref={containerRef}
-      className="fixed top-4 right-4 z-50 w-40"
+      className={`fixed top-4 right-4 z-50 transition-all duration-200 ${isFocused ? 'w-80' : 'w-40'}`}
     >
       <div className="bg-background/95 backdrop-blur-sm border rounded-lg shadow-lg">
         <div className="relative p-2">
@@ -189,8 +191,14 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
               setQuery(e.target.value);
               if (e.target.value.length >= 2) setIsOpen(true);
             }}
-            onFocus={() => query.length >= 2 && setIsOpen(true)}
-            placeholder='Pesquisar... ("/")'
+            onFocus={() => {
+              setIsFocused(true);
+              if (query.length >= 2) setIsOpen(true);
+            }}
+            onBlur={() => {
+              if (!query) setIsFocused(false);
+            }}
+            placeholder={isFocused ? 'Pesquisar nós e tarefas...' : '/'}
             className="pl-9 pr-8 h-9 text-sm"
           />
           {query && (
