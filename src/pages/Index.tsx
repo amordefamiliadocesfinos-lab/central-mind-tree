@@ -9,7 +9,6 @@ import { NodeConnectionsOverlay } from "@/components/NodeConnectionsOverlay";
 import { ReplanningBanner } from "@/components/ReplanningBanner";
 import { DueDateBanner } from "@/components/DueDateBanner";
 import { CEOLegend } from "@/components/CEOLegend";
-import { SearchBar } from "@/components/SearchBar";
 import { useToast } from "@/hooks/use-toast";
 
 interface Node {
@@ -361,7 +360,6 @@ const Index = () => {
       />
       <ReplanningBanner />
       <DueDateBanner />
-      <SearchBar onResultClick={handleSearchResultClick} />
     </>
   );
 };
