@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
-import { Search, FileText, Box, X, GripVertical } from "lucide-react";
+import { Search, FileText, Box, X, GripVertical, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -24,6 +24,7 @@ interface SearchResult {
   title: string;
   parentTitle?: string;
   nodeId?: string;
+  isHidden?: boolean;
 }
 
 interface GlobalSearchBarProps {
@@ -57,6 +58,7 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
   const [isFocused, setIsFocused] = useState(false);
   const [showNodes, setShowNodes] = useState(true);
   const [showTasks, setShowTasks] = useState(true);
+  const [showHidden, setShowHidden] = useState(false);
   const [position, setPosition] = useState(() => {
     const saved = localStorage.getItem(POSITION_KEY);
     if (saved) {
@@ -183,31 +185,39 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
 
     if (showNodes) {
       nodes.forEach((node) => {
-        // Only show visible nodes
-        if (node.is_visible && matchesQuery(queryTokens, node.title)) {
+        // Show visible nodes, or hidden nodes if showHidden is enabled
+        if ((node.is_visible || showHidden) && matchesQuery(queryTokens, node.title)) {
           const parentTitle = node.parent_id ? nodeTitleMap[node.parent_id] : undefined;
-          out.push({ type: "node", id: node.id, title: node.title, parentTitle });
+          out.push({ 
+            type: "node", 
+            id: node.id, 
+            title: node.title, 
+            parentTitle,
+            isHidden: !node.is_visible,
+          });
         }
       });
     }
 
     if (showTasks) {
       tasks.forEach((task) => {
-        // Only show tasks whose parent node is visible
-        if (visibleNodeIds.has(task.node_id) && matchesQuery(queryTokens, task.title, task.description)) {
+        // Show tasks from visible nodes, or from hidden nodes if showHidden is enabled
+        const nodeIsVisible = visibleNodeIds.has(task.node_id);
+        if ((nodeIsVisible || showHidden) && matchesQuery(queryTokens, task.title, task.description)) {
           out.push({
             type: "task",
             id: task.id,
             title: task.title,
             parentTitle: nodeTitleMap[task.node_id],
             nodeId: task.node_id,
+            isHidden: !nodeIsVisible,
           });
         }
       });
     }
 
     return out.slice(0, 20);
-  }, [query, nodes, tasks, nodeTitleMap, showNodes, showTasks, visibleNodeIds]);
+  }, [query, nodes, tasks, nodeTitleMap, showNodes, showTasks, visibleNodeIds, showHidden]);
 
   const handleResultClick = useCallback(
     (result: SearchResult) => {
@@ -287,7 +297,7 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
 
         {isOpen && query.length >= 2 && (
           <div className="border-t max-h-64 overflow-y-auto">
-            <div className="flex gap-4 p-2 border-b text-sm">
+            <div className="flex flex-wrap gap-3 p-2 border-b text-sm">
               <label className="flex items-center gap-1 cursor-pointer">
                 <input
                   type="checkbox"
@@ -308,6 +318,16 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
                 <FileText className="h-3 w-3" />
                 Tarefas
               </label>
+              <label className="flex items-center gap-1 cursor-pointer text-muted-foreground">
+                <input
+                  type="checkbox"
+                  checked={showHidden}
+                  onChange={(e) => setShowHidden(e.target.checked)}
+                  className="rounded"
+                />
+                <EyeOff className="h-3 w-3" />
+                Ocultos
+              </label>
             </div>
 
             {results.length === 0 ? (
@@ -321,12 +341,15 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
                     className="w-full flex items-center gap-3 px-3 py-2 hover:bg-accent text-left transition-colors"
                   >
                     {result.type === "node" ? (
-                      <Box className="h-4 w-4 text-primary shrink-0" />
+                      <Box className={`h-4 w-4 shrink-0 ${result.isHidden ? 'text-muted-foreground/50' : 'text-primary'}`} />
                     ) : (
-                      <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <FileText className={`h-4 w-4 shrink-0 ${result.isHidden ? 'text-muted-foreground/50' : 'text-muted-foreground'}`} />
                     )}
                     <div className="min-w-0 flex-1">
-                      <div className="font-medium truncate">{result.title}</div>
+                      <div className={`font-medium truncate flex items-center gap-1 ${result.isHidden ? 'text-muted-foreground' : ''}`}>
+                        {result.title}
+                        {result.isHidden && <EyeOff className="h-3 w-3 text-muted-foreground/60" />}
+                      </div>
                       {result.parentTitle && (
                         <div className="text-xs text-muted-foreground truncate">{result.parentTitle}</div>
                       )}
