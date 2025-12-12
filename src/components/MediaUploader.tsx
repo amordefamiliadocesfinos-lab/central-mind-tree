@@ -1,27 +1,78 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, X, FileText, Film, Image as ImageIcon } from "lucide-react";
+import { Plus, X, FileText, Film, Image as ImageIcon, Loader2 } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface MediaItem {
   id: string;
-  file: File;
+  file?: File;
   type: "image" | "video" | "other";
   previewUrl: string;
+  storagePath?: string; // Path in Supabase storage
 }
 
 interface MediaUploaderProps {
   media: MediaItem[];
   onChange: (media: MediaItem[]) => void;
+  entityType: "task" | "node";
+  entityId: string;
 }
 
-export function MediaUploader({ media, onChange }: MediaUploaderProps) {
+export async function uploadMedia(
+  items: MediaItem[],
+  entityType: "task" | "node",
+  entityId: string
+): Promise<string[]> {
+  const uploadedUrls: string[] = [];
+
+  for (const item of items) {
+    // If already uploaded (has storagePath but no file), keep existing URL
+    if (item.storagePath && !item.file) {
+      uploadedUrls.push(item.storagePath);
+      continue;
+    }
+
+    // Upload new files
+    if (item.file) {
+      const fileExt = item.file.name.split(".").pop();
+      const filePath = `${entityType}/${entityId}/${item.id}.${fileExt}`;
+
+      const { error } = await supabase.storage
+        .from("media")
+        .upload(filePath, item.file, { upsert: true });
+
+      if (!error) {
+        const { data: urlData } = supabase.storage
+          .from("media")
+          .getPublicUrl(filePath);
+        uploadedUrls.push(urlData.publicUrl);
+      }
+    }
+  }
+
+  return uploadedUrls;
+}
+
+export async function deleteMediaFromStorage(urls: string[]): Promise<void> {
+  for (const url of urls) {
+    // Extract path from URL
+    const match = url.match(/\/media\/(.+)$/);
+    if (match) {
+      await supabase.storage.from("media").remove([match[1]]);
+    }
+  }
+}
+
+export function MediaUploader({ media, onChange, entityType, entityId }: MediaUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Cleanup preview URLs when component unmounts or media changes
   useEffect(() => {
     return () => {
       media.forEach((item) => {
-        URL.revokeObjectURL(item.previewUrl);
+        if (item.file) {
+          URL.revokeObjectURL(item.previewUrl);
+        }
       });
     };
   }, []);
@@ -61,10 +112,16 @@ export function MediaUploader({ media, onChange }: MediaUploaderProps) {
     }
   };
 
-  const handleRemove = (id: string) => {
+  const handleRemove = async (id: string) => {
     const item = media.find((m) => m.id === id);
     if (item) {
-      URL.revokeObjectURL(item.previewUrl);
+      if (item.file) {
+        URL.revokeObjectURL(item.previewUrl);
+      }
+      // If it was already uploaded, delete from storage
+      if (item.storagePath) {
+        await deleteMediaFromStorage([item.storagePath]);
+      }
     }
     onChange(media.filter((m) => m.id !== id));
   };
@@ -110,7 +167,7 @@ export function MediaUploader({ media, onChange }: MediaUploaderProps) {
                 <div className="w-full h-full flex flex-col items-center justify-center bg-muted">
                   <Film className="h-8 w-8 text-muted-foreground mb-1" />
                   <span className="text-xs text-muted-foreground truncate max-w-full px-2">
-                    {item.file.name}
+                    {item.file?.name || "Video"}
                   </span>
                 </div>
               )}
@@ -119,7 +176,7 @@ export function MediaUploader({ media, onChange }: MediaUploaderProps) {
                 <div className="w-full h-full flex flex-col items-center justify-center bg-muted">
                   <FileText className="h-8 w-8 text-muted-foreground mb-1" />
                   <span className="text-xs text-muted-foreground truncate max-w-full px-2">
-                    {item.file.name}
+                    {item.file?.name || "File"}
                   </span>
                 </div>
               )}
@@ -137,4 +194,25 @@ export function MediaUploader({ media, onChange }: MediaUploaderProps) {
       )}
     </div>
   );
+}
+
+// Helper to load existing media from URLs
+export function loadMediaFromUrls(urls: string[]): MediaItem[] {
+  return urls.map((url) => {
+    const id = crypto.randomUUID();
+    let type: MediaItem["type"] = "other";
+
+    if (url.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
+      type = "image";
+    } else if (url.match(/\.(mp4|webm|mov|avi)$/i)) {
+      type = "video";
+    }
+
+    return {
+      id,
+      type,
+      previewUrl: url,
+      storagePath: url,
+    };
+  });
 }

@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { MediaUploader, MediaItem } from "@/components/MediaUploader";
+import { MediaUploader, MediaItem, uploadMedia, loadMediaFromUrls } from "@/components/MediaUploader";
 import { Save } from "lucide-react";
 
 interface Node {
@@ -26,6 +26,7 @@ interface Node {
   title: string;
   color: "roxo" | "vermelho" | "amarelo" | "verde";
   is_visible: boolean;
+  media_urls?: string[];
 }
 
 interface NodeEditDialogProps {
@@ -46,15 +47,31 @@ export function NodeEditDialog({
   const [color, setColor] = useState<Node["color"]>(node.color);
   const [description, setDescription] = useState("");
   const [media, setMedia] = useState<MediaItem[]>([]);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (open) {
       setTitle(node.title);
       setColor(node.color);
       setDescription("");
+      // Load existing media
+      fetchNodeMedia();
+    }
+  }, [open, node.id]);
+
+  const fetchNodeMedia = async () => {
+    const { data } = await supabase
+      .from("nodes")
+      .select("media_urls")
+      .eq("id", node.id)
+      .maybeSingle();
+
+    if (data?.media_urls && Array.isArray(data.media_urls)) {
+      setMedia(loadMediaFromUrls(data.media_urls as string[]));
+    } else {
       setMedia([]);
     }
-  }, [open, node]);
+  };
 
   const handleSave = async () => {
     if (!title.trim()) {
@@ -65,23 +82,31 @@ export function NodeEditDialog({
       return;
     }
 
-    const { error } = await supabase
-      .from("nodes")
-      .update({ title, color })
-      .eq("id", node.id);
+    setSaving(true);
+    try {
+      // Upload new media files
+      const mediaUrls = await uploadMedia(media, "node", node.id);
 
-    if (error) {
-      toast({
-        variant: "destructive",
-        title: "Erro ao salvar nó",
-        description: error.message,
-      });
-      return;
+      const { error } = await supabase
+        .from("nodes")
+        .update({ title, color, media_urls: mediaUrls })
+        .eq("id", node.id);
+
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Erro ao salvar nó",
+          description: error.message,
+        });
+        return;
+      }
+
+      toast({ title: "Nó atualizado com sucesso" });
+      onNodeChange();
+      onOpenChange(false);
+    } finally {
+      setSaving(false);
     }
-
-    toast({ title: "Nó atualizado com sucesso" });
-    onNodeChange();
-    onOpenChange(false);
   };
 
   return (
@@ -128,12 +153,12 @@ export function NodeEditDialog({
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Anexos de Mídia</label>
-            <MediaUploader media={media} onChange={setMedia} />
+            <MediaUploader media={media} onChange={setMedia} entityType="node" entityId={node.id} />
           </div>
 
-          <Button onClick={handleSave} className="w-full">
+          <Button onClick={handleSave} className="w-full" disabled={saving}>
             <Save className="h-4 w-4 mr-2" />
-            Salvar
+            {saving ? "Salvando..." : "Salvar"}
           </Button>
         </div>
       </DialogContent>

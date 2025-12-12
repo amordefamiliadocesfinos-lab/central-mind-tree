@@ -25,7 +25,7 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { Json } from "@/integrations/supabase/types";
-import { MediaUploader, MediaItem } from "@/components/MediaUploader";
+import { MediaUploader, MediaItem, uploadMedia, loadMediaFromUrls } from "@/components/MediaUploader";
 
 interface ChecklistItem {
   id: string;
@@ -48,6 +48,7 @@ interface Task {
   use_checklist_progress: boolean;
   due_date: string | null;
   scheduled_date: string | null;
+  media_urls: string[];
 }
 
 interface Node {
@@ -80,6 +81,7 @@ const TaskEdit = () => {
   const [showChecklist, setShowChecklist] = useState(false);
   const [newItemText, setNewItemText] = useState("");
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [media, setMedia] = useState<MediaItem[]>([]);
 
   // Calculate progress from checklist
@@ -121,6 +123,10 @@ const TaskEdit = () => {
         ? (taskData.checklist as unknown as ChecklistItem[])
         : [];
 
+      const taskMediaUrls = Array.isArray(taskData.media_urls)
+        ? (taskData.media_urls as string[])
+        : [];
+
       setTask(taskData as unknown as Task);
       setFormData({
         title: taskData.title,
@@ -134,6 +140,7 @@ const TaskEdit = () => {
       setChecklist(taskChecklist);
       setUseChecklistProgress(taskData.use_checklist_progress || false);
       setShowChecklist(taskChecklist.length > 0);
+      setMedia(loadMediaFromUrls(taskMediaUrls));
 
       // Fetch node data
       const { data: nodeData, error: nodeError } = await supabase
@@ -178,7 +185,11 @@ const TaskEdit = () => {
 
     if (!id) return;
 
+    setSaving(true);
     try {
+      // Upload new media files
+      const mediaUrls = await uploadMedia(media, "task", id);
+
       const { error } = await supabase
         .from("tasks")
         .update({
@@ -191,6 +202,7 @@ const TaskEdit = () => {
           use_checklist_progress: useChecklistProgress,
           due_date: formData.due_date ? format(formData.due_date, "yyyy-MM-dd") : null,
           scheduled_date: formData.scheduled_date ? format(formData.scheduled_date, "yyyy-MM-dd") : null,
+          media_urls: mediaUrls,
         })
         .eq("id", id);
 
@@ -210,6 +222,8 @@ const TaskEdit = () => {
         title: "Erro ao atualizar tarefa",
         description: error.message,
       });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -531,15 +545,15 @@ const TaskEdit = () => {
           {/* Media Attachments */}
           <div className="space-y-2">
             <label className="text-sm font-medium">Anexos de Mídia</label>
-            <MediaUploader media={media} onChange={setMedia} />
+            <MediaUploader media={media} onChange={setMedia} entityType="task" entityId={id || ""} />
           </div>
         </div>
 
         {/* Actions */}
         <div className="flex gap-3">
-          <Button onClick={handleSave} className="flex-1">
+          <Button onClick={handleSave} className="flex-1" disabled={saving}>
             <Save className="h-4 w-4 mr-2" />
-            Salvar e Voltar
+            {saving ? "Salvando..." : "Salvar e Voltar"}
           </Button>
           <Button variant="outline" onClick={() => navigate("/", { 
             state: { 

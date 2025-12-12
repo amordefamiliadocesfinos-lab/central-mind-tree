@@ -52,6 +52,7 @@ export type Database = {
           created_at: string
           id: string
           is_visible: boolean
+          media_urls: Json | null
           parent_id: string | null
           title: string
         }
@@ -60,6 +61,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_visible?: boolean
+          media_urls?: Json | null
           parent_id?: string | null
           title: string
         }
@@ -68,6 +70,7 @@ export type Database = {
           created_at?: string
           id?: string
           is_visible?: boolean
+          media_urls?: Json | null
           parent_id?: string | null
           title?: string
         }
@@ -394,6 +397,7 @@ export type Database = {
           description: string | null
           due_date: string | null
           id: string
+          media_urls: Json | null
           node_id: string
           order_index: number
           progress: number
@@ -410,6 +414,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          media_urls?: Json | null
           node_id: string
           order_index?: number
           progress?: number
@@ -426,6 +431,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          media_urls?: Json | null
           node_id?: string
           order_index?: number
           progress?: number
