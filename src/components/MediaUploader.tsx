@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, X, FileText, Film, Image as ImageIcon, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useLightbox, LightboxItem } from "@/components/lightbox";
 
 export interface MediaItem {
   id: string;
@@ -65,6 +66,7 @@ export async function deleteMediaFromStorage(urls: string[]): Promise<void> {
 
 export function MediaUploader({ media, onChange, entityType, entityId }: MediaUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const { open: openLightbox } = useLightbox();
 
   // Cleanup preview URLs when component unmounts or media changes
   useEffect(() => {
@@ -126,6 +128,16 @@ export function MediaUploader({ media, onChange, entityType, entityId }: MediaUp
     onChange(media.filter((m) => m.id !== id));
   };
 
+  const handleOpenLightbox = (index: number) => {
+    const items: LightboxItem[] = media.map((m) => ({
+      id: m.id,
+      type: m.type === "other" ? "file" : m.type,
+      src: m.previewUrl,
+      name: m.file?.name,
+    }));
+    openLightbox(items, index);
+  };
+
   return (
     <div className="space-y-3">
       <input
@@ -150,10 +162,11 @@ export function MediaUploader({ media, onChange, entityType, entityId }: MediaUp
 
       {media.length > 0 && (
         <div className="grid grid-cols-3 gap-2">
-          {media.map((item) => (
+          {media.map((item, index) => (
             <div
               key={item.id}
-              className="relative aspect-square rounded-lg border bg-muted overflow-hidden group"
+              className="relative aspect-square rounded-lg border bg-muted overflow-hidden group cursor-pointer"
+              onClick={() => handleOpenLightbox(index)}
             >
               {item.type === "image" && (
                 <img
@@ -183,7 +196,10 @@ export function MediaUploader({ media, onChange, entityType, entityId }: MediaUp
 
               <button
                 type="button"
-                onClick={() => handleRemove(item.id)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleRemove(item.id);
+                }}
                 className="absolute top-1 right-1 p-1 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
               >
                 <X className="h-3 w-3" />
