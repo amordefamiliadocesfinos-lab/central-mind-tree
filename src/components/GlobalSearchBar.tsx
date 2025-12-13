@@ -130,12 +130,10 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
         setIsFocused(false);
       }
     };
-    // Use 'click' instead of 'mousedown' to allow result buttons to complete their click first
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
-  // Drag handlers
   const handleDragStart = useCallback((e: React.MouseEvent) => {
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
@@ -173,7 +171,6 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
     return map;
   }, [nodes]);
 
-  // Build set of visible node IDs for filtering
   const visibleNodeIds = useMemo(() => {
     return new Set(nodes.filter((n) => n.is_visible).map((n) => n.id));
   }, [nodes]);
@@ -185,7 +182,6 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
 
     if (showNodes) {
       nodes.forEach((node) => {
-        // Show visible nodes, or hidden nodes if showHidden is enabled
         if ((node.is_visible || showHidden) && matchesQuery(queryTokens, node.title)) {
           const parentTitle = node.parent_id ? nodeTitleMap[node.parent_id] : undefined;
           out.push({ 
@@ -201,7 +197,6 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
 
     if (showTasks) {
       tasks.forEach((task) => {
-        // Show tasks from visible nodes, or from hidden nodes if showHidden is enabled
         const nodeIsVisible = visibleNodeIds.has(task.node_id);
         if ((nodeIsVisible || showHidden) && matchesQuery(queryTokens, task.title, task.description)) {
           out.push({
@@ -226,9 +221,7 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
 
       const nodeIdToNavigate = result.type === "node" ? result.id : result.nodeId;
 
-      // If the node is hidden, make it and all ancestors visible first
       if (result.isHidden && nodeIdToNavigate) {
-        // Collect all ancestor IDs
         const ancestorIds: string[] = [];
         let currentId: string | null = nodeIdToNavigate;
         
@@ -238,14 +231,12 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
           currentId = node?.parent_id || null;
         }
 
-        // Make all ancestors visible
         if (ancestorIds.length > 0) {
           await supabase
             .from("nodes")
             .update({ is_visible: true })
             .in("id", ancestorIds);
           
-          // Small delay to ensure realtime updates propagate
           await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
@@ -257,7 +248,6 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
           navigate(`/?highlight=${result.id}`);
         }
       } else if (result.type === "task") {
-        // For tasks, navigate to the node and open tasks dialog with the task highlighted
         if (nodeIdToNavigate) {
           navigate(`/?highlight=${nodeIdToNavigate}&openTasks=true&taskId=${result.id}`);
         }
@@ -278,7 +268,6 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
     >
       <div className="bg-background/95 backdrop-blur-sm border rounded-lg shadow-lg">
         <div className="relative p-2 flex items-center gap-1">
-          {/* Drag handle */}
           <div
             onMouseDown={handleDragStart}
             className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded touch-none"
@@ -303,9 +292,14 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
               onBlur={() => {
                 if (!query) setIsFocused(false);
               }}
-              placeholder={isFocused ? 'Pesquisar...' : '/'}
+              placeholder="Pesquisar..."
               className="pl-7 pr-7 h-8 text-sm"
             />
+            {!isFocused && !query && (
+              <kbd className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-[10px] font-mono bg-muted text-muted-foreground px-1.5 py-0.5 rounded border border-border">
+                /
+              </kbd>
+            )}
             {query && (
               <button
                 onClick={() => {
