@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { GlobalSearchBar } from "@/components/GlobalSearchBar";
+import { LightboxProvider, LightboxRoot } from "@/components/lightbox";
 import Index from "./pages/Index";
 import TaskEdit from "./pages/TaskEdit";
 import Foco from "./pages/Foco";
@@ -41,9 +42,12 @@ function AppContent() {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <AppContent />
+      <LightboxProvider>
+        <Toaster />
+        <Sonner />
+        <AppContent />
+        <LightboxRoot />
+      </LightboxProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
