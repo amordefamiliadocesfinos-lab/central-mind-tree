@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +35,7 @@ import {
   Bell,
   FileText,
   Loader2,
+  GripVertical,
 } from "lucide-react";
 import { format, parseISO, addDays, startOfWeek, endOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -252,38 +253,79 @@ function OverdueStep({ wizard }: { wizard: ReturnType<typeof useReplanningWizard
   );
 }
 
-// Step 3: Calendar distribution
+// Step 3: Calendar distribution with drag-and-drop reordering
 function CalendarStep({ wizard }: { wizard: ReturnType<typeof useReplanningWizard> }) {
-  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
+  const [orderedTasks, setOrderedTasks] = useState<WizardTask[]>(() => 
+    wizard.unscheduledTasks.slice(0, 15)
+  );
+  const draggedIdx = useRef<number | null>(null);
+  const dragOverIdx = useRef<number | null>(null);
+
+  const handleDragStart = (index: number) => {
+    draggedIdx.current = index;
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    dragOverIdx.current = index;
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (draggedIdx.current === null || dragOverIdx.current === null) return;
+    if (draggedIdx.current === dragOverIdx.current) return;
+
+    const newTasks = [...orderedTasks];
+    const [draggedTask] = newTasks.splice(draggedIdx.current, 1);
+    newTasks.splice(dragOverIdx.current, 0, draggedTask);
+    setOrderedTasks(newTasks);
+
+    draggedIdx.current = null;
+    dragOverIdx.current = null;
+  };
+
+  const handleDragEnd = () => {
+    draggedIdx.current = null;
+    dragOverIdx.current = null;
+  };
 
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
-        Distribua as tarefas sem agendamento pelos dias da semana.
+        Distribua as tarefas sem agendamento pelos dias da semana. Arraste para reordenar.
       </p>
 
-      {wizard.unscheduledTasks.length === 0 ? (
+      {orderedTasks.length === 0 ? (
         <div className="text-center py-8 text-muted-foreground">
           <Check className="h-8 w-8 mx-auto mb-2 text-green-500" />
           Todas as tarefas já estão agendadas!
         </div>
       ) : (
         <div className="space-y-2">
-          {wizard.unscheduledTasks.slice(0, 10).map((task) => (
-            <TaskCard
+          {orderedTasks.map((task, index) => (
+            <div
               key={task.id}
-              task={task}
-              currentStatus={wizard.changes.taskStatuses[task.id] || task.status}
-              scheduledDate={wizard.changes.taskSchedules[task.id]}
-              onStatusChange={(status) => wizard.updateTaskStatus(task.id, status)}
-              onSchedule={(date) => wizard.scheduleTask(task.id, date)}
-              showScheduler
-            />
+              draggable
+              onDragStart={() => handleDragStart(index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDrop={handleDrop}
+              onDragEnd={handleDragEnd}
+              className="cursor-grab active:cursor-grabbing"
+            >
+              <TaskCard
+                task={task}
+                currentStatus={wizard.changes.taskStatuses[task.id] || task.status}
+                scheduledDate={wizard.changes.taskSchedules[task.id]}
+                onStatusChange={(status) => wizard.updateTaskStatus(task.id, status)}
+                onSchedule={(date) => wizard.scheduleTask(task.id, date)}
+                showScheduler
+                showDragHandle
+              />
+            </div>
           ))}
-          {wizard.unscheduledTasks.length > 10 && (
+          {wizard.unscheduledTasks.length > 15 && (
             <p className="text-sm text-muted-foreground text-center pt-2">
-              + {wizard.unscheduledTasks.length - 10} tarefas adicionais
+              + {wizard.unscheduledTasks.length - 15} tarefas adicionais
             </p>
           )}
         </div>
@@ -477,6 +519,7 @@ interface TaskCardProps {
   onStatusChange: (status: string) => void;
   onSchedule?: (date: string) => void;
   showScheduler?: boolean;
+  showDragHandle?: boolean;
 }
 
 function TaskCard({
@@ -486,6 +529,7 @@ function TaskCard({
   onStatusChange,
   onSchedule,
   showScheduler,
+  showDragHandle,
 }: TaskCardProps) {
   const statusConfig = STATUS_CONFIG[currentStatus as keyof typeof STATUS_CONFIG];
   const hasStatusChange = currentStatus !== task.status;
@@ -499,6 +543,9 @@ function TaskCard({
       )}
     >
       <div className="flex items-start justify-between gap-3">
+        {showDragHandle && (
+          <GripVertical className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
+        )}
         <div className="flex-1 min-w-0">
           <p className="font-medium truncate">{task.title}</p>
           <p className="text-xs text-muted-foreground">{task.node_title || "Nó desconhecido"}</p>
