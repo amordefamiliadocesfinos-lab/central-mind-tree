@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { startOfWeek } from "date-fns";
 
 const getWeekStartTimestamp = () => {
@@ -11,6 +11,7 @@ const getTodayISO = () => {
 
 export const useReplanningReminder = () => {
   const [showReminder, setShowReminder] = useState(false);
+  const [shouldAutoOpen, setShouldAutoOpen] = useState(false);
 
   useEffect(() => {
     const checkReminder = () => {
@@ -24,6 +25,7 @@ export const useReplanningReminder = () => {
 
       if (!isFridayAfternoon && !isMondayMorning) {
         setShowReminder(false);
+        setShouldAutoOpen(false);
         return;
       }
 
@@ -33,6 +35,7 @@ export const useReplanningReminder = () => {
 
       if (lastCompletedAt && parseInt(lastCompletedAt) >= weekStart) {
         setShowReminder(false);
+        setShouldAutoOpen(false);
         return;
       }
 
@@ -42,10 +45,16 @@ export const useReplanningReminder = () => {
 
       if (snoozeUntil && snoozeUntil >= today) {
         setShowReminder(false);
+        setShouldAutoOpen(false);
         return;
       }
 
+      // Check if auto-open was already triggered today
+      const autoOpenedToday = localStorage.getItem("pc.plan.autoOpenedAt");
+      const shouldAuto = !autoOpenedToday || autoOpenedToday !== today;
+
       setShowReminder(true);
+      setShouldAutoOpen(shouldAuto);
     };
 
     checkReminder();
@@ -54,10 +63,16 @@ export const useReplanningReminder = () => {
     return () => clearInterval(interval);
   }, []);
 
-  const snoozeToday = () => {
+  const snoozeToday = useCallback(() => {
     localStorage.setItem("pc.plan.snoozeUntil", getTodayISO());
     setShowReminder(false);
-  };
+    setShouldAutoOpen(false);
+  }, []);
 
-  return { showReminder, snoozeToday };
+  const markAutoOpened = useCallback(() => {
+    localStorage.setItem("pc.plan.autoOpenedAt", getTodayISO());
+    setShouldAutoOpen(false);
+  }, []);
+
+  return { showReminder, snoozeToday, shouldAutoOpen, markAutoOpened };
 };
