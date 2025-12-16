@@ -4,14 +4,28 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Package, ShoppingCart, Factory, ArrowLeft, Trash2, AlertTriangle } from 'lucide-react';
+import { Plus, Package, ShoppingCart, Factory, ArrowLeft, Trash2, AlertTriangle, Image, History, ArrowUpDown } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { ProductGallery } from '@/components/ProductGallery';
+import { InventoryMovementDialog } from '@/components/InventoryMovementDialog';
+import { ProductMovementHistory } from '@/components/ProductMovementHistory';
+
+const PRODUCT_CATEGORIES = [
+  'Alimentos',
+  'Bebidas',
+  'Doces',
+  'Salgados',
+  'Embalagens',
+  'Insumos',
+  'Outros',
+];
 
 export default function Operacoes() {
   const {
@@ -29,11 +43,25 @@ export default function Operacoes() {
     calculateKPIs,
     orderStatus,
     orderChannels,
+    refetch,
   } = useOrders();
 
   const [showProductDialog, setShowProductDialog] = useState(false);
   const [showOrderDialog, setShowOrderDialog] = useState(false);
-  const [newProduct, setNewProduct] = useState({ sku: '', name: '', min_stock: 0, price: 0 });
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [movementProduct, setMovementProduct] = useState<{ id: string; name: string; balance: number } | null>(null);
+  const [historyProductId, setHistoryProductId] = useState<string | null>(null);
+  
+  const [newProduct, setNewProduct] = useState<Partial<Product>>({ 
+    sku: '', 
+    name: '', 
+    min_stock: 0, 
+    price: 0,
+    category: '',
+    unit: 'un',
+    media_urls: [],
+    cover_image_url: null,
+  });
   const [newOrder, setNewOrder] = useState({
     customer_name: '',
     channel: 'direto',
@@ -46,9 +74,17 @@ export default function Operacoes() {
   const productionPlan = calculateProductionPlan();
 
   const handleAddProduct = async () => {
-    await createProduct(newProduct);
-    setShowProductDialog(false);
-    setNewProduct({ sku: '', name: '', min_stock: 0, price: 0 });
+    const result = await createProduct(newProduct);
+    if (result) {
+      setShowProductDialog(false);
+      setNewProduct({ sku: '', name: '', min_stock: 0, price: 0, category: '', unit: 'un', media_urls: [], cover_image_url: null });
+    }
+  };
+
+  const handleUpdateProduct = async () => {
+    if (!editingProduct) return;
+    await updateProduct(editingProduct.id, editingProduct);
+    setEditingProduct(null);
   };
 
   const handleAddOrder = async () => {
@@ -68,7 +104,6 @@ export default function Operacoes() {
     const items = [...newOrder.items];
     (items[index] as Record<string, string | number>)[field] = value;
     
-    // Auto-fill price from product
     if (field === 'product_id') {
       const product = products.find(p => p.id === value);
       if (product?.price) {
@@ -89,6 +124,11 @@ export default function Operacoes() {
       await updateInventory(editingInventory.productId, editingInventory.quantity);
       setEditingInventory(null);
     }
+  };
+
+  const getProductBalance = (productId: string) => {
+    const inv = inventory.find(i => i.product_id === productId);
+    return inv?.quantity || 0;
   };
 
   if (loading) {
@@ -384,49 +424,55 @@ export default function Operacoes() {
                 </TableHeader>
                 <TableBody>
                   {products.map((product) => {
-                    const inv = inventory.find(i => i.product_id === product.id);
-                    const qty = inv?.quantity || 0;
+                    const qty = getProductBalance(product.id);
                     const isLow = qty <= product.min_stock;
 
                     return (
                       <TableRow key={product.id}>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
-                            {product.name}
-                            {isLow && <AlertTriangle className="h-4 w-4 text-amber-500" />}
+                            {product.cover_image_url && (
+                              <img 
+                                src={product.cover_image_url} 
+                                alt={product.name}
+                                className="h-8 w-8 rounded object-cover"
+                              />
+                            )}
+                            <div>
+                              {product.name}
+                              {isLow && <AlertTriangle className="h-4 w-4 text-amber-500 inline ml-2" />}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell className="text-right">
-                          {editingInventory?.productId === product.id ? (
-                            <Input
-                              type="number"
-                              className="w-20 inline-block"
-                              value={editingInventory.quantity}
-                              onChange={(e) => setEditingInventory({
-                                ...editingInventory,
-                                quantity: parseInt(e.target.value) || 0,
-                              })}
-                              onBlur={handleUpdateInventory}
-                              onKeyDown={(e) => e.key === 'Enter' && handleUpdateInventory()}
-                              autoFocus
-                            />
-                          ) : (
-                            <span className={isLow ? 'text-amber-500 font-bold' : ''}>
-                              {qty}
-                            </span>
-                          )}
+                          <span className={isLow ? 'text-amber-500 font-bold' : ''}>
+                            {qty} {product.unit}
+                          </span>
                         </TableCell>
                         <TableCell className="text-right text-muted-foreground">
                           {product.min_stock}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setEditingInventory({ productId: product.id, quantity: qty })}
-                          >
-                            Editar
-                          </Button>
+                          <div className="flex justify-end gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => setMovementProduct({ 
+                                id: product.id, 
+                                name: product.name, 
+                                balance: qty 
+                              })}
+                            >
+                              <ArrowUpDown className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setHistoryProductId(product.id)}
+                            >
+                              <History className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     );
@@ -448,41 +494,98 @@ export default function Operacoes() {
                   Novo Produto
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>Novo Produto</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
-                  <div>
-                    <Label>SKU</Label>
-                    <Input
-                      value={newProduct.sku}
-                      onChange={(e) => setNewProduct({ ...newProduct, sku: e.target.value })}
-                      placeholder="Código único"
-                    />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>SKU</Label>
+                      <Input
+                        value={newProduct.sku || ''}
+                        onChange={(e) => setNewProduct({ ...newProduct, sku: e.target.value })}
+                        placeholder="Código único"
+                      />
+                    </div>
+                    <div>
+                      <Label>Unidade</Label>
+                      <Select
+                        value={newProduct.unit || 'un'}
+                        onValueChange={(v) => setNewProduct({ ...newProduct, unit: v })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="un">Unidade</SelectItem>
+                          <SelectItem value="kg">Quilograma</SelectItem>
+                          <SelectItem value="g">Grama</SelectItem>
+                          <SelectItem value="l">Litro</SelectItem>
+                          <SelectItem value="ml">Mililitro</SelectItem>
+                          <SelectItem value="cx">Caixa</SelectItem>
+                          <SelectItem value="pct">Pacote</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   <div>
                     <Label>Nome</Label>
                     <Input
-                      value={newProduct.name}
+                      value={newProduct.name || ''}
                       onChange={(e) => setNewProduct({ ...newProduct, name: e.target.value })}
                     />
                   </div>
                   <div>
-                    <Label>Estoque Mínimo</Label>
-                    <Input
-                      type="number"
-                      value={newProduct.min_stock}
-                      onChange={(e) => setNewProduct({ ...newProduct, min_stock: parseInt(e.target.value) || 0 })}
-                    />
+                    <Label>Categoria</Label>
+                    <Select
+                      value={newProduct.category || ''}
+                      onValueChange={(v) => setNewProduct({ ...newProduct, category: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PRODUCT_CATEGORIES.map((cat) => (
+                          <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
-                    <Label>Preço (R$)</Label>
+                    <Label>Descrição</Label>
+                    <Textarea
+                      value={newProduct.description || ''}
+                      onChange={(e) => setNewProduct({ ...newProduct, description: e.target.value })}
+                      rows={2}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Estoque Mínimo</Label>
+                      <Input
+                        type="number"
+                        value={newProduct.min_stock || 0}
+                        onChange={(e) => setNewProduct({ ...newProduct, min_stock: parseInt(e.target.value) || 0 })}
+                      />
+                    </div>
+                    <div>
+                      <Label>Preço (R$)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        value={newProduct.price || 0}
+                        onChange={(e) => setNewProduct({ ...newProduct, price: parseFloat(e.target.value) || 0 })}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label>Custo (R$)</Label>
                     <Input
                       type="number"
                       step="0.01"
-                      value={newProduct.price}
-                      onChange={(e) => setNewProduct({ ...newProduct, price: parseFloat(e.target.value) || 0 })}
+                      value={newProduct.cost || 0}
+                      onChange={(e) => setNewProduct({ ...newProduct, cost: parseFloat(e.target.value) || 0 })}
                     />
                   </div>
                   <Button onClick={handleAddProduct} className="w-full">
@@ -493,26 +596,212 @@ export default function Operacoes() {
             </Dialog>
           </div>
 
-          <div className="grid gap-3 md:grid-cols-2">
-            {products.map((product) => (
-              <Card key={product.id}>
-                <CardContent className="p-4">
-                  <div className="flex justify-between">
-                    <div>
-                      <h3 className="font-medium">{product.name}</h3>
-                      <p className="text-xs text-muted-foreground">SKU: {product.sku}</p>
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {products.map((product) => {
+              const qty = getProductBalance(product.id);
+              const isLow = qty <= product.min_stock;
+              
+              return (
+                <Card 
+                  key={product.id} 
+                  className="cursor-pointer hover:border-primary/50 transition-colors"
+                  onClick={() => setEditingProduct(product)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex gap-3">
+                      {product.cover_image_url ? (
+                        <img 
+                          src={product.cover_image_url} 
+                          alt={product.name}
+                          className="h-16 w-16 rounded-lg object-cover flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="h-16 w-16 rounded-lg bg-muted flex items-center justify-center flex-shrink-0">
+                          <Image className="h-6 w-6 text-muted-foreground" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-medium truncate">{product.name}</h3>
+                        <p className="text-xs text-muted-foreground">SKU: {product.sku}</p>
+                        {product.category && (
+                          <Badge variant="secondary" className="text-xs mt-1">
+                            {product.category}
+                          </Badge>
+                        )}
+                        <div className="flex items-center justify-between mt-2">
+                          <span className="text-sm font-bold">R$ {(product.price || 0).toFixed(2)}</span>
+                          <span className={cn(
+                            "text-xs",
+                            isLow ? "text-amber-500 font-bold" : "text-muted-foreground"
+                          )}>
+                            Est: {qty}
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold">R$ {(product.price || 0).toFixed(2)}</p>
-                      <p className="text-xs text-muted-foreground">Min: {product.min_stock}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Edit Product Dialog */}
+      <Dialog open={!!editingProduct} onOpenChange={(open) => !open && setEditingProduct(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Produto</DialogTitle>
+          </DialogHeader>
+          {editingProduct && (
+            <div className="space-y-4">
+              <ProductGallery
+                productId={editingProduct.id}
+                mediaUrls={editingProduct.media_urls || []}
+                coverImageUrl={editingProduct.cover_image_url}
+                onUpdate={(urls, cover) => setEditingProduct({
+                  ...editingProduct,
+                  media_urls: urls,
+                  cover_image_url: cover,
+                })}
+              />
+              
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label>SKU</Label>
+                  <Input
+                    value={editingProduct.sku}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, sku: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label>Unidade</Label>
+                  <Select
+                    value={editingProduct.unit}
+                    onValueChange={(v) => setEditingProduct({ ...editingProduct, unit: v })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="un">Unidade</SelectItem>
+                      <SelectItem value="kg">Quilograma</SelectItem>
+                      <SelectItem value="g">Grama</SelectItem>
+                      <SelectItem value="l">Litro</SelectItem>
+                      <SelectItem value="ml">Mililitro</SelectItem>
+                      <SelectItem value="cx">Caixa</SelectItem>
+                      <SelectItem value="pct">Pacote</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div>
+                <Label>Nome</Label>
+                <Input
+                  value={editingProduct.name}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, name: e.target.value })}
+                />
+              </div>
+              
+              <div>
+                <Label>Categoria</Label>
+                <Select
+                  value={editingProduct.category || ''}
+                  onValueChange={(v) => setEditingProduct({ ...editingProduct, category: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PRODUCT_CATEGORIES.map((cat) => (
+                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label>Descrição</Label>
+                <Textarea
+                  value={editingProduct.description || ''}
+                  onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
+                  rows={2}
+                />
+              </div>
+              
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label>Mínimo</Label>
+                  <Input
+                    type="number"
+                    value={editingProduct.min_stock}
+                    onChange={(e) => setEditingProduct({ 
+                      ...editingProduct, 
+                      min_stock: parseInt(e.target.value) || 0 
+                    })}
+                  />
+                </div>
+                <div>
+                  <Label>Custo</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={editingProduct.cost || 0}
+                    onChange={(e) => setEditingProduct({ 
+                      ...editingProduct, 
+                      cost: parseFloat(e.target.value) || 0 
+                    })}
+                  />
+                </div>
+                <div>
+                  <Label>Preço</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={editingProduct.price || 0}
+                    onChange={(e) => setEditingProduct({ 
+                      ...editingProduct, 
+                      price: parseFloat(e.target.value) || 0 
+                    })}
+                  />
+                </div>
+              </div>
+              
+              <Button onClick={handleUpdateProduct} className="w-full">
+                Salvar Alterações
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Inventory Movement Dialog */}
+      {movementProduct && (
+        <InventoryMovementDialog
+          open={!!movementProduct}
+          onOpenChange={(open) => !open && setMovementProduct(null)}
+          productId={movementProduct.id}
+          productName={movementProduct.name}
+          currentBalance={movementProduct.balance}
+          onSuccess={() => {
+            refetch();
+            setMovementProduct(null);
+          }}
+        />
+      )}
+
+      {/* Movement History Dialog */}
+      <Dialog open={!!historyProductId} onOpenChange={(open) => !open && setHistoryProductId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Histórico de Movimentos</DialogTitle>
+          </DialogHeader>
+          {historyProductId && (
+            <ProductMovementHistory productId={historyProductId} />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

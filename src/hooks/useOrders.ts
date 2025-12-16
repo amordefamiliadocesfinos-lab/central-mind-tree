@@ -12,6 +12,11 @@ export interface Product {
   cost: number | null;
   price: number | null;
   is_active: boolean;
+  category: string | null;
+  attributes: Record<string, unknown>;
+  media_urls: string[];
+  cover_image_url: string | null;
+  expiry_days: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -136,17 +141,22 @@ export function useOrders() {
   }, []);
 
   const createProduct = useCallback(async (product: Partial<Product>) => {
-    const { data, error } = await supabase
+    const { data, error } = await (supabase
       .from('products')
       .insert({
         sku: product.sku || `SKU-${Date.now()}`,
         name: product.name || 'Novo Produto',
-        description: product.description,
+        description: product.description || null,
         unit: product.unit || 'un',
         min_stock: product.min_stock || 0,
-        cost: product.cost,
-        price: product.price,
-      })
+        cost: product.cost || null,
+        price: product.price || null,
+        category: product.category || null,
+        attributes: (product.attributes || {}) as any,
+        media_urls: (product.media_urls || []) as any,
+        cover_image_url: product.cover_image_url || null,
+        expiry_days: product.expiry_days || null,
+      }) as any)
       .select()
       .single();
 
@@ -161,9 +171,13 @@ export function useOrders() {
   }, [fetchProducts]);
 
   const updateProduct = useCallback(async (id: string, updates: Partial<Product>) => {
+    const updateData: any = { ...updates };
+    if (updates.attributes) updateData.attributes = updates.attributes;
+    if (updates.media_urls) updateData.media_urls = updates.media_urls;
+    
     const { error } = await supabase
       .from('products')
-      .update(updates)
+      .update(updateData)
       .eq('id', id);
 
     if (error) {
