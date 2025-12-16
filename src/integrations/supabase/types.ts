@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      contacts: {
+        Row: {
+          address: string | null
+          city: string | null
+          company_name: string | null
+          created_at: string
+          document: string | null
+          email: string | null
+          id: string
+          is_active: boolean
+          name: string
+          notes: string | null
+          phone: string | null
+          state: string | null
+          type: string
+          updated_at: string
+          zip_code: string | null
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          company_name?: string | null
+          created_at?: string
+          document?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          notes?: string | null
+          phone?: string | null
+          state?: string | null
+          type?: string
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          company_name?: string | null
+          created_at?: string
+          document?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          state?: string | null
+          type?: string
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Relationships: []
+      }
       inventory: {
         Row: {
           id: string
@@ -39,6 +93,56 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "inventory_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_movements: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          movement_type: string
+          new_balance: number
+          notes: string | null
+          previous_balance: number
+          product_id: string
+          quantity: number
+          reference_id: string | null
+          reference_type: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          movement_type: string
+          new_balance?: number
+          notes?: string | null
+          previous_balance?: number
+          product_id: string
+          quantity: number
+          reference_id?: string | null
+          reference_type?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          movement_type?: string
+          new_balance?: number
+          notes?: string | null
+          previous_balance?: number
+          product_id?: string
+          quantity?: number
+          reference_id?: string | null
+          reference_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_movements_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
@@ -129,50 +233,67 @@ export type Database = {
       orders: {
         Row: {
           channel: string | null
+          contact_id: string | null
           created_at: string
           customer_contact: string | null
           customer_name: string | null
           deleted_at: string | null
+          delivery_date: string | null
           due_date: string | null
           id: string
           notes: string | null
           order_date: string
           order_number: string | null
+          production_date: string | null
           status: string
           total_value: number | null
           updated_at: string
         }
         Insert: {
           channel?: string | null
+          contact_id?: string | null
           created_at?: string
           customer_contact?: string | null
           customer_name?: string | null
           deleted_at?: string | null
+          delivery_date?: string | null
           due_date?: string | null
           id?: string
           notes?: string | null
           order_date?: string
           order_number?: string | null
+          production_date?: string | null
           status?: string
           total_value?: number | null
           updated_at?: string
         }
         Update: {
           channel?: string | null
+          contact_id?: string | null
           created_at?: string
           customer_contact?: string | null
           customer_name?: string | null
           deleted_at?: string | null
+          delivery_date?: string | null
           due_date?: string | null
           id?: string
           notes?: string | null
           order_date?: string
           order_number?: string | null
+          production_date?: string | null
           status?: string
           total_value?: number | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "orders_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       posts: {
         Row: {
@@ -232,12 +353,17 @@ export type Database = {
       }
       products: {
         Row: {
+          attributes: Json | null
+          category: string | null
           cost: number | null
+          cover_image_url: string | null
           created_at: string
           deleted_at: string | null
           description: string | null
+          expiry_days: number | null
           id: string
           is_active: boolean
+          media_urls: Json | null
           min_stock: number | null
           name: string
           price: number | null
@@ -246,12 +372,17 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          attributes?: Json | null
+          category?: string | null
           cost?: number | null
+          cover_image_url?: string | null
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          expiry_days?: number | null
           id?: string
           is_active?: boolean
+          media_urls?: Json | null
           min_stock?: number | null
           name: string
           price?: number | null
@@ -260,12 +391,17 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          attributes?: Json | null
+          category?: string | null
           cost?: number | null
+          cover_image_url?: string | null
           created_at?: string
           deleted_at?: string | null
           description?: string | null
+          expiry_days?: number | null
           id?: string
           is_active?: boolean
+          media_urls?: Json | null
           min_stock?: number | null
           name?: string
           price?: number | null
