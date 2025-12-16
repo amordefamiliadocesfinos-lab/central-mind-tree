@@ -81,10 +81,10 @@ export function TaskBar({ linesMode, onLinesModeChange }: TaskBarProps) {
   if (tasks.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-2 pb-3 border-b">
+    <div className="flex items-center gap-2 p-2 bg-background/95 backdrop-blur border rounded-lg shadow-md">
       {/* Status counter buttons */}
       <button
-        className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold ${
+        className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold ${
           statusCounts.estrutural > 0 ? "bg-node-roxo text-white" : "bg-muted text-muted-foreground"
         }`}
         title={`Estrutural: ${statusCounts.estrutural}`}
@@ -93,7 +93,7 @@ export function TaskBar({ linesMode, onLinesModeChange }: TaskBarProps) {
       </button>
       
       <button
-        className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold ${
+        className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold ${
           statusCounts.andamento > 0 ? "bg-node-vermelho text-white" : "bg-muted text-muted-foreground"
         }`}
         title={`Em andamento: ${statusCounts.andamento}`}
@@ -102,7 +102,7 @@ export function TaskBar({ linesMode, onLinesModeChange }: TaskBarProps) {
       </button>
       
       <button
-        className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold ${
+        className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold ${
           statusCounts.pendente > 0 ? "bg-node-amarelo text-white" : "bg-muted text-muted-foreground"
         }`}
         title={`Pendente: ${statusCounts.pendente}`}
@@ -111,7 +111,7 @@ export function TaskBar({ linesMode, onLinesModeChange }: TaskBarProps) {
       </button>
       
       <button
-        className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold ${
+        className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-semibold ${
           statusCounts.concluído > 0 ? "bg-node-verde text-white" : "bg-muted text-muted-foreground"
         }`}
         title={`Concluído: ${statusCounts.concluído}`}
@@ -120,13 +120,13 @@ export function TaskBar({ linesMode, onLinesModeChange }: TaskBarProps) {
       </button>
 
       {/* Divider */}
-      <div className="h-6 w-px bg-border mx-1" />
+      <div className="h-5 w-px bg-border mx-1" />
 
       {/* Lines mode selector */}
-      <div className="flex items-center gap-1 bg-muted rounded-md p-0.5">
+      <div className="flex items-center gap-0.5 bg-muted rounded p-0.5">
         <button
           onClick={() => onLinesModeChange("off")}
-          className={`px-2 py-1 text-xs rounded transition-colors ${
+          className={`px-2 py-0.5 text-xs rounded transition-colors ${
             linesMode === "off" 
               ? "bg-background text-foreground shadow-sm" 
               : "text-muted-foreground hover:text-foreground"
@@ -136,27 +136,17 @@ export function TaskBar({ linesMode, onLinesModeChange }: TaskBarProps) {
         </button>
         <button
           onClick={() => onLinesModeChange("resumo")}
-          className={`px-2 py-1 text-xs rounded transition-colors ${
+          className={`px-2 py-0.5 text-xs rounded transition-colors ${
             linesMode === "resumo" 
               ? "bg-background text-foreground shadow-sm" 
               : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          Resumo
-        </button>
-        <button
-          onClick={() => onLinesModeChange("detalhe")}
-          className={`px-2 py-1 text-xs rounded transition-colors ${
-            linesMode === "detalhe" 
-              ? "bg-background text-foreground shadow-sm" 
-              : "text-muted-foreground hover:text-foreground"
-          }`}
-        >
-          Detalhe
+          Linhas
         </button>
         <button
           onClick={() => onLinesModeChange("ceo")}
-          className={`px-2 py-1 text-xs rounded transition-colors ${
+          className={`px-2 py-0.5 text-xs rounded transition-colors ${
             linesMode === "ceo" 
               ? "bg-node-vermelho text-white shadow-sm" 
               : "text-muted-foreground hover:text-foreground"
