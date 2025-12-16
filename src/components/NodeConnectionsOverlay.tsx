@@ -248,6 +248,103 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
     return connections;
   }, [tasks, taskMap, nodePositions, linesMode, nodes.length]);
 
+  // Memoized anchor points calculator - MUST be before early return
+  const getAnchorPoints = useCallback((sourceNodeId: string, targetNodeId: string) => {
+    const source = nodePositions.get(sourceNodeId);
+    const target = nodePositions.get(targetNodeId);
+    
+    if (!source || !target) {
+      return { x1: 0, y1: 0, x2: 0, y2: 0 };
+    }
+
+    // Determine exit/entry sides based on relative horizontal position
+    const exitRight = target.x > source.x;
+    
+    const x1 = exitRight ? source.right : source.left;
+    const y1 = source.y;
+    const x2 = exitRight ? target.left : target.right;
+    const y2 = target.y;
+
+    return { x1, y1, x2, y2 };
+  }, [nodePositions]);
+
+  // Generate Bezier path with horizontal control points - MUST be before early return
+  const getBezierPath = useCallback((x1: number, y1: number, x2: number, y2: number, offset = 0) => {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    
+    // Add perpendicular offset for multiple lines
+    const len = Math.sqrt(dx * dx + dy * dy);
+    const perpX = len > 0 ? (-dy / len) * offset : 0;
+    const perpY = len > 0 ? (dx / len) * offset : 0;
+    
+    // Horizontal control = 0.3 × horizontal distance
+    const controlOffset = Math.abs(dx) * 0.3;
+    
+    // Control points extend horizontally from anchors
+    const cx1 = x1 + (dx > 0 ? controlOffset : -controlOffset) + perpX;
+    const cy1 = y1 + perpY;
+    const cx2 = x2 - (dx > 0 ? controlOffset : -controlOffset) + perpX;
+    const cy2 = y2 + perpY;
+
+    const startX = x1 + perpX;
+    const startY = y1 + perpY;
+    const endX = x2 + perpX;
+    const endY = y2 + perpY;
+
+    const midX = (startX + endX) / 2;
+    const midY = (startY + endY) / 2;
+
+    return {
+      path: `M ${startX} ${startY} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${endX} ${endY}`,
+      midX,
+      midY,
+    };
+  }, []);
+
+  const getArrowId = useCallback((status: Task["status"], faded = false) => `arrow-${status}${faded ? '-faded' : ''}`, []);
+
+  const togglePairExpansion = useCallback((pairKey: string) => {
+    setExpandedPairs(prev => {
+      const next = new Set(prev);
+      if (next.has(pairKey)) {
+        next.delete(pairKey);
+      } else {
+        next.add(pairKey);
+      }
+      return next;
+    });
+  }, []);
+
+  // Check if connection involves hovered node - MUST be before early return
+  const isConnectionRelevant = useCallback((sourceNodeId: string, targetNodeId: string) => {
+    if (!hoveredNodeId) return true;
+    return sourceNodeId === hoveredNodeId || targetNodeId === hoveredNodeId;
+  }, [hoveredNodeId]);
+
+  // CEO mode opacity based on status - MUST be before early return
+  const getCEOOpacity = useCallback((status: Task["status"]) => {
+    if (linesMode !== "ceo") return 1;
+    if (status === "estrutural" || status === "andamento") return 1;
+    return 0.15;
+  }, [linesMode]);
+
+  // Viewport culling - check if connection is visible - MUST be before early return
+  const viewportDimensions = useMemo(() => ({
+    width: typeof window !== 'undefined' ? window.innerWidth : 1920,
+    height: typeof window !== 'undefined' ? window.innerHeight : 1080,
+  }), [nodePositions]);
+
+  const isInViewport = useCallback((x1: number, y1: number, x2: number, y2: number) => {
+    const padding = 100; // Extra padding for curves
+    const minX = Math.min(x1, x2) - padding;
+    const maxX = Math.max(x1, x2) + padding;
+    const minY = Math.min(y1, y2) - padding;
+    const maxY = Math.max(y1, y2) + padding;
+    
+    return !(maxX < 0 || minX > viewportDimensions.width || maxY < 0 || minY > viewportDimensions.height);
+  }, [viewportDimensions]);
+
   // Memoized bundled connections for resumo/ceo modes
   const bundledConnections = useMemo((): BundledConnection[] => {
     if (linesMode !== "resumo" && linesMode !== "ceo") return [];
@@ -316,107 +413,11 @@ export function NodeConnectionsOverlay({ linesMode }: NodeConnectionsOverlayProp
     return bundled;
   }, [tasks, taskMap, nodePositions, linesMode, nodes.length]);
 
-  if (linesMode === "off" || nodes.length === 0) return null;
-
-  // Memoized anchor points calculator
-  const getAnchorPoints = useCallback((sourceNodeId: string, targetNodeId: string) => {
-    const source = nodePositions.get(sourceNodeId);
-    const target = nodePositions.get(targetNodeId);
-    
-    if (!source || !target) {
-      return { x1: 0, y1: 0, x2: 0, y2: 0 };
-    }
-
-    // Determine exit/entry sides based on relative horizontal position
-    const exitRight = target.x > source.x;
-    
-    const x1 = exitRight ? source.right : source.left;
-    const y1 = source.y;
-    const x2 = exitRight ? target.left : target.right;
-    const y2 = target.y;
-
-    return { x1, y1, x2, y2 };
-  }, [nodePositions]);
-
-  // Generate Bezier path with horizontal control points - pure function, no deps needed
-  const getBezierPath = useCallback((x1: number, y1: number, x2: number, y2: number, offset = 0) => {
-    const dx = x2 - x1;
-    const dy = y2 - y1;
-    
-    // Add perpendicular offset for multiple lines
-    const len = Math.sqrt(dx * dx + dy * dy);
-    const perpX = len > 0 ? (-dy / len) * offset : 0;
-    const perpY = len > 0 ? (dx / len) * offset : 0;
-    
-    // Horizontal control = 0.3 × horizontal distance
-    const controlOffset = Math.abs(dx) * 0.3;
-    
-    // Control points extend horizontally from anchors
-    const cx1 = x1 + (dx > 0 ? controlOffset : -controlOffset) + perpX;
-    const cy1 = y1 + perpY;
-    const cx2 = x2 - (dx > 0 ? controlOffset : -controlOffset) + perpX;
-    const cy2 = y2 + perpY;
-
-    const startX = x1 + perpX;
-    const startY = y1 + perpY;
-    const endX = x2 + perpX;
-    const endY = y2 + perpY;
-
-    const midX = (startX + endX) / 2;
-    const midY = (startY + endY) / 2;
-
-    return {
-      path: `M ${startX} ${startY} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${endX} ${endY}`,
-      midX,
-      midY,
-    };
-  }, []);
-
-  const getArrowId = useCallback((status: Task["status"], faded = false) => `arrow-${status}${faded ? '-faded' : ''}`, []);
-
-  const togglePairExpansion = useCallback((pairKey: string) => {
-    setExpandedPairs(prev => {
-      const next = new Set(prev);
-      if (next.has(pairKey)) {
-        next.delete(pairKey);
-      } else {
-        next.add(pairKey);
-      }
-      return next;
-    });
-  }, []);
-
-  // Check if connection involves hovered node
-  const isConnectionRelevant = useCallback((sourceNodeId: string, targetNodeId: string) => {
-    if (!hoveredNodeId) return true;
-    return sourceNodeId === hoveredNodeId || targetNodeId === hoveredNodeId;
-  }, [hoveredNodeId]);
-
-  // CEO mode opacity based on status
-  const getCEOOpacity = useCallback((status: Task["status"]) => {
-    if (linesMode !== "ceo") return 1;
-    if (status === "estrutural" || status === "andamento") return 1;
-    return 0.15;
-  }, [linesMode]);
-
-  // Viewport culling - check if connection is visible (memoized dimensions)
-  const viewportDimensions = useMemo(() => ({
-    width: typeof window !== 'undefined' ? window.innerWidth : 1920,
-    height: typeof window !== 'undefined' ? window.innerHeight : 1080,
-  }), [nodePositions]); // Recalculate when positions change
-
-  const isInViewport = useCallback((x1: number, y1: number, x2: number, y2: number) => {
-    const padding = 100; // Extra padding for curves
-    const minX = Math.min(x1, x2) - padding;
-    const maxX = Math.max(x1, x2) + padding;
-    const minY = Math.min(y1, y2) - padding;
-    const maxY = Math.max(y1, y2) + padding;
-    
-    return !(maxX < 0 || minX > viewportDimensions.width || maxY < 0 || minY > viewportDimensions.height);
-  }, [viewportDimensions]);
-
   // Effective mode: CEO uses resumo rendering
   const effectiveMode = linesMode === "ceo" ? "resumo" : linesMode;
+
+  // Early return AFTER all hooks
+  if (linesMode === "off" || nodes.length === 0) return null;
 
   return (
     <svg
