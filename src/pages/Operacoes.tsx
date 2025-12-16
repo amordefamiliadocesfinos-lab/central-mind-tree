@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useOrders, Order, Product, OrderItem } from '@/hooks/useOrders';
+import { useMRP } from '@/hooks/useMRP';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -10,12 +11,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Plus, Package, ShoppingCart, Factory, ArrowLeft, Trash2, AlertTriangle, Image, History, ArrowUpDown } from 'lucide-react';
+import { Plus, Package, ShoppingCart, Factory, ArrowLeft, Trash2, AlertTriangle, Image, History, ArrowUpDown, Boxes } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ProductGallery } from '@/components/ProductGallery';
 import { InventoryMovementDialog } from '@/components/InventoryMovementDialog';
 import { ProductMovementHistory } from '@/components/ProductMovementHistory';
+import { BOMEditor } from '@/components/BOMEditor';
+import { MRPPanel } from '@/components/MRPPanel';
 
 const PRODUCT_CATEGORIES = [
   'Alimentos',
@@ -46,11 +49,14 @@ export default function Operacoes() {
     refetch,
   } = useOrders();
 
+  const { reserveMaterials, consumeMaterials, calculateOrderBOM } = useMRP();
+
   const [showProductDialog, setShowProductDialog] = useState(false);
   const [showOrderDialog, setShowOrderDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [movementProduct, setMovementProduct] = useState<{ id: string; name: string; balance: number } | null>(null);
   const [historyProductId, setHistoryProductId] = useState<string | null>(null);
+  const [orderBOM, setOrderBOM] = useState<{ component_id: string; component_name: string; qty_needed: number; stock_available: number; shortage: number }[]>([]);
   
   const [newProduct, setNewProduct] = useState<Partial<Product>>({ 
     sku: '', 
@@ -126,6 +132,43 @@ export default function Operacoes() {
     }
   };
 
+  // Handle order status change with MRP reserve/consume
+  const handleStatusChange = useCallback(async (order: Order, newStatus: string) => {
+    const oldStatus = order.status;
+    
+    // Get order items for MRP calculations
+    const items = order.items?.map(i => ({ product_id: i.product_id, quantity: i.quantity })) || [];
+    
+    // Reserve when confirming order
+    if (oldStatus === 'rascunho' && newStatus === 'confirmado' && items.length > 0) {
+      await reserveMaterials(order.id, items);
+    }
+    
+    // Consume when starting production
+    if ((oldStatus === 'confirmado' || oldStatus === 'rascunho') && newStatus === 'producao' && items.length > 0) {
+      await consumeMaterials(order.id, items);
+    }
+    
+    await updateOrderStatus(order.id, newStatus);
+    refetch();
+  }, [reserveMaterials, consumeMaterials, updateOrderStatus, refetch]);
+
+  // Calculate BOM for current order being created
+  const calculateNewOrderBOM = useCallback(async () => {
+    if (newOrder.items.length === 0) {
+      setOrderBOM([]);
+      return;
+    }
+    const items = newOrder.items.filter(i => i.product_id).map(i => ({
+      product_id: i.product_id,
+      quantity: i.quantity,
+    }));
+    if (items.length > 0) {
+      const bom = await calculateOrderBOM(items);
+      setOrderBOM(bom);
+    }
+  }, [newOrder.items, calculateOrderBOM]);
+
   const getProductBalance = (productId: string) => {
     const inv = inventory.find(i => i.product_id === productId);
     return inv?.quantity || 0;
@@ -182,7 +225,7 @@ export default function Operacoes() {
       </div>
 
       <Tabs defaultValue="orders" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="orders" className="gap-1">
             <ShoppingCart className="h-4 w-4" />
             Pedidos
@@ -190,6 +233,10 @@ export default function Operacoes() {
           <TabsTrigger value="production" className="gap-1">
             <Factory className="h-4 w-4" />
             Produção
+          </TabsTrigger>
+          <TabsTrigger value="mrp" className="gap-1">
+            <Boxes className="h-4 w-4" />
+            MRP
           </TabsTrigger>
           <TabsTrigger value="inventory" className="gap-1">
             <Package className="h-4 w-4" />
@@ -344,7 +391,7 @@ export default function Operacoes() {
                         <p className="font-bold">R$ {(order.total_value || 0).toFixed(2)}</p>
                         <Select
                           value={order.status}
-                          onValueChange={(v) => updateOrderStatus(order.id, v)}
+                          onValueChange={(v) => handleStatusChange(order, v)}
                         >
                           <SelectTrigger className="w-32 h-8 mt-1">
                             <SelectValue />
@@ -404,6 +451,11 @@ export default function Operacoes() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* MRP Tab */}
+        <TabsContent value="mrp">
+          <MRPPanel />
         </TabsContent>
 
         {/* Inventory Tab */}
@@ -663,8 +715,22 @@ export default function Operacoes() {
                   ...editingProduct,
                   media_urls: urls,
                   cover_image_url: cover,
-                })}
+              })}
               />
+
+              {/* BOM Editor */}
+              <div className="border-t pt-4">
+                <BOMEditor
+                  productId={editingProduct.id}
+                  productName={editingProduct.name}
+                  availableComponents={products.map(p => ({
+                    id: p.id,
+                    name: p.name,
+                    sku: p.sku,
+                    unit: p.unit,
+                  }))}
+                />
+              </div>
               
               <div className="grid grid-cols-2 gap-3">
                 <div>
