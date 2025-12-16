@@ -132,6 +132,7 @@ export type Database = {
           created_at: string
           customer_contact: string | null
           customer_name: string | null
+          deleted_at: string | null
           due_date: string | null
           id: string
           notes: string | null
@@ -146,6 +147,7 @@ export type Database = {
           created_at?: string
           customer_contact?: string | null
           customer_name?: string | null
+          deleted_at?: string | null
           due_date?: string | null
           id?: string
           notes?: string | null
@@ -160,6 +162,7 @@ export type Database = {
           created_at?: string
           customer_contact?: string | null
           customer_name?: string | null
+          deleted_at?: string | null
           due_date?: string | null
           id?: string
           notes?: string | null
@@ -231,6 +234,7 @@ export type Database = {
         Row: {
           cost: number | null
           created_at: string
+          deleted_at: string | null
           description: string | null
           id: string
           is_active: boolean
@@ -244,6 +248,7 @@ export type Database = {
         Insert: {
           cost?: number | null
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
           is_active?: boolean
@@ -257,6 +262,7 @@ export type Database = {
         Update: {
           cost?: number | null
           created_at?: string
+          deleted_at?: string | null
           description?: string | null
           id?: string
           is_active?: boolean
@@ -393,6 +399,7 @@ export type Database = {
         Row: {
           checklist: Json | null
           created_at: string
+          deleted_at: string | null
           dependency_id: string | null
           description: string | null
           due_date: string | null
@@ -410,6 +417,7 @@ export type Database = {
         Insert: {
           checklist?: Json | null
           created_at?: string
+          deleted_at?: string | null
           dependency_id?: string | null
           description?: string | null
           due_date?: string | null
@@ -427,6 +435,7 @@ export type Database = {
         Update: {
           checklist?: Json | null
           created_at?: string
+          deleted_at?: string | null
           dependency_id?: string | null
           description?: string | null
           due_date?: string | null

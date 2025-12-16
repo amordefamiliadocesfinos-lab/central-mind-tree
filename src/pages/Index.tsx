@@ -3,7 +3,7 @@ import { useLocation, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { NodeBox } from "@/components/NodeBox";
 import { NodeTree } from "@/components/NodeTree";
-import { TimerWidget } from "@/components/TimerWidget";
+import { TaskBar } from "@/components/TaskBar";
 import { TasksDialog } from "@/components/TasksDialog";
 import { NodeConnectionsOverlay } from "@/components/NodeConnectionsOverlay";
 import { ReplanningBanner } from "@/components/ReplanningBanner";
@@ -392,10 +392,13 @@ const Index = () => {
       )}
       <NodeConnectionsOverlay linesMode={linesMode} />
       <CEOLegend visible={linesMode === "ceo"} />
-      <TimerWidget 
-        linesMode={linesMode}
-        onLinesModeChange={setLinesMode}
-      />
+      {/* TaskBar above footer for lines mode control */}
+      <div className="fixed bottom-14 left-4 z-[9998]">
+        <TaskBar 
+          linesMode={linesMode}
+          onLinesModeChange={setLinesMode}
+        />
+      </div>
       <ReplanningBanner />
       <DueDateBanner />
     </>

@@ -4,7 +4,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { GlobalSearchBar } from "@/components/GlobalSearchBar";
+import { GlobalFooterBar } from "@/components/GlobalFooterBar";
 import { LightboxProvider, LightboxRoot } from "@/components/lightbox";
+import { UndoRedoProvider } from "@/contexts/UndoRedoContext";
 import Index from "./pages/Index";
 import TaskEdit from "./pages/TaskEdit";
 import Foco from "./pages/Foco";
@@ -35,6 +37,7 @@ function AppContent() {
         <Route path="/task/:id" element={<TaskEdit />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
+      <GlobalFooterBar />
     </BrowserRouter>
   );
 }
@@ -42,12 +45,14 @@ function AppContent() {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <LightboxProvider>
-        <Toaster />
-        <Sonner />
-        <AppContent />
-        <LightboxRoot />
-      </LightboxProvider>
+      <UndoRedoProvider>
+        <LightboxProvider>
+          <Toaster />
+          <Sonner />
+          <AppContent />
+          <LightboxRoot />
+        </LightboxProvider>
+      </UndoRedoProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );
