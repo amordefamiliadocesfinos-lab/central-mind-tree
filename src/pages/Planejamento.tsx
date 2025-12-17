@@ -34,7 +34,8 @@ import { cn } from "@/lib/utils";
 import { ReplanningBanner } from "@/components/ReplanningBanner";
 import { DueDateBanner } from "@/components/DueDateBanner";
 import { DueDatePill } from "@/components/DueDatePill";
-import { ReplanningWizard } from "@/components/ReplanningWizard";
+import { OperableWizard } from "@/components/OperableWizard";
+import { WeeklyHierarchyView } from "@/components/WeeklyHierarchyView";
 
 interface Task {
   id: string;
@@ -502,7 +503,10 @@ const Planejamento = () => {
           </div>
         </div>
 
-        <ReplanningWizard open={wizardOpen} onOpenChange={setWizardOpen} />
+        <OperableWizard open={wizardOpen} onOpenChange={setWizardOpen} />
+        
+        {/* Weekly Hierarchy View with DnD */}
+        <WeeklyHierarchyView />
 
         {/* Block 1: Checklist de Áreas */}
         <Card>
