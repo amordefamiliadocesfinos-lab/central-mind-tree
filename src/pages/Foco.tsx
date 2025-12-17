@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { ReplanningBanner } from "@/components/ReplanningBanner";
 import { DueDateBanner } from "@/components/DueDateBanner";
+import { FollowUpBanner } from "@/components/FollowUpBanner";
 
 interface Task {
   id: string;
@@ -563,6 +564,7 @@ export default function Foco() {
 
         <ReplanningBanner />
         <DueDateBanner />
+        <FollowUpBanner />
       </div>
     </div>
   );

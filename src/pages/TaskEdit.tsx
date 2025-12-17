@@ -20,12 +20,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Save, Plus, Trash2, ListChecks, CalendarIcon, X } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, ListChecks, CalendarIcon, X, Clock } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import type { Json } from "@/integrations/supabase/types";
 import { MediaUploader, MediaItem, uploadMedia, loadMediaFromUrls } from "@/components/MediaUploader";
+import { OnHoldBadge } from "@/components/OnHoldBadge";
+import { OnHoldDialog } from "@/components/OnHoldDialog";
+import { useOnHold, OnHoldFormData } from "@/hooks/useOnHold";
 
 interface ChecklistItem {
   id: string;
@@ -49,6 +52,11 @@ interface Task {
   due_date: string | null;
   scheduled_date: string | null;
   media_urls: string[];
+  on_hold: boolean;
+  on_hold_who: string | null;
+  on_hold_channel: string | null;
+  on_hold_deadline: string | null;
+  on_hold_note: string | null;
 }
 
 interface Node {
@@ -83,6 +91,9 @@ const TaskEdit = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [media, setMedia] = useState<MediaItem[]>([]);
+  const [showOnHoldDialog, setShowOnHoldDialog] = useState(false);
+  
+  const { toggleOnHold, loading: onHoldLoading } = useOnHold();
 
   // Calculate progress from checklist
   const calculatedProgress = checklist.length > 0
@@ -248,6 +259,22 @@ const TaskEdit = () => {
     setChecklist(checklist.filter(item => item.id !== itemId));
   };
 
+  const handleOnHoldToggle = async (data?: OnHoldFormData) => {
+    if (!task || !id) return;
+    const success = await toggleOnHold(id, task.on_hold, data);
+    if (success) {
+      // Refresh task data
+      const { data: updated } = await supabase
+        .from("tasks")
+        .select("*")
+        .eq("id", id)
+        .single();
+      if (updated) {
+        setTask(updated as unknown as Task);
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center w-screen h-screen bg-background">
@@ -279,11 +306,30 @@ const TaskEdit = () => {
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
-            <h1 className="text-2xl font-bold">Editar Tarefa</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold">Editar Tarefa</h1>
+              <OnHoldBadge
+                onHold={task.on_hold}
+                who={task.on_hold_who}
+                channel={task.on_hold_channel}
+                deadline={task.on_hold_deadline}
+                note={task.on_hold_note}
+              />
+            </div>
             {node && (
               <p className="text-sm text-muted-foreground">Nó: {node.title}</p>
             )}
           </div>
+          <Button
+            variant={task.on_hold ? "default" : "outline"}
+            size="sm"
+            onClick={() => task.on_hold ? handleOnHoldToggle() : setShowOnHoldDialog(true)}
+            disabled={onHoldLoading}
+            className="gap-1"
+          >
+            <Clock className="h-4 w-4" />
+            {task.on_hold ? "Remover Espera" : "Em Espera"}
+          </Button>
         </div>
 
         {/* Form */}
@@ -566,6 +612,13 @@ const TaskEdit = () => {
           </Button>
         </div>
       </div>
+
+      <OnHoldDialog
+        open={showOnHoldDialog}
+        onOpenChange={setShowOnHoldDialog}
+        onConfirm={handleOnHoldToggle}
+        taskTitle={task.title}
+      />
     </div>
   );
 };
