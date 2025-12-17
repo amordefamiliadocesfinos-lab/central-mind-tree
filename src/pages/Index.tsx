@@ -8,6 +8,7 @@ import { TasksDialog } from "@/components/TasksDialog";
 import { NodeConnectionsOverlay } from "@/components/NodeConnectionsOverlay";
 import { ReplanningBanner } from "@/components/ReplanningBanner";
 import { DueDateBanner } from "@/components/DueDateBanner";
+import { FollowUpBanner } from "@/components/FollowUpBanner";
 import { CEOLegend } from "@/components/CEOLegend";
 import { useToast } from "@/hooks/use-toast";
 
@@ -401,6 +402,7 @@ const Index = () => {
       </div>
       <ReplanningBanner />
       <DueDateBanner />
+      <FollowUpBanner />
     </>
   );
 };
