@@ -157,6 +157,7 @@ export type Database = {
           id: string
           is_visible: boolean
           media_urls: Json | null
+          order_index: number
           parent_id: string | null
           title: string
         }
@@ -166,6 +167,7 @@ export type Database = {
           id?: string
           is_visible?: boolean
           media_urls?: Json | null
+          order_index?: number
           parent_id?: string | null
           title: string
         }
@@ -175,6 +177,7 @@ export type Database = {
           id?: string
           is_visible?: boolean
           media_urls?: Json | null
+          order_index?: number
           parent_id?: string | null
           title?: string
         }
@@ -663,6 +666,36 @@ export type Database = {
           last_update?: string
           remaining_seconds?: number
           status?: string
+        }
+        Relationships: []
+      }
+      wizard_steps: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          label: string
+          module_route: string | null
+          order_index: number
+          step_key: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label: string
+          module_route?: string | null
+          order_index?: number
+          step_key: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          module_route?: string | null
+          order_index?: number
+          step_key?: string
         }
         Relationships: []
       }
