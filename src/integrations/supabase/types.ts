@@ -608,6 +608,110 @@ export type Database = {
           },
         ]
       }
+      sheet_cells: {
+        Row: {
+          cell_type: string
+          col_index: number
+          created_at: string
+          format: Json | null
+          formula: string | null
+          id: string
+          row_index: number
+          sheet_id: string
+          updated_at: string
+          value: string | null
+        }
+        Insert: {
+          cell_type?: string
+          col_index: number
+          created_at?: string
+          format?: Json | null
+          formula?: string | null
+          id?: string
+          row_index: number
+          sheet_id: string
+          updated_at?: string
+          value?: string | null
+        }
+        Update: {
+          cell_type?: string
+          col_index?: number
+          created_at?: string
+          format?: Json | null
+          formula?: string | null
+          id?: string
+          row_index?: number
+          sheet_id?: string
+          updated_at?: string
+          value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sheet_cells_sheet_id_fkey"
+            columns: ["sheet_id"]
+            isOneToOne: false
+            referencedRelation: "sheets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sheets: {
+        Row: {
+          col_widths: Json | null
+          created_at: string
+          deleted_at: string | null
+          frozen_cols: number
+          frozen_rows: number
+          id: string
+          node_id: string | null
+          row_heights: Json | null
+          task_id: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          col_widths?: Json | null
+          created_at?: string
+          deleted_at?: string | null
+          frozen_cols?: number
+          frozen_rows?: number
+          id?: string
+          node_id?: string | null
+          row_heights?: Json | null
+          task_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          col_widths?: Json | null
+          created_at?: string
+          deleted_at?: string | null
+          frozen_cols?: number
+          frozen_rows?: number
+          id?: string
+          node_id?: string | null
+          row_heights?: Json | null
+          task_id?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sheets_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sheets_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       task_merge_history: {
         Row: {
           created_at: string
