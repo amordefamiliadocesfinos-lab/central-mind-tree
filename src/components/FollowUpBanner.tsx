@@ -55,7 +55,8 @@ export const FollowUpBanner = () => {
   ).length;
 
   return (
-    <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+    <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[9998] animate-in fade-in slide-in-from-top-2 duration-300">
+      <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4 shadow-lg max-w-md">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Bell className="h-5 w-5 text-blue-500" />
@@ -135,6 +136,7 @@ export const FollowUpBanner = () => {
           })}
         </div>
       )}
+      </div>
     </div>
   );
 };
