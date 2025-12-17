@@ -191,6 +191,38 @@ export type Database = {
           },
         ]
       }
+      on_hold_log: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          previous_data: Json | null
+          task_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          previous_data?: Json | null
+          task_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          previous_data?: Json | null
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "on_hold_log_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       order_items: {
         Row: {
           id: string
@@ -576,6 +608,33 @@ export type Database = {
           },
         ]
       }
+      task_merge_history: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          merged_data: Json
+          merged_task_ids: string[]
+          target_task_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          merged_data: Json
+          merged_task_ids: string[]
+          target_task_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          merged_data?: Json
+          merged_task_ids?: string[]
+          target_task_id?: string
+        }
+        Relationships: []
+      }
       tasks: {
         Row: {
           checklist: Json | null
@@ -587,6 +646,12 @@ export type Database = {
           id: string
           media_urls: Json | null
           node_id: string
+          on_hold: boolean
+          on_hold_channel: string | null
+          on_hold_created_at: string | null
+          on_hold_deadline: string | null
+          on_hold_note: string | null
+          on_hold_who: string | null
           order_index: number
           progress: number
           scheduled_date: string | null
@@ -605,6 +670,12 @@ export type Database = {
           id?: string
           media_urls?: Json | null
           node_id: string
+          on_hold?: boolean
+          on_hold_channel?: string | null
+          on_hold_created_at?: string | null
+          on_hold_deadline?: string | null
+          on_hold_note?: string | null
+          on_hold_who?: string | null
           order_index?: number
           progress?: number
           scheduled_date?: string | null
@@ -623,6 +694,12 @@ export type Database = {
           id?: string
           media_urls?: Json | null
           node_id?: string
+          on_hold?: boolean
+          on_hold_channel?: string | null
+          on_hold_created_at?: string | null
+          on_hold_deadline?: string | null
+          on_hold_note?: string | null
+          on_hold_who?: string | null
           order_index?: number
           progress?: number
           scheduled_date?: string | null
