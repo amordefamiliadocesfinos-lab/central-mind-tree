@@ -28,9 +28,11 @@ import {
 } from "@/components/ui/select";
 import { ArrowLeft, Plus, Trash2, Star, Check, Save, RotateCcw, Pencil, GripVertical, ChevronUp, ChevronDown, CalendarIcon, X, Wand2 } from "lucide-react";
 import { toast } from "sonner";
-import { format, startOfWeek, endOfWeek, subWeeks, parseISO } from "date-fns";
+import { format, subWeeks, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { getWeekStartSaoPaulo, getWeekEndSaoPaulo, getWeekStartISO, formatWeekRange } from "@/lib/dateUtils";
+import { FollowUpBanner } from "@/components/FollowUpBanner";
 import { ReplanningBanner } from "@/components/ReplanningBanner";
 import { DueDateBanner } from "@/components/DueDateBanner";
 import { DueDatePill } from "@/components/DueDatePill";
@@ -85,9 +87,7 @@ const STATUS_COLORS: Record<string, string> = {
   pendente: "bg-yellow-500",
 };
 
-const getWeekStartISO = () => {
-  return startOfWeek(new Date(), { weekStartsOn: 1 }).toISOString();
-};
+// Use centralized date utility for consistent timezone handling
 
 const Planejamento = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -200,11 +200,11 @@ const Planejamento = () => {
     return map;
   }, [nodes]);
 
-  // Week period display
-  const weekStart = startOfWeek(new Date(), { weekStartsOn: 1 });
-  const weekEnd = endOfWeek(new Date(), { weekStartsOn: 1 });
+  // Week period display - using Sao Paulo timezone
+  const weekStart = getWeekStartSaoPaulo();
+  const weekEnd = getWeekEndSaoPaulo();
   const prevWeekStart = subWeeks(weekStart, 1);
-  const weekPeriod = `${format(weekStart, "dd/MM", { locale: ptBR })} - ${format(weekEnd, "dd/MM", { locale: ptBR })}`;
+  const weekPeriod = formatWeekRange();
 
   // Tasks from previous week still in "andamento"
   const previousWeekAndamentoTasks = useMemo(() => {
