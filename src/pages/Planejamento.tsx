@@ -26,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Plus, Trash2, Star, Check, Save, RotateCcw, Pencil, GripVertical, ChevronUp, ChevronDown, CalendarIcon, X, Wand2 } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Star, Check, Save, RotateCcw, Pencil, GripVertical, ChevronUp, ChevronDown, CalendarIcon, X } from "lucide-react";
 import { toast } from "sonner";
 import { format, subWeeks, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -36,8 +36,6 @@ import { FollowUpBanner } from "@/components/FollowUpBanner";
 import { ReplanningBanner } from "@/components/ReplanningBanner";
 import { DueDateBanner } from "@/components/DueDateBanner";
 import { DueDatePill } from "@/components/DueDatePill";
-import { OperableWizard } from "@/components/OperableWizard";
-import { WeeklyHierarchyView } from "@/components/WeeklyHierarchyView";
 
 interface Task {
   id: string;
@@ -96,7 +94,6 @@ const Planejamento = () => {
   const [completedThisWeek, setCompletedThisWeek] = useState(0);
   const [closingTaskIds, setClosingTaskIds] = useState<string[]>([]);
   const [closingAction, setClosingAction] = useState<"keep" | "pending" | null>(null);
-  const [wizardOpen, setWizardOpen] = useState(false);
 
   // Template (customizable areas)
   const [template, setTemplate] = useState<PlanTemplate>(() => {
@@ -492,21 +489,10 @@ const Planejamento = () => {
             <h1 className="text-2xl font-bold">Planejamento Semanal</h1>
             <Badge variant="outline">{weekPeriod}</Badge>
           </div>
-          <div className="flex gap-2">
-            <Button variant="default" onClick={() => setWizardOpen(true)}>
-              <Wand2 className="h-4 w-4 mr-2" />
-              Replanejar
-            </Button>
-            <Link to="/foco">
-              <Button variant="outline">Ir para Foco</Button>
-            </Link>
-          </div>
+          <Link to="/foco">
+            <Button variant="outline">Ir para Foco</Button>
+          </Link>
         </div>
-
-        <OperableWizard open={wizardOpen} onOpenChange={setWizardOpen} />
-        
-        {/* Weekly Hierarchy View with DnD */}
-        <WeeklyHierarchyView />
 
         {/* Block 1: Checklist de Áreas */}
         <Card>
