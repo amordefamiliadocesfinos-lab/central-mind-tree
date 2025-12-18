@@ -20,7 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Save, Plus, Trash2, ListChecks, CalendarIcon, X, Clock } from "lucide-react";
+import { ArrowLeft, Save, Plus, Trash2, ListChecks, CalendarIcon, X, Clock, FileSpreadsheet } from "lucide-react";
+import { SheetList } from "@/components/SheetList";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -592,6 +593,15 @@ const TaskEdit = () => {
           <div className="space-y-2">
             <label className="text-sm font-medium">Anexos de Mídia</label>
             <MediaUploader media={media} onChange={setMedia} entityType="task" entityId={id || ""} />
+          </div>
+
+          {/* Spreadsheets Section */}
+          <div className="space-y-2 pt-4 border-t">
+            <div className="flex items-center gap-2 mb-2">
+              <FileSpreadsheet className="h-5 w-5 text-primary" />
+              <label className="text-sm font-medium">Planilhas</label>
+            </div>
+            <SheetList taskId={id} />
           </div>
         </div>
 

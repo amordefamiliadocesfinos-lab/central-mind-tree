@@ -18,6 +18,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { MediaUploader, MediaItem, uploadMedia, loadMediaFromUrls } from "@/components/MediaUploader";
+import { SheetList } from "@/components/SheetList";
 import { Save } from "lucide-react";
 
 interface Node {
@@ -154,6 +155,11 @@ export function NodeEditDialog({
           <div className="space-y-2">
             <label className="text-sm font-medium">Anexos de Mídia</label>
             <MediaUploader media={media} onChange={setMedia} entityType="node" entityId={node.id} />
+          </div>
+
+          <div className="space-y-2 pt-4 border-t">
+            <label className="text-sm font-medium">Planilhas</label>
+            <SheetList nodeId={node.id} />
           </div>
 
           <Button onClick={handleSave} className="w-full" disabled={saving}>
