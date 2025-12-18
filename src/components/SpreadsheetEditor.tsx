@@ -1,24 +1,18 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo, KeyboardEvent } from 'react';
-import { DataGrid, Column, RenderCellProps, RenderEditCellProps } from 'react-data-grid';
-import 'react-data-grid/lib/styles.css';
 import { useSpreadsheet, CellUpdate, SheetCell } from '@/hooks/useSpreadsheet';
 import { cellKey, colIndexToLetter, CellValue, evaluateFormula, CellData } from '@/lib/formulaEngine';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Undo2, Redo2, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface SpreadsheetEditorProps {
   sheetId: string;
   readOnly?: boolean;
 }
 
-interface RowData {
-  rowIndex: number;
-  [key: string]: CellValue | number;
-}
-
-const DEFAULT_ROWS = 100;
+const DEFAULT_ROWS = 50;
 const DEFAULT_COLS = 26; // A-Z
 
 export function SpreadsheetEditor({ sheetId, readOnly = false }: SpreadsheetEditorProps) {
@@ -26,7 +20,8 @@ export function SpreadsheetEditor({ sheetId, readOnly = false }: SpreadsheetEdit
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
   const [formulaBarValue, setFormulaBarValue] = useState('');
   const [editingCell, setEditingCell] = useState<{ row: number; col: number } | null>(null);
-  const gridRef = useRef<HTMLDivElement>(null);
+  const [editValue, setEditValue] = useState('');
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Build cell data map for display
   const cellMap = useMemo(() => {
@@ -34,19 +29,6 @@ export function SpreadsheetEditor({ sheetId, readOnly = false }: SpreadsheetEdit
     for (const cell of cells) {
       const key = cellKey(cell.row_index, cell.col_index);
       map.set(key, cell);
-    }
-    return map;
-  }, [cells]);
-
-  // Build CellData for formula evaluation
-  const cellDataMap = useMemo((): CellData => {
-    const map: CellData = new Map();
-    for (const cell of cells) {
-      const key = cellKey(cell.row_index, cell.col_index);
-      map.set(key, {
-        value: cell.formula ? null : (cell.value as CellValue),
-        formula: cell.formula || undefined,
-      });
     }
     return map;
   }, [cells]);
@@ -62,108 +44,13 @@ export function SpreadsheetEditor({ sheetId, readOnly = false }: SpreadsheetEdit
     }
   }, [selectedCell, cellMap]);
 
-  // Generate columns
-  const columns: Column<RowData>[] = useMemo(() => {
-    const cols: Column<RowData>[] = [
-      {
-        key: 'rowIndex',
-        name: '',
-        width: 50,
-        frozen: true,
-        renderCell: ({ row }) => (
-          <div className="text-center text-muted-foreground text-xs font-medium">
-            {row.rowIndex + 1}
-          </div>
-        ),
-      },
-    ];
-
-    for (let i = 0; i < DEFAULT_COLS; i++) {
-      const colKey = `col_${i}`;
-      const colLetter = colIndexToLetter(i);
-      
-      cols.push({
-        key: colKey,
-        name: colLetter,
-        width: sheet?.col_widths?.[i] || 100,
-        resizable: true,
-        renderCell: (props: RenderCellProps<RowData>) => {
-          const row = props.row.rowIndex;
-          const col = i;
-          const key = cellKey(row, col);
-          const cell = cellMap.get(key);
-          const displayValue = computedCells.get(key);
-          const format = cell?.format || {};
-
-          return (
-            <div
-              className={cn(
-                'w-full h-full px-1 flex items-center overflow-hidden text-ellipsis',
-                format.bold && 'font-bold',
-                format.italic && 'italic',
-                format.underline && 'underline',
-                format.align === 'center' && 'justify-center',
-                format.align === 'right' && 'justify-end',
-                !format.align && 'justify-start'
-              )}
-              style={{
-                backgroundColor: format.bgColor || undefined,
-                color: format.textColor || undefined,
-              }}
-            >
-              {formatDisplayValue(displayValue, cell?.cell_type)}
-            </div>
-          );
-        },
-        renderEditCell: readOnly ? undefined : (props: RenderEditCellProps<RowData>) => {
-          const row = props.row.rowIndex;
-          const col = i;
-          const key = cellKey(row, col);
-          const cell = cellMap.get(key);
-          const initialValue = cell?.formula || cell?.value || '';
-
-          return (
-            <input
-              className="w-full h-full px-1 border-2 border-primary outline-none bg-background"
-              autoFocus
-              defaultValue={initialValue}
-              onBlur={(e) => {
-                handleCellEdit(row, col, e.target.value);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleCellEdit(row, col, (e.target as HTMLInputElement).value);
-                  props.onClose();
-                } else if (e.key === 'Escape') {
-                  props.onClose();
-                } else if (e.key === 'Tab') {
-                  e.preventDefault();
-                  handleCellEdit(row, col, (e.target as HTMLInputElement).value);
-                  props.onClose();
-                }
-              }}
-            />
-          );
-        },
-      });
+  // Focus input when editing starts
+  useEffect(() => {
+    if (editingCell && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
     }
-
-    return cols;
-  }, [sheet?.col_widths, cellMap, computedCells, readOnly]);
-
-  // Generate rows
-  const rows: RowData[] = useMemo(() => {
-    const data: RowData[] = [];
-    for (let i = 0; i < DEFAULT_ROWS; i++) {
-      const row: RowData = { rowIndex: i };
-      for (let j = 0; j < DEFAULT_COLS; j++) {
-        row[`col_${j}`] = null;
-      }
-      data.push(row);
-    }
-    return data;
-  }, []);
+  }, [editingCell]);
 
   // Handle cell edit
   const handleCellEdit = useCallback(
@@ -180,6 +67,7 @@ export function SpreadsheetEditor({ sheetId, readOnly = false }: SpreadsheetEdit
 
       await updateCell(update);
       setEditingCell(null);
+      setEditValue('');
     },
     [updateCell, readOnly]
   );
@@ -189,18 +77,6 @@ export function SpreadsheetEditor({ sheetId, readOnly = false }: SpreadsheetEdit
     if (!selectedCell || readOnly) return;
     handleCellEdit(selectedCell.row, selectedCell.col, formulaBarValue);
   }, [selectedCell, formulaBarValue, handleCellEdit, readOnly]);
-
-  // Handle cell selection
-  const handleCellClick = useCallback(
-    (args: { rowIdx: number; column: Column<RowData> }) => {
-      if (args.column.key === 'rowIndex') return;
-      const colIndex = parseInt(args.column.key.replace('col_', ''), 10);
-      if (!isNaN(colIndex)) {
-        setSelectedCell({ row: args.rowIdx, col: colIndex });
-      }
-    },
-    []
-  );
 
   // Format display value based on cell type
   function formatDisplayValue(value: CellValue, cellType?: string): string {
@@ -290,6 +166,49 @@ export function SpreadsheetEditor({ sheetId, readOnly = false }: SpreadsheetEdit
     },
     [selectedCell, cellMap, updateCell, readOnly]
   );
+
+  // Handle cell click
+  const handleCellClick = useCallback((row: number, col: number) => {
+    setSelectedCell({ row, col });
+    setEditingCell(null);
+  }, []);
+
+  // Handle cell double-click to edit
+  const handleCellDoubleClick = useCallback((row: number, col: number) => {
+    if (readOnly) return;
+    const key = cellKey(row, col);
+    const cell = cellMap.get(key);
+    setEditingCell({ row, col });
+    setEditValue(cell?.formula || cell?.value || '');
+  }, [cellMap, readOnly]);
+
+  // Handle edit submit
+  const handleEditSubmit = useCallback(() => {
+    if (editingCell) {
+      handleCellEdit(editingCell.row, editingCell.col, editValue);
+    }
+  }, [editingCell, editValue, handleCellEdit]);
+
+  // Handle edit key down
+  const handleEditKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleEditSubmit();
+    } else if (e.key === 'Escape') {
+      setEditingCell(null);
+      setEditValue('');
+    } else if (e.key === 'Tab') {
+      e.preventDefault();
+      handleEditSubmit();
+      // Move to next cell
+      if (editingCell) {
+        const nextCol = e.shiftKey ? editingCell.col - 1 : editingCell.col + 1;
+        if (nextCol >= 0 && nextCol < DEFAULT_COLS) {
+          setSelectedCell({ row: editingCell.row, col: nextCol });
+        }
+      }
+    }
+  }, [handleEditSubmit, editingCell]);
 
   if (isLoading) {
     return <div className="p-4 text-muted-foreground">Carregando planilha...</div>;
@@ -406,18 +325,86 @@ export function SpreadsheetEditor({ sheetId, readOnly = false }: SpreadsheetEdit
         </div>
       </div>
 
-      {/* Grid */}
-      <div className="flex-1 overflow-auto" ref={gridRef}>
-        <DataGrid
-          columns={columns}
-          rows={rows}
-          rowHeight={28}
-          headerRowHeight={32}
-          onCellClick={handleCellClick}
-          className="rdg-light h-full"
-          style={{ height: '100%' }}
-        />
-      </div>
+      {/* Grid - Custom implementation */}
+      <ScrollArea className="flex-1">
+        <div className="inline-block min-w-full">
+          {/* Header Row */}
+          <div className="flex sticky top-0 z-10 bg-muted border-b">
+            <div className="w-12 h-8 flex items-center justify-center border-r text-xs font-medium text-muted-foreground bg-muted">
+              {/* Row number header */}
+            </div>
+            {Array.from({ length: DEFAULT_COLS }, (_, i) => (
+              <div
+                key={i}
+                className="w-24 h-8 flex items-center justify-center border-r text-xs font-medium text-muted-foreground bg-muted"
+              >
+                {colIndexToLetter(i)}
+              </div>
+            ))}
+          </div>
+
+          {/* Data Rows */}
+          {Array.from({ length: DEFAULT_ROWS }, (_, rowIndex) => (
+            <div key={rowIndex} className="flex border-b">
+              {/* Row number */}
+              <div className="w-12 h-7 flex items-center justify-center border-r text-xs text-muted-foreground bg-muted/50 sticky left-0">
+                {rowIndex + 1}
+              </div>
+              {/* Cells */}
+              {Array.from({ length: DEFAULT_COLS }, (_, colIndex) => {
+                const key = cellKey(rowIndex, colIndex);
+                const cell = cellMap.get(key);
+                const displayValue = computedCells.get(key);
+                const format = cell?.format || {};
+                const isSelected = selectedCell?.row === rowIndex && selectedCell?.col === colIndex;
+                const isEditing = editingCell?.row === rowIndex && editingCell?.col === colIndex;
+
+                return (
+                  <div
+                    key={colIndex}
+                    className={cn(
+                      'w-24 h-7 border-r relative',
+                      isSelected && 'ring-2 ring-primary ring-inset',
+                      !isEditing && 'cursor-cell'
+                    )}
+                    onClick={() => handleCellClick(rowIndex, colIndex)}
+                    onDoubleClick={() => handleCellDoubleClick(rowIndex, colIndex)}
+                  >
+                    {isEditing ? (
+                      <input
+                        ref={inputRef}
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onBlur={handleEditSubmit}
+                        onKeyDown={handleEditKeyDown}
+                        className="w-full h-full px-1 border-2 border-primary outline-none bg-background text-sm font-mono"
+                      />
+                    ) : (
+                      <div
+                        className={cn(
+                          'w-full h-full px-1 flex items-center text-sm overflow-hidden text-ellipsis whitespace-nowrap',
+                          format.bold && 'font-bold',
+                          format.italic && 'italic',
+                          format.underline && 'underline',
+                          format.align === 'center' && 'justify-center',
+                          format.align === 'right' && 'justify-end',
+                          !format.align && 'justify-start'
+                        )}
+                        style={{
+                          backgroundColor: format.bgColor || undefined,
+                          color: format.textColor || undefined,
+                        }}
+                      >
+                        {formatDisplayValue(displayValue, cell?.cell_type)}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
     </div>
   );
 }
