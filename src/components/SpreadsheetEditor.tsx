@@ -3,9 +3,10 @@ import { useSpreadsheet, CellUpdate, SheetCell } from '@/hooks/useSpreadsheet';
 import { cellKey, colIndexToLetter, CellValue, evaluateFormula, CellData } from '@/lib/formulaEngine';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Undo2, Redo2, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight } from 'lucide-react';
+import { Undo2, Redo2, Bold, Italic, Underline, AlignLeft, AlignCenter, AlignRight, Download, Upload } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useToast } from '@/hooks/use-toast';
 
 interface SpreadsheetEditorProps {
   sheetId: string;
@@ -16,12 +17,14 @@ const DEFAULT_ROWS = 50;
 const DEFAULT_COLS = 26; // A-Z
 
 export function SpreadsheetEditor({ sheetId, readOnly = false }: SpreadsheetEditorProps) {
-  const { sheet, cells, computedCells, isLoading, updateCell, undo, redo, canUndo, canRedo } = useSpreadsheet(sheetId);
+  const { sheet, cells, computedCells, isLoading, updateCell, updateCellsBatch, undo, redo, canUndo, canRedo } = useSpreadsheet(sheetId);
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
   const [formulaBarValue, setFormulaBarValue] = useState('');
   const [editingCell, setEditingCell] = useState<{ row: number; col: number } | null>(null);
   const [editValue, setEditValue] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
 
   // Build cell data map for display
   const cellMap = useMemo(() => {
@@ -167,6 +170,98 @@ export function SpreadsheetEditor({ sheetId, readOnly = false }: SpreadsheetEdit
     [selectedCell, cellMap, updateCell, readOnly]
   );
 
+  // Export to CSV
+  const handleExportCSV = useCallback(() => {
+    const maxRow = Math.max(...cells.map(c => c.row_index), 0);
+    const maxCol = Math.max(...cells.map(c => c.col_index), 0);
+    
+    const rows: string[][] = [];
+    for (let r = 0; r <= maxRow; r++) {
+      const row: string[] = [];
+      for (let c = 0; c <= maxCol; c++) {
+        const key = cellKey(r, c);
+        const computed = computedCells.get(key);
+        const value = computed !== undefined && computed !== null ? String(computed) : '';
+        // Escape quotes and wrap in quotes if contains comma, quote, or newline
+        const escaped = value.includes(',') || value.includes('"') || value.includes('\n')
+          ? `"${value.replace(/"/g, '""')}"`
+          : value;
+        row.push(escaped);
+      }
+      rows.push(row);
+    }
+    
+    const csvContent = rows.map(row => row.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${sheet?.title || 'planilha'}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    
+    toast({ title: 'CSV exportado com sucesso!' });
+  }, [cells, computedCells, sheet?.title, toast]);
+
+  // Import from CSV
+  const handleImportCSV = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const text = await file.text();
+    const lines = text.split(/\r?\n/);
+    const updates: CellUpdate[] = [];
+    
+    for (let rowIndex = 0; rowIndex < lines.length; rowIndex++) {
+      const line = lines[rowIndex];
+      if (!line.trim()) continue;
+      
+      // Parse CSV line (handles quoted values)
+      const values: string[] = [];
+      let current = '';
+      let inQuotes = false;
+      
+      for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"') {
+          if (inQuotes && line[i + 1] === '"') {
+            current += '"';
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === ',' && !inQuotes) {
+          values.push(current);
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      values.push(current);
+      
+      for (let colIndex = 0; colIndex < values.length; colIndex++) {
+        const value = values[colIndex].trim();
+        if (value) {
+          updates.push({
+            row: rowIndex,
+            col: colIndex,
+            value: value,
+          });
+        }
+      }
+    }
+    
+    if (updates.length > 0) {
+      await updateCellsBatch(updates);
+      toast({ title: `Importado ${updates.length} células do CSV!` });
+    }
+    
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  }, [updateCellsBatch, toast]);
+
   // Handle cell click
   const handleCellClick = useCallback((row: number, col: number) => {
     setSelectedCell({ row, col });
@@ -299,6 +394,34 @@ export function SpreadsheetEditor({ sheetId, readOnly = false }: SpreadsheetEdit
         >
           <AlignRight className="h-4 w-4" />
         </Button>
+
+        <div className="h-4 w-px bg-border mx-1" />
+
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleExportCSV}
+          disabled={cells.length === 0}
+          title="Exportar CSV"
+        >
+          <Download className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={readOnly}
+          title="Importar CSV"
+        >
+          <Upload className="h-4 w-4" />
+        </Button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".csv"
+          onChange={handleImportCSV}
+          className="hidden"
+        />
       </div>
 
       {/* Formula Bar */}
