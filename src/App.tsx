@@ -15,6 +15,7 @@ import Calendario from "./pages/Calendario";
 import Rotina from "./pages/Rotina";
 import Operacoes from "./pages/Operacoes";
 import Conteudo from "./pages/Conteudo";
+import Planilhas from "./pages/Planilhas";
 import NotFound from "./pages/NotFound";
 import { useScheduledTaskPromotion } from "./hooks/useScheduledTaskPromotion";
 
@@ -34,6 +35,7 @@ function AppContent() {
         <Route path="/rotina" element={<Rotina />} />
         <Route path="/operacoes" element={<Operacoes />} />
         <Route path="/conteudo" element={<Conteudo />} />
+        <Route path="/planilhas" element={<Planilhas />} />
         <Route path="/task/:id" element={<TaskEdit />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
