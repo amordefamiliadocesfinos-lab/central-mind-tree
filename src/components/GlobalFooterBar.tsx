@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   Play, Pause, RotateCcw, Clock, Focus, Calendar, Timer, 
-  ShoppingCart, FileText, Undo2, Redo2, Home 
+  ShoppingCart, FileText, Undo2, Redo2, Home, FileSpreadsheet 
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUndoRedoContext } from "@/contexts/UndoRedoContext";
@@ -370,6 +370,17 @@ export function GlobalFooterBar() {
           >
             <Link to="/conteudo">
               <FileText className="h-4 w-4" />
+            </Link>
+          </Button>
+
+          <Button
+            asChild
+            size="sm"
+            variant={isActive('/planilhas') ? 'secondary' : 'ghost'}
+            className={cn("h-8 px-2 text-xs", isActive('/planilhas') && "bg-secondary")}
+          >
+            <Link to="/planilhas">
+              <FileSpreadsheet className="h-4 w-4" />
             </Link>
           </Button>
         </div>
