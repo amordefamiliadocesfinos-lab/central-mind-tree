@@ -431,6 +431,7 @@ export default function Operacoes() {
                     orderStatus={orderStatus}
                     orderChannels={orderChannels}
                     onStatusChange={handleStatusChange}
+                    onClick={(o) => setEditingOrder(orders.find(ord => ord.id === o.id) || null)}
                   />
                 ))
               )}
@@ -635,10 +636,30 @@ export default function Operacoes() {
         );
 
       case 'production':
-        return <ProductionTab products={products} />;
+        return <ProductionTab products={products} onRefetch={refetch} />;
 
       case 'mrp':
-        return <MRPTab />;
+        return (
+          <MRPTab 
+            orders={orders} 
+            onReserve={async (order) => {
+              const items = order.items?.map(i => ({ product_id: i.product_id, quantity: i.quantity })) || [];
+              if (items.length > 0) {
+                await reserveMaterials(order.id, items);
+                await updateOrderStatus(order.id, 'confirmado');
+                refetch();
+              }
+            }}
+            onConsume={async (order) => {
+              const items = order.items?.map(i => ({ product_id: i.product_id, quantity: i.quantity })) || [];
+              if (items.length > 0) {
+                await consumeMaterials(order.id, items);
+                await updateOrderStatus(order.id, 'producao');
+                refetch();
+              }
+            }}
+          />
+        );
 
       case 'calendar':
         return (
@@ -881,6 +902,24 @@ export default function Operacoes() {
         onOpenChange={(open) => !open && setDeletingProduct(null)}
         productName={deletingProduct?.name || ''}
         onConfirm={handleDeleteProduct}
+      />
+
+      {/* Order Edit Dialog */}
+      <OrderEditDialog
+        open={!!editingOrder}
+        onOpenChange={(open) => !open && setEditingOrder(null)}
+        order={editingOrder}
+        products={products}
+        orderChannels={orderChannels}
+        orderStatus={orderStatus}
+        onSave={async (orderId, updates, items) => {
+          await updateOrder(orderId, updates, items);
+          refetch();
+        }}
+        onDelete={async (orderId) => {
+          await deleteOrder(orderId);
+          refetch();
+        }}
       />
     </div>
   );

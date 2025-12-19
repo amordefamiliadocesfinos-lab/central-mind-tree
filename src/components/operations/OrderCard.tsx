@@ -28,13 +28,17 @@ interface OrderCardProps {
   orderChannels: Record<string, string>;
   onStatusChange: (order: Order, newStatus: string) => void;
   onDelete?: (orderId: string) => void;
+  onClick?: (order: Order) => void;
 }
 
-export function OrderCard({ order, orderStatus, orderChannels, onStatusChange, onDelete }: OrderCardProps) {
+export function OrderCard({ order, orderStatus, orderChannels, onStatusChange, onDelete, onClick }: OrderCardProps) {
   const statusInfo = orderStatus[order.status as keyof typeof orderStatus];
   
   return (
-    <Card className="touch-manipulation active:scale-[0.98] transition-transform">
+    <Card 
+      className="touch-manipulation active:scale-[0.98] transition-transform cursor-pointer hover:bg-muted/50"
+      onClick={() => onClick?.(order)}
+    >
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
@@ -76,7 +80,7 @@ export function OrderCard({ order, orderStatus, orderChannels, onStatusChange, o
               value={order.status}
               onValueChange={(v) => onStatusChange(order, v)}
             >
-              <SelectTrigger className="w-28 h-9 text-xs">
+              <SelectTrigger className="w-28 h-9 text-xs" onClick={(e) => e.stopPropagation()}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

@@ -1,18 +1,26 @@
 import { useState, useEffect } from 'react';
 import { useMRP, MaterialNeed, PurchaseSuggestion } from '@/hooks/useMRP';
+import { Order } from '@/hooks/useOrders';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { AlertTriangle, ShoppingBag, Package, Download, RefreshCw, Check } from 'lucide-react';
+import { AlertTriangle, ShoppingBag, Package, Download, RefreshCw, Check, Play, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
-export function MRPTab() {
+interface MRPTabProps {
+  orders?: Order[];
+  onReserve?: (order: Order) => Promise<void>;
+  onConsume?: (order: Order) => Promise<void>;
+}
+
+export function MRPTab({ orders = [], onReserve, onConsume }: MRPTabProps) {
   const { calculateMaterialNeeds, getPurchaseSuggestions } = useMRP();
   const [needs, setNeeds] = useState<MaterialNeed[]>([]);
   const [suggestions, setSuggestions] = useState<PurchaseSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -81,6 +89,27 @@ export function MRPTab() {
     toast.success('Lista de compras exportada!');
   };
 
+  const handleReserve = async (order: Order) => {
+    if (!onReserve) return;
+    setActionLoading(order.id + '-reserve');
+    await onReserve(order);
+    setActionLoading(null);
+    loadData();
+  };
+
+  const handleConsume = async (order: Order) => {
+    if (!onConsume) return;
+    setActionLoading(order.id + '-consume');
+    await onConsume(order);
+    setActionLoading(null);
+    loadData();
+  };
+
+  // Get orders that can be confirmed (draft status)
+  const draftOrders = orders.filter(o => o.status === 'rascunho' && o.items && o.items.length > 0);
+  // Get orders that can start production (confirmed status)
+  const confirmedOrders = orders.filter(o => o.status === 'confirmado' && o.items && o.items.length > 0);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -123,6 +152,87 @@ export function MRPTab() {
           <Download className="h-4 w-4" />
         </Button>
       </div>
+
+      {/* Order Actions - Confirm Orders */}
+      {draftOrders.length > 0 && onReserve && (
+        <Card className="border-blue-500/50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <CheckCircle className="h-4 w-4 text-blue-500" />
+              Confirmar Pedidos ({draftOrders.length})
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Reservar insumos para os pedidos abaixo
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {draftOrders.map(order => (
+              <div 
+                key={order.id}
+                className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+              >
+                <div>
+                  <p className="font-medium">
+                    {order.customer_name || `#${order.order_number || order.id.slice(0, 8)}`}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {order.items?.length || 0} itens • R$ {(order.total_value || 0).toFixed(2)}
+                  </p>
+                </div>
+                <Button 
+                  size="sm" 
+                  onClick={() => handleReserve(order)}
+                  disabled={actionLoading === order.id + '-reserve'}
+                >
+                  <Check className="h-4 w-4 mr-1" />
+                  {actionLoading === order.id + '-reserve' ? 'Reservando...' : 'Confirmar'}
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Order Actions - Start Production */}
+      {confirmedOrders.length > 0 && onConsume && (
+        <Card className="border-green-500/50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Play className="h-4 w-4 text-green-500" />
+              Iniciar Produção ({confirmedOrders.length})
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Consumir insumos e iniciar produção
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {confirmedOrders.map(order => (
+              <div 
+                key={order.id}
+                className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+              >
+                <div>
+                  <p className="font-medium">
+                    {order.customer_name || `#${order.order_number || order.id.slice(0, 8)}`}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {order.items?.length || 0} itens • R$ {(order.total_value || 0).toFixed(2)}
+                  </p>
+                </div>
+                <Button 
+                  size="sm"
+                  variant="default"
+                  onClick={() => handleConsume(order)}
+                  disabled={actionLoading === order.id + '-consume'}
+                >
+                  <Play className="h-4 w-4 mr-1" />
+                  {actionLoading === order.id + '-consume' ? 'Iniciando...' : 'Iniciar'}
+                </Button>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Purchase Suggestions */}
       {suggestions.length > 0 && (
