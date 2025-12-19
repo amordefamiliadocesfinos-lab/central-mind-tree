@@ -408,6 +408,39 @@ export type Database = {
           },
         ]
       }
+      processes: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          unit: string
+          updated_at: string
+          value_per_unit: number
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          unit?: string
+          updated_at?: string
+          value_per_unit?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          unit?: string
+          updated_at?: string
+          value_per_unit?: number
+        }
+        Relationships: []
+      }
       product_components: {
         Row: {
           component_id: string
@@ -446,6 +479,215 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_optional_costs: {
+        Row: {
+          cost_per_unit: number
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          product_id: string
+        }
+        Insert: {
+          cost_per_unit?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          product_id: string
+        }
+        Update: {
+          cost_per_unit?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_optional_costs_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_processes: {
+        Row: {
+          cost_per_unit: number
+          created_at: string
+          id: string
+          process_id: string
+          product_id: string
+        }
+        Insert: {
+          cost_per_unit?: number
+          created_at?: string
+          id?: string
+          process_id: string
+          product_id: string
+        }
+        Update: {
+          cost_per_unit?: number
+          created_at?: string
+          id?: string
+          process_id?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_processes_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_processes_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_closing_items: {
+        Row: {
+          closing_id: string
+          employee_name: string
+          id: string
+          process_id: string | null
+          total_quantity: number
+          total_value: number
+        }
+        Insert: {
+          closing_id: string
+          employee_name: string
+          id?: string
+          process_id?: string | null
+          total_quantity?: number
+          total_value?: number
+        }
+        Update: {
+          closing_id?: string
+          employee_name?: string
+          id?: string
+          process_id?: string | null
+          total_quantity?: number
+          total_value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_closing_items_closing_id_fkey"
+            columns: ["closing_id"]
+            isOneToOne: false
+            referencedRelation: "production_closings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_closing_items_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_closings: {
+        Row: {
+          closed_at: string | null
+          created_at: string
+          end_date: string
+          id: string
+          notes: string | null
+          start_date: string
+          status: string
+          total_value: number
+        }
+        Insert: {
+          closed_at?: string | null
+          created_at?: string
+          end_date: string
+          id?: string
+          notes?: string | null
+          start_date: string
+          status?: string
+          total_value?: number
+        }
+        Update: {
+          closed_at?: string | null
+          created_at?: string
+          end_date?: string
+          id?: string
+          notes?: string | null
+          start_date?: string
+          status?: string
+          total_value?: number
+        }
+        Relationships: []
+      }
+      production_entries: {
+        Row: {
+          created_at: string
+          date: string
+          employee_name: string
+          id: string
+          notes: string | null
+          period: string
+          process_id: string
+          production_order_id: string
+          quantity: number
+          total_value: number | null
+          updated_at: string
+          value_per_unit: number
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          employee_name: string
+          id?: string
+          notes?: string | null
+          period?: string
+          process_id: string
+          production_order_id: string
+          quantity?: number
+          total_value?: number | null
+          updated_at?: string
+          value_per_unit?: number
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          employee_name?: string
+          id?: string
+          notes?: string | null
+          period?: string
+          process_id?: string
+          production_order_id?: string
+          quantity?: number
+          total_value?: number | null
+          updated_at?: string
+          value_per_unit?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_entries_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_entries_production_order_id_fkey"
+            columns: ["production_order_id"]
+            isOneToOne: false
+            referencedRelation: "production_orders"
             referencedColumns: ["id"]
           },
         ]
@@ -503,6 +745,95 @@ export type Database = {
           },
           {
             foreignKeyName: "production_logs_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_order_processes: {
+        Row: {
+          created_at: string
+          id: string
+          is_required: boolean
+          process_id: string
+          production_order_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_required?: boolean
+          process_id: string
+          production_order_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_required?: boolean
+          process_id?: string
+          production_order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_order_processes_process_id_fkey"
+            columns: ["process_id"]
+            isOneToOne: false
+            referencedRelation: "processes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_order_processes_production_order_id_fkey"
+            columns: ["production_order_id"]
+            isOneToOne: false
+            referencedRelation: "production_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_orders: {
+        Row: {
+          batch_code: string | null
+          completed_at: string | null
+          consolidated_quantity: number
+          created_at: string
+          id: string
+          notes: string | null
+          order_number: string | null
+          product_id: string | null
+          status: string
+          target_quantity: number
+          updated_at: string
+        }
+        Insert: {
+          batch_code?: string | null
+          completed_at?: string | null
+          consolidated_quantity?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_number?: string | null
+          product_id?: string | null
+          status?: string
+          target_quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          batch_code?: string | null
+          completed_at?: string | null
+          consolidated_quantity?: number
+          created_at?: string
+          id?: string
+          notes?: string | null
+          order_number?: string | null
+          product_id?: string | null
+          status?: string
+          target_quantity?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_orders_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"

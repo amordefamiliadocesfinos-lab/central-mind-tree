@@ -1,0 +1,629 @@
+import { useState, useEffect, useMemo } from 'react';
+import { useProductionOrders, ProductionOrder, ProductionEntry, PRODUCTION_ORDER_STATUS } from '@/hooks/useProductionOrders';
+import { useProcesses, Process } from '@/hooks/useProcesses';
+import { useOrders, Product } from '@/hooks/useOrders';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { 
+  Plus, Factory, Package, Users, CheckCircle2, 
+  ChevronRight, Clock, Trash2, Play, Check
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
+interface ProductionOrdersTabProps {
+  products: Product[];
+}
+
+export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
+  const { 
+    orders, 
+    loading, 
+    createOrder, 
+    updateOrder,
+    deleteOrder,
+    createEntry, 
+    deleteEntry,
+    calculateConsolidation,
+    completeOrder,
+    getPaymentSummary,
+  } = useProductionOrders();
+  const { processes, activeProcesses } = useProcesses();
+
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<ProductionOrder | null>(null);
+  const [showEntryForm, setShowEntryForm] = useState(false);
+
+  // Create form state
+  const [newOrder, setNewOrder] = useState({
+    product_id: '',
+    batch_code: '',
+    target_quantity: 0,
+    notes: '',
+    selectedProcesses: [] as { process_id: string; is_required: boolean }[],
+  });
+
+  // Entry form state
+  const [newEntry, setNewEntry] = useState({
+    process_id: '',
+    employee_name: '',
+    date: new Date().toISOString().split('T')[0],
+    period: 'manha',
+    quantity: 0,
+    notes: '',
+  });
+
+  const handleCreateOrder = async () => {
+    if (!newOrder.product_id || newOrder.selectedProcesses.length === 0) return;
+
+    await createOrder(
+      {
+        product_id: newOrder.product_id,
+        batch_code: newOrder.batch_code || null,
+        target_quantity: newOrder.target_quantity,
+        notes: newOrder.notes || null,
+      },
+      newOrder.selectedProcesses
+    );
+
+    setShowCreateDialog(false);
+    setNewOrder({
+      product_id: '',
+      batch_code: '',
+      target_quantity: 0,
+      notes: '',
+      selectedProcesses: [],
+    });
+  };
+
+  const handleCreateEntry = async () => {
+    if (!selectedOrder || !newEntry.process_id || !newEntry.employee_name || newEntry.quantity <= 0) return;
+
+    const process = processes.find(p => p.id === newEntry.process_id);
+    
+    await createEntry({
+      production_order_id: selectedOrder.id,
+      process_id: newEntry.process_id,
+      employee_name: newEntry.employee_name,
+      date: newEntry.date,
+      period: newEntry.period,
+      quantity: newEntry.quantity,
+      value_per_unit: process?.value_per_unit || 0,
+      notes: newEntry.notes || null,
+    });
+
+    setShowEntryForm(false);
+    setNewEntry({
+      process_id: '',
+      employee_name: '',
+      date: new Date().toISOString().split('T')[0],
+      period: 'manha',
+      quantity: 0,
+      notes: '',
+    });
+  };
+
+  const toggleProcess = (processId: string, isRequired: boolean) => {
+    const exists = newOrder.selectedProcesses.find(p => p.process_id === processId);
+    if (exists) {
+      setNewOrder({
+        ...newOrder,
+        selectedProcesses: newOrder.selectedProcesses.filter(p => p.process_id !== processId),
+      });
+    } else {
+      setNewOrder({
+        ...newOrder,
+        selectedProcesses: [...newOrder.selectedProcesses, { process_id: processId, is_required: isRequired }],
+      });
+    }
+  };
+
+  const handleCompleteOrder = async (order: ProductionOrder) => {
+    if (confirm('Concluir esta ordem de produção? Isso irá baixar os insumos e dar entrada no produto acabado.')) {
+      await completeOrder(order.id);
+    }
+  };
+
+  const handleDeleteOrder = async (order: ProductionOrder) => {
+    if (confirm('Excluir esta ordem de produção?')) {
+      await deleteOrder(order.id);
+      setSelectedOrder(null);
+    }
+  };
+
+  // Get unique employees from entries
+  const uniqueEmployees = useMemo(() => {
+    const employees = new Set<string>();
+    orders.forEach(order => {
+      (order.entries || []).forEach(entry => {
+        employees.add(entry.employee_name);
+      });
+    });
+    return Array.from(employees);
+  }, [orders]);
+
+  if (loading) {
+    return <p className="text-muted-foreground text-center py-4">Carregando...</p>;
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <h2 className="text-lg font-semibold flex items-center gap-2">
+          <Factory className="h-5 w-5" />
+          Ordens de Produção ({orders.length})
+        </h2>
+        <Button onClick={() => setShowCreateDialog(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Nova OP
+        </Button>
+      </div>
+
+      {/* Orders List */}
+      <div className="space-y-2">
+        {orders.length === 0 ? (
+          <Card className="p-8 text-center">
+            <Factory className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
+            <p className="text-muted-foreground">Nenhuma ordem de produção</p>
+          </Card>
+        ) : (
+          orders.map((order) => {
+            const statusConfig = PRODUCTION_ORDER_STATUS[order.status as keyof typeof PRODUCTION_ORDER_STATUS];
+            const consolidated = calculateConsolidation(order);
+            
+            return (
+              <Card 
+                key={order.id}
+                className="cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={() => setSelectedOrder(order)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{order.order_number}</span>
+                        <Badge className={cn("text-xs text-white", statusConfig?.color)}>
+                          {statusConfig?.label}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Package className="h-4 w-4" />
+                        <span>{order.product?.name || 'Produto não definido'}</span>
+                        {order.batch_code && (
+                          <Badge variant="outline" className="text-xs">
+                            Lote: {order.batch_code}
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {format(new Date(order.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                      </p>
+                    </div>
+                    <div className="text-right flex items-center gap-3">
+                      <div>
+                        <p className="text-2xl font-bold">{consolidated}</p>
+                        <p className="text-xs text-muted-foreground">
+                          de {order.target_quantity} meta
+                        </p>
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
+      </div>
+
+      {/* Create Order Dialog */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Nova Ordem de Produção</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Produto *</Label>
+              <Select
+                value={newOrder.product_id}
+                onValueChange={(v) => setNewOrder({ ...newOrder, product_id: v })}
+              >
+                <SelectTrigger className="h-12">
+                  <SelectValue placeholder="Selecione o produto" />
+                </SelectTrigger>
+                <SelectContent>
+                  {products.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Lote</Label>
+                <Input
+                  className="h-12"
+                  value={newOrder.batch_code}
+                  onChange={(e) => setNewOrder({ ...newOrder, batch_code: e.target.value })}
+                  placeholder="Código do lote"
+                />
+              </div>
+              <div>
+                <Label>Meta de Produção</Label>
+                <Input
+                  type="number"
+                  className="h-12"
+                  value={newOrder.target_quantity}
+                  onChange={(e) => setNewOrder({ ...newOrder, target_quantity: parseInt(e.target.value) || 0 })}
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label>Processos *</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Selecione os processos obrigatórios para esta OP
+              </p>
+              <div className="space-y-2 max-h-48 overflow-y-auto border rounded-lg p-2">
+                {activeProcesses.map((process) => {
+                  const selected = newOrder.selectedProcesses.find(p => p.process_id === process.id);
+                  return (
+                    <div 
+                      key={process.id}
+                      className={cn(
+                        "flex items-center justify-between p-2 rounded border cursor-pointer transition-colors",
+                        selected ? "bg-primary/10 border-primary" : "hover:bg-muted"
+                      )}
+                      onClick={() => toggleProcess(process.id, true)}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Checkbox checked={!!selected} />
+                        <span>{process.name}</span>
+                      </div>
+                      <span className="text-sm text-muted-foreground">
+                        R$ {process.value_per_unit.toFixed(2)}/{process.unit}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div>
+              <Label>Observações</Label>
+              <Textarea
+                value={newOrder.notes}
+                onChange={(e) => setNewOrder({ ...newOrder, notes: e.target.value })}
+                rows={2}
+              />
+            </div>
+
+            <Button 
+              className="w-full h-12" 
+              onClick={handleCreateOrder}
+              disabled={!newOrder.product_id || newOrder.selectedProcesses.length === 0}
+            >
+              Criar Ordem de Produção
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Order Details Dialog */}
+      <Dialog open={!!selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          {selectedOrder && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  {selectedOrder.order_number}
+                  <Badge className={cn(
+                    "text-xs text-white",
+                    PRODUCTION_ORDER_STATUS[selectedOrder.status as keyof typeof PRODUCTION_ORDER_STATUS]?.color
+                  )}>
+                    {PRODUCTION_ORDER_STATUS[selectedOrder.status as keyof typeof PRODUCTION_ORDER_STATUS]?.label}
+                  </Badge>
+                </DialogTitle>
+              </DialogHeader>
+
+              <Tabs defaultValue="info" className="w-full">
+                <TabsList className="grid w-full grid-cols-3">
+                  <TabsTrigger value="info">Info</TabsTrigger>
+                  <TabsTrigger value="entries">Lançamentos</TabsTrigger>
+                  <TabsTrigger value="payment">Pagamento</TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="info" className="space-y-4">
+                  <Card>
+                    <CardContent className="pt-4 space-y-3">
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Produto:</span>
+                        <span className="font-medium">{selectedOrder.product?.name}</span>
+                      </div>
+                      {selectedOrder.batch_code && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Lote:</span>
+                          <span>{selectedOrder.batch_code}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Meta:</span>
+                        <span>{selectedOrder.target_quantity}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Consolidado:</span>
+                        <span className="font-bold text-lg">{calculateConsolidation(selectedOrder)}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Processes Progress */}
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">Progresso por Processo</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {(selectedOrder.processes || []).map((op) => {
+                        const processEntries = (selectedOrder.entries || []).filter(e => e.process_id === op.process_id);
+                        const totalQty = processEntries.reduce((sum, e) => sum + e.quantity, 0);
+                        const progress = selectedOrder.target_quantity > 0 
+                          ? Math.round((totalQty / selectedOrder.target_quantity) * 100)
+                          : 0;
+
+                        return (
+                          <div key={op.id} className="flex items-center justify-between p-2 border rounded">
+                            <div className="flex items-center gap-2">
+                              {op.is_required && <Badge variant="destructive" className="text-xs">Obrig.</Badge>}
+                              <span>{op.process?.name}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium">{totalQty}</span>
+                              <span className="text-xs text-muted-foreground">({progress}%)</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </CardContent>
+                  </Card>
+
+                  {/* Actions */}
+                  <div className="flex gap-2">
+                    {selectedOrder.status === 'aberto' && (
+                      <Button 
+                        variant="outline"
+                        onClick={() => updateOrder(selectedOrder.id, { status: 'producao' })}
+                      >
+                        <Play className="h-4 w-4 mr-2" />
+                        Iniciar Produção
+                      </Button>
+                    )}
+                    {selectedOrder.status === 'producao' && (
+                      <Button 
+                        onClick={() => handleCompleteOrder(selectedOrder)}
+                        className="bg-green-600 hover:bg-green-700"
+                      >
+                        <Check className="h-4 w-4 mr-2" />
+                        Concluir OP
+                      </Button>
+                    )}
+                    <Button 
+                      variant="destructive"
+                      onClick={() => handleDeleteOrder(selectedOrder)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Excluir
+                    </Button>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="entries" className="space-y-4">
+                  <Button onClick={() => setShowEntryForm(true)} className="w-full h-12">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Novo Lançamento
+                  </Button>
+
+                  <div className="space-y-2">
+                    {(selectedOrder.entries || []).length === 0 ? (
+                      <p className="text-muted-foreground text-center py-4">Nenhum lançamento</p>
+                    ) : (
+                      (selectedOrder.entries || []).map((entry) => (
+                        <Card key={entry.id}>
+                          <CardContent className="p-3">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-medium">{entry.employee_name}</p>
+                                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                  <Badge variant="secondary" className="text-xs">
+                                    {entry.process?.name}
+                                  </Badge>
+                                  <span>{entry.date}</span>
+                                </div>
+                                {entry.notes && (
+                                  <p className="text-xs text-muted-foreground mt-1">{entry.notes}</p>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xl font-bold">{entry.quantity}</p>
+                                <p className="text-sm text-green-600">
+                                  R$ {entry.total_value.toFixed(2)}
+                                </p>
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (confirm('Excluir este lançamento?')) {
+                                      deleteEntry(entry.id);
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="h-3 w-3" />
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))
+                    )}
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="payment" className="space-y-4">
+                  {(() => {
+                    const paymentSummary = getPaymentSummary(selectedOrder.entries || []);
+                    const totalPayment = Object.values(paymentSummary).reduce((sum, emp) => sum + emp.total, 0);
+
+                    return (
+                      <>
+                        <Card>
+                          <CardContent className="pt-4 text-center">
+                            <p className="text-3xl font-bold text-green-600">
+                              R$ {totalPayment.toFixed(2)}
+                            </p>
+                            <p className="text-sm text-muted-foreground">Total a Pagar</p>
+                          </CardContent>
+                        </Card>
+
+                        {Object.entries(paymentSummary).map(([employee, data]) => (
+                          <Card key={employee}>
+                            <CardHeader className="pb-2">
+                              <CardTitle className="text-sm flex items-center gap-2">
+                                <Users className="h-4 w-4" />
+                                {employee}
+                                <Badge className="ml-auto">R$ {data.total.toFixed(2)}</Badge>
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-1">
+                              {Object.entries(data.byProcess).map(([process, info]) => (
+                                <div key={process} className="flex justify-between text-sm">
+                                  <span className="text-muted-foreground">{process}</span>
+                                  <span>{info.qty} un = R$ {info.value.toFixed(2)}</span>
+                                </div>
+                              ))}
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </>
+                    );
+                  })()}
+                </TabsContent>
+              </Tabs>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Entry Form Dialog */}
+      <Dialog open={showEntryForm} onOpenChange={setShowEntryForm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Novo Lançamento</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Processo *</Label>
+              <Select
+                value={newEntry.process_id}
+                onValueChange={(v) => setNewEntry({ ...newEntry, process_id: v })}
+              >
+                <SelectTrigger className="h-12">
+                  <SelectValue placeholder="Selecione o processo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(selectedOrder?.processes || []).map((op) => (
+                    <SelectItem key={op.process_id} value={op.process_id}>
+                      {op.process?.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label>Funcionário *</Label>
+              <Input
+                className="h-12"
+                value={newEntry.employee_name}
+                onChange={(e) => setNewEntry({ ...newEntry, employee_name: e.target.value })}
+                placeholder="Nome do funcionário"
+                list="employees-list"
+              />
+              <datalist id="employees-list">
+                {uniqueEmployees.map(emp => (
+                  <option key={emp} value={emp} />
+                ))}
+              </datalist>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Data</Label>
+                <Input
+                  type="date"
+                  className="h-12"
+                  value={newEntry.date}
+                  onChange={(e) => setNewEntry({ ...newEntry, date: e.target.value })}
+                />
+              </div>
+              <div>
+                <Label>Período</Label>
+                <Select
+                  value={newEntry.period}
+                  onValueChange={(v) => setNewEntry({ ...newEntry, period: v })}
+                >
+                  <SelectTrigger className="h-12">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="manha">Manhã</SelectItem>
+                    <SelectItem value="tarde">Tarde</SelectItem>
+                    <SelectItem value="noite">Noite</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div>
+              <Label>Quantidade *</Label>
+              <Input
+                type="number"
+                className="h-12 text-xl"
+                value={newEntry.quantity || ''}
+                onChange={(e) => setNewEntry({ ...newEntry, quantity: parseInt(e.target.value) || 0 })}
+              />
+            </div>
+
+            <div>
+              <Label>Observações</Label>
+              <Textarea
+                value={newEntry.notes}
+                onChange={(e) => setNewEntry({ ...newEntry, notes: e.target.value })}
+                rows={2}
+              />
+            </div>
+
+            <Button 
+              className="w-full h-12" 
+              onClick={handleCreateEntry}
+              disabled={!newEntry.process_id || !newEntry.employee_name || newEntry.quantity <= 0}
+            >
+              Registrar Lançamento
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
