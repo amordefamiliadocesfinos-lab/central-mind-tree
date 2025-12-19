@@ -1,6 +1,8 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useOrders, Order, Product, OrderItem } from '@/hooks/useOrders';
 import { useMRP } from '@/hooks/useMRP';
+import { useStorageLocations } from '@/hooks/useStorageLocations';
+import { useMultiLocationInventory } from '@/hooks/useMultiLocationInventory';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,11 +11,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Package, ShoppingCart, Factory, ArrowLeft, Trash2, AlertTriangle, Image } from 'lucide-react';
+import { Plus, Package, ShoppingCart, Factory, ArrowLeft, Trash2, AlertTriangle, Image, Warehouse } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ProductGallery } from '@/components/ProductGallery';
-import { InventoryMovementDialog } from '@/components/InventoryMovementDialog';
 import { ProductMovementHistory } from '@/components/ProductMovementHistory';
 import { BOMEditor } from '@/components/BOMEditor';
 import { MRPPanel } from '@/components/MRPPanel';
@@ -22,6 +23,9 @@ import { OperationsSearchBar } from '@/components/operations/OperationsSearchBar
 import { OrderCard } from '@/components/operations/OrderCard';
 import { ProductCard } from '@/components/operations/ProductCard';
 import { KPICards } from '@/components/operations/KPICards';
+import { MultiLocationMovementDialog } from '@/components/operations/MultiLocationMovementDialog';
+import { LocationsManager } from '@/components/operations/LocationsManager';
+import { ProductDeleteDialog } from '@/components/operations/ProductDeleteDialog';
 
 const PRODUCT_CATEGORIES = [
   'Alimentos',
@@ -41,10 +45,9 @@ export default function Operacoes() {
     loading,
     createProduct,
     updateProduct,
-    updateInventory,
+    deleteProduct,
     createOrder,
     updateOrderStatus,
-    deleteOrder,
     calculateProductionPlan,
     calculateKPIs,
     orderStatus,
@@ -52,7 +55,9 @@ export default function Operacoes() {
     refetch,
   } = useOrders();
 
-  const { reserveMaterials, consumeMaterials, calculateOrderBOM } = useMRP();
+  const { reserveMaterials, consumeMaterials } = useMRP();
+  const { locations } = useStorageLocations();
+  const { getTotalBalance, getProductInventoryByLocation } = useMultiLocationInventory();
 
   // Tab state
   const [activeTab, setActiveTab] = useState<OperationsTab>('overview');
@@ -66,9 +71,26 @@ export default function Operacoes() {
   const [showProductDialog, setShowProductDialog] = useState(false);
   const [showOrderDialog, setShowOrderDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [movementProduct, setMovementProduct] = useState<{ id: string; name: string; balance: number } | null>(null);
+  const [movementProduct, setMovementProduct] = useState<{ id: string; name: string } | null>(null);
   const [historyProductId, setHistoryProductId] = useState<string | null>(null);
-  const [orderBOM, setOrderBOM] = useState<{ component_id: string; component_name: string; qty_needed: number; stock_available: number; shortage: number }[]>([]);
+  const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  
+  // Product balances cache for display
+  const [productBalances, setProductBalances] = useState<Record<string, number>>({});
+
+  // Load product balances
+  useEffect(() => {
+    const loadBalances = async () => {
+      const balances: Record<string, number> = {};
+      for (const product of products) {
+        balances[product.id] = await getTotalBalance(product.id);
+      }
+      setProductBalances(balances);
+    };
+    if (products.length > 0) {
+      loadBalances();
+    }
+  }, [products, getTotalBalance]);
   
   const [newProduct, setNewProduct] = useState<Partial<Product>>({ 
     sku: '', 
@@ -87,7 +109,16 @@ export default function Operacoes() {
     items: [] as { product_id: string; quantity: number; unit_price: number }[],
   });
 
-  const kpis = calculateKPIs();
+  const kpis = useMemo(() => {
+    const base = calculateKPIs();
+    // Recalculate low stock using multi-location totals
+    const lowStock = products.filter(p => {
+      const balance = productBalances[p.id] || 0;
+      return balance <= p.min_stock;
+    });
+    return { ...base, lowStock };
+  }, [calculateKPIs, products, productBalances]);
+
   const productionPlan = calculateProductionPlan();
 
   // Filter logic
@@ -112,8 +143,7 @@ export default function Operacoes() {
   }, [products, searchTerm, categoryFilter]);
 
   const getProductBalance = (productId: string) => {
-    const inv = inventory.find(i => i.product_id === productId);
-    return inv?.quantity || 0;
+    return productBalances[productId] || 0;
   };
 
   // Handlers
@@ -128,6 +158,13 @@ export default function Operacoes() {
   const handleUpdateProduct = async () => {
     if (!editingProduct) return;
     await updateProduct(editingProduct.id, editingProduct);
+    setEditingProduct(null);
+  };
+
+  const handleDeleteProduct = async () => {
+    if (!deletingProduct) return;
+    await deleteProduct(deletingProduct.id);
+    setDeletingProduct(null);
     setEditingProduct(null);
   };
 
@@ -251,6 +288,8 @@ export default function Operacoes() {
                 )}
               </CardContent>
             </Card>
+
+            <LocationsManager />
           </div>
         );
 
@@ -560,6 +599,15 @@ export default function Operacoes() {
               placeholder="Buscar no estoque..."
               showStatusFilter={false}
             />
+
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {locations.map(loc => (
+                <Badge key={loc.id} variant="secondary" className="shrink-0">
+                  <Warehouse className="h-3 w-3 mr-1" />
+                  {loc.name}
+                </Badge>
+              ))}
+            </div>
             
             <h2 className="text-lg font-semibold">Estoque ({filteredProducts.length})</h2>
 
@@ -570,7 +618,7 @@ export default function Operacoes() {
                   product={product}
                   balance={getProductBalance(product.id)}
                   onEdit={setEditingProduct}
-                  onMovement={setMovementProduct}
+                  onMovement={(p) => setMovementProduct({ id: p.id, name: p.name })}
                   onHistory={setHistoryProductId}
                   showInventoryActions
                 />
@@ -819,26 +867,39 @@ export default function Operacoes() {
                   />
                 </div>
               </div>
-              
-              <Button onClick={handleUpdateProduct} className="w-full h-12 text-base">
-                Salvar Alterações
-              </Button>
+
+              <div className="flex gap-2">
+                <Button onClick={handleUpdateProduct} className="flex-1 h-12 text-base">
+                  Salvar Alterações
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  size="icon" 
+                  className="h-12 w-12"
+                  onClick={() => setDeletingProduct(editingProduct)}
+                >
+                  <Trash2 className="h-5 w-5" />
+                </Button>
+              </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* Inventory Movement Dialog */}
+      {/* Multi-Location Movement Dialog */}
       {movementProduct && (
-        <InventoryMovementDialog
+        <MultiLocationMovementDialog
           open={!!movementProduct}
           onOpenChange={(open) => !open && setMovementProduct(null)}
           productId={movementProduct.id}
           productName={movementProduct.name}
-          currentBalance={movementProduct.balance}
           onSuccess={() => {
             refetch();
             setMovementProduct(null);
+            // Reload balances
+            getTotalBalance(movementProduct.id).then(balance => {
+              setProductBalances(prev => ({ ...prev, [movementProduct.id]: balance }));
+            });
           }}
         />
       )}
@@ -854,6 +915,14 @@ export default function Operacoes() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Product Delete Dialog */}
+      <ProductDeleteDialog
+        open={!!deletingProduct}
+        onOpenChange={(open) => !open && setDeletingProduct(null)}
+        productName={deletingProduct?.name || ''}
+        onConfirm={handleDeleteProduct}
+      />
     </div>
   );
 }
