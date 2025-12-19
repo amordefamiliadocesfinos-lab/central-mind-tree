@@ -17,8 +17,9 @@ import { cn } from '@/lib/utils';
 import { ProductGallery } from '@/components/ProductGallery';
 import { ProductMovementHistory } from '@/components/ProductMovementHistory';
 import { BOMEditor } from '@/components/BOMEditor';
-import { OperationsBottomNav, OperationsTab } from '@/components/operations/OperationsBottomNav';
+import { OperationsTab } from '@/components/operations/OperationsBottomNav';
 import { OperationsSearchBar } from '@/components/operations/OperationsSearchBar';
+import { OperationsTopTabs } from '@/components/operations/OperationsTopTabs';
 import { OrderCard } from '@/components/operations/OrderCard';
 import { ProductCard } from '@/components/operations/ProductCard';
 import { KPICards } from '@/components/operations/KPICards';
@@ -112,8 +113,7 @@ export default function Operacoes() {
 
   // Tab from querystring (stable)
   const tabParam = searchParams.get('tab') as OperationsTab | null;
-  const activeTab: OperationsTab = tabParam && VALID_TABS.includes(tabParam) ? tabParam : 'overview';
-  
+  const activeTab: OperationsTab = tabParam && VALID_TABS.includes(tabParam) ? tabParam : 'orders';
   const setActiveTab = useCallback((tab: OperationsTab) => {
     setSearchParams({ tab }, { replace: true });
   }, [setSearchParams]);
@@ -701,15 +701,10 @@ export default function Operacoes() {
       </header>
 
       {/* Main Content */}
-      <main className="p-4 pb-24">
+      <main className="p-4 pb-24 space-y-4">
+        <OperationsTopTabs activeTab={activeTab} onTabChange={handleTabChange} />
         {renderContent()}
       </main>
-
-      {/* Bottom Navigation */}
-      <OperationsBottomNav 
-        activeTab={activeTab} 
-        onTabChange={handleTabChange} 
-      />
 
       {/* Edit Product Dialog */}
       <Dialog open={!!editingProduct} onOpenChange={(open) => !open && setEditingProduct(null)}>
