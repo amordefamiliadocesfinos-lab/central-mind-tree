@@ -1,5 +1,6 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
-import { useOrders, Order, Product, OrderItem } from '@/hooks/useOrders';
+import { useState, useCallback, useEffect } from 'react';
+import { useSearchParams, Link } from 'react-router-dom';
+import { useOrders } from '@/hooks/useOrders';
 import { useMRP } from '@/hooks/useMRP';
 import { useStorageLocations } from '@/hooks/useStorageLocations';
 import { useMultiLocationInventory } from '@/hooks/useMultiLocationInventory';
@@ -11,8 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Package, ShoppingCart, Factory, ArrowLeft, Trash2, AlertTriangle, Image, Warehouse } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Plus, Package, ShoppingCart, Factory, ArrowLeft, Trash2, AlertTriangle, Warehouse } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ProductGallery } from '@/components/ProductGallery';
 import { ProductMovementHistory } from '@/components/ProductMovementHistory';
@@ -29,21 +29,28 @@ import { OrderEditDialog } from '@/components/operations/OrderEditDialog';
 import { ProductionTab } from '@/components/operations/ProductionTab';
 import { OperationsCalendarTab } from '@/components/operations/OperationsCalendarTab';
 import { MRPTab } from '@/components/operations/MRPTab';
+import { 
+  useAppStore, 
+  PRODUCT_CATEGORIES, 
+  ORDER_STATUS,
+  ORDER_CHANNELS,
+  sortProductsByCategory,
+  sortOrdersByStatus,
+  Product as StoreProduct,
+  Order as StoreOrder,
+  OrderItem as StoreOrderItem,
+} from '@/stores/appStore';
+import { useKPIsSelector, useFilteredOrders, useFilteredProducts, useSearchFilters } from '@/stores/selectors';
+import type { Order, OrderItem, Product } from '@/hooks/useOrders';
 
-const PRODUCT_CATEGORIES = [
-  'Alimentos',
-  'Bebidas',
-  'Doces',
-  'Salgados',
-  'Embalagens',
-  'Insumos',
-  'Outros',
-];
+const VALID_TABS: OperationsTab[] = ['overview', 'orders', 'products', 'inventory', 'production', 'mrp', 'calendar'];
 
 export default function Operacoes() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  
   const {
-    orders,
-    products,
+    orders: rawOrders,
+    products: rawProducts,
     inventory,
     loading,
     createProduct,
@@ -54,26 +61,74 @@ export default function Operacoes() {
     updateOrderStatus,
     updateOrderDueDate,
     deleteOrder,
-    calculateProductionPlan,
-    calculateKPIs,
-    orderStatus,
-    orderChannels,
     refetch,
   } = useOrders();
 
   const { reserveMaterials, consumeMaterials } = useMRP();
   const { locations } = useStorageLocations();
-  const { getTotalBalance, getProductInventoryByLocation } = useMultiLocationInventory();
+  const { getTotalBalance } = useMultiLocationInventory();
 
-  // Tab state
-  const [activeTab, setActiveTab] = useState<OperationsTab>('overview');
+  // Store state
+  const setOrders = useAppStore((s) => s.setOrders);
+  const setProducts = useAppStore((s) => s.setProducts);
+  const setInventory = useAppStore((s) => s.setInventory);
+  const setProductBalances = useAppStore((s) => s.setProductBalances);
+  const updateProductBalance = useAppStore((s) => s.updateProductBalance);
+  const productBalances = useAppStore((s) => s.productBalances);
+
+  // Sync data to store
+  useEffect(() => {
+    setOrders(rawOrders as StoreOrder[]);
+  }, [rawOrders, setOrders]);
+
+  useEffect(() => {
+    setProducts(rawProducts as StoreProduct[]);
+  }, [rawProducts, setProducts]);
+
+  useEffect(() => {
+    setInventory(inventory.map(i => ({
+      id: i.id,
+      product_id: i.product_id,
+      quantity: i.quantity,
+      location: i.location,
+      location_id: null,
+      updated_at: i.updated_at,
+    })));
+  }, [inventory, setInventory]);
+
+  // Load product balances
+  useEffect(() => {
+    const loadBalances = async () => {
+      const balances: Record<string, number> = {};
+      for (const product of rawProducts) {
+        balances[product.id] = await getTotalBalance(product.id);
+      }
+      setProductBalances(balances);
+    };
+    if (rawProducts.length > 0) {
+      loadBalances();
+    }
+  }, [rawProducts, getTotalBalance, setProductBalances]);
+
+  // Tab from querystring (stable)
+  const tabParam = searchParams.get('tab') as OperationsTab | null;
+  const activeTab: OperationsTab = tabParam && VALID_TABS.includes(tabParam) ? tabParam : 'overview';
   
-  // Search and filter states
-  const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const setActiveTab = useCallback((tab: OperationsTab) => {
+    setSearchParams({ tab }, { replace: true });
+  }, [setSearchParams]);
 
-  // Dialog states
+  // Filters from store
+  const { searchTerm, categoryFilter, statusFilter, setSearchTerm, setCategoryFilter, setStatusFilter, resetFilters } = useSearchFilters();
+
+  // KPIs from selector
+  const kpis = useKPIsSelector();
+
+  // Filtered and sorted data
+  const filteredOrders = sortOrdersByStatus(useFilteredOrders());
+  const filteredProducts = sortProductsByCategory(useFilteredProducts());
+
+  // Dialog states (local)
   const [showProductDialog, setShowProductDialog] = useState(false);
   const [showOrderDialog, setShowOrderDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -81,24 +136,7 @@ export default function Operacoes() {
   const [movementProduct, setMovementProduct] = useState<{ id: string; name: string } | null>(null);
   const [historyProductId, setHistoryProductId] = useState<string | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
-  
-  // Product balances cache for display
-  const [productBalances, setProductBalances] = useState<Record<string, number>>({});
 
-  // Load product balances
-  useEffect(() => {
-    const loadBalances = async () => {
-      const balances: Record<string, number> = {};
-      for (const product of products) {
-        balances[product.id] = await getTotalBalance(product.id);
-      }
-      setProductBalances(balances);
-    };
-    if (products.length > 0) {
-      loadBalances();
-    }
-  }, [products, getTotalBalance]);
-  
   const [newProduct, setNewProduct] = useState<Partial<Product>>({ 
     sku: '', 
     name: '', 
@@ -116,42 +154,7 @@ export default function Operacoes() {
     items: [] as { product_id: string; quantity: number; unit_price: number }[],
   });
 
-  const kpis = useMemo(() => {
-    const base = calculateKPIs();
-    // Recalculate low stock using multi-location totals
-    const lowStock = products.filter(p => {
-      const balance = productBalances[p.id] || 0;
-      return balance <= p.min_stock;
-    });
-    return { ...base, lowStock };
-  }, [calculateKPIs, products, productBalances]);
-
-  const productionPlan = calculateProductionPlan();
-
-  // Filter logic
-  const filteredOrders = useMemo(() => {
-    return orders.filter(order => {
-      const matchesSearch = !searchTerm || 
-        order.customer_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.order_number?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
-  }, [orders, searchTerm, statusFilter]);
-
-  const filteredProducts = useMemo(() => {
-    return products.filter(product => {
-      const matchesSearch = !searchTerm || 
-        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        product.sku.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = categoryFilter === 'all' || product.category === categoryFilter;
-      return matchesSearch && matchesCategory;
-    });
-  }, [products, searchTerm, categoryFilter]);
-
-  const getProductBalance = (productId: string) => {
-    return productBalances[productId] || 0;
-  };
+  const getProductBalance = (productId: string) => productBalances[productId] || 0;
 
   // Handlers
   const handleAddProduct = async () => {
@@ -193,7 +196,7 @@ export default function Operacoes() {
     (items[index] as Record<string, string | number>)[field] = value;
     
     if (field === 'product_id') {
-      const product = products.find(p => p.id === value);
+      const product = rawProducts.find(p => p.id === value);
       if (product?.price) {
         items[index].unit_price = product.price;
       }
@@ -223,7 +226,12 @@ export default function Operacoes() {
     refetch();
   }, [reserveMaterials, consumeMaterials, updateOrderStatus, refetch]);
 
-  const statusList = Object.entries(orderStatus).map(([key, value]) => ({ key, label: value.label }));
+  const handleTabChange = useCallback((tab: OperationsTab) => {
+    setActiveTab(tab);
+    resetFilters();
+  }, [setActiveTab, resetFilters]);
+
+  const statusList = Object.entries(ORDER_STATUS).map(([key, value]) => ({ key, label: value.label }));
 
   if (loading) {
     return (
@@ -245,22 +253,22 @@ export default function Operacoes() {
                 <CardTitle className="text-base">Pedidos Recentes</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
-                {orders.slice(0, 3).map(order => (
+                {sortOrdersByStatus(rawOrders).slice(0, 3).map(order => (
                   <OrderCard 
                     key={order.id}
                     order={order}
-                    orderStatus={orderStatus}
-                    orderChannels={orderChannels}
+                    orderStatus={ORDER_STATUS}
+                    orderChannels={ORDER_CHANNELS}
                     onStatusChange={handleStatusChange}
                   />
                 ))}
-                {orders.length > 3 && (
+                {rawOrders.length > 3 && (
                   <Button 
                     variant="ghost" 
                     className="w-full"
-                    onClick={() => setActiveTab('orders')}
+                    onClick={() => handleTabChange('orders')}
                   >
-                    Ver todos ({orders.length})
+                    Ver todos ({rawOrders.length})
                   </Button>
                 )}
               </CardContent>
@@ -280,8 +288,7 @@ export default function Operacoes() {
                   </p>
                 ) : (
                   <div className="space-y-2">
-                    {products
-                      .filter(p => kpis.lowStock.some(l => l.id === p.id))
+                    {sortProductsByCategory(kpis.lowStock as Product[])
                       .slice(0, 3)
                       .map(product => (
                         <ProductCard
@@ -310,7 +317,7 @@ export default function Operacoes() {
               onCategoryChange={setCategoryFilter}
               statusFilter={statusFilter}
               onStatusChange={setStatusFilter}
-              categories={PRODUCT_CATEGORIES}
+              categories={[...PRODUCT_CATEGORIES]}
               statuses={statusList}
               placeholder="Buscar pedidos..."
               showCategoryFilter={false}
@@ -348,7 +355,7 @@ export default function Operacoes() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {Object.entries(orderChannels).map(([key, label]) => (
+                          {Object.entries(ORDER_CHANNELS).map(([key, label]) => (
                             <SelectItem key={key} value={key}>{label}</SelectItem>
                           ))}
                         </SelectContent>
@@ -382,7 +389,7 @@ export default function Operacoes() {
                               <SelectValue placeholder="Produto" />
                             </SelectTrigger>
                             <SelectContent>
-                              {products.map((p) => (
+                              {sortProductsByCategory(rawProducts).map((p) => (
                                 <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                               ))}
                             </SelectContent>
@@ -427,11 +434,11 @@ export default function Operacoes() {
                 filteredOrders.map((order) => (
                   <OrderCard
                     key={order.id}
-                    order={order}
-                    orderStatus={orderStatus}
-                    orderChannels={orderChannels}
+                    order={order as Order}
+                    orderStatus={ORDER_STATUS}
+                    orderChannels={ORDER_CHANNELS}
                     onStatusChange={handleStatusChange}
-                    onClick={(o) => setEditingOrder(orders.find(ord => ord.id === o.id) || null)}
+                    onClick={(o) => setEditingOrder(rawOrders.find(ord => ord.id === o.id) || null)}
                   />
                 ))
               )}
@@ -449,7 +456,7 @@ export default function Operacoes() {
               onCategoryChange={setCategoryFilter}
               statusFilter={statusFilter}
               onStatusChange={setStatusFilter}
-              categories={PRODUCT_CATEGORIES}
+              categories={[...PRODUCT_CATEGORIES]}
               statuses={[]}
               placeholder="Buscar produtos..."
               showStatusFilter={false}
@@ -582,7 +589,7 @@ export default function Operacoes() {
                 filteredProducts.map((product) => (
                   <ProductCard
                     key={product.id}
-                    product={product}
+                    product={product as Product}
                     balance={getProductBalance(product.id)}
                     onEdit={setEditingProduct}
                   />
@@ -602,7 +609,7 @@ export default function Operacoes() {
               onCategoryChange={setCategoryFilter}
               statusFilter={statusFilter}
               onStatusChange={setStatusFilter}
-              categories={PRODUCT_CATEGORIES}
+              categories={[...PRODUCT_CATEGORIES]}
               statuses={[]}
               placeholder="Buscar no estoque..."
               showStatusFilter={false}
@@ -623,7 +630,7 @@ export default function Operacoes() {
               {filteredProducts.map((product) => (
                 <ProductCard
                   key={product.id}
-                  product={product}
+                  product={product as Product}
                   balance={getProductBalance(product.id)}
                   onEdit={setEditingProduct}
                   onMovement={(p) => setMovementProduct({ id: p.id, name: p.name })}
@@ -636,12 +643,12 @@ export default function Operacoes() {
         );
 
       case 'production':
-        return <ProductionTab products={products} onRefetch={refetch} />;
+        return <ProductionTab products={rawProducts} onRefetch={refetch} />;
 
       case 'mrp':
         return (
           <MRPTab 
-            orders={orders} 
+            orders={rawOrders} 
             onReserve={async (order) => {
               const items = order.items?.map(i => ({ product_id: i.product_id, quantity: i.quantity })) || [];
               if (items.length > 0) {
@@ -664,8 +671,8 @@ export default function Operacoes() {
       case 'calendar':
         return (
           <OperationsCalendarTab
-            orders={orders}
-            orderStatus={orderStatus}
+            orders={rawOrders}
+            orderStatus={ORDER_STATUS}
             onOrderClick={setEditingOrder}
             onDateChange={updateOrderDueDate}
           />
@@ -701,12 +708,7 @@ export default function Operacoes() {
       {/* Bottom Navigation */}
       <OperationsBottomNav 
         activeTab={activeTab} 
-        onTabChange={(tab) => {
-          setActiveTab(tab);
-          setSearchTerm('');
-          setCategoryFilter('all');
-          setStatusFilter('all');
-        }} 
+        onTabChange={handleTabChange} 
       />
 
       {/* Edit Product Dialog */}
@@ -732,7 +734,7 @@ export default function Operacoes() {
                 <BOMEditor
                   productId={editingProduct.id}
                   productName={editingProduct.name}
-                  availableComponents={products.map(p => ({
+                  availableComponents={rawProducts.map(p => ({
                     id: p.id,
                     name: p.name,
                     sku: p.sku,
@@ -876,9 +878,8 @@ export default function Operacoes() {
           onSuccess={() => {
             refetch();
             setMovementProduct(null);
-            // Reload balances
             getTotalBalance(movementProduct.id).then(balance => {
-              setProductBalances(prev => ({ ...prev, [movementProduct.id]: balance }));
+              updateProductBalance(movementProduct.id, balance);
             });
           }}
         />
@@ -909,17 +910,11 @@ export default function Operacoes() {
         open={!!editingOrder}
         onOpenChange={(open) => !open && setEditingOrder(null)}
         order={editingOrder}
-        products={products}
-        orderChannels={orderChannels}
-        orderStatus={orderStatus}
-        onSave={async (orderId, updates, items) => {
-          await updateOrder(orderId, updates, items);
-          refetch();
-        }}
-        onDelete={async (orderId) => {
-          await deleteOrder(orderId);
-          refetch();
-        }}
+        products={rawProducts}
+        orderStatus={ORDER_STATUS}
+        orderChannels={ORDER_CHANNELS}
+        onSave={updateOrder}
+        onDelete={deleteOrder}
       />
     </div>
   );
