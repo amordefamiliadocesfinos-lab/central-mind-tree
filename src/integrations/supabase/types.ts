@@ -72,6 +72,7 @@ export type Database = {
         Row: {
           id: string
           location: string | null
+          location_id: string | null
           product_id: string
           quantity: number
           updated_at: string
@@ -79,6 +80,7 @@ export type Database = {
         Insert: {
           id?: string
           location?: string | null
+          location_id?: string | null
           product_id: string
           quantity?: number
           updated_at?: string
@@ -86,11 +88,19 @@ export type Database = {
         Update: {
           id?: string
           location?: string | null
+          location_id?: string | null
           product_id?: string
           quantity?: number
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "inventory_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "storage_locations"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "inventory_product_id_fkey"
             columns: ["product_id"]
@@ -104,7 +114,9 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string | null
+          from_location: string | null
           id: string
+          location: string | null
           movement_type: string
           new_balance: number
           notes: string | null
@@ -113,11 +125,14 @@ export type Database = {
           quantity: number
           reference_id: string | null
           reference_type: string | null
+          to_location: string | null
         }
         Insert: {
           created_at?: string
           created_by?: string | null
+          from_location?: string | null
           id?: string
+          location?: string | null
           movement_type: string
           new_balance?: number
           notes?: string | null
@@ -126,11 +141,14 @@ export type Database = {
           quantity: number
           reference_id?: string | null
           reference_type?: string | null
+          to_location?: string | null
         }
         Update: {
           created_at?: string
           created_by?: string | null
+          from_location?: string | null
           id?: string
+          location?: string | null
           movement_type?: string
           new_balance?: number
           notes?: string | null
@@ -139,6 +157,7 @@ export type Database = {
           quantity?: number
           reference_id?: string | null
           reference_type?: string | null
+          to_location?: string | null
         }
         Relationships: [
           {
@@ -711,6 +730,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      storage_locations: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: []
       }
       task_merge_history: {
         Row: {

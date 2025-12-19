@@ -116,6 +116,7 @@ export function useOrders() {
       .from('products')
       .select('*')
       .eq('is_active', true)
+      .is('deleted_at', null)
       .order('name');
 
     if (error) {
@@ -125,6 +126,26 @@ export function useOrders() {
 
     setProducts((data as Product[]) || []);
   }, []);
+
+  const deleteProduct = useCallback(async (productId: string) => {
+    // Soft delete by setting deleted_at
+    const { error } = await supabase
+      .from('products')
+      .update({ 
+        deleted_at: new Date().toISOString(),
+        is_active: false 
+      })
+      .eq('id', productId);
+
+    if (error) {
+      toast.error('Erro ao excluir produto');
+      return false;
+    }
+
+    toast.success('Produto excluído!');
+    fetchProducts();
+    return true;
+  }, [fetchProducts]);
 
   const fetchInventory = useCallback(async () => {
     const { data, error } = await supabase
@@ -389,6 +410,7 @@ export function useOrders() {
     loading,
     createProduct,
     updateProduct,
+    deleteProduct,
     updateInventory,
     createOrder,
     updateOrderStatus,
