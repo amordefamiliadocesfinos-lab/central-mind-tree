@@ -298,6 +298,73 @@ export function useOrders() {
     fetchOrders();
   }, [fetchOrders]);
 
+  const updateOrder = useCallback(async (
+    orderId: string, 
+    updates: Partial<Order>, 
+    items?: Partial<OrderItem>[]
+  ) => {
+    // Update order
+    const total = items?.reduce((acc, item) => {
+      return acc + (item.quantity || 0) * (item.unit_price || 0);
+    }, 0) || updates.total_value;
+
+    const { error: orderError } = await supabase
+      .from('orders')
+      .update({
+        customer_name: updates.customer_name,
+        customer_contact: updates.customer_contact,
+        channel: updates.channel,
+        status: updates.status,
+        due_date: updates.due_date,
+        notes: updates.notes,
+        total_value: total,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', orderId);
+
+    if (orderError) {
+      toast.error('Erro ao atualizar pedido');
+      return;
+    }
+
+    // Update items if provided
+    if (items) {
+      // Delete existing items
+      await supabase.from('order_items').delete().eq('order_id', orderId);
+      
+      // Insert new items
+      if (items.length > 0) {
+        await supabase.from('order_items').insert(
+          items.map(item => ({
+            order_id: orderId,
+            product_id: item.product_id,
+            quantity: item.quantity || 1,
+            unit_price: item.unit_price,
+            notes: item.notes,
+          }))
+        );
+      }
+    }
+
+    toast.success('Pedido atualizado!');
+    fetchOrders();
+  }, [fetchOrders]);
+
+  const updateOrderDueDate = useCallback(async (orderId: string, dueDate: string) => {
+    const { error } = await supabase
+      .from('orders')
+      .update({ due_date: dueDate, updated_at: new Date().toISOString() })
+      .eq('id', orderId);
+
+    if (error) {
+      toast.error('Erro ao atualizar prazo');
+      return;
+    }
+
+    toast.success('Prazo atualizado!');
+    fetchOrders();
+  }, [fetchOrders]);
+
   const deleteOrder = useCallback(async (orderId: string) => {
     const { error } = await supabase
       .from('orders')
@@ -413,7 +480,9 @@ export function useOrders() {
     deleteProduct,
     updateInventory,
     createOrder,
+    updateOrder,
     updateOrderStatus,
+    updateOrderDueDate,
     deleteOrder,
     calculateProductionPlan,
     calculateKPIs,
