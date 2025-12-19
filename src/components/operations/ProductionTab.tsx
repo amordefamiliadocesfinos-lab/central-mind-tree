@@ -8,7 +8,8 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ProductionLogForm } from './ProductionLogForm';
-import { Plus, Factory, Users, Calendar, ChevronLeft, ChevronRight, Pencil, Download } from 'lucide-react';
+import { ProductivityCharts } from './ProductivityCharts';
+import { Plus, Factory, Users, Calendar, ChevronLeft, ChevronRight, Pencil, Download, BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface ProductionTabProps {
@@ -35,6 +36,7 @@ export function ProductionTab({ products, onRefetch }: ProductionTabProps) {
   const [editingLog, setEditingLog] = useState<ProductionLog | null>(null);
   const [filterEmployee, setFilterEmployee] = useState('all');
   const [filterProcess, setFilterProcess] = useState('all');
+  const [showCharts, setShowCharts] = useState(true);
 
   useEffect(() => {
     fetchLogs(selectedDate);
@@ -161,11 +163,26 @@ export function ProductionTab({ products, onRefetch }: ProductionTabProps) {
         </Card>
       </div>
 
+      {/* Charts Toggle & Productivity Charts */}
+      <div className="flex items-center justify-between">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => setShowCharts(!showCharts)}
+          className="gap-2"
+        >
+          <BarChart3 className="h-4 w-4" />
+          {showCharts ? 'Ocultar Gráficos' : 'Ver Gráficos'}
+        </Button>
+      </div>
+
+      {showCharts && <ProductivityCharts logs={filteredLogs} selectedDate={selectedDate} />}
+
       {/* By Employee Summary */}
       {Object.keys(summary.by_employee).length > 0 && (
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Produção por Funcionário</CardTitle>
+            <CardTitle className="text-sm">Resumo por Funcionário</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
