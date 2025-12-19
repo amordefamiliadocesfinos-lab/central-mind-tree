@@ -17,7 +17,6 @@ import { cn } from '@/lib/utils';
 import { ProductGallery } from '@/components/ProductGallery';
 import { ProductMovementHistory } from '@/components/ProductMovementHistory';
 import { BOMEditor } from '@/components/BOMEditor';
-import { MRPPanel } from '@/components/MRPPanel';
 import { OperationsBottomNav, OperationsTab } from '@/components/operations/OperationsBottomNav';
 import { OperationsSearchBar } from '@/components/operations/OperationsSearchBar';
 import { OrderCard } from '@/components/operations/OrderCard';
@@ -26,6 +25,10 @@ import { KPICards } from '@/components/operations/KPICards';
 import { MultiLocationMovementDialog } from '@/components/operations/MultiLocationMovementDialog';
 import { LocationsManager } from '@/components/operations/LocationsManager';
 import { ProductDeleteDialog } from '@/components/operations/ProductDeleteDialog';
+import { OrderEditDialog } from '@/components/operations/OrderEditDialog';
+import { ProductionTab } from '@/components/operations/ProductionTab';
+import { OperationsCalendarTab } from '@/components/operations/OperationsCalendarTab';
+import { MRPTab } from '@/components/operations/MRPTab';
 
 const PRODUCT_CATEGORIES = [
   'Alimentos',
@@ -47,7 +50,10 @@ export default function Operacoes() {
     updateProduct,
     deleteProduct,
     createOrder,
+    updateOrder,
     updateOrderStatus,
+    updateOrderDueDate,
+    deleteOrder,
     calculateProductionPlan,
     calculateKPIs,
     orderStatus,
@@ -71,6 +77,7 @@ export default function Operacoes() {
   const [showProductDialog, setShowProductDialog] = useState(false);
   const [showOrderDialog, setShowOrderDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [movementProduct, setMovementProduct] = useState<{ id: string; name: string } | null>(null);
   const [historyProductId, setHistoryProductId] = useState<string | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
@@ -628,67 +635,19 @@ export default function Operacoes() {
         );
 
       case 'production':
-        return (
-          <div className="space-y-3">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <Factory className="h-5 w-5" />
-                  Plano de Produção
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {productionPlan.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">
-                    Nenhuma produção necessária. Todos os pedidos podem ser atendidos pelo estoque atual.
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {productionPlan.map((item) => (
-                      <Card key={item.product_id} className="bg-muted/50">
-                        <CardContent className="p-4">
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <h3 className="font-medium">{item.product.name}</h3>
-                              <div className="flex gap-4 text-sm text-muted-foreground mt-1">
-                                <span>Pedido: {item.ordered}</span>
-                                <span>Estoque: {item.inStock}</span>
-                              </div>
-                            </div>
-                            <div className="text-right">
-                              <p className="text-2xl font-bold text-amber-600">
-                                {item.toProduce}
-                              </p>
-                              <p className="text-xs text-muted-foreground">a produzir</p>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        );
+        return <ProductionTab products={products} />;
 
       case 'mrp':
-        return <MRPPanel />;
+        return <MRPTab />;
 
       case 'calendar':
         return (
-          <div className="space-y-3">
-            <Card className="p-8 text-center">
-              <p className="text-muted-foreground">
-                Agenda de produção em desenvolvimento
-              </p>
-              <Link to="/calendario">
-                <Button variant="outline" className="mt-4">
-                  Ir para Calendário
-                </Button>
-              </Link>
-            </Card>
-          </div>
+          <OperationsCalendarTab
+            orders={orders}
+            orderStatus={orderStatus}
+            onOrderClick={setEditingOrder}
+            onDateChange={updateOrderDueDate}
+          />
         );
 
       default:

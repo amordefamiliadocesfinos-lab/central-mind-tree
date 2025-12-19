@@ -299,6 +299,7 @@ export type Database = {
           order_date: string
           order_number: string | null
           production_date: string | null
+          production_notes: string | null
           status: string
           total_value: number | null
           updated_at: string
@@ -317,6 +318,7 @@ export type Database = {
           order_date?: string
           order_number?: string | null
           production_date?: string | null
+          production_notes?: string | null
           status?: string
           total_value?: number | null
           updated_at?: string
@@ -335,6 +337,7 @@ export type Database = {
           order_date?: string
           order_number?: string | null
           production_date?: string | null
+          production_notes?: string | null
           status?: string
           total_value?: number | null
           updated_at?: string
@@ -440,6 +443,66 @@ export type Database = {
           },
           {
             foreignKeyName: "product_components_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      production_logs: {
+        Row: {
+          created_at: string
+          date: string
+          employee_name: string
+          id: string
+          notes: string | null
+          order_id: string | null
+          period: string
+          process: string
+          product_id: string | null
+          quantity: number
+          updated_at: string
+          warnings: string | null
+        }
+        Insert: {
+          created_at?: string
+          date?: string
+          employee_name: string
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+          period?: string
+          process: string
+          product_id?: string | null
+          quantity?: number
+          updated_at?: string
+          warnings?: string | null
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          employee_name?: string
+          id?: string
+          notes?: string | null
+          order_id?: string | null
+          period?: string
+          process?: string
+          product_id?: string | null
+          quantity?: number
+          updated_at?: string
+          warnings?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "production_logs_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "production_logs_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
