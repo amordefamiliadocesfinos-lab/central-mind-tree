@@ -1,0 +1,394 @@
+import { useState, useCallback, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { useBOM } from './useBOM';
+
+export interface ProductionOrderProcess {
+  id: string;
+  production_order_id: string;
+  process_id: string;
+  is_required: boolean;
+  created_at: string;
+  process?: {
+    id: string;
+    name: string;
+    value_per_unit: number;
+  };
+}
+
+export interface ProductionEntry {
+  id: string;
+  production_order_id: string;
+  process_id: string;
+  employee_name: string;
+  date: string;
+  period: string;
+  quantity: number;
+  value_per_unit: number;
+  total_value: number;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  process?: {
+    id: string;
+    name: string;
+  };
+}
+
+export interface ProductionOrder {
+  id: string;
+  order_number: string | null;
+  product_id: string | null;
+  batch_code: string | null;
+  target_quantity: number;
+  consolidated_quantity: number;
+  status: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+  product?: {
+    id: string;
+    name: string;
+    sku: string;
+  };
+  processes?: ProductionOrderProcess[];
+  entries?: ProductionEntry[];
+}
+
+export const PRODUCTION_ORDER_STATUS = {
+  aberto: { label: 'Aberto', color: 'bg-blue-500' },
+  producao: { label: 'Em Produção', color: 'bg-amber-500' },
+  concluido: { label: 'Concluído', color: 'bg-green-500' },
+  cancelado: { label: 'Cancelado', color: 'bg-red-500' },
+};
+
+export function useProductionOrders() {
+  const [orders, setOrders] = useState<ProductionOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { calculateBOM } = useBOM();
+
+  const fetchOrders = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('production_orders')
+      .select(`
+        *,
+        product:products(id, name, sku),
+        processes:production_order_processes(
+          *,
+          process:processes(id, name, value_per_unit)
+        ),
+        entries:production_entries(
+          *,
+          process:processes(id, name)
+        )
+      `)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching production orders:', error);
+      toast.error('Erro ao carregar ordens de produção');
+    } else {
+      setOrders(data || []);
+    }
+    setLoading(false);
+  }, []);
+
+  const createOrder = useCallback(async (
+    order: Partial<ProductionOrder>,
+    processIds: { process_id: string; is_required: boolean }[]
+  ) => {
+    // Generate order number
+    const orderNumber = `OP-${Date.now().toString(36).toUpperCase()}`;
+
+    const { data, error } = await supabase
+      .from('production_orders')
+      .insert({ ...order, order_number: orderNumber })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating production order:', error);
+      toast.error('Erro ao criar ordem de produção');
+      return null;
+    }
+
+    // Add processes
+    if (processIds.length > 0) {
+      const { error: procError } = await supabase
+        .from('production_order_processes')
+        .insert(processIds.map(p => ({
+          production_order_id: data.id,
+          process_id: p.process_id,
+          is_required: p.is_required,
+        })));
+
+      if (procError) {
+        console.error('Error adding processes:', procError);
+      }
+    }
+
+    toast.success('Ordem de produção criada');
+    fetchOrders();
+    return data;
+  }, [fetchOrders]);
+
+  const updateOrder = useCallback(async (id: string, updates: Partial<ProductionOrder>) => {
+    const { error } = await supabase
+      .from('production_orders')
+      .update(updates)
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating order:', error);
+      toast.error('Erro ao atualizar ordem');
+      return false;
+    }
+
+    toast.success('Ordem atualizada');
+    fetchOrders();
+    return true;
+  }, [fetchOrders]);
+
+  const deleteOrder = useCallback(async (id: string) => {
+    const { error } = await supabase
+      .from('production_orders')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting order:', error);
+      toast.error('Erro ao excluir ordem');
+      return false;
+    }
+
+    toast.success('Ordem excluída');
+    setOrders(prev => prev.filter(o => o.id !== id));
+    return true;
+  }, []);
+
+  // Calculate consolidated quantity (minimum across required processes)
+  const calculateConsolidation = useCallback((order: ProductionOrder) => {
+    const requiredProcesses = order.processes?.filter(p => p.is_required) || [];
+    if (requiredProcesses.length === 0) return 0;
+
+    const entriesByProcess: Record<string, number> = {};
+    (order.entries || []).forEach(entry => {
+      entriesByProcess[entry.process_id] = (entriesByProcess[entry.process_id] || 0) + entry.quantity;
+    });
+
+    // Get minimum quantity across all required processes
+    const quantities = requiredProcesses.map(p => entriesByProcess[p.process_id] || 0);
+    return Math.min(...quantities);
+  }, []);
+
+  // Add production entry
+  const createEntry = useCallback(async (entry: Omit<ProductionEntry, 'id' | 'created_at' | 'updated_at' | 'total_value' | 'process'>) => {
+    const { data, error } = await supabase
+      .from('production_entries')
+      .insert(entry)
+      .select(`*, process:processes(id, name)`)
+      .single();
+
+    if (error) {
+      console.error('Error creating entry:', error);
+      toast.error('Erro ao criar lançamento');
+      return null;
+    }
+
+    toast.success('Lançamento registrado');
+    
+    // Recalculate consolidated quantity
+    const order = orders.find(o => o.id === entry.production_order_id);
+    if (order) {
+      const updatedOrder = {
+        ...order,
+        entries: [...(order.entries || []), data],
+      };
+      const consolidated = calculateConsolidation(updatedOrder);
+      await supabase
+        .from('production_orders')
+        .update({ consolidated_quantity: consolidated })
+        .eq('id', entry.production_order_id);
+    }
+    
+    fetchOrders();
+    return data;
+  }, [orders, calculateConsolidation, fetchOrders]);
+
+  const updateEntry = useCallback(async (id: string, updates: Partial<ProductionEntry>) => {
+    const { error } = await supabase
+      .from('production_entries')
+      .update(updates)
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating entry:', error);
+      toast.error('Erro ao atualizar lançamento');
+      return false;
+    }
+
+    toast.success('Lançamento atualizado');
+    fetchOrders();
+    return true;
+  }, [fetchOrders]);
+
+  const deleteEntry = useCallback(async (id: string) => {
+    const { error } = await supabase
+      .from('production_entries')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting entry:', error);
+      toast.error('Erro ao excluir lançamento');
+      return false;
+    }
+
+    toast.success('Lançamento excluído');
+    fetchOrders();
+    return true;
+  }, [fetchOrders]);
+
+  // Complete production order (consume BOM, add finished product to stock)
+  const completeOrder = useCallback(async (orderId: string) => {
+    const order = orders.find(o => o.id === orderId);
+    if (!order || !order.product_id) return false;
+
+    const consolidatedQty = calculateConsolidation(order);
+    if (consolidatedQty <= 0) {
+      toast.error('Nenhuma quantidade consolidada para concluir');
+      return false;
+    }
+
+    // Get BOM and consume materials
+    const bomLines = await calculateBOM(order.product_id, consolidatedQty);
+    
+    for (const line of bomLines) {
+      if (line.shortage > 0) {
+        toast.error(`Estoque insuficiente de ${line.component_name}`);
+        return false;
+      }
+    }
+
+    // Create inventory movements for BOM consumption
+    for (const line of bomLines) {
+      // Get current stock
+      const { data: inv } = await supabase
+        .from('inventory')
+        .select('quantity')
+        .eq('product_id', line.component_id)
+        .single();
+      
+      const prevBalance = inv?.quantity || 0;
+      const newBalance = prevBalance - line.qty_needed;
+
+      await supabase
+        .from('inventory_movements')
+        .insert({
+          product_id: line.component_id,
+          quantity: -line.qty_needed,
+          previous_balance: prevBalance,
+          new_balance: newBalance,
+          movement_type: 'consume',
+          reference_type: 'production_order',
+          reference_id: orderId,
+          notes: `Consumo OP ${order.order_number}`,
+        });
+
+      await supabase
+        .from('inventory')
+        .upsert({
+          product_id: line.component_id,
+          quantity: newBalance,
+        }, { onConflict: 'product_id' });
+    }
+
+    // Add finished product to stock
+    const { data: finishedInv } = await supabase
+      .from('inventory')
+      .select('quantity')
+      .eq('product_id', order.product_id)
+      .single();
+    
+    const prevFinished = finishedInv?.quantity || 0;
+    const newFinished = prevFinished + consolidatedQty;
+
+    await supabase
+      .from('inventory_movements')
+      .insert({
+        product_id: order.product_id,
+        quantity: consolidatedQty,
+        previous_balance: prevFinished,
+        new_balance: newFinished,
+        movement_type: 'in',
+        reference_type: 'production_order',
+        reference_id: orderId,
+        notes: `Entrada produção OP ${order.order_number}`,
+      });
+
+    await supabase
+      .from('inventory')
+      .upsert({
+        product_id: order.product_id,
+        quantity: newFinished,
+      }, { onConflict: 'product_id' });
+
+    // Update order status
+    await supabase
+      .from('production_orders')
+      .update({
+        status: 'concluido',
+        consolidated_quantity: consolidatedQty,
+        completed_at: new Date().toISOString(),
+      })
+      .eq('id', orderId);
+
+    toast.success(`OP concluída! ${consolidatedQty} unidades produzidas`);
+    fetchOrders();
+    return true;
+  }, [orders, calculateConsolidation, calculateBOM, fetchOrders]);
+
+  // Get payment summary by employee
+  const getPaymentSummary = useCallback((entries: ProductionEntry[]) => {
+    const byEmployee: Record<string, { total: number; byProcess: Record<string, { qty: number; value: number }> }> = {};
+
+    entries.forEach(entry => {
+      if (!byEmployee[entry.employee_name]) {
+        byEmployee[entry.employee_name] = { total: 0, byProcess: {} };
+      }
+
+      const emp = byEmployee[entry.employee_name];
+      emp.total += entry.total_value;
+
+      const processName = entry.process?.name || entry.process_id;
+      if (!emp.byProcess[processName]) {
+        emp.byProcess[processName] = { qty: 0, value: 0 };
+      }
+      emp.byProcess[processName].qty += entry.quantity;
+      emp.byProcess[processName].value += entry.total_value;
+    });
+
+    return byEmployee;
+  }, []);
+
+  useEffect(() => {
+    fetchOrders();
+  }, [fetchOrders]);
+
+  return {
+    orders,
+    loading,
+    fetchOrders,
+    createOrder,
+    updateOrder,
+    deleteOrder,
+    createEntry,
+    updateEntry,
+    deleteEntry,
+    calculateConsolidation,
+    completeOrder,
+    getPaymentSummary,
+  };
+}
