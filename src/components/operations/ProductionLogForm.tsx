@@ -210,14 +210,14 @@ export function ProductionLogForm({
           <div>
             <Label>Produto (opcional)</Label>
             <Select
-              value={formData.product_id || ''}
-              onValueChange={(v) => setFormData({ ...formData, product_id: v || null })}
+              value={formData.product_id || 'none'}
+              onValueChange={(v) => setFormData({ ...formData, product_id: v === 'none' ? null : v })}
             >
               <SelectTrigger className="h-12">
                 <SelectValue placeholder="Selecione..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhum</SelectItem>
+                <SelectItem value="none">Nenhum</SelectItem>
                 {products.map((p) => (
                   <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                 ))}
