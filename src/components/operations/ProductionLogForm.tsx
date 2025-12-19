@@ -5,9 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { ProductionLog, PRODUCTION_PERIODS, PRODUCTION_PROCESSES, PROCESS_LABELS } from '@/hooks/useProductionLogs';
 import { Product } from '@/hooks/useOrders';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Package } from 'lucide-react';
 
 interface ProductionLogFormProps {
   open: boolean;
@@ -15,7 +16,7 @@ interface ProductionLogFormProps {
   log?: ProductionLog | null;
   products: Product[];
   employees: string[];
-  onSave: (log: Omit<ProductionLog, 'id' | 'created_at' | 'updated_at' | 'product'>) => Promise<ProductionLog | null>;
+  onSave: (log: Omit<ProductionLog, 'id' | 'created_at' | 'updated_at' | 'product'>, consumeStock?: boolean) => Promise<ProductionLog | null>;
   onUpdate?: (id: string, log: Partial<ProductionLog>) => Promise<ProductionLog | null>;
   onDelete?: (id: string) => Promise<boolean>;
   defaultDate?: string;
@@ -46,6 +47,7 @@ export function ProductionLogForm({
   const [saving, setSaving] = useState(false);
   const [newEmployee, setNewEmployee] = useState('');
   const [showNewEmployee, setShowNewEmployee] = useState(false);
+  const [consumeStock, setConsumeStock] = useState(false);
 
   useEffect(() => {
     if (log) {
@@ -84,9 +86,10 @@ export function ProductionLogForm({
     if (log && onUpdate) {
       await onUpdate(log.id, formData);
     } else {
-      await onSave(formData);
+      await onSave(formData, consumeStock && !!formData.product_id);
     }
     setSaving(false);
+    setConsumeStock(false);
     onOpenChange(false);
   };
 
@@ -253,6 +256,24 @@ export function ProductionLogForm({
               placeholder="Problemas, alertas..."
             />
           </div>
+
+          {/* Stock consumption option - only for new logs with product */}
+          {!log && formData.product_id && (
+            <div className="flex items-center space-x-2 p-3 bg-muted/50 rounded-lg">
+              <Checkbox
+                id="consume-stock"
+                checked={consumeStock}
+                onCheckedChange={(checked) => setConsumeStock(checked as boolean)}
+              />
+              <label
+                htmlFor="consume-stock"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex items-center gap-2"
+              >
+                <Package className="h-4 w-4" />
+                Consumir insumos do estoque (via BOM)
+              </label>
+            </div>
+          )}
 
           <div className="flex gap-2 pt-2">
             <Button 

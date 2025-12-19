@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useProductionLogs, ProductionLog, PROCESS_LABELS, PRODUCTION_PERIODS } from '@/hooks/useProductionLogs';
 import { useOrders, Product } from '@/hooks/useOrders';
+import { useMRP } from '@/hooks/useMRP';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,9 +13,10 @@ import { cn } from '@/lib/utils';
 
 interface ProductionTabProps {
   products: Product[];
+  onRefetch?: () => void;
 }
 
-export function ProductionTab({ products }: ProductionTabProps) {
+export function ProductionTab({ products, onRefetch }: ProductionTabProps) {
   const {
     logs,
     loading,
@@ -25,6 +27,7 @@ export function ProductionTab({ products }: ProductionTabProps) {
     getSummary,
     getUniqueEmployees,
   } = useProductionLogs();
+  const { consumeMaterials } = useMRP();
 
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [employees, setEmployees] = useState<string[]>([]);
@@ -81,10 +84,19 @@ export function ProductionTab({ products }: ProductionTabProps) {
     URL.revokeObjectURL(url);
   };
 
-  const handleSave = async (data: Omit<ProductionLog, 'id' | 'created_at' | 'updated_at' | 'product'>) => {
+  const handleSave = async (data: Omit<ProductionLog, 'id' | 'created_at' | 'updated_at' | 'product'>, consumeStock?: boolean) => {
     const result = await createLog(data);
     if (result) {
       await getUniqueEmployees().then(setEmployees);
+      
+      // Consume stock via BOM if requested
+      if (consumeStock && data.product_id && data.quantity > 0) {
+        await consumeMaterials(
+          result.id, 
+          [{ product_id: data.product_id, quantity: data.quantity }]
+        );
+        onRefetch?.();
+      }
     }
     return result;
   };
