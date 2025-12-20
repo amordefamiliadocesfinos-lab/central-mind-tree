@@ -185,12 +185,9 @@ export function useProductionOrders() {
 
   // Add production entry
   const createEntry = useCallback(async (entry: Omit<ProductionEntry, 'id' | 'created_at' | 'updated_at' | 'total_value' | 'process'>) => {
-    // Calculate total_value
-    const totalValue = entry.quantity * entry.value_per_unit;
-    
     const { data, error } = await supabase
       .from('production_entries')
-      .insert({ ...entry, total_value: totalValue })
+      .insert(entry)
       .select(`*, process:processes(id, name)`)
       .single();
 
