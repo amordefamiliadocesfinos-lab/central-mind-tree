@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Package, ShoppingCart, Factory, ArrowLeft, Trash2, AlertTriangle, Warehouse } from 'lucide-react';
+import { Plus, Package, ShoppingCart, Factory, ArrowLeft, Trash2, AlertTriangle, Warehouse, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ProductGallery } from '@/components/ProductGallery';
 import { ProductMovementHistory } from '@/components/ProductMovementHistory';
@@ -30,6 +30,7 @@ import { OrderEditDialog } from '@/components/operations/OrderEditDialog';
 import { ProductionTab } from '@/components/operations/ProductionTab';
 import { OperationsCalendarTab } from '@/components/operations/OperationsCalendarTab';
 import { MRPTab } from '@/components/operations/MRPTab';
+import { ProductCostEditor } from '@/components/operations/ProductCostEditor';
 import { 
   useAppStore, 
   PRODUCT_CATEGORIES, 
@@ -136,6 +137,7 @@ export default function Operacoes() {
   const [movementProduct, setMovementProduct] = useState<{ id: string; name: string } | null>(null);
   const [historyProductId, setHistoryProductId] = useState<string | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
+  const [showCostEditor, setShowCostEditor] = useState(false);
 
   const [newProduct, setNewProduct] = useState<Partial<Product>>({ 
     sku: '', 
@@ -846,6 +848,14 @@ export default function Operacoes() {
               </div>
 
               <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  className="h-12"
+                  onClick={() => setShowCostEditor(true)}
+                >
+                  <DollarSign className="h-5 w-5 mr-2" />
+                  Custos
+                </Button>
                 <Button onClick={handleUpdateProduct} className="flex-1 h-12 text-base">
                   Salvar Alterações
                 </Button>
@@ -862,6 +872,17 @@ export default function Operacoes() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Product Cost Editor */}
+      {editingProduct && (
+        <ProductCostEditor
+          productId={editingProduct.id}
+          productName={editingProduct.name}
+          open={showCostEditor}
+          onOpenChange={setShowCostEditor}
+          onCostUpdated={refetch}
+        />
+      )}
 
       {/* Multi-Location Movement Dialog */}
       {movementProduct && (
