@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useProductionOrders, ProductionOrder, ProductionEntry, PRODUCTION_ORDER_STATUS } from '@/hooks/useProductionOrders';
 import { useProcesses, Process } from '@/hooks/useProcesses';
 import { useOrders, Product } from '@/hooks/useOrders';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { ResponsiveDialog, FullScreenDialog } from '@/components/ui/responsive-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -237,12 +237,12 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
       </div>
 
       {/* Create Order Dialog */}
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Nova Ordem de Produção</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
+      <FullScreenDialog 
+        open={showCreateDialog} 
+        onOpenChange={setShowCreateDialog}
+        title="Nova Ordem de Produção"
+      >
+        <div className="space-y-4 p-4">
             <div>
               <Label>Produto *</Label>
               <Select
@@ -327,28 +327,27 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
             >
               Criar Ordem de Produção
             </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </FullScreenDialog>
 
       {/* Order Details Dialog */}
-      <Dialog open={!!selectedOrder} onOpenChange={(open) => !open && setSelectedOrder(null)}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          {selectedOrder && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  {selectedOrder.order_number}
-                  <Badge className={cn(
-                    "text-xs text-white",
-                    PRODUCTION_ORDER_STATUS[selectedOrder.status as keyof typeof PRODUCTION_ORDER_STATUS]?.color
-                  )}>
-                    {PRODUCTION_ORDER_STATUS[selectedOrder.status as keyof typeof PRODUCTION_ORDER_STATUS]?.label}
-                  </Badge>
-                </DialogTitle>
-              </DialogHeader>
+      <FullScreenDialog 
+        open={!!selectedOrder} 
+        onOpenChange={(open) => !open && setSelectedOrder(null)}
+        title={selectedOrder?.order_number}
+      >
+        {selectedOrder && (
+          <div className="p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <Badge className={cn(
+                "text-xs text-white",
+                PRODUCTION_ORDER_STATUS[selectedOrder.status as keyof typeof PRODUCTION_ORDER_STATUS]?.color
+              )}>
+                {PRODUCTION_ORDER_STATUS[selectedOrder.status as keyof typeof PRODUCTION_ORDER_STATUS]?.label}
+              </Badge>
+            </div>
 
-              <Tabs defaultValue="info" className="w-full">
+            <Tabs defaultValue="info" className="w-full">
                 <TabsList className="grid w-full grid-cols-3">
                   <TabsTrigger value="info">Info</TabsTrigger>
                   <TabsTrigger value="entries">Lançamentos</TabsTrigger>
@@ -529,21 +528,20 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
                     );
                   })()}
                 </TabsContent>
-              </Tabs>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+            </Tabs>
+          </div>
+        )}
+      </FullScreenDialog>
 
       {/* Entry Form Dialog */}
-      <Dialog open={showEntryForm} onOpenChange={setShowEntryForm}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Novo Lançamento</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <Label>Processo *</Label>
+      <ResponsiveDialog 
+        open={showEntryForm} 
+        onOpenChange={setShowEntryForm}
+        title="Novo Lançamento"
+      >
+        <div className="space-y-4 p-4 sm:p-0">
+          <div>
+            <Label>Processo *</Label>
               <Select
                 value={newEntry.process_id}
                 onValueChange={(v) => setNewEntry({ ...newEntry, process_id: v })}
@@ -624,16 +622,15 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
               />
             </div>
 
-            <Button 
-              className="w-full h-12" 
-              onClick={handleCreateEntry}
-              disabled={!newEntry.process_id || !newEntry.employee_name || newEntry.quantity <= 0}
-            >
-              Registrar Lançamento
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          <Button 
+            className="w-full h-12" 
+            onClick={handleCreateEntry}
+            disabled={!newEntry.process_id || !newEntry.employee_name || newEntry.quantity <= 0}
+          >
+            Registrar Lançamento
+          </Button>
+        </div>
+      </ResponsiveDialog>
     </div>
   );
 }

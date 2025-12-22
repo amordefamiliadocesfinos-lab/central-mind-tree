@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { FullScreenDialog } from '@/components/ui/responsive-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Plus, Trash2, Calendar } from 'lucide-react';
 import { Order, OrderItem, Product } from '@/hooks/useOrders';
-
 interface OrderEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -101,15 +100,12 @@ export function OrderEditDialog({
   if (!order) return null;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            Editar Pedido #{order.order_number || order.id.slice(0, 8)}
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4">
+    <FullScreenDialog 
+      open={open} 
+      onOpenChange={onOpenChange}
+      title={`Editar Pedido #${order.order_number || order.id.slice(0, 8)}`}
+    >
+        <div className="space-y-4 p-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Cliente</Label>
@@ -260,8 +256,7 @@ export function OrderEditDialog({
               </Button>
             )}
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </FullScreenDialog>
   );
 }
