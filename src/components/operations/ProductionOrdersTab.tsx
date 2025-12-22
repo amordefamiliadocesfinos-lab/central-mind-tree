@@ -85,6 +85,16 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
     });
   };
 
+  // Sync selectedOrder when orders change
+  useEffect(() => {
+    if (selectedOrder) {
+      const updated = orders.find(o => o.id === selectedOrder.id);
+      if (updated) {
+        setSelectedOrder(updated);
+      }
+    }
+  }, [orders]);
+
   const handleCreateEntry = async () => {
     if (!selectedOrder || !newEntry.process_id || !newEntry.employee_name || newEntry.quantity <= 0) return;
 
