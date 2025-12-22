@@ -1,14 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, RotateCcw, ArrowLeft, CalendarCheck, Plus, X, Check, Clock, ExternalLink, AlertTriangle } from "lucide-react";
+import { Play, Pause, RotateCcw, ArrowLeft, CalendarCheck, Plus, X, Check, Clock, ExternalLink, AlertTriangle, Timer } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { ReplanningBanner } from "@/components/ReplanningBanner";
 import { DueDateBanner } from "@/components/DueDateBanner";
 import { FollowUpBanner } from "@/components/FollowUpBanner";
+import { useTimeTracking } from "@/hooks/useTimeTracking";
 
 interface Task {
   id: string;
@@ -84,6 +85,10 @@ export default function Foco() {
   });
   const [session, setSession] = useState<SessionState>(loadSession);
   const [displayMs, setDisplayMs] = useState(0);
+  const [taskTotalTime, setTaskTotalTime] = useState<number>(0);
+  
+  // Time tracking hook
+  const { startTracking, stopTracking, getTaskTotalTime, formatDuration } = useTimeTracking();
 
   const isRunning = session.startedAt !== null && session.pausedAt === null;
   const isPaused = session.startedAt !== null && session.pausedAt !== null;
@@ -229,11 +234,24 @@ export default function Foco() {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  // Load total time for active task
+  useEffect(() => {
+    if (activeTaskId) {
+      getTaskTotalTime(activeTaskId).then(setTaskTotalTime);
+    } else {
+      setTaskTotalTime(0);
+    }
+  }, [activeTaskId, getTaskTotalTime]);
+
   const handleSelectTask = (taskId: string) => {
     setActiveTaskId(taskId);
   };
 
-  const handleStart = () => {
+  const handleStart = async () => {
+    if (activeTaskId) {
+      const activeTask = tasks.find(t => t.id === activeTaskId);
+      await startTracking(activeTaskId, activeTask?.node_id, 'focus');
+    }
     setSession({
       startedAt: Date.now(),
       pausedAt: null,
@@ -241,8 +259,11 @@ export default function Foco() {
     });
   };
 
-  const handlePause = () => {
+  const handlePause = async () => {
     if (!session.startedAt) return;
+    if (activeTaskId) {
+      await stopTracking(activeTaskId);
+    }
     const elapsed = session.elapsedMs + (Date.now() - session.startedAt);
     setSession({
       startedAt: session.startedAt,
@@ -251,7 +272,11 @@ export default function Foco() {
     });
   };
 
-  const handleResume = () => {
+  const handleResume = async () => {
+    if (activeTaskId) {
+      const activeTask = tasks.find(t => t.id === activeTaskId);
+      await startTracking(activeTaskId, activeTask?.node_id, 'focus');
+    }
     setSession({
       startedAt: Date.now(),
       pausedAt: null,
@@ -259,7 +284,13 @@ export default function Foco() {
     });
   };
 
-  const handleReset = () => {
+  const handleReset = async () => {
+    if (activeTaskId) {
+      await stopTracking(activeTaskId);
+      // Refresh total time
+      const total = await getTaskTotalTime(activeTaskId);
+      setTaskTotalTime(total);
+    }
     setSession({
       startedAt: null,
       pausedAt: null,
@@ -269,6 +300,9 @@ export default function Foco() {
 
   const handleCompleteTask = async () => {
     if (!activeTaskId) return;
+    
+    // Stop time tracking first
+    await stopTracking(activeTaskId);
     
     await supabase
       .from('tasks')
@@ -288,12 +322,19 @@ export default function Foco() {
       setActiveTaskId(null);
     }
     
-    handleReset();
+    setSession({
+      startedAt: null,
+      pausedAt: null,
+      elapsedMs: 0,
+    });
     toast.success("Tarefa concluída!");
   };
 
   const handleMoveToPending = async () => {
     if (!activeTaskId) return;
+    
+    // Stop time tracking
+    await stopTracking(activeTaskId);
     
     await supabase
       .from('tasks')
@@ -312,7 +353,11 @@ export default function Foco() {
       setActiveTaskId(null);
     }
     
-    handleReset();
+    setSession({
+      startedAt: null,
+      pausedAt: null,
+      elapsedMs: 0,
+    });
     toast.info("Tarefa movida para pendente");
   };
 
@@ -359,8 +404,16 @@ export default function Foco() {
         {/* Timer fixo */}
         <Card className="p-4 mb-6 bg-destructive/10 border-destructive/30">
           <div className="flex items-center justify-between">
-            <div className="text-3xl font-mono font-bold text-destructive">
-              {formatTime(displayMs)}
+            <div className="flex items-center gap-4">
+              <div className="text-3xl font-mono font-bold text-destructive">
+                {formatTime(displayMs)}
+              </div>
+              {taskTotalTime > 0 && (
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <Timer className="h-4 w-4" />
+                  <span>Total: {formatDuration(taskTotalTime)}</span>
+                </div>
+              )}
             </div>
             <div className="flex gap-2">
               {!isRunning && !isPaused && (
