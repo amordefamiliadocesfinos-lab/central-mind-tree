@@ -13,12 +13,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import {
   Select,
   SelectContent,
@@ -476,25 +471,30 @@ const Planejamento = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-4xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
+    <div className="min-h-screen bg-background pb-safe-bottom">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b safe-area-pt">
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center gap-3 min-w-0">
             <Link to="/">
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="h-10 w-10 flex-shrink-0">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
-            <h1 className="text-2xl font-bold">Planejamento Semanal</h1>
-            <Badge variant="outline">{weekPeriod}</Badge>
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-2xl font-bold truncate">Planejamento</h1>
+              <Badge variant="outline" className="text-xs">{weekPeriod}</Badge>
+            </div>
           </div>
           <Link to="/foco">
-            <Button variant="outline">Ir para Foco</Button>
+            <Button variant="outline" size="sm" className="h-10 px-3">
+              <span className="hidden sm:inline">Ir para </span>Foco
+            </Button>
           </Link>
         </div>
+      </div>
 
-        {/* Block 1: Checklist de Áreas */}
+      <div className="p-4 max-w-4xl mx-auto space-y-4">
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Checklist de Áreas</CardTitle>
@@ -551,11 +551,11 @@ const Planejamento = () => {
 
         {/* Block 2: Seleção de Tarefas */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg">Seleção de Tarefas para a Semana</CardTitle>
-            <Button size="sm" onClick={() => openNewTaskForm()}>
-              <Plus className="h-4 w-4 mr-1" />
-              Nova tarefa
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-base sm:text-lg">Seleção de Tarefas</CardTitle>
+            <Button size="sm" onClick={() => openNewTaskForm()} className="h-9">
+              <Plus className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Nova tarefa</span>
             </Button>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -575,58 +575,55 @@ const Planejamento = () => {
                       variant="ghost"
                       size="sm"
                       onClick={() => openNewTaskForm(nodeId)}
+                      className="h-8 w-8 p-0"
                     >
                       <Plus className="h-3 w-3" />
                     </Button>
                   </div>
-                  <div className="space-y-1 pl-2">
+                  <div className="space-y-2 pl-2">
                     {nodeTasks.map((task) => (
                       <div
                         key={task.id}
-                        className="flex items-center gap-2 p-2 rounded border bg-card hover:bg-accent/50 transition-colors"
+                        className="flex flex-col sm:flex-row sm:items-center gap-2 p-2 rounded border bg-card active:scale-[0.99] transition-transform"
                       >
-                        <div
-                          className={`w-2 h-2 rounded-full flex-shrink-0 ${STATUS_COLORS[task.status]}`}
-                        />
-                        <span className="flex-1 text-sm truncate">{task.title}</span>
-                        <DueDatePill dueDate={task.due_date || null} />
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => openEditTaskForm(task)}
-                          className="h-7 w-7 p-0"
-                        >
-                          <Pencil className="h-3 w-3" />
-                        </Button>
-                        <Button
-                          variant={
-                            currentPlan.selectedTaskIds.includes(task.id)
-                              ? "default"
-                              : "outline"
-                          }
-                          size="sm"
-                          onClick={() => toggleTaskSelected(task.id)}
-                        >
-                          <Check className="h-3 w-3 mr-1" />
-                          Plano
-                        </Button>
-                        <Button
-                          variant={
-                            currentPlan.prioritizedTaskIds.includes(task.id)
-                              ? "default"
-                              : "outline"
-                          }
-                          size="sm"
-                          onClick={() => toggleTaskPrioritized(task.id)}
-                          className={
-                            currentPlan.prioritizedTaskIds.includes(task.id)
-                              ? "bg-amber-500 hover:bg-amber-600"
-                              : ""
-                          }
-                        >
-                          <Star className="h-3 w-3 mr-1" />
-                          Priorizar
-                        </Button>
+                        <div className="flex items-center gap-2 min-w-0 flex-1">
+                          <div
+                            className={`w-2 h-2 rounded-full flex-shrink-0 ${STATUS_COLORS[task.status]}`}
+                          />
+                          <span className="text-sm truncate flex-1">{task.title}</span>
+                          <DueDatePill dueDate={task.due_date || null} />
+                        </div>
+                        <div className="flex items-center gap-1 justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditTaskForm(task)}
+                            className="h-9 w-9 p-0"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant={currentPlan.selectedTaskIds.includes(task.id) ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => toggleTaskSelected(task.id)}
+                            className="h-9 px-2"
+                          >
+                            <Check className="h-3 w-3" />
+                            <span className="hidden sm:inline ml-1">Plano</span>
+                          </Button>
+                          <Button
+                            variant={currentPlan.prioritizedTaskIds.includes(task.id) ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => toggleTaskPrioritized(task.id)}
+                            className={cn(
+                              "h-9 px-2",
+                              currentPlan.prioritizedTaskIds.includes(task.id) && "bg-amber-500 hover:bg-amber-600"
+                            )}
+                          >
+                            <Star className="h-3 w-3" />
+                            <span className="hidden sm:inline ml-1">Prio</span>
+                          </Button>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -643,137 +640,101 @@ const Planejamento = () => {
 
         {/* Block 3: Plano da Semana */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">
-              Plano da Semana ({weekPeriod})
-            </CardTitle>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base sm:text-lg">Plano da Semana</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="p-3 rounded-lg border">
-                <p className="text-muted-foreground mb-1">Tarefas no Plano</p>
-                <p className="text-2xl font-bold">
+                <p className="text-muted-foreground mb-1 text-xs sm:text-sm">Tarefas no Plano</p>
+                <p className="text-xl sm:text-2xl font-bold">
                   {currentPlan.selectedTaskIds.length}
                 </p>
               </div>
               <div className="p-3 rounded-lg border">
-                <p className="text-muted-foreground mb-1">Priorizadas (Foco)</p>
-                <p className="text-2xl font-bold text-amber-500">
+                <p className="text-muted-foreground mb-1 text-xs sm:text-sm">Priorizadas</p>
+                <p className="text-xl sm:text-2xl font-bold text-amber-500">
                   {currentPlan.prioritizedTaskIds.length}
                 </p>
               </div>
             </div>
 
             {currentPlan.prioritizedTaskIds.length > 0 && (
-              <div 
-                className="space-y-1"
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  e.dataTransfer.dropEffect = "move";
-                }}
-              >
+              <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">
-                  Fila de prioridades (arraste ou use as setas):
+                  Fila de prioridades:
                 </p>
-                {currentPlan.prioritizedTaskIds.map((id, i) => {
-                  const task = tasks.find((t) => t.id === id);
-                  const isFirst = i === 0;
-                  const isLast = i === currentPlan.prioritizedTaskIds.length - 1;
-                  
-                  const moveUp = () => {
-                    if (isFirst) return;
-                    setCurrentPlan((prev) => {
-                      const newOrder = [...prev.prioritizedTaskIds];
-                      [newOrder[i - 1], newOrder[i]] = [newOrder[i], newOrder[i - 1]];
-                      return { ...prev, prioritizedTaskIds: newOrder };
-                    });
-                  };
-                  
-                  const moveDown = () => {
-                    if (isLast) return;
-                    setCurrentPlan((prev) => {
-                      const newOrder = [...prev.prioritizedTaskIds];
-                      [newOrder[i], newOrder[i + 1]] = [newOrder[i + 1], newOrder[i]];
-                      return { ...prev, prioritizedTaskIds: newOrder };
-                    });
-                  };
-                  
-                  return task ? (
-                    <div
-                      key={id}
-                      draggable={true}
-                      onDragStart={(e) => {
-                        setDraggedPriorityIndex(i);
-                        e.dataTransfer.effectAllowed = "move";
-                        e.dataTransfer.setData("text/plain", String(i));
-                      }}
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }}
-                      onDragEnter={(e) => {
-                        e.preventDefault();
-                      }}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const dragIndex = draggedPriorityIndex;
-                        if (dragIndex === null || dragIndex === i) {
-                          setDraggedPriorityIndex(null);
-                          return;
-                        }
-                        setCurrentPlan((prev) => {
-                          const newOrder = [...prev.prioritizedTaskIds];
-                          const [removed] = newOrder.splice(dragIndex, 1);
-                          newOrder.splice(i, 0, removed);
-                          return { ...prev, prioritizedTaskIds: newOrder };
-                        });
-                        setDraggedPriorityIndex(null);
-                      }}
-                      onDragEnd={() => setDraggedPriorityIndex(null)}
-                      className={`flex items-center gap-2 text-sm p-2 rounded bg-amber-500/10 select-none border-2 border-transparent ${
-                        draggedPriorityIndex === i ? "opacity-50" : ""
-                      } ${draggedPriorityIndex !== null && draggedPriorityIndex !== i ? "border-dashed border-amber-500/30" : ""}`}
-                    >
-                      <div className="flex flex-col gap-0.5">
-                        <button
-                          onClick={moveUp}
-                          disabled={isFirst}
-                          className={`p-0.5 rounded hover:bg-amber-500/20 transition-colors ${isFirst ? "opacity-30 cursor-not-allowed" : "cursor-pointer"}`}
-                        >
-                          <ChevronUp className="h-3 w-3" />
-                        </button>
-                        <button
-                          onClick={moveDown}
-                          disabled={isLast}
-                          className={`p-0.5 rounded hover:bg-amber-500/20 transition-colors ${isLast ? "opacity-30 cursor-not-allowed" : "cursor-pointer"}`}
-                        >
-                          <ChevronDown className="h-3 w-3" />
-                        </button>
+                <div className="space-y-1 max-h-48 overflow-y-auto">
+                  {currentPlan.prioritizedTaskIds.map((id, i) => {
+                    const task = tasks.find((t) => t.id === id);
+                    const isFirst = i === 0;
+                    const isLast = i === currentPlan.prioritizedTaskIds.length - 1;
+                    
+                    const moveUp = () => {
+                      if (isFirst) return;
+                      setCurrentPlan((prev) => {
+                        const newOrder = [...prev.prioritizedTaskIds];
+                        [newOrder[i - 1], newOrder[i]] = [newOrder[i], newOrder[i - 1]];
+                        return { ...prev, prioritizedTaskIds: newOrder };
+                      });
+                    };
+                    
+                    const moveDown = () => {
+                      if (isLast) return;
+                      setCurrentPlan((prev) => {
+                        const newOrder = [...prev.prioritizedTaskIds];
+                        [newOrder[i], newOrder[i + 1]] = [newOrder[i + 1], newOrder[i]];
+                        return { ...prev, prioritizedTaskIds: newOrder };
+                      });
+                    };
+                    
+                    return task ? (
+                      <div
+                        key={id}
+                        className="flex items-center gap-2 text-sm p-2 rounded bg-amber-500/10"
+                      >
+                        <div className="flex flex-col gap-0.5">
+                          <button
+                            onClick={moveUp}
+                            disabled={isFirst}
+                            className={cn(
+                              "p-1 rounded hover:bg-amber-500/20 transition-colors",
+                              isFirst && "opacity-30 cursor-not-allowed"
+                            )}
+                          >
+                            <ChevronUp className="h-3 w-3" />
+                          </button>
+                          <button
+                            onClick={moveDown}
+                            disabled={isLast}
+                            className={cn(
+                              "p-1 rounded hover:bg-amber-500/20 transition-colors",
+                              isLast && "opacity-30 cursor-not-allowed"
+                            )}
+                          >
+                            <ChevronDown className="h-3 w-3" />
+                          </button>
+                        </div>
+                        <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <span className="text-muted-foreground font-medium w-5">{i + 1}.</span>
+                        <span className="flex-1 truncate">{task.title}</span>
                       </div>
-                      <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0 pointer-events-none cursor-grab" />
-                      <span className="text-muted-foreground font-medium w-6 pointer-events-none">{i + 1}.</span>
-                      <span className="flex-1 pointer-events-none">{task.title}</span>
-                    </div>
-                  ) : null;
-                })}
+                    ) : null;
+                  })}
+                </div>
               </div>
             )}
 
-            <div className="flex gap-3 pt-4">
-              <Button onClick={handleSendToFocus} className="flex-1">
+            <div className="flex flex-col sm:flex-row gap-2 pt-2">
+              <Button onClick={handleSendToFocus} className="flex-1 h-11">
                 <Star className="h-4 w-4 mr-2" />
                 Enviar ao Foco
               </Button>
-              <Button onClick={handleSavePlan} variant="outline" className="flex-1">
+              <Button onClick={handleSavePlan} variant="outline" className="flex-1 h-11">
                 <Save className="h-4 w-4 mr-2" />
-                Salvar Plano
+                Salvar
               </Button>
-              <Button
-                onClick={handleCompletePlanning}
-                variant="secondary"
-                className="flex-1"
-              >
+              <Button onClick={handleCompletePlanning} variant="secondary" className="flex-1 h-11">
                 <Check className="h-4 w-4 mr-2" />
                 Concluir
               </Button>
@@ -783,23 +744,23 @@ const Planejamento = () => {
 
         {/* Block 4: Fechamento Rápido */}
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base sm:text-lg flex items-center gap-2">
               <RotateCcw className="h-5 w-5" />
               Fechamento Rápido
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 gap-4 text-sm">
+            <div className="grid grid-cols-2 gap-3 text-sm">
               <div className="p-3 rounded-lg border">
-                <p className="text-muted-foreground mb-1">Concluídas esta semana</p>
-                <p className="text-2xl font-bold text-green-500">
+                <p className="text-muted-foreground mb-1 text-xs sm:text-sm">Concluídas esta semana</p>
+                <p className="text-xl sm:text-2xl font-bold text-green-500">
                   {completedThisWeek}
                 </p>
               </div>
               <div className="p-3 rounded-lg border">
-                <p className="text-muted-foreground mb-1">Em andamento (semana anterior)</p>
-                <p className="text-2xl font-bold text-red-500">
+                <p className="text-muted-foreground mb-1 text-xs sm:text-sm">Em andamento (anterior)</p>
+                <p className="text-xl sm:text-2xl font-bold text-red-500">
                   {previousWeekAndamentoTasks.length}
                 </p>
               </div>
@@ -819,9 +780,9 @@ const Planejamento = () => {
                         className="flex items-center gap-2 text-sm p-2 rounded bg-red-500/10"
                       >
                         <div className="w-2 h-2 rounded-full bg-red-500" />
-                        <span className="flex-1">{task.title}</span>
+                        <span className="flex-1 truncate">{task.title}</span>
                         {node && (
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-xs text-muted-foreground hidden sm:inline">
                             {node.title}
                           </span>
                         )}
@@ -830,18 +791,18 @@ const Planejamento = () => {
                   })}
                 </div>
 
-                <div className="flex gap-3 pt-2">
+                <div className="flex flex-col sm:flex-row gap-2 pt-2">
                   <Button
                     onClick={() => handleQuickClose("keep")}
                     variant="outline"
-                    className="flex-1"
+                    className="flex-1 h-11"
                   >
                     Manter em Andamento
                   </Button>
                   <Button
                     onClick={() => handleQuickClose("pending")}
                     variant="secondary"
-                    className="flex-1"
+                    className="flex-1 h-11"
                   >
                     Mover para Pendente
                   </Button>
@@ -859,25 +820,22 @@ const Planejamento = () => {
       </div>
       <ReplanningBanner />
 
-      {/* Task Form Dialog */}
-      <Dialog open={isTaskFormOpen} onOpenChange={setIsTaskFormOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {editingTask ? "Editar Tarefa" : "Nova Tarefa"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 pt-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Título *</label>
-              <Input
-                placeholder="Título da tarefa"
-                value={taskForm.title}
-                onChange={(e) =>
-                  setTaskForm({ ...taskForm, title: e.target.value })
-                }
-              />
-            </div>
+      {/* Task Form Dialog - Responsive */}
+      <ResponsiveDialog 
+        open={isTaskFormOpen} 
+        onOpenChange={setIsTaskFormOpen}
+        title={editingTask ? "Editar Tarefa" : "Nova Tarefa"}
+      >
+        <div className="space-y-4 p-4 sm:p-0">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Título *</label>
+            <Input
+              placeholder="Título da tarefa"
+              value={taskForm.title}
+              onChange={(e) => setTaskForm({ ...taskForm, title: e.target.value })}
+              className="h-11"
+            />
+          </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Descrição</label>
               <Textarea
