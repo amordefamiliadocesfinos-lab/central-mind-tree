@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { AlertTriangle, Play, X, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,40 +13,37 @@ import { useStockCheckStore } from '@/stores/stockCheckStore';
 
 export function StockCheckAlert() {
   const [showAlert, setShowAlert] = useState(false);
+  const hasCheckedRef = useRef(false);
   const { 
     shouldShowAlert, 
     skipToday, 
     remindIn2Hours, 
     openWizard,
     remindAt,
-    clearReminder,
   } = useStockCheckStore();
 
-  // Check on mount and when remindAt changes
+  // Check ONLY ONCE on mount
   useEffect(() => {
-    const check = () => {
-      setShowAlert(shouldShowAlert());
-    };
+    if (hasCheckedRef.current) return;
+    hasCheckedRef.current = true;
     
-    check();
-    
-    // Set up interval to check reminder expiry
-    const interval = setInterval(check, 60000); // Check every minute
-    
-    return () => clearInterval(interval);
-  }, [shouldShowAlert, remindAt]);
-
-  // Also check when remindAt expires
-  useEffect(() => {
-    if (remindAt && remindAt > Date.now()) {
-      const timeout = setTimeout(() => {
-        clearReminder();
-        setShowAlert(shouldShowAlert());
-      }, remindAt - Date.now());
-      
-      return () => clearTimeout(timeout);
+    if (shouldShowAlert()) {
+      setShowAlert(true);
     }
-  }, [remindAt, clearReminder, shouldShowAlert]);
+  }, []);
+
+  // Handle reminder expiry - show alert again when reminder time passes
+  useEffect(() => {
+    if (!remindAt || remindAt <= Date.now()) return;
+    
+    const timeout = setTimeout(() => {
+      if (shouldShowAlert()) {
+        setShowAlert(true);
+      }
+    }, remindAt - Date.now());
+    
+    return () => clearTimeout(timeout);
+  }, [remindAt, shouldShowAlert]);
 
   const handleStart = () => {
     setShowAlert(false);
@@ -63,16 +60,23 @@ export function StockCheckAlert() {
     setShowAlert(false);
   };
 
+  // Close without action = skip for this session (don't show again until refresh)
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
+      setShowAlert(false);
+    }
+  };
+
   if (!showAlert) return null;
 
   return (
-    <AlertDialog open={showAlert} onOpenChange={setShowAlert}>
-      <AlertDialogContent className="max-w-md border-red-500 border-2">
+    <AlertDialog open={showAlert} onOpenChange={handleOpenChange}>
+      <AlertDialogContent className="max-w-md border-destructive border-2">
         <AlertDialogHeader className="text-center">
-          <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-red-500 flex items-center justify-center">
-            <AlertTriangle className="h-8 w-8 text-white" />
+          <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-destructive flex items-center justify-center">
+            <AlertTriangle className="h-8 w-8 text-destructive-foreground" />
           </div>
-          <AlertDialogTitle className="text-2xl font-bold text-red-500 text-center">
+          <AlertDialogTitle className="text-2xl font-bold text-destructive text-center">
             ATUALIZAR ESTOQUE DIÁRIO
           </AlertDialogTitle>
           <AlertDialogDescription className="text-center text-base">
@@ -83,7 +87,7 @@ export function StockCheckAlert() {
         <AlertDialogFooter className="flex-col gap-2 sm:flex-col">
           <Button 
             onClick={handleStart} 
-            className="w-full h-14 text-lg bg-red-500 hover:bg-red-600"
+            className="w-full h-14 text-lg bg-destructive hover:bg-destructive/90 text-destructive-foreground"
           >
             <Play className="h-5 w-5 mr-2" />
             Iniciar Agora
