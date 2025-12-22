@@ -14,6 +14,93 @@ export type Database = {
   }
   public: {
     Tables: {
+      automation_logs: {
+        Row: {
+          action_result: Json | null
+          id: string
+          rule_id: string
+          status: string
+          task_id: string | null
+          trigger_data: Json | null
+          triggered_at: string
+        }
+        Insert: {
+          action_result?: Json | null
+          id?: string
+          rule_id: string
+          status?: string
+          task_id?: string | null
+          trigger_data?: Json | null
+          triggered_at?: string
+        }
+        Update: {
+          action_result?: Json | null
+          id?: string
+          rule_id?: string
+          status?: string
+          task_id?: string | null
+          trigger_data?: Json | null
+          triggered_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_logs_rule_id_fkey"
+            columns: ["rule_id"]
+            isOneToOne: false
+            referencedRelation: "automation_rules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "automation_logs_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      automation_rules: {
+        Row: {
+          action_config: Json
+          action_type: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          last_triggered_at: string | null
+          name: string
+          trigger_config: Json
+          trigger_type: string
+          updated_at: string
+        }
+        Insert: {
+          action_config?: Json
+          action_type: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          last_triggered_at?: string | null
+          name: string
+          trigger_config?: Json
+          trigger_type: string
+          updated_at?: string
+        }
+        Update: {
+          action_config?: Json
+          action_type?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          last_triggered_at?: string | null
+          name?: string
+          trigger_config?: Json
+          trigger_type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       contacts: {
         Row: {
           address: string | null
@@ -1178,6 +1265,7 @@ export type Database = {
       }
       tasks: {
         Row: {
+          active_time_entry_id: string | null
           checklist: Json | null
           created_at: string
           deleted_at: string | null
@@ -1202,6 +1290,7 @@ export type Database = {
           use_checklist_progress: boolean | null
         }
         Insert: {
+          active_time_entry_id?: string | null
           checklist?: Json | null
           created_at?: string
           deleted_at?: string | null
@@ -1226,6 +1315,7 @@ export type Database = {
           use_checklist_progress?: boolean | null
         }
         Update: {
+          active_time_entry_id?: string | null
           checklist?: Json | null
           created_at?: string
           deleted_at?: string | null
@@ -1262,6 +1352,57 @@ export type Database = {
             columns: ["node_id"]
             isOneToOne: false
             referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      time_entries: {
+        Row: {
+          created_at: string
+          duration_seconds: number | null
+          ended_at: string | null
+          entry_type: string
+          id: string
+          node_id: string | null
+          notes: string | null
+          started_at: string
+          task_id: string
+        }
+        Insert: {
+          created_at?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          entry_type?: string
+          id?: string
+          node_id?: string | null
+          notes?: string | null
+          started_at: string
+          task_id: string
+        }
+        Update: {
+          created_at?: string
+          duration_seconds?: number | null
+          ended_at?: string | null
+          entry_type?: string
+          id?: string
+          node_id?: string | null
+          notes?: string | null
+          started_at?: string
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "time_entries_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "time_entries_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
         ]
