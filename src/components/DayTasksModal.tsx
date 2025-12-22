@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ExternalLink, Edit, Play, PlayCircle, Users, Clock, MapPin } from "lucide-react";
+import { ExternalLink, Edit, Play, PlayCircle, Users, Clock, MapPin, Plus, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
+import { cn } from "@/lib/utils";
 import type { Meeting } from "@/hooks/useMeetings";
 
 interface Task {
@@ -124,156 +125,167 @@ export function DayTasksModal({
   const totalItems = tasks.length + meetings.length;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {formatDate(date)}
-            <Badge variant="secondary">{totalItems} item(s)</Badge>
-          </DialogTitle>
-        </DialogHeader>
+    <ResponsiveDialog
+      open={isOpen}
+      onOpenChange={onClose}
+      title={`${formatDate(date)} • ${totalItems} item(s)`}
+    >
+      <div className="space-y-4">
+        {/* Meetings Section */}
+        {meetings.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium flex items-center gap-2 text-muted-foreground px-1">
+              <Users className="h-4 w-4" />
+              Reuniões ({meetings.length})
+            </h4>
+            {meetings.map((meeting) => (
+              <div
+                key={meeting.id}
+                onClick={() => handleOpenMeeting(meeting.id)}
+                className={cn(
+                  "flex items-center justify-between p-4 rounded-xl border bg-card",
+                  "hover:bg-accent/50 transition-colors cursor-pointer",
+                  "touch-manipulation active:scale-[0.98]"
+                )}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${meetingStatusColors[meeting.status] || "bg-sky-500"}`} />
+                    <span className="font-medium truncate text-base">{meeting.title}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <span className="flex items-center gap-1">
+                      <Clock className="h-3.5 w-3.5" />
+                      {formatTime(meeting.start_time)} ({meeting.duration_minutes}min)
+                    </span>
+                    {meeting.location && (
+                      <span className="flex items-center gap-1 truncate">
+                        <MapPin className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate">{meeting.location}</span>
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-10 w-10 shrink-0 ml-2"
+                  title="Abrir reunião"
+                >
+                  <ExternalLink className="h-5 w-5" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
 
-        <div className="space-y-4 mt-4">
-          {/* Meetings Section */}
-          {meetings.length > 0 && (
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
-                <Users className="h-4 w-4" />
-                Reuniões ({meetings.length})
-              </h4>
-              {meetings.map((meeting) => (
+        {/* Tasks Section */}
+        {tasks.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium flex items-center gap-2 text-muted-foreground px-1">
+              <Play className="h-4 w-4" />
+              Tarefas ({tasks.length})
+            </h4>
+            {tasks.map((task) => {
+              const node = nodesMap[task.node_id];
+              return (
                 <div
-                  key={meeting.id}
-                  onClick={() => handleOpenMeeting(meeting.id)}
-                  className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors cursor-pointer"
+                  key={task.id}
+                  className={cn(
+                    "flex items-center justify-between p-4 rounded-xl border bg-card",
+                    "hover:bg-accent/50 transition-colors",
+                    "touch-manipulation active:scale-[0.98]"
+                  )}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1">
-                      <div className={`w-2 h-2 rounded-full ${meetingStatusColors[meeting.status] || "bg-sky-500"}`} />
-                      <span className="font-medium truncate">{meeting.title}</span>
+                      <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${statusColors[task.status] || "bg-gray-400"}`} />
+                      <span className="font-medium truncate text-base">{task.title}</span>
                     </div>
-                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {formatTime(meeting.start_time)} ({meeting.duration_minutes}min)
+                    {node && (
+                      <span className="text-sm text-muted-foreground flex items-center gap-1.5">
+                        <div 
+                          className="w-2 h-2 rounded-full shrink-0" 
+                          style={{ backgroundColor: node.color }} 
+                        />
+                        {node.title}
                       </span>
-                      {meeting.location && (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {meeting.location}
-                        </span>
-                      )}
-                    </div>
+                    )}
                   </div>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    title="Abrir reunião"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1 ml-2 shrink-0">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => window.open(`/task/${task.id}`, "_blank")}
+                      title="Abrir tarefa"
+                      className="h-10 w-10"
+                    >
+                      <ExternalLink className="h-5 w-5" />
+                    </Button>
+                    {task.status !== "andamento" && task.status !== "concluído" && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleStartTask(task.id)}
+                        disabled={loading === task.id}
+                        title="Iniciar agora"
+                        className="h-10 w-10 text-green-600 hover:text-green-700 hover:bg-green-50"
+                      >
+                        <Play className="h-5 w-5" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              ))}
-            </div>
-          )}
+              );
+            })}
 
-          {/* Tasks Section */}
-          {tasks.length > 0 && (
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium flex items-center gap-2 text-muted-foreground">
-                <Play className="h-4 w-4" />
-                Tarefas ({tasks.length})
-              </h4>
-              {tasks.map((task) => {
-                const node = nodesMap[task.node_id];
-                return (
-                  <div
-                    key={task.id}
-                    className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-accent/50 transition-colors"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className={`w-2 h-2 rounded-full ${statusColors[task.status] || "bg-gray-400"}`} />
-                        <span className="font-medium truncate">{task.title}</span>
-                      </div>
-                      {node && (
-                        <span className="text-xs text-muted-foreground">
-                          {node.title}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-1 ml-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => window.open(`/task/${task.id}`, "_blank")}
-                        title="Abrir tarefa"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => window.open(`/task/${task.id}`, "_blank")}
-                        title="Editar"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      {task.status !== "andamento" && task.status !== "concluído" && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleStartTask(task.id)}
-                          disabled={loading === task.id}
-                          title="Iniciar agora"
-                          className="text-green-600 hover:text-green-700"
-                        >
-                          <Play className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+            {pendingCount > 1 && (
+              <Button
+                onClick={handleStartAllTasks}
+                disabled={loading === "all"}
+                className="w-full h-12 text-base"
+                variant="outline"
+              >
+                <PlayCircle className="h-5 w-5 mr-2" />
+                Iniciar todas do dia ({pendingCount})
+              </Button>
+            )}
+          </div>
+        )}
 
-              {pendingCount > 1 && (
-                <Button
-                  onClick={handleStartAllTasks}
-                  disabled={loading === "all"}
-                  className="w-full"
-                  variant="outline"
-                >
-                  <PlayCircle className="h-4 w-4 mr-2" />
-                  Iniciar todas do dia ({pendingCount})
-                </Button>
-              )}
-            </div>
-          )}
+        {/* Empty state */}
+        {totalItems === 0 && (
+          <div className="text-center py-8">
+            <p className="text-muted-foreground mb-4">Nenhum item neste dia</p>
+          </div>
+        )}
 
-          {/* Empty state */}
-          {totalItems === 0 && (
-            <p className="text-muted-foreground text-center py-4">Nenhum item neste dia</p>
-          )}
-
-          {/* Create buttons */}
-          {(onCreateTask || onCreateMeeting) && (
-            <div className="flex gap-2 pt-2 border-t">
-              {onCreateTask && (
-                <Button variant="outline" size="sm" className="flex-1" onClick={onCreateTask}>
-                  <Play className="h-4 w-4 mr-1" />
-                  Nova Tarefa
-                </Button>
-              )}
-              {onCreateMeeting && (
-                <Button variant="outline" size="sm" className="flex-1" onClick={onCreateMeeting}>
-                  <Users className="h-4 w-4 mr-1" />
-                  Nova Reunião
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
-      </DialogContent>
-    </Dialog>
+        {/* Create buttons - Large touch targets */}
+        {(onCreateTask || onCreateMeeting) && (
+          <div className="flex gap-3 pt-4 border-t">
+            {onCreateTask && (
+              <Button 
+                variant="outline" 
+                className="flex-1 h-12 text-base touch-manipulation active:scale-[0.98]" 
+                onClick={onCreateTask}
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                Tarefa
+              </Button>
+            )}
+            {onCreateMeeting && (
+              <Button 
+                variant="outline" 
+                className="flex-1 h-12 text-base touch-manipulation active:scale-[0.98]" 
+                onClick={onCreateMeeting}
+              >
+                <Users className="h-5 w-5 mr-2" />
+                Reunião
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+    </ResponsiveDialog>
   );
 }
