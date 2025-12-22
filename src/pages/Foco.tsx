@@ -10,6 +10,7 @@ import { ReplanningBanner } from "@/components/ReplanningBanner";
 import { DueDateBanner } from "@/components/DueDateBanner";
 import { FollowUpBanner } from "@/components/FollowUpBanner";
 import { useTimeTracking } from "@/hooks/useTimeTracking";
+import { cn } from "@/lib/utils";
 
 interface Task {
   id: string;
@@ -382,26 +383,29 @@ export default function Foco() {
     .filter((t): t is Task => t !== undefined);
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-2xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
+    <div className="min-h-screen bg-background pb-safe-bottom">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b safe-area-pt">
+        <div className="flex items-center justify-between p-4">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="h-10 w-10">
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="text-2xl font-bold text-foreground">Foco — Em andamento</h1>
+            <h1 className="text-lg sm:text-2xl font-bold text-foreground truncate">Foco</h1>
           </div>
           <Button 
             variant={isReplanningDay() ? "default" : "outline"} 
             size="sm"
             onClick={() => navigate('/planejamento')}
+            className="h-10 px-3"
           >
-            <CalendarCheck className="h-4 w-4 mr-2" />
-            Replanejar
+            <CalendarCheck className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Replanejar</span>
           </Button>
         </div>
+      </div>
 
-        {/* Timer fixo */}
+      <div className="p-4 max-w-2xl mx-auto space-y-4">
         <Card className="p-4 mb-6 bg-destructive/10 border-destructive/30">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -481,12 +485,12 @@ export default function Foco() {
             );
           })()}
           {activeTaskId && (
-            <div className="flex gap-2 mt-3 pt-3 border-t border-destructive/20">
+            <div className="flex flex-wrap gap-2 mt-3 pt-3 border-t border-destructive/20">
               <Button
                 size="sm"
                 variant="default"
                 onClick={handleCompleteTask}
-                className="flex-1"
+                className="flex-1 h-11"
               >
                 <Check className="h-4 w-4 mr-1" />
                 Concluir
@@ -495,7 +499,7 @@ export default function Foco() {
                 size="sm"
                 variant="outline"
                 onClick={handleMoveToPending}
-                className="flex-1"
+                className="flex-1 h-11"
               >
                 <Clock className="h-4 w-4 mr-1" />
                 Pendente
@@ -504,6 +508,7 @@ export default function Foco() {
                 size="sm"
                 variant="ghost"
                 onClick={handleOpenEdit}
+                className="h-11 w-11 p-0"
               >
                 <ExternalLink className="h-4 w-4" />
               </Button>
@@ -511,19 +516,20 @@ export default function Foco() {
           )}
         </Card>
 
-        {/* Fila ativa */}
+        {/* Fila ativa - horizontal scroll on mobile */}
         {queuedTasks.length > 0 && (
-          <div className="mb-6">
+          <div>
             <h2 className="text-sm font-medium text-muted-foreground mb-2">Fila ativa</h2>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4">
               {queuedTasks.map((task, index) => (
                 <div
                   key={task.id}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm ${
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-2 rounded-md text-sm whitespace-nowrap flex-shrink-0",
                     activeTaskId === task.id 
                       ? 'bg-destructive/20 text-destructive border border-destructive/30' 
                       : 'bg-muted text-muted-foreground'
-                  }`}
+                  )}
                 >
                   <span className="text-xs opacity-60">{index + 1}.</span>
                   <span 
@@ -534,7 +540,7 @@ export default function Foco() {
                   </span>
                   <button
                     onClick={() => handleRemoveFromQueue(task.id)}
-                    className="ml-1 hover:text-destructive"
+                    className="ml-1 hover:text-destructive p-1"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -544,7 +550,7 @@ export default function Foco() {
           </div>
         )}
 
-        {/* Lista de tarefas */}
+        {/* Lista de tarefas - touch-friendly cards */}
         <div className="space-y-3">
           {tasks.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
@@ -554,15 +560,16 @@ export default function Foco() {
             tasks.map(task => (
               <Card
                 key={task.id}
-                className={`p-4 cursor-pointer transition-all ${
+                className={cn(
+                  "p-4 cursor-pointer transition-all active:scale-[0.98]",
                   activeTaskId === task.id 
                     ? 'border-destructive bg-destructive/5' 
                     : 'hover:border-muted-foreground/30'
-                }`}
+                )}
                 onClick={() => handleSelectTask(task.id)}
               >
-                <div className="flex justify-between items-start">
-                  <div className="flex-1">
+                <div className="flex justify-between items-start gap-3">
+                  <div className="flex-1 min-w-0">
                     <h3 className="font-medium text-foreground">{task.title}</h3>
                     {task.description && (
                       <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
@@ -574,11 +581,12 @@ export default function Foco() {
                       return (
                         <Badge
                           variant="outline"
-                          className={`mt-2 cursor-pointer text-xs ${
+                          className={cn(
+                            "mt-2 cursor-pointer text-xs",
                             dep.status !== 'concluído' 
                               ? 'bg-amber-500/20 border-amber-500/50 text-amber-600 hover:bg-amber-500/30' 
                               : 'hover:bg-muted'
-                          }`}
+                          )}
                           onClick={(e) => {
                             e.stopPropagation();
                             window.open(`/task/${dep.id}`, '_blank');
@@ -593,7 +601,7 @@ export default function Foco() {
                       {nodes[task.node_id]?.title || 'Nó desconhecido'}
                     </p>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="text-sm text-muted-foreground">
                       {task.progress}%
                     </span>
@@ -601,7 +609,7 @@ export default function Foco() {
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-7 px-2"
+                        className="h-10 w-10 p-0"
                         onClick={(e) => handleAddToQueue(task.id, e)}
                         title="Adicionar à fila"
                       >
