@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Package, ShoppingCart, Factory, ArrowLeft, Trash2, AlertTriangle, Warehouse, DollarSign } from 'lucide-react';
+import { Plus, Package, ShoppingCart, Factory, ArrowLeft, Trash2, AlertTriangle, Warehouse, DollarSign, ClipboardCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ProductGallery } from '@/components/ProductGallery';
 import { ProductMovementHistory } from '@/components/ProductMovementHistory';
@@ -42,6 +42,7 @@ import {
   Order as StoreOrder,
   OrderItem as StoreOrderItem,
 } from '@/stores/appStore';
+import { useStockCheckStore } from '@/stores/stockCheckStore';
 import { useKPIsSelector, useFilteredOrders, useFilteredProducts, useSearchFilters } from '@/stores/selectors';
 import type { Order, OrderItem, Product } from '@/hooks/useOrders';
 
@@ -121,6 +122,9 @@ export default function Operacoes() {
 
   // Filters from store
   const { searchTerm, categoryFilter, statusFilter, setSearchTerm, setCategoryFilter, setStatusFilter, resetFilters } = useSearchFilters();
+
+  // Stock check
+  const openStockCheckWizard = useStockCheckStore((s) => s.openWizard);
 
   // KPIs from selector
   const kpis = useKPIsSelector();
@@ -626,7 +630,17 @@ export default function Operacoes() {
               ))}
             </div>
             
-            <h2 className="text-lg font-semibold">Estoque ({filteredProducts.length})</h2>
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold">Estoque ({filteredProducts.length})</h2>
+              <Button 
+                onClick={openStockCheckWizard}
+                variant="outline"
+                className="h-10 gap-2 border-amber-500 text-amber-600 hover:bg-amber-50"
+              >
+                <ClipboardCheck className="h-4 w-4" />
+                Atualizar Estoque
+              </Button>
+            </div>
 
             <div className="space-y-3">
               {filteredProducts.map((product) => (

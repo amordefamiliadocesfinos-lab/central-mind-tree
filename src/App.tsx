@@ -7,6 +7,7 @@ import { GlobalSearchBar } from "@/components/GlobalSearchBar";
 import { GlobalFooterBar } from "@/components/GlobalFooterBar";
 import { LightboxProvider, LightboxRoot } from "@/components/lightbox";
 import { UndoRedoProvider } from "@/contexts/UndoRedoContext";
+import { StockCheckAlert, StockCheckWizard } from "@/components/stock-check";
 import Index from "./pages/Index";
 import TaskEdit from "./pages/TaskEdit";
 import Foco from "./pages/Foco";
@@ -40,6 +41,8 @@ function AppContent() {
         <Route path="*" element={<NotFound />} />
       </Routes>
       <GlobalFooterBar />
+      <StockCheckAlert />
+      <StockCheckWizard />
     </BrowserRouter>
   );
 }
