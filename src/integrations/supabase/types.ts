@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_users: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          is_active: boolean
+          name: string
+          role: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          role?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          role?: string | null
+        }
+        Relationships: []
+      }
       automation_logs: {
         Row: {
           action_result: Json | null
@@ -252,6 +279,168 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_items: {
+        Row: {
+          created_at: string
+          description: string | null
+          duration_minutes: number | null
+          id: string
+          item_type: string
+          meeting_id: string
+          notes: string | null
+          order_index: number
+          owner_id: string | null
+          status: string
+          task_id: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          item_type?: string
+          meeting_id: string
+          notes?: string | null
+          order_index?: number
+          owner_id?: string | null
+          status?: string
+          task_id?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          duration_minutes?: number | null
+          id?: string
+          item_type?: string
+          meeting_id?: string
+          notes?: string | null
+          order_index?: number
+          owner_id?: string | null
+          status?: string
+          task_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_items_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_items_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_items_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meeting_participants: {
+        Row: {
+          confirmed: boolean | null
+          id: string
+          meeting_id: string
+          role: string | null
+          user_id: string
+        }
+        Insert: {
+          confirmed?: boolean | null
+          id?: string
+          meeting_id: string
+          role?: string | null
+          user_id: string
+        }
+        Update: {
+          confirmed?: boolean | null
+          id?: string
+          meeting_id?: string
+          role?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meeting_participants_meeting_id_fkey"
+            columns: ["meeting_id"]
+            isOneToOne: false
+            referencedRelation: "meetings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meeting_participants_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meetings: {
+        Row: {
+          created_at: string
+          decisions: string | null
+          duration_minutes: number
+          id: string
+          location: string | null
+          meeting_date: string
+          notes: string | null
+          objective: string | null
+          owner_id: string | null
+          start_time: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          decisions?: string | null
+          duration_minutes?: number
+          id?: string
+          location?: string | null
+          meeting_date: string
+          notes?: string | null
+          objective?: string | null
+          owner_id?: string | null
+          start_time: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          decisions?: string | null
+          duration_minutes?: number
+          id?: string
+          location?: string | null
+          meeting_date?: string
+          notes?: string | null
+          objective?: string | null
+          owner_id?: string | null
+          start_time?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meetings_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "app_users"
             referencedColumns: ["id"]
           },
         ]
