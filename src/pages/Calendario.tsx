@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus } from "lucide-react";
+import { ArrowLeft, Plus, Users } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { DayTasksModal } from "@/components/DayTasksModal";
+import { useMeetings, Meeting } from "@/hooks/useMeetings";
 
 interface Task {
   id: string;
@@ -47,6 +48,8 @@ const STATUS_COLORS: Record<string, string> = {
   "concluído": "#22C55E",
 };
 
+const MEETING_COLOR = "#0EA5E9"; // Sky blue for meetings
+
 const Calendario = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [nodes, setNodes] = useState<Node[]>([]);
@@ -64,6 +67,14 @@ const Calendario = () => {
   // Day tasks modal state
   const [dayTasksModalOpen, setDayTasksModalOpen] = useState(false);
   const [dayTasksModalDate, setDayTasksModalDate] = useState<string>("");
+
+  // Meetings integration
+  const { meetings, updateMeeting, fetchMeetings } = useMeetings();
+  const navigate = useNavigate();
+  
+  // Drag state for meetings
+  const [draggingMeeting, setDraggingMeeting] = useState<Meeting | null>(null);
+  const draggedRef = useRef<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -161,6 +172,59 @@ const Calendario = () => {
     return map;
   }, [tasks]);
 
+  // Group meetings by date
+  const meetingsByDate = useMemo(() => {
+    const map: Record<string, Meeting[]> = {};
+    meetings.forEach((meeting) => {
+      if (meeting.meeting_date) {
+        if (!map[meeting.meeting_date]) {
+          map[meeting.meeting_date] = [];
+        }
+        map[meeting.meeting_date].push(meeting);
+      }
+    });
+    return map;
+  }, [meetings]);
+
+  // Handle meeting drag start
+  const handleMeetingDragStart = (e: React.DragEvent, meeting: Meeting) => {
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', meeting.id);
+    draggedRef.current = meeting.id;
+    setDraggingMeeting(meeting);
+  };
+
+  // Handle meeting drag end
+  const handleMeetingDragEnd = () => {
+    draggedRef.current = null;
+    setDraggingMeeting(null);
+  };
+
+  // Handle drop on a day
+  const handleDrop = async (e: React.DragEvent, dateKey: string) => {
+    e.preventDefault();
+    const meetingId = e.dataTransfer.getData('text/plain');
+    
+    if (meetingId && draggingMeeting) {
+      const result = await updateMeeting(meetingId, { meeting_date: dateKey });
+      if (result) {
+        toast.success(`Reunião reagendada para ${dateKey}`);
+        await fetchMeetings();
+      } else {
+        toast.error("Erro ao reagendar reunião");
+      }
+    }
+    
+    setDraggingMeeting(null);
+    draggedRef.current = null;
+  };
+
+  // Handle drag over
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
   // Get days in month
   const getDaysInMonth = (month: number, year: number) => {
     return new Date(year, month + 1, 0).getDate();
@@ -173,9 +237,22 @@ const Calendario = () => {
 
   // Get tooltip content for a day
   const getTooltipContent = (dateKey: string) => {
-    const dayTasks = tasksByDate[dateKey];
-    if (!dayTasks || dayTasks.length === 0) return "";
-    return dayTasks.map((t) => `• ${t.title}`).join("\n");
+    const dayTasks = tasksByDate[dateKey] || [];
+    const dayMeetings = meetingsByDate[dateKey] || [];
+    const lines: string[] = [];
+    
+    if (dayMeetings.length > 0) {
+      lines.push('📅 Reuniões:');
+      dayMeetings.forEach(m => lines.push(`  • ${m.title} (${m.start_time.slice(0, 5)})`));
+    }
+    
+    if (dayTasks.length > 0) {
+      if (lines.length > 0) lines.push('');
+      lines.push('📋 Tarefas:');
+      dayTasks.forEach(t => lines.push(`  • ${t.title}`));
+    }
+    
+    return lines.join('\n');
   };
 
   // Check if date is today
@@ -242,6 +319,14 @@ const Calendario = () => {
               </span>
             </div>
           ))}
+          {/* Meeting legend */}
+          <div className="flex items-center gap-2">
+            <div
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: MEETING_COLOR }}
+            />
+            <span className="text-muted-foreground">Reunião</span>
+          </div>
         </div>
 
         {/* Calendar Grid - 12 months */}
@@ -260,36 +345,49 @@ const Calendario = () => {
                   {days.map((day) => {
                     const dateKey = formatDateKey(selectedYear, monthIndex, day);
                     const dayTasks = tasksByDate[dateKey] || [];
+                    const dayMeetings = meetingsByDate[dateKey] || [];
                     const hasScheduledTasks = dayTasks.length > 0;
+                    const hasMeetings = dayMeetings.length > 0;
+                    const hasContent = hasScheduledTasks || hasMeetings;
                     const tooltipContent = getTooltipContent(dateKey);
                     const todayHighlight = isToday(dateKey);
+                    const totalItems = dayTasks.length + dayMeetings.length;
 
-                    // Get dominant status color (first task's status)
-                    const dominantColor = hasScheduledTasks
-                      ? STATUS_COLORS[dayTasks[0].status] || "#6B7280"
-                      : undefined;
+                    // Priority: meeting > task status
+                    const dominantColor = hasMeetings 
+                      ? MEETING_COLOR 
+                      : hasScheduledTasks
+                        ? STATUS_COLORS[dayTasks[0].status] || "#6B7280"
+                        : undefined;
 
                     return (
                       <div
                         key={day}
                         title={tooltipContent || "Clique para agendar tarefa"}
                         onClick={() => handleDayClick(dateKey)}
+                        onDrop={(e) => handleDrop(e, dateKey)}
+                        onDragOver={handleDragOver}
                         className={`
                           relative w-6 h-6 flex items-center justify-center text-[10px] rounded cursor-pointer
                           ${todayHighlight ? "ring-2 ring-primary ring-offset-1" : ""}
-                          ${hasScheduledTasks ? "hover:opacity-80" : "text-muted-foreground hover:bg-muted"}
+                          ${hasContent ? "hover:opacity-80" : "text-muted-foreground hover:bg-muted"}
+                          ${draggingMeeting ? "hover:ring-2 hover:ring-primary/50" : ""}
                         `}
                         style={{
-                          backgroundColor: hasScheduledTasks ? dominantColor : undefined,
-                          color: hasScheduledTasks ? "white" : undefined,
+                          backgroundColor: hasContent ? dominantColor : undefined,
+                          color: hasContent ? "white" : undefined,
                         }}
                       >
                         {day}
-                        {/* Multi-task indicator */}
-                        {dayTasks.length > 1 && (
+                        {/* Multi-item indicator */}
+                        {totalItems > 1 && (
                           <span className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 bg-background text-foreground text-[7px] rounded-full flex items-center justify-center border">
-                            {dayTasks.length}
+                            {totalItems}
                           </span>
+                        )}
+                        {/* Meeting indicator */}
+                        {hasMeetings && !hasScheduledTasks && (
+                          <Users className="absolute -bottom-0.5 -right-0.5 w-2 h-2 text-white" />
                         )}
                       </div>
                     );
@@ -303,10 +401,42 @@ const Calendario = () => {
         {/* Summary */}
         <div className="border rounded-lg p-4 bg-card">
           <h3 className="font-semibold mb-2">Resumo {selectedYear}</h3>
-          <p className="text-sm text-muted-foreground">
-            {tasks.filter((t) => t.scheduled_date?.startsWith(String(selectedYear))).length} tarefa(s) agendada(s)
-          </p>
+          <div className="flex gap-6 text-sm text-muted-foreground">
+            <p>{tasks.filter((t) => t.scheduled_date?.startsWith(String(selectedYear))).length} tarefa(s) agendada(s)</p>
+            <p>{meetings.filter((m) => m.meeting_date?.startsWith(String(selectedYear))).length} reunião(ões)</p>
+          </div>
         </div>
+
+        {/* Meetings list for drag */}
+        {meetings.filter(m => m.meeting_date?.startsWith(String(selectedYear))).length > 0 && (
+          <div className="border rounded-lg p-4 bg-card">
+            <h3 className="font-semibold mb-3 flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Reuniões de {selectedYear}
+              <span className="text-xs text-muted-foreground font-normal">(arraste para reagendar)</span>
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {meetings
+                .filter(m => m.meeting_date?.startsWith(String(selectedYear)))
+                .sort((a, b) => a.meeting_date.localeCompare(b.meeting_date))
+                .map(meeting => (
+                  <div
+                    key={meeting.id}
+                    draggable
+                    onDragStart={(e) => handleMeetingDragStart(e, meeting)}
+                    onDragEnd={handleMeetingDragEnd}
+                    onClick={() => navigate(`/reunioes/${meeting.id}`)}
+                    className="px-3 py-1.5 rounded-full text-xs font-medium text-white cursor-move hover:opacity-80 transition-opacity flex items-center gap-2"
+                    style={{ backgroundColor: MEETING_COLOR }}
+                  >
+                    <span>{meeting.meeting_date.slice(5, 10).replace('-', '/')}</span>
+                    <span className="max-w-[120px] truncate">{meeting.title}</span>
+                    <span className="opacity-75">{meeting.start_time.slice(0, 5)}</span>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Quick Create Task Dialog */}
