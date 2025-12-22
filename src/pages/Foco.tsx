@@ -2,7 +2,23 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, RotateCcw, ArrowLeft, CalendarCheck, Plus, X, Check, Clock, ExternalLink, AlertTriangle, Timer } from "lucide-react";
+import { Play, Pause, RotateCcw, ArrowLeft, CalendarCheck, Plus, X, Check, Clock, ExternalLink, AlertTriangle, Timer, GripVertical } from "lucide-react";
+import { 
+  DndContext, 
+  closestCenter, 
+  PointerSensor, 
+  TouchSensor, 
+  useSensor, 
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import { 
+  arrayMove, 
+  SortableContext, 
+  useSortable,
+  horizontalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -53,6 +69,121 @@ const loadSession = (): SessionState => {
   }
   return { startedAt: null, pausedAt: null, elapsedMs: 0 };
 };
+
+// Sortable Queue Item component
+interface SortableQueueItemProps {
+  task: Task;
+  index: number;
+  isActive: boolean;
+  onSelect: (id: string) => void;
+  onRemove: (id: string) => void;
+}
+
+function SortableQueueItem({ task, index, isActive, onSelect, onRemove }: SortableQueueItemProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    touchAction: "none",
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        "flex items-center gap-2 px-3 py-2 rounded-md text-sm whitespace-nowrap flex-shrink-0",
+        isActive 
+          ? 'bg-destructive/20 text-destructive border border-destructive/30' 
+          : 'bg-muted text-muted-foreground',
+        isDragging && 'shadow-lg'
+      )}
+    >
+      <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none">
+        <GripVertical className="h-3 w-3 opacity-50" />
+      </div>
+      <span className="text-xs opacity-60">{index + 1}.</span>
+      <span 
+        className="cursor-pointer hover:underline"
+        onClick={() => onSelect(task.id)}
+      >
+        {task.title}
+      </span>
+      <button
+        onClick={() => onRemove(task.id)}
+        className="ml-1 hover:text-destructive p-1"
+      >
+        <X className="h-3 w-3" />
+      </button>
+    </div>
+  );
+}
+
+// Queue List with drag & drop
+interface QueueListProps {
+  tasks: Task[];
+  activeTaskId: string | null;
+  queue: string[];
+  setQueue: React.Dispatch<React.SetStateAction<string[]>>;
+  onSelect: (id: string) => void;
+  onRemove: (id: string) => void;
+}
+
+function QueueList({ tasks, activeTaskId, queue, setQueue, onSelect, onRemove }: QueueListProps) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 150, tolerance: 5 },
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = queue.indexOf(active.id as string);
+      const newIndex = queue.indexOf(over.id as string);
+      const newQueue = arrayMove(queue, oldIndex, newIndex);
+      setQueue(newQueue);
+    }
+  };
+
+  return (
+    <div>
+      <h2 className="text-sm font-medium text-muted-foreground mb-2">Fila ativa (arraste para reordenar)</h2>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext items={queue} strategy={horizontalListSortingStrategy}>
+          <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4">
+            {tasks.map((task, index) => (
+              <SortableQueueItem
+                key={task.id}
+                task={task}
+                index={index}
+                isActive={activeTaskId === task.id}
+                onSelect={onSelect}
+                onRemove={onRemove}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
+    </div>
+  );
+}
 
 export default function Foco() {
   const navigate = useNavigate();
@@ -516,38 +647,16 @@ export default function Foco() {
           )}
         </Card>
 
-        {/* Fila ativa - horizontal scroll on mobile */}
+        {/* Fila ativa - horizontal drag & drop */}
         {queuedTasks.length > 0 && (
-          <div>
-            <h2 className="text-sm font-medium text-muted-foreground mb-2">Fila ativa</h2>
-            <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-2 -mx-4 px-4">
-              {queuedTasks.map((task, index) => (
-                <div
-                  key={task.id}
-                  className={cn(
-                    "flex items-center gap-2 px-3 py-2 rounded-md text-sm whitespace-nowrap flex-shrink-0",
-                    activeTaskId === task.id 
-                      ? 'bg-destructive/20 text-destructive border border-destructive/30' 
-                      : 'bg-muted text-muted-foreground'
-                  )}
-                >
-                  <span className="text-xs opacity-60">{index + 1}.</span>
-                  <span 
-                    className="cursor-pointer hover:underline"
-                    onClick={() => handleSelectTask(task.id)}
-                  >
-                    {task.title}
-                  </span>
-                  <button
-                    onClick={() => handleRemoveFromQueue(task.id)}
-                    className="ml-1 hover:text-destructive p-1"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
+          <QueueList
+            tasks={queuedTasks}
+            activeTaskId={activeTaskId}
+            queue={queue}
+            setQueue={setQueue}
+            onSelect={handleSelectTask}
+            onRemove={handleRemoveFromQueue}
+          />
         )}
 
         {/* Lista de tarefas - touch-friendly cards */}
