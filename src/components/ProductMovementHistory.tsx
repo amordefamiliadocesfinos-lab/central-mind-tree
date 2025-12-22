@@ -41,7 +41,10 @@ export function ProductMovementHistory({ productId }: ProductMovementHistoryProp
     <ScrollArea className="h-64">
       <div className="space-y-2">
         {history.map((movement) => {
-          const label = MOVEMENT_LABELS[movement.movement_type as MovementType];
+          const label = MOVEMENT_LABELS[movement.movement_type as MovementType] || { 
+            label: movement.movement_type, 
+            color: 'bg-gray-500' 
+          };
           const isPositive = movement.movement_type === 'in' || 
             (movement.movement_type === 'adjust' && movement.quantity > 0);
           
