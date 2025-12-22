@@ -8,6 +8,7 @@ import { GlobalFooterBar } from "@/components/GlobalFooterBar";
 import { LightboxProvider, LightboxRoot } from "@/components/lightbox";
 import { UndoRedoProvider } from "@/contexts/UndoRedoContext";
 import { StockCheckAlert, StockCheckWizard } from "@/components/stock-check";
+import { AssistantPanel } from "@/components/assistant";
 import Index from "./pages/Index";
 import TaskEdit from "./pages/TaskEdit";
 import Foco from "./pages/Foco";
@@ -27,6 +28,9 @@ function AppContent() {
 
   return (
     <BrowserRouter>
+      <div className="fixed top-4 right-4 z-50">
+        <AssistantPanel />
+      </div>
       <GlobalSearchBar />
       <Routes>
         <Route path="/" element={<Index />} />
