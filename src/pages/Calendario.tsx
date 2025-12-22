@@ -69,12 +69,23 @@ const Calendario = () => {
   const [dayTasksModalDate, setDayTasksModalDate] = useState<string>("");
 
   // Meetings integration
-  const { meetings, updateMeeting, fetchMeetings } = useMeetings();
+  const { meetings, users, updateMeeting, createMeeting, fetchMeetings } = useMeetings();
   const navigate = useNavigate();
   
   // Drag state for meetings
   const [draggingMeeting, setDraggingMeeting] = useState<Meeting | null>(null);
   const draggedRef = useRef<string | null>(null);
+
+  // Create choice dialog (task or meeting)
+  const [choiceDialogOpen, setChoiceDialogOpen] = useState(false);
+  
+  // Create meeting dialog state
+  const [createMeetingDialogOpen, setCreateMeetingDialogOpen] = useState(false);
+  const [newMeetingTitle, setNewMeetingTitle] = useState("");
+  const [newMeetingTime, setNewMeetingTime] = useState("09:00");
+  const [newMeetingDuration, setNewMeetingDuration] = useState(60);
+  const [newMeetingOwnerId, setNewMeetingOwnerId] = useState("");
+  const [creatingMeeting, setCreatingMeeting] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -96,19 +107,58 @@ const Calendario = () => {
 
   const handleDayClick = (dateKey: string) => {
     const dayTasks = tasksByDate[dateKey] || [];
+    const dayMeetings = meetingsByDate[dateKey] || [];
     
-    if (dayTasks.length > 0) {
-      // Se há tarefas, abrir modal de visualização
+    if (dayTasks.length > 0 || dayMeetings.length > 0) {
+      // Se há tarefas ou reuniões, abrir modal de visualização
       setDayTasksModalDate(dateKey);
       setDayTasksModalOpen(true);
     } else {
-      // Se não há tarefas, abrir dialog de criação
+      // Se não há nada, abrir dialog de escolha
       setSelectedDate(dateKey);
-      setNewTaskTitle("");
-      setNewTaskNodeId(nodes[0]?.id || "");
-      setNewTaskStatus("pendente");
-      setCreateDialogOpen(true);
+      setChoiceDialogOpen(true);
     }
+  };
+
+  const handleChooseTask = () => {
+    setChoiceDialogOpen(false);
+    setNewTaskTitle("");
+    setNewTaskNodeId(nodes[0]?.id || "");
+    setNewTaskStatus("pendente");
+    setCreateDialogOpen(true);
+  };
+
+  const handleChooseMeeting = () => {
+    setChoiceDialogOpen(false);
+    setNewMeetingTitle("");
+    setNewMeetingTime("09:00");
+    setNewMeetingDuration(60);
+    setNewMeetingOwnerId(users[0]?.id || "");
+    setCreateMeetingDialogOpen(true);
+  };
+
+  const handleCreateMeeting = async () => {
+    if (!newMeetingTitle.trim()) {
+      toast.error("Preencha o título da reunião");
+      return;
+    }
+
+    setCreatingMeeting(true);
+    const result = await createMeeting({
+      title: newMeetingTitle.trim(),
+      meeting_date: selectedDate,
+      start_time: newMeetingTime,
+      duration_minutes: newMeetingDuration,
+      owner_id: newMeetingOwnerId || undefined,
+    });
+
+    if (result) {
+      toast.success("Reunião criada");
+      setCreateMeetingDialogOpen(false);
+    } else {
+      toast.error("Erro ao criar reunião");
+    }
+    setCreatingMeeting(false);
   };
 
   const handleOpenCreateFromModal = () => {
@@ -505,6 +555,122 @@ const Calendario = () => {
               </Button>
               <Button onClick={handleCreateTask} disabled={creating}>
                 {creating ? "Criando..." : "Criar Tarefa"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Choice Dialog - Task or Meeting */}
+      <Dialog open={choiceDialogOpen} onOpenChange={setChoiceDialogOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>O que deseja criar?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground mb-4">
+            Data selecionada: {selectedDate}
+          </p>
+          <div className="flex gap-3">
+            <Button 
+              variant="outline" 
+              className="flex-1 h-20 flex-col gap-2"
+              onClick={handleChooseTask}
+            >
+              <Plus className="h-6 w-6" />
+              <span>Tarefa</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              className="flex-1 h-20 flex-col gap-2"
+              onClick={handleChooseMeeting}
+            >
+              <Users className="h-6 w-6" />
+              <span>Reunião</span>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create Meeting Dialog */}
+      <Dialog open={createMeetingDialogOpen} onOpenChange={setCreateMeetingDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Nova Reunião - {selectedDate}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <div className="space-y-2">
+              <Label htmlFor="meeting-title">Título</Label>
+              <Input
+                id="meeting-title"
+                value={newMeetingTitle}
+                onChange={(e) => setNewMeetingTitle(e.target.value)}
+                placeholder="Nome da reunião"
+                autoFocus
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="meeting-time">Horário</Label>
+                <Input
+                  id="meeting-time"
+                  type="time"
+                  value={newMeetingTime}
+                  onChange={(e) => setNewMeetingTime(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Duração</Label>
+                <Select 
+                  value={String(newMeetingDuration)} 
+                  onValueChange={(v) => setNewMeetingDuration(Number(v))}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="15">15 min</SelectItem>
+                    <SelectItem value="30">30 min</SelectItem>
+                    <SelectItem value="45">45 min</SelectItem>
+                    <SelectItem value="60">1 hora</SelectItem>
+                    <SelectItem value="90">1h30</SelectItem>
+                    <SelectItem value="120">2 horas</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {users.length > 0 && (
+              <div className="space-y-2">
+                <Label>Responsável</Label>
+                <Select value={newMeetingOwnerId} onValueChange={setNewMeetingOwnerId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o responsável" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {users.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setCreateMeetingDialogOpen(false)}
+              >
+                Cancelar
+              </Button>
+              <Button onClick={handleCreateMeeting} disabled={creatingMeeting}>
+                {creatingMeeting ? "Criando..." : "Criar Reunião"}
               </Button>
             </div>
           </div>
