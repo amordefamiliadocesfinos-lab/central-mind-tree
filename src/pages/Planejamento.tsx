@@ -1000,8 +1000,7 @@ const Planejamento = () => {
               </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveDialog>
       <DueDateBanner />
     </div>
   );
