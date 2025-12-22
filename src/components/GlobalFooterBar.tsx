@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { 
   Play, Pause, RotateCcw, Clock, Focus, Calendar, Timer, 
-  ShoppingCart, FileText, Undo2, Redo2, Home, FileSpreadsheet 
+  ShoppingCart, FileText, Undo2, Redo2, Home, FileSpreadsheet,
+  Users, User
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUndoRedoContext } from "@/contexts/UndoRedoContext";
@@ -381,6 +382,28 @@ export function GlobalFooterBar() {
           >
             <Link to="/planilhas">
               <FileSpreadsheet className="h-4 w-4" />
+            </Link>
+          </Button>
+
+          <Button
+            asChild
+            size="sm"
+            variant={isActive('/reunioes') ? 'secondary' : 'ghost'}
+            className={cn("h-8 px-2 text-xs", isActive('/reunioes') && "bg-secondary")}
+          >
+            <Link to="/reunioes">
+              <Users className="h-4 w-4" />
+            </Link>
+          </Button>
+
+          <Button
+            asChild
+            size="sm"
+            variant={isActive('/minha-area') ? 'secondary' : 'ghost'}
+            className={cn("h-8 px-2 text-xs", isActive('/minha-area') && "bg-secondary")}
+          >
+            <Link to="/minha-area">
+              <User className="h-4 w-4" />
             </Link>
           </Button>
         </div>
