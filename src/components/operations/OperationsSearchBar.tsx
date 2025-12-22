@@ -40,12 +40,12 @@ export function OperationsSearchBar({
       {/* Search Row */}
       <div className="flex gap-2">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
           <Input
             placeholder={placeholder}
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-9 h-12 text-base"
+            className="pl-9 h-12 text-base rounded-xl"
           />
           {searchTerm && (
             <Button
@@ -58,58 +58,60 @@ export function OperationsSearchBar({
             </Button>
           )}
         </div>
-        <Button
-          variant={hasActiveFilters ? "default" : "outline"}
-          size="icon"
-          className="h-12 w-12 shrink-0"
-          onClick={() => setShowFilters(!showFilters)}
-        >
-          <Filter className="h-5 w-5" />
-        </Button>
+        {(showCategoryFilter || showStatusFilter) && (
+          <Button
+            variant={hasActiveFilters ? "default" : "outline"}
+            size="icon"
+            className="h-12 w-12 shrink-0 rounded-xl"
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <Filter className="h-5 w-5" />
+          </Button>
+        )}
       </div>
 
-      {/* Filters Row */}
+      {/* Filters - Scrollable chips on mobile */}
       {showFilters && (
-        <div className="flex gap-2 mt-2 animate-in slide-in-from-top-2 duration-200">
-          {showCategoryFilter && (
-            <Select value={categoryFilter} onValueChange={onCategoryChange}>
-              <SelectTrigger className="flex-1 h-10">
-                <SelectValue placeholder="Categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas categorias</SelectItem>
-                {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          {showStatusFilter && (
-            <Select value={statusFilter} onValueChange={onStatusChange}>
-              <SelectTrigger className="flex-1 h-10">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos status</SelectItem>
-                {statuses.map((status) => (
-                  <SelectItem key={status.key} value={status.key}>{status.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-          {hasActiveFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="shrink-0"
-              onClick={() => {
-                onCategoryChange('all');
-                onStatusChange('all');
-              }}
-            >
-              Limpar
-            </Button>
-          )}
+        <div className="mt-3 animate-in slide-in-from-top-2 duration-200">
+          <div className="scroll-x-container">
+            {showStatusFilter && statuses.map((status) => (
+              <Button
+                key={status.key}
+                variant={statusFilter === status.key ? "default" : "outline"}
+                size="sm"
+                className="shrink-0 h-9 px-4 rounded-full text-sm touch-manipulation active:scale-95"
+                onClick={() => onStatusChange(statusFilter === status.key ? 'all' : status.key)}
+              >
+                {status.label}
+                {statusFilter === status.key && <X className="ml-1 h-3 w-3" />}
+              </Button>
+            ))}
+            {showCategoryFilter && categories.map((cat) => (
+              <Button
+                key={cat}
+                variant={categoryFilter === cat ? "default" : "outline"}
+                size="sm"
+                className="shrink-0 h-9 px-4 rounded-full text-sm touch-manipulation active:scale-95"
+                onClick={() => onCategoryChange(categoryFilter === cat ? 'all' : cat)}
+              >
+                {cat}
+                {categoryFilter === cat && <X className="ml-1 h-3 w-3" />}
+              </Button>
+            ))}
+            {hasActiveFilters && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="shrink-0 h-9 px-3 rounded-full text-sm text-destructive"
+                onClick={() => {
+                  onCategoryChange('all');
+                  onStatusChange('all');
+                }}
+              >
+                Limpar
+              </Button>
+            )}
+          </div>
         </div>
       )}
     </div>

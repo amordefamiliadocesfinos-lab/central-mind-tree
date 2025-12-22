@@ -17,7 +17,7 @@ import { cn } from '@/lib/utils';
 import { ProductGallery } from '@/components/ProductGallery';
 import { ProductMovementHistory } from '@/components/ProductMovementHistory';
 import { BOMEditor } from '@/components/BOMEditor';
-import { OperationsTab } from '@/components/operations/OperationsBottomNav';
+import { OperationsTab, OperationsBottomNav } from '@/components/operations/OperationsBottomNav';
 import { OperationsSearchBar } from '@/components/operations/OperationsSearchBar';
 import { OperationsTopTabs } from '@/components/operations/OperationsTopTabs';
 import { OrderCard } from '@/components/operations/OrderCard';
@@ -700,27 +700,32 @@ export default function Operacoes() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
+    <div className="min-h-screen bg-background no-overflow-x">
+      {/* Header - Sticky with safe area */}
+      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b safe-area-pt">
+        <div className="flex items-center justify-between px-4 h-14">
+          <div className="flex items-center gap-3 min-w-0">
             <Link to="/">
-              <Button variant="ghost" size="icon" className="h-10 w-10">
+              <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
-            <h1 className="text-xl font-bold">Operações</h1>
+            <h1 className="text-lg sm:text-xl font-bold truncate">Operações</h1>
           </div>
-          <KPICards kpis={kpis} compact />
+          <div className="hidden sm:block">
+            <KPICards kpis={kpis} compact />
+          </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="p-4 pb-24 space-y-4">
+      {/* Main Content - with bottom padding for fixed nav */}
+      <main className="px-4 pt-2 pb-bottom-nav space-y-4 no-overflow-x">
         <OperationsTopTabs activeTab={activeTab} onTabChange={handleTabChange} />
         {renderContent()}
       </main>
+
+      {/* Bottom Navigation */}
+      <OperationsBottomNav activeTab={activeTab} onTabChange={handleTabChange} />
 
       {/* Edit Product Dialog */}
       <Dialog open={!!editingProduct} onOpenChange={(open) => !open && setEditingProduct(null)}>
