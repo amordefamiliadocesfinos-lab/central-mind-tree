@@ -93,7 +93,10 @@ export function ProductCard({
               className="h-10"
               onClick={(e) => {
                 e.stopPropagation();
-                onHistory?.(product.id);
+                console.log('History button clicked for product:', product.id, 'onHistory function exists:', !!onHistory);
+                if (onHistory) {
+                  onHistory(product.id);
+                }
               }}
             >
               <History className="h-4 w-4" />
