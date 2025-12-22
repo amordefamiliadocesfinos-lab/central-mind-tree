@@ -9,13 +9,14 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useMeetings, Meeting, MeetingItem } from '@/hooks/useMeetings';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   agendada: { label: 'Agendada', color: 'bg-blue-500' },
@@ -224,55 +225,59 @@ export default function ReuniaoDetalhe() {
   const acaoItems = meeting.items?.filter(i => i.item_type === 'acao' || i.item_type === 'decisao') || [];
 
   return (
-    <div className="min-h-screen bg-background p-4 pb-24">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/reunioes')}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <h1 className="text-xl font-bold">{meeting.title}</h1>
-              <p className="text-sm text-muted-foreground">
-                {format(new Date(meeting.meeting_date + 'T12:00:00'), "EEEE, d 'de' MMMM", { locale: ptBR })} às {meeting.start_time.substring(0, 5)}
-              </p>
+    <div className="min-h-screen bg-background pb-24">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b safe-area-pt">
+        <div className="max-w-4xl mx-auto px-4 py-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0" onClick={() => navigate('/reunioes')}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div className="min-w-0">
+                <h1 className="text-base md:text-xl font-bold truncate">{meeting.title}</h1>
+                <p className="text-xs md:text-sm text-muted-foreground truncate">
+                  {format(new Date(meeting.meeting_date + 'T12:00:00'), "EEE, d MMM", { locale: ptBR })} • {meeting.start_time.substring(0, 5)}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <Select value={meeting.status} onValueChange={handleStatusChange}>
+                <SelectTrigger className="w-auto min-w-[100px] md:w-[140px] h-10">
+                  <Badge className={cn(status.color, "text-white text-xs")}>{status.label}</Badge>
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(STATUS_LABELS).map(([key, val]) => (
+                    <SelectItem key={key} value={key}>{val.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="icon" className="h-10 w-10 md:w-auto md:px-3" onClick={exportAta}>
+                <FileText className="h-4 w-4" />
+                <span className="hidden md:inline ml-1">Exportar</span>
+              </Button>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <Select value={meeting.status} onValueChange={handleStatusChange}>
-              <SelectTrigger className="w-[140px]">
-                <Badge className={`${status.color} text-white`}>{status.label}</Badge>
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(STATUS_LABELS).map(([key, val]) => (
-                  <SelectItem key={key} value={key}>{val.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button variant="outline" size="sm" onClick={exportAta}>
-              <FileText className="h-4 w-4 mr-1" />
-              Exportar
-            </Button>
-          </div>
         </div>
+      </div>
 
+      <div className="max-w-4xl mx-auto px-4 py-4">
         {/* Active Timer */}
         {activeItemId && (
           <Card className="mb-4 border-primary bg-primary/5">
             <CardContent className="py-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="text-2xl font-mono font-bold text-primary">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="text-xl md:text-2xl font-mono font-bold text-primary shrink-0">
                     {formatTimer(itemTimer)}
                   </div>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-xs md:text-sm text-muted-foreground truncate">
                     {meeting.items?.find(i => i.id === activeItemId)?.title}
                   </span>
                 </div>
-                <Button size="sm" variant="destructive" onClick={handleStopItem}>
-                  <Check className="h-4 w-4 mr-1" />
-                  Concluir
+                <Button size="sm" variant="destructive" onClick={handleStopItem} className="h-9 shrink-0">
+                  <Check className="h-4 w-4 md:mr-1" />
+                  <span className="hidden md:inline">Concluir</span>
                 </Button>
               </div>
             </CardContent>
@@ -281,10 +286,10 @@ export default function ReuniaoDetalhe() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="estrutura">Estrutura</TabsTrigger>
-            <TabsTrigger value="execucao">Execução</TabsTrigger>
-            <TabsTrigger value="acoes">Ações</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 h-11">
+            <TabsTrigger value="estrutura" className="text-xs md:text-sm">Estrutura</TabsTrigger>
+            <TabsTrigger value="execucao" className="text-xs md:text-sm">Execução</TabsTrigger>
+            <TabsTrigger value="acoes" className="text-xs md:text-sm">Ações</TabsTrigger>
           </TabsList>
 
           {/* Estrutura Tab */}
@@ -489,59 +494,56 @@ export default function ReuniaoDetalhe() {
       </div>
 
       {/* New Item Dialog */}
-      <Dialog open={showNewItemDialog} onOpenChange={setShowNewItemDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Novo Item de Pauta</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
+      <ResponsiveDialog open={showNewItemDialog} onOpenChange={setShowNewItemDialog} title="Novo Item de Pauta">
+        <div className="space-y-4 p-4 md:p-0">
+          <div className="space-y-2">
+            <Label>Título *</Label>
+            <Input
+              className="h-11"
+              value={newItem.title}
+              onChange={(e) => setNewItem(prev => ({ ...prev, title: e.target.value }))}
+              placeholder="Assunto a ser discutido"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Descrição</Label>
+            <Textarea
+              value={newItem.description}
+              onChange={(e) => setNewItem(prev => ({ ...prev, description: e.target.value }))}
+              rows={2}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label>Título *</Label>
+              <Label>Responsável</Label>
+              <Select value={newItem.owner_id} onValueChange={(v) => setNewItem(prev => ({ ...prev, owner_id: v }))}>
+                <SelectTrigger className="h-11">
+                  <SelectValue placeholder="Selecionar" />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.map(u => (
+                    <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Duração (min)</Label>
               <Input
-                value={newItem.title}
-                onChange={(e) => setNewItem(prev => ({ ...prev, title: e.target.value }))}
-                placeholder="Assunto a ser discutido"
+                type="number"
+                className="h-11"
+                min={1}
+                value={newItem.duration_minutes}
+                onChange={(e) => setNewItem(prev => ({ ...prev, duration_minutes: parseInt(e.target.value) || 5 }))}
               />
-            </div>
-            <div className="space-y-2">
-              <Label>Descrição</Label>
-              <Textarea
-                value={newItem.description}
-                onChange={(e) => setNewItem(prev => ({ ...prev, description: e.target.value }))}
-                rows={2}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Responsável</Label>
-                <Select value={newItem.owner_id} onValueChange={(v) => setNewItem(prev => ({ ...prev, owner_id: v }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecionar" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {users.map(u => (
-                      <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Duração (min)</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  value={newItem.duration_minutes}
-                  onChange={(e) => setNewItem(prev => ({ ...prev, duration_minutes: parseInt(e.target.value) || 5 }))}
-                />
-              </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNewItemDialog(false)}>Cancelar</Button>
-            <Button onClick={handleAddItem}>Adicionar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <div className="flex gap-3 pt-4 pb-safe-bottom">
+            <Button variant="outline" onClick={() => setShowNewItemDialog(false)} className="flex-1 h-11">Cancelar</Button>
+            <Button onClick={handleAddItem} className="flex-1 h-11">Adicionar</Button>
+          </div>
+        </div>
+      </ResponsiveDialog>
     </div>
   );
 }

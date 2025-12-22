@@ -4,17 +4,18 @@ import { Plus, Calendar, Users, Clock, MapPin, ArrowLeft, MoreVertical, Trash2, 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
+import { FullScreenDialog } from '@/components/ui/responsive-dialog';
 import { useMeetings, Meeting, AppUser } from '@/hooks/useMeetings';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { cn } from '@/lib/utils';
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   agendada: { label: 'Agendada', color: 'bg-blue-500' },
@@ -110,55 +111,59 @@ export default function Reunioes() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 pb-24">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-2xl font-bold">Reuniões</h1>
-          </div>
-          <div className="flex items-center gap-2">
-            <Select value={activeUserId || ''} onValueChange={setActiveUserId}>
-              <SelectTrigger className="w-[140px]">
-                <User className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Usuário" />
-              </SelectTrigger>
-              <SelectContent>
-                {users.map(user => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Button onClick={() => setShowNewDialog(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nova
-            </Button>
+    <div className="min-h-screen bg-background pb-24">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b safe-area-pt">
+        <div className="max-w-4xl mx-auto px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" className="h-10 w-10" onClick={() => navigate('/')}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <h1 className="text-xl font-bold">Reuniões</h1>
+            </div>
+            <div className="flex items-center gap-2">
+              <Select value={activeUserId || ''} onValueChange={setActiveUserId}>
+                <SelectTrigger className="w-[120px] md:w-[140px] h-10">
+                  <User className="h-4 w-4 mr-1 md:mr-2 shrink-0" />
+                  <SelectValue placeholder="Usuário" />
+                </SelectTrigger>
+                <SelectContent>
+                  {users.map(user => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button onClick={() => setShowNewDialog(true)} className="h-10 px-3 md:px-4">
+                <Plus className="h-4 w-4 md:mr-2" />
+                <span className="hidden md:inline">Nova</span>
+              </Button>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <Card>
-            <CardContent className="pt-4 text-center">
-              <div className="text-2xl font-bold text-primary">{stats.thisWeek}</div>
-              <p className="text-xs text-muted-foreground">Esta semana</p>
+      <div className="max-w-4xl mx-auto px-4 py-4">
+        {/* Stats - Horizontal scroll on mobile */}
+        <div className="grid grid-cols-3 gap-2 md:gap-4 mb-4">
+          <Card className="min-w-0">
+            <CardContent className="p-3 md:pt-4 text-center">
+              <div className="text-xl md:text-2xl font-bold text-primary">{stats.thisWeek}</div>
+              <p className="text-[10px] md:text-xs text-muted-foreground truncate">Esta semana</p>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-4 text-center">
-              <div className="text-2xl font-bold text-amber-500">{stats.upcoming}</div>
-              <p className="text-xs text-muted-foreground">Próximos 7 dias</p>
+          <Card className="min-w-0">
+            <CardContent className="p-3 md:pt-4 text-center">
+              <div className="text-xl md:text-2xl font-bold text-amber-500">{stats.upcoming}</div>
+              <p className="text-[10px] md:text-xs text-muted-foreground truncate">Próximos 7d</p>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-4 text-center">
-              <div className="text-2xl font-bold text-muted-foreground">{stats.total}</div>
-              <p className="text-xs text-muted-foreground">Total</p>
+          <Card className="min-w-0">
+            <CardContent className="p-3 md:pt-4 text-center">
+              <div className="text-xl md:text-2xl font-bold text-muted-foreground">{stats.total}</div>
+              <p className="text-[10px] md:text-xs text-muted-foreground truncate">Total</p>
             </CardContent>
           </Card>
         </div>
@@ -176,7 +181,7 @@ export default function Reunioes() {
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2 md:space-y-3">
             {meetings.map(meeting => {
               const status = STATUS_LABELS[meeting.status] || STATUS_LABELS.agendada;
               const owner = meeting.owner;
@@ -184,32 +189,32 @@ export default function Reunioes() {
               return (
                 <Card 
                   key={meeting.id} 
-                  className="cursor-pointer hover:border-primary/50 transition-colors"
+                  className="cursor-pointer active:scale-[0.99] hover:border-primary/50 transition-all touch-manipulation"
                   onClick={() => navigate(`/reunioes/${meeting.id}`)}
                 >
-                  <CardContent className="py-4">
-                    <div className="flex items-start justify-between">
+                  <CardContent className="py-3 md:py-4">
+                    <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Badge className={`${status.color} text-white text-xs`}>
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          <Badge className={cn(status.color, "text-white text-xs shrink-0")}>
                             {status.label}
                           </Badge>
-                          <h3 className="font-medium truncate">{meeting.title}</h3>
+                          <h3 className="font-medium truncate text-sm md:text-base">{meeting.title}</h3>
                         </div>
                         
-                        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground mt-2">
+                        <div className="flex flex-wrap items-center gap-2 md:gap-3 text-xs md:text-sm text-muted-foreground mt-2">
                           <span className="flex items-center gap-1">
                             <Calendar className="h-3 w-3" />
                             {formatDate(meeting.meeting_date)}
                           </span>
                           <span className="flex items-center gap-1">
                             <Clock className="h-3 w-3" />
-                            {formatTime(meeting.start_time)} ({meeting.duration_minutes}min)
+                            {formatTime(meeting.start_time)}
                           </span>
                           {meeting.location && (
-                            <span className="flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {meeting.location}
+                            <span className="flex items-center gap-1 max-w-[100px] md:max-w-none">
+                              <MapPin className="h-3 w-3 shrink-0" />
+                              <span className="truncate">{meeting.location}</span>
                             </span>
                           )}
                           {owner && (
@@ -223,7 +228,7 @@ export default function Reunioes() {
                       
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                          <Button variant="ghost" size="icon">
+                          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0">
                             <MoreVertical className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -257,122 +262,124 @@ export default function Reunioes() {
       </div>
 
       {/* New Meeting Dialog */}
-      <Dialog open={showNewDialog} onOpenChange={setShowNewDialog}>
-        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Nova Reunião</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
+      <FullScreenDialog open={showNewDialog} onOpenChange={setShowNewDialog} title="Nova Reunião">
+        <div className="space-y-4 p-4 md:p-0">
+          <div className="space-y-2">
+            <Label htmlFor="title">Título *</Label>
+            <Input
+              id="title"
+              className="h-11"
+              value={newMeeting.title}
+              onChange={(e) => setNewMeeting(prev => ({ ...prev, title: e.target.value }))}
+              placeholder="Ex: Alinhamento semanal"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="objective">Objetivo</Label>
+            <Textarea
+              id="objective"
+              value={newMeeting.objective}
+              onChange={(e) => setNewMeeting(prev => ({ ...prev, objective: e.target.value }))}
+              placeholder="Qual o objetivo desta reunião?"
+              rows={2}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="title">Título *</Label>
+              <Label htmlFor="date">Data *</Label>
               <Input
-                id="title"
-                value={newMeeting.title}
-                onChange={(e) => setNewMeeting(prev => ({ ...prev, title: e.target.value }))}
-                placeholder="Ex: Alinhamento semanal"
+                id="date"
+                type="date"
+                className="h-11"
+                value={newMeeting.meeting_date}
+                onChange={(e) => setNewMeeting(prev => ({ ...prev, meeting_date: e.target.value }))}
               />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="objective">Objetivo</Label>
-              <Textarea
-                id="objective"
-                value={newMeeting.objective}
-                onChange={(e) => setNewMeeting(prev => ({ ...prev, objective: e.target.value }))}
-                placeholder="Qual o objetivo desta reunião?"
-                rows={2}
+              <Label htmlFor="time">Horário *</Label>
+              <Input
+                id="time"
+                type="time"
+                className="h-11"
+                value={newMeeting.start_time}
+                onChange={(e) => setNewMeeting(prev => ({ ...prev, start_time: e.target.value }))}
               />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="date">Data *</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={newMeeting.meeting_date}
-                  onChange={(e) => setNewMeeting(prev => ({ ...prev, meeting_date: e.target.value }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="time">Horário *</Label>
-                <Input
-                  id="time"
-                  type="time"
-                  value={newMeeting.start_time}
-                  onChange={(e) => setNewMeeting(prev => ({ ...prev, start_time: e.target.value }))}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="duration">Duração (min)</Label>
-                <Input
-                  id="duration"
-                  type="number"
-                  min={15}
-                  step={15}
-                  value={newMeeting.duration_minutes}
-                  onChange={(e) => setNewMeeting(prev => ({ ...prev, duration_minutes: parseInt(e.target.value) || 60 }))}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="location">Local/Link</Label>
-                <Input
-                  id="location"
-                  value={newMeeting.location}
-                  onChange={(e) => setNewMeeting(prev => ({ ...prev, location: e.target.value }))}
-                  placeholder="Sala ou link"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Responsável</Label>
-              <Select
-                value={newMeeting.owner_id}
-                onValueChange={(v) => setNewMeeting(prev => ({ ...prev, owner_id: v }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecionar responsável" />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.map(user => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.name} {user.role && `(${user.role})`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Participantes</Label>
-              <div className="border rounded-lg p-3 space-y-2 max-h-32 overflow-y-auto">
-                {users.map(user => (
-                  <label key={user.id} className="flex items-center gap-2 cursor-pointer">
-                    <Checkbox
-                      checked={newMeeting.participant_ids.includes(user.id)}
-                      onCheckedChange={() => toggleParticipant(user.id)}
-                    />
-                    <span className="text-sm">{user.name}</span>
-                    {user.role && <span className="text-xs text-muted-foreground">({user.role})</span>}
-                  </label>
-                ))}
-              </div>
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowNewDialog(false)}>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label htmlFor="duration">Duração (min)</Label>
+              <Input
+                id="duration"
+                type="number"
+                className="h-11"
+                min={15}
+                step={15}
+                value={newMeeting.duration_minutes}
+                onChange={(e) => setNewMeeting(prev => ({ ...prev, duration_minutes: parseInt(e.target.value) || 60 }))}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="location">Local/Link</Label>
+              <Input
+                id="location"
+                className="h-11"
+                value={newMeeting.location}
+                onChange={(e) => setNewMeeting(prev => ({ ...prev, location: e.target.value }))}
+                placeholder="Sala ou link"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Responsável</Label>
+            <Select
+              value={newMeeting.owner_id}
+              onValueChange={(v) => setNewMeeting(prev => ({ ...prev, owner_id: v }))}
+            >
+              <SelectTrigger className="h-11">
+                <SelectValue placeholder="Selecionar responsável" />
+              </SelectTrigger>
+              <SelectContent>
+                {users.map(user => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.name} {user.role && `(${user.role})`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Participantes</Label>
+            <div className="border rounded-lg p-3 space-y-3 max-h-40 overflow-y-auto">
+              {users.map(user => (
+                <label key={user.id} className="flex items-center gap-3 cursor-pointer min-h-[44px] touch-manipulation">
+                  <Checkbox
+                    checked={newMeeting.participant_ids.includes(user.id)}
+                    onCheckedChange={() => toggleParticipant(user.id)}
+                    className="h-5 w-5"
+                  />
+                  <span className="text-sm">{user.name}</span>
+                  {user.role && <span className="text-xs text-muted-foreground">({user.role})</span>}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-4 pb-safe-bottom">
+            <Button variant="outline" onClick={() => setShowNewDialog(false)} className="flex-1 h-11">
               Cancelar
             </Button>
-            <Button onClick={handleCreate}>
+            <Button onClick={handleCreate} className="flex-1 h-11">
               Criar Reunião
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </div>
+      </FullScreenDialog>
     </div>
   );
 }
