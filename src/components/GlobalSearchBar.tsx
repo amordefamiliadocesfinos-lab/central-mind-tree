@@ -134,10 +134,12 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
-  const handleDragStart = useCallback((e: React.MouseEvent) => {
+  const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
-      setDragOffset({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      setDragOffset({ x: clientX - rect.left, y: clientY - rect.top });
       setIsDragging(true);
     }
   }, []);
@@ -145,23 +147,29 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
   useEffect(() => {
     if (!isDragging) return;
 
-    const handleMouseMove = (e: MouseEvent) => {
-      const newX = Math.max(0, Math.min(window.innerWidth - 160, e.clientX - dragOffset.x));
-      const newY = Math.max(0, Math.min(window.innerHeight - 50, e.clientY - dragOffset.y));
+    const handleMove = (e: MouseEvent | TouchEvent) => {
+      const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+      const newX = Math.max(0, Math.min(window.innerWidth - 160, clientX - dragOffset.x));
+      const newY = Math.max(0, Math.min(window.innerHeight - 50, clientY - dragOffset.y));
       setPosition({ x: newX, y: newY });
     };
 
-    const handleMouseUp = () => {
+    const handleEnd = () => {
       setIsDragging(false);
       localStorage.setItem(POSITION_KEY, JSON.stringify(position));
     };
 
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
+    document.addEventListener("mousemove", handleMove);
+    document.addEventListener("mouseup", handleEnd);
+    document.addEventListener("touchmove", handleMove, { passive: false });
+    document.addEventListener("touchend", handleEnd);
 
     return () => {
-      document.removeEventListener("mousemove", handleMouseMove);
-      document.removeEventListener("mouseup", handleMouseUp);
+      document.removeEventListener("mousemove", handleMove);
+      document.removeEventListener("mouseup", handleEnd);
+      document.removeEventListener("touchmove", handleMove);
+      document.removeEventListener("touchend", handleEnd);
     };
   }, [isDragging, dragOffset, position]);
 
@@ -270,7 +278,8 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
         <div className="relative p-2 flex items-center gap-1">
           <div
             onMouseDown={handleDragStart}
-            className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded touch-none"
+            onTouchStart={handleDragStart}
+            className="cursor-grab active:cursor-grabbing p-1 hover:bg-muted rounded touch-none select-none"
             title="Arrastar"
           >
             <GripVertical className="h-4 w-4 text-muted-foreground" />
