@@ -18,6 +18,9 @@ import Rotina from "./pages/Rotina";
 import Operacoes from "./pages/Operacoes";
 import Conteudo from "./pages/Conteudo";
 import Planilhas from "./pages/Planilhas";
+import Reunioes from "./pages/Reunioes";
+import ReuniaoDetalhe from "./pages/ReuniaoDetalhe";
+import MinhaArea from "./pages/MinhaArea";
 import NotFound from "./pages/NotFound";
 import { useScheduledTaskPromotion } from "./hooks/useScheduledTaskPromotion";
 
@@ -41,6 +44,9 @@ function AppContent() {
         <Route path="/operacoes" element={<Operacoes />} />
         <Route path="/conteudo" element={<Conteudo />} />
         <Route path="/planilhas" element={<Planilhas />} />
+        <Route path="/reunioes" element={<Reunioes />} />
+        <Route path="/reunioes/:id" element={<ReuniaoDetalhe />} />
+        <Route path="/minha-area" element={<MinhaArea />} />
         <Route path="/task/:id" element={<TaskEdit />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
