@@ -683,8 +683,19 @@ const Calendario = () => {
         onClose={() => setDayTasksModalOpen(false)}
         date={dayTasksModalDate}
         tasks={tasksByDate[dayTasksModalDate] || []}
+        meetings={meetingsByDate[dayTasksModalDate] || []}
         nodesMap={nodesMap}
         onTaskUpdated={loadData}
+        onCreateTask={() => {
+          setDayTasksModalOpen(false);
+          setSelectedDate(dayTasksModalDate);
+          handleChooseTask();
+        }}
+        onCreateMeeting={() => {
+          setDayTasksModalOpen(false);
+          setSelectedDate(dayTasksModalDate);
+          handleChooseMeeting();
+        }}
       />
     </div>
   );
