@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ArrowLeft, Plus, Trash2, Star, Check, Save, RotateCcw, Pencil, GripVertical, ChevronUp, ChevronDown, CalendarIcon, X } from "lucide-react";
+import { SortableList, SortableHandle } from "@/components/ui/sortable-list";
 import { toast } from "sonner";
 import { format, subWeeks, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -662,66 +663,45 @@ const Planejamento = () => {
             {currentPlan.prioritizedTaskIds.length > 0 && (
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">
-                  Fila de prioridades:
+                  Fila de prioridades (arraste para reordenar):
                 </p>
-                <div className="space-y-1 max-h-48 overflow-y-auto">
-                  {currentPlan.prioritizedTaskIds.map((id, i) => {
+                <SortableList
+                  items={currentPlan.prioritizedTaskIds}
+                  keyExtractor={(id) => id}
+                  onReorder={(newOrder) => {
+                    setCurrentPlan((prev) => ({
+                      ...prev,
+                      prioritizedTaskIds: newOrder,
+                    }));
+                  }}
+                  renderItem={(id, index, isDragging) => {
                     const task = tasks.find((t) => t.id === id);
-                    const isFirst = i === 0;
-                    const isLast = i === currentPlan.prioritizedTaskIds.length - 1;
-                    
-                    const moveUp = () => {
-                      if (isFirst) return;
-                      setCurrentPlan((prev) => {
-                        const newOrder = [...prev.prioritizedTaskIds];
-                        [newOrder[i - 1], newOrder[i]] = [newOrder[i], newOrder[i - 1]];
-                        return { ...prev, prioritizedTaskIds: newOrder };
-                      });
-                    };
-                    
-                    const moveDown = () => {
-                      if (isLast) return;
-                      setCurrentPlan((prev) => {
-                        const newOrder = [...prev.prioritizedTaskIds];
-                        [newOrder[i], newOrder[i + 1]] = [newOrder[i + 1], newOrder[i]];
-                        return { ...prev, prioritizedTaskIds: newOrder };
-                      });
-                    };
-                    
                     return task ? (
                       <div
-                        key={id}
-                        className="flex items-center gap-2 text-sm p-2 rounded bg-amber-500/10"
+                        className={cn(
+                          "flex items-center gap-2 text-sm p-2 rounded bg-amber-500/10 border border-transparent",
+                          isDragging && "border-amber-500 shadow-lg"
+                        )}
                       >
-                        <div className="flex flex-col gap-0.5">
-                          <button
-                            onClick={moveUp}
-                            disabled={isFirst}
-                            className={cn(
-                              "p-1 rounded hover:bg-amber-500/20 transition-colors",
-                              isFirst && "opacity-30 cursor-not-allowed"
-                            )}
-                          >
-                            <ChevronUp className="h-3 w-3" />
-                          </button>
-                          <button
-                            onClick={moveDown}
-                            disabled={isLast}
-                            className={cn(
-                              "p-1 rounded hover:bg-amber-500/20 transition-colors",
-                              isLast && "opacity-30 cursor-not-allowed"
-                            )}
-                          >
-                            <ChevronDown className="h-3 w-3" />
-                          </button>
-                        </div>
-                        <GripVertical className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                        <span className="text-muted-foreground font-medium w-5">{i + 1}.</span>
+                        <SortableHandle />
+                        <span className="text-muted-foreground font-medium w-5">{index + 1}.</span>
                         <span className="flex-1 truncate">{task.title}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 opacity-60 hover:opacity-100"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleTaskPrioritized(task.id);
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
                       </div>
                     ) : null;
-                  })}
-                </div>
+                  }}
+                  className="max-h-48 overflow-y-auto"
+                />
               </div>
             )}
 
