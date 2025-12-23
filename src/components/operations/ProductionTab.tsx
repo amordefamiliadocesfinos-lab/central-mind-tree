@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useProductionLogs, ProductionLog, PROCESS_LABELS, PRODUCTION_PERIODS } from '@/hooks/useProductionLogs';
 import { useOrders, Product } from '@/hooks/useOrders';
 import { useMRP } from '@/hooks/useMRP';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -30,7 +31,6 @@ export function ProductionTab({ products, onRefetch }: ProductionTabProps) {
     updateLog,
     deleteLog,
     getSummary,
-    getUniqueEmployees,
   } = useProductionLogs();
   const { consumeMaterials } = useMRP();
 
@@ -43,12 +43,23 @@ export function ProductionTab({ products, onRefetch }: ProductionTabProps) {
   const [filterProcess, setFilterProcess] = useState('all');
   const [showCharts, setShowCharts] = useState(true);
 
+  // Fetch collaborators from app_users
+  const fetchCollaborators = async () => {
+    const { data } = await supabase
+      .from('app_users')
+      .select('name')
+      .eq('is_active', true)
+      .order('name');
+    
+    setEmployees((data || []).map(u => u.name));
+  };
+
   useEffect(() => {
     if (activeSubTab === 'logs') {
       fetchLogs(selectedDate);
-      getUniqueEmployees().then(setEmployees);
+      fetchCollaborators();
     }
-  }, [selectedDate, activeSubTab, fetchLogs, getUniqueEmployees]);
+  }, [selectedDate, activeSubTab, fetchLogs]);
 
   const filteredLogs = useMemo(() => {
     return logs.filter(log => {
@@ -96,8 +107,6 @@ export function ProductionTab({ products, onRefetch }: ProductionTabProps) {
   const handleSave = async (data: Omit<ProductionLog, 'id' | 'created_at' | 'updated_at' | 'product'>, consumeStock?: boolean) => {
     const result = await createLog(data);
     if (result) {
-      await getUniqueEmployees().then(setEmployees);
-      
       // Consume stock via BOM if requested
       if (consumeStock && data.product_id && data.quantity > 0) {
         await consumeMaterials(
@@ -108,6 +117,11 @@ export function ProductionTab({ products, onRefetch }: ProductionTabProps) {
       }
     }
     return result;
+  };
+
+  // Callback to refresh employees after adding new one
+  const handleRefreshEmployees = () => {
+    fetchCollaborators();
   };
 
   const handleUpdate = async (id: string, data: Partial<ProductionLog>) => {
@@ -343,6 +357,7 @@ export function ProductionTab({ products, onRefetch }: ProductionTabProps) {
                 onUpdate={handleUpdate}
                 onDelete={handleDelete}
                 defaultDate={selectedDate}
+                onRefreshEmployees={handleRefreshEmployees}
               />
             </div>
           )}

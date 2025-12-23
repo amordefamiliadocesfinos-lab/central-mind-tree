@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useProductionOrders, ProductionOrder, ProductionEntry, PRODUCTION_ORDER_STATUS } from '@/hooks/useProductionOrders';
 import { useProcesses, Process } from '@/hooks/useProcesses';
 import { useOrders, Product } from '@/hooks/useOrders';
+import { supabase } from '@/integrations/supabase/client';
 import { ResponsiveDialog, FullScreenDialog } from '@/components/ui/responsive-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { toast } from 'sonner';
 import { 
   Plus, Factory, Package, Users, CheckCircle2, 
   ChevronRight, Clock, Trash2, Play, Check
@@ -112,6 +114,8 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
     });
 
     setShowEntryForm(false);
+    setShowNewEmployee(false);
+    setNewEmployeeName('');
     setNewEntry({
       process_id: '',
       employee_name: '',
@@ -150,16 +154,43 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
     }
   };
 
-  // Get unique employees from entries
-  const uniqueEmployees = useMemo(() => {
-    const employees = new Set<string>();
-    orders.forEach(order => {
-      (order.entries || []).forEach(entry => {
-        employees.add(entry.employee_name);
-      });
-    });
-    return Array.from(employees);
-  }, [orders]);
+  // Fetch collaborators from app_users
+  const [collaborators, setCollaborators] = useState<string[]>([]);
+  const [showNewEmployee, setShowNewEmployee] = useState(false);
+  const [newEmployeeName, setNewEmployeeName] = useState('');
+
+  const fetchCollaborators = async () => {
+    const { data } = await supabase
+      .from('app_users')
+      .select('name')
+      .eq('is_active', true)
+      .order('name');
+    
+    setCollaborators((data || []).map(u => u.name));
+  };
+
+  useEffect(() => {
+    fetchCollaborators();
+  }, []);
+
+  const handleAddNewEmployee = async () => {
+    if (newEmployeeName.trim()) {
+      const { error } = await supabase
+        .from('app_users')
+        .insert({ name: newEmployeeName.trim(), is_active: true });
+      
+      if (error) {
+        toast.error('Erro ao adicionar colaborador');
+      } else {
+        toast.success('Colaborador adicionado!');
+        fetchCollaborators();
+      }
+      
+      setNewEntry({ ...newEntry, employee_name: newEmployeeName.trim() });
+      setShowNewEmployee(false);
+      setNewEmployeeName('');
+    }
+  };
 
   if (loading) {
     return <p className="text-muted-foreground text-center py-4">Carregando...</p>;
@@ -561,18 +592,42 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
 
             <div>
               <Label>Funcionário *</Label>
-              <Input
-                className="h-12"
-                value={newEntry.employee_name}
-                onChange={(e) => setNewEntry({ ...newEntry, employee_name: e.target.value })}
-                placeholder="Nome do funcionário"
-                list="employees-list"
-              />
-              <datalist id="employees-list">
-                {uniqueEmployees.map(emp => (
-                  <option key={emp} value={emp} />
-                ))}
-              </datalist>
+              {showNewEmployee ? (
+                <div className="flex gap-2">
+                  <Input
+                    className="h-12 flex-1"
+                    placeholder="Nome do novo funcionário"
+                    value={newEmployeeName}
+                    onChange={(e) => setNewEmployeeName(e.target.value)}
+                  />
+                  <Button onClick={handleAddNewEmployee} className="h-12">
+                    Adicionar
+                  </Button>
+                </div>
+              ) : (
+                <Select
+                  value={newEntry.employee_name || ''}
+                  onValueChange={(v) => {
+                    if (v === '_new') {
+                      setShowNewEmployee(true);
+                    } else {
+                      setNewEntry({ ...newEntry, employee_name: v });
+                    }
+                  }}
+                >
+                  <SelectTrigger className="h-12">
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {collaborators.map((emp) => (
+                      <SelectItem key={emp} value={emp}>{emp}</SelectItem>
+                    ))}
+                    <SelectItem value="_new" className="text-primary">
+                      + Novo funcionário
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
