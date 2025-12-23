@@ -3,7 +3,6 @@ import { useLocation, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { NodeBox } from "@/components/NodeBox";
 import { NodeTree } from "@/components/NodeTree";
-import { TaskBar } from "@/components/TaskBar";
 import { TasksDialog } from "@/components/TasksDialog";
 import { NodeConnectionsOverlay } from "@/components/NodeConnectionsOverlay";
 import { ReplanningBanner } from "@/components/ReplanningBanner";
@@ -11,6 +10,7 @@ import { DueDateBanner } from "@/components/DueDateBanner";
 import { FollowUpBanner } from "@/components/FollowUpBanner";
 import { CEOLegend } from "@/components/CEOLegend";
 import { useToast } from "@/hooks/use-toast";
+import { useLinesMode } from "@/contexts/LinesModeContext";
 
 interface Node {
   id: string;
@@ -30,7 +30,7 @@ const Index = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [linesMode, setLinesMode] = useState<"off" | "resumo" | "detalhe" | "ceo">("off");
+  const { linesMode, setLinesMode, setShowTaskBar } = useLinesMode();
   const [tasksDialogState, setTasksDialogState] = useState<{
     open: boolean;
     nodeId: string;
@@ -39,6 +39,12 @@ const Index = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Enable taskbar when on Index page
+  useEffect(() => {
+    setShowTaskBar(true);
+    return () => setShowTaskBar(false);
+  }, [setShowTaskBar]);
 
   // Detectar se devemos reabrir o diálogo de tarefas ao voltar da página de edição
   useEffect(() => {
@@ -393,13 +399,6 @@ const Index = () => {
       )}
       <NodeConnectionsOverlay linesMode={linesMode} />
       <CEOLegend visible={linesMode === "ceo"} />
-      {/* TaskBar above footer for lines mode control */}
-      <div className="fixed bottom-14 left-4 z-[9998]">
-        <TaskBar 
-          linesMode={linesMode}
-          onLinesModeChange={setLinesMode}
-        />
-      </div>
       <ReplanningBanner />
       <DueDateBanner />
       <FollowUpBanner />
