@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { 
   Play, Pause, RotateCcw, Clock, Focus, Calendar, Timer, 
   ShoppingCart, FileText, Undo2, Redo2, Home, FileSpreadsheet,
-  Users, User
+  Users, User, UsersRound
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUndoRedoContext } from "@/contexts/UndoRedoContext";
@@ -15,6 +15,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLinesMode } from "@/contexts/LinesModeContext";
+import { CollaboratorsPanel } from "./CollaboratorsPanel";
 
 interface Task {
   id: string;
@@ -58,6 +59,7 @@ export function GlobalFooterBar() {
   const [timeInput, setTimeInput] = useState("00:00:00");
   const [stateId, setStateId] = useState<string | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [collaboratorsOpen, setCollaboratorsOpen] = useState(false);
   const location = useLocation();
   const { toast } = useToast();
   const { undo, redo, canUndo, canRedo } = useUndoRedoContext();
@@ -562,7 +564,28 @@ export function GlobalFooterBar() {
               <User className="h-4 w-4" />
             </Link>
           </Button>
+
+          {/* Collaborators button */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="sm"
+                variant={collaboratorsOpen ? 'secondary' : 'ghost'}
+                className={cn("h-8 w-8 p-0", collaboratorsOpen && "bg-secondary")}
+                onClick={() => setCollaboratorsOpen(true)}
+              >
+                <UsersRound className="h-4 w-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Colaboradores</TooltipContent>
+          </Tooltip>
         </div>
+
+        {/* Collaborators Panel */}
+        <CollaboratorsPanel 
+          open={collaboratorsOpen} 
+          onOpenChange={setCollaboratorsOpen} 
+        />
 
         {/* Right: Timer */}
         <div className="flex items-center gap-1 md:gap-2">
