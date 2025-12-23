@@ -1,5 +1,5 @@
-import { useState, useMemo, useCallback } from 'react';
-import { Check, ChevronLeft, ChevronRight, X, Search, Package } from 'lucide-react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
+import { Check, ChevronLeft, ChevronRight, X, Search, Package, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,9 +12,9 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { useStockCheckStore } from '@/stores/stockCheckStore';
-import { useStorageLocations, StorageLocation } from '@/hooks/useStorageLocations';
+import { useStorageLocations } from '@/hooks/useStorageLocations';
 import { useMultiLocationInventory, LocationInventory } from '@/hooks/useMultiLocationInventory';
-import { useAppStore } from '@/stores/appStore';
+import { supabase } from '@/integrations/supabase/client';
 import { getTodayISO } from '@/lib/dateUtils';
 import { toast } from 'sonner';
 
@@ -55,9 +55,12 @@ const STEPS: { key: WizardStep; label: string; progress: number }[] = [
 export function StockCheckWizard() {
   const { isWizardOpen, closeWizard, setLastStockCheckDate } = useStockCheckStore();
   const { locations } = useStorageLocations();
-  const { getProductInventoryByLocation, adjustInventory, createEntry, createExit } = useMultiLocationInventory();
-  const products = useAppStore((s) => s.products);
-  const productBalances = useAppStore((s) => s.productBalances);
+  const { getProductInventoryByLocation, adjustInventory, createEntry, createExit, getTotalBalance } = useMultiLocationInventory();
+  
+  // Local products state - fetched directly from Supabase
+  const [products, setProducts] = useState<ProductForCheck[]>([]);
+  const [productBalances, setProductBalances] = useState<Record<string, number>>({});
+  const [isLoadingProducts, setIsLoadingProducts] = useState(false);
 
   // Wizard state
   const [currentStep, setCurrentStep] = useState<WizardStep>('locations');
@@ -78,11 +81,63 @@ export function StockCheckWizard() {
   const [justification, setJustification] = useState('');
   const [countingLocation, setCountingLocation] = useState('');
 
+  // Fetch products directly when wizard opens
+  useEffect(() => {
+    if (isWizardOpen) {
+      const fetchProducts = async () => {
+        setIsLoadingProducts(true);
+        try {
+          const { data, error } = await supabase
+            .from('products')
+            .select('id, name, sku, min_stock, unit, category')
+            .eq('is_active', true)
+            .is('deleted_at', null)
+            .order('name');
+
+          if (error) {
+            console.error('Error fetching products:', error);
+            toast.error('Erro ao carregar produtos');
+            return;
+          }
+
+          const productsList = (data || []).map(p => ({
+            id: p.id,
+            name: p.name,
+            sku: p.sku,
+            min_stock: p.min_stock || 0,
+            unit: p.unit,
+            category: p.category,
+          }));
+          
+          setProducts(productsList);
+
+          // Fetch balances in parallel
+          const { data: inventoryData } = await supabase
+            .from('inventory')
+            .select('product_id, quantity');
+
+          const balances: Record<string, number> = {};
+          (inventoryData || []).forEach(item => {
+            balances[item.product_id] = (balances[item.product_id] || 0) + item.quantity;
+          });
+          setProductBalances(balances);
+        } catch (err) {
+          console.error('Error fetching products:', err);
+          toast.error('Erro ao carregar produtos');
+        } finally {
+          setIsLoadingProducts(false);
+        }
+      };
+
+      fetchProducts();
+    }
+  }, [isWizardOpen]);
+
   const stepInfo = STEPS.find(s => s.key === currentStep)!;
 
   // Filtered products for selection
   const filteredProducts = useMemo(() => {
-    let filtered = products.filter(p => p.is_active);
+    let filtered = products;
 
     if (searchTerm) {
       const search = searchTerm.toLowerCase();
@@ -144,9 +199,8 @@ export function StockCheckWizard() {
         // Pre-select ALL products when entering items step
         setLoading(true);
         try {
-          const activeProducts = products.filter(p => p.is_active);
           const itemsWithBalances = await Promise.all(
-            activeProducts.map(async (product) => {
+            products.map(async (product) => {
               const balances = await getProductInventoryByLocation(product.id);
               const filteredBalances = balances.filter(b => 
                 selectedLocations.includes(b.location || '')
