@@ -17,6 +17,7 @@ interface Task {
   status: string;
   due_date: string | null;
   node_id: string;
+  assigned_to: string | null;
 }
 
 interface Node {
@@ -46,7 +47,7 @@ export default function MinhaArea() {
       setLoading(true);
       
       const [tasksResult, nodesResult] = await Promise.all([
-        supabase.from('tasks').select('id, title, status, due_date, node_id').is('deleted_at', null),
+        supabase.from('tasks').select('id, title, status, due_date, node_id, assigned_to').is('deleted_at', null),
         supabase.from('nodes').select('id, title, color'),
       ]);
 
@@ -75,10 +76,14 @@ export default function MinhaArea() {
       .sort((a, b) => a.meeting_date.localeCompare(b.meeting_date));
   }, [myMeetings]);
 
-  // My tasks (for now all tasks, in future filter by user)
+  // My tasks - filtered by assigned_to when a user is selected
   const myTasks = useMemo(() => {
-    return tasks.filter(t => t.status !== 'concluida');
-  }, [tasks]);
+    let filteredTasks = tasks.filter(t => t.status !== 'concluida' && t.status !== 'concluído');
+    if (activeUserId) {
+      filteredTasks = filteredTasks.filter(t => t.assigned_to === activeUserId);
+    }
+    return filteredTasks;
+  }, [tasks, activeUserId]);
 
   // Tasks by status
   const tasksByStatus = useMemo(() => {

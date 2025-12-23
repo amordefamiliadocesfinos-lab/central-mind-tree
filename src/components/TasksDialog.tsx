@@ -33,6 +33,13 @@ interface Task {
   created_at: string;
   updated_at: string;
   due_date: string | null;
+  assigned_to: string | null;
+}
+
+interface AppUser {
+  id: string;
+  name: string;
+  role: string | null;
 }
 
 interface TasksDialogProps {
@@ -57,6 +64,7 @@ export function TasksDialog({
   const [isCreating, setIsCreating] = useState(false);
   const [draggedTask, setDraggedTask] = useState<string | null>(null);
   const [nodes, setNodes] = useState<{ id: string; title: string }[]>([]);
+  const [collaborators, setCollaborators] = useState<AppUser[]>([]);
   const [movingTaskId, setMovingTaskId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: "",
@@ -64,6 +72,7 @@ export function TasksDialog({
     status: "pendente" as Task["status"],
     dependency_id: null as string | null,
     progress: 0,
+    assigned_to: null as string | null,
   });
   const { toast } = useToast();
 
@@ -71,6 +80,7 @@ export function TasksDialog({
     if (open) {
       fetchTasks();
       fetchNodes();
+      fetchCollaborators();
     }
   }, [open, nodeId]);
 
@@ -89,6 +99,24 @@ export function TasksDialog({
       });
     } else {
       setNodes(data || []);
+    }
+  };
+
+  const fetchCollaborators = async () => {
+    const { data, error } = await supabase
+      .from("app_users")
+      .select("id, name, role")
+      .eq("is_active", true)
+      .order("name", { ascending: true });
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Erro ao carregar colaboradores",
+        description: error.message,
+      });
+    } else {
+      setCollaborators(data || []);
     }
   };
 
@@ -160,6 +188,7 @@ export function TasksDialog({
       dependency_id: formData.dependency_id,
       progress: formData.progress,
       order_index: maxOrder + 1,
+      assigned_to: formData.assigned_to,
     });
 
     if (error) {
@@ -170,7 +199,7 @@ export function TasksDialog({
       });
     } else {
       toast({ title: "Tarefa criada" });
-      setFormData({ title: "", description: "", status: "pendente", dependency_id: null, progress: 0 });
+      setFormData({ title: "", description: "", status: "pendente", dependency_id: null, progress: 0, assigned_to: null });
       setIsCreating(false);
       fetchTasks();
       onTasksChange();
@@ -226,7 +255,7 @@ export function TasksDialog({
 
   const cancelEdit = () => {
     setIsCreating(false);
-    setFormData({ title: "", description: "", status: "pendente", dependency_id: null, progress: 0 });
+    setFormData({ title: "", description: "", status: "pendente", dependency_id: null, progress: 0, assigned_to: null });
   };
 
   const getStatusBadgeColor = (status: Task["status"]) => {
@@ -408,6 +437,24 @@ export function TasksDialog({
                   }
                 />
               </div>
+              <Select
+                value={formData.assigned_to || "none"}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, assigned_to: value === "none" ? null : value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Responsável..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum responsável</SelectItem>
+                  {collaborators.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name} {user.role && `(${user.role})`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <div className="flex gap-2">
                 <Button
                   onClick={handleCreate}

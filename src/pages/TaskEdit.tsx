@@ -58,6 +58,14 @@ interface Task {
   on_hold_channel: string | null;
   on_hold_deadline: string | null;
   on_hold_note: string | null;
+  assigned_to: string | null;
+}
+
+interface AppUser {
+  id: string;
+  name: string;
+  role: string | null;
+  is_active: boolean;
 }
 
 interface Node {
@@ -76,6 +84,7 @@ const TaskEdit = () => {
   const [task, setTask] = useState<Task | null>(null);
   const [node, setNode] = useState<Node | null>(null);
   const [availableTasks, setAvailableTasks] = useState<Task[]>([]);
+  const [collaborators, setCollaborators] = useState<AppUser[]>([]);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -84,6 +93,7 @@ const TaskEdit = () => {
     progress: 0,
     due_date: null as Date | null,
     scheduled_date: null as Date | null,
+    assigned_to: null as string | null,
   });
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [useChecklistProgress, setUseChecklistProgress] = useState(false);
@@ -148,6 +158,7 @@ const TaskEdit = () => {
         progress: taskData.progress,
         due_date: taskData.due_date ? parseISO(taskData.due_date) : null,
         scheduled_date: taskData.scheduled_date ? parseISO(taskData.scheduled_date) : null,
+        assigned_to: taskData.assigned_to || null,
       });
       setChecklist(taskChecklist);
       setUseChecklistProgress(taskData.use_checklist_progress || false);
@@ -174,6 +185,16 @@ const TaskEdit = () => {
 
       if (tasksError) throw tasksError;
       setAvailableTasks(tasksData as unknown as Task[]);
+
+      // Fetch collaborators
+      const { data: usersData, error: usersError } = await supabase
+        .from("app_users")
+        .select("id, name, role, is_active")
+        .eq("is_active", true)
+        .order("name", { ascending: true });
+
+      if (usersError) throw usersError;
+      setCollaborators(usersData || []);
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -215,6 +236,7 @@ const TaskEdit = () => {
           due_date: formData.due_date ? format(formData.due_date, "yyyy-MM-dd") : null,
           scheduled_date: formData.scheduled_date ? format(formData.scheduled_date, "yyyy-MM-dd") : null,
           media_urls: mediaUrls,
+          assigned_to: formData.assigned_to,
         })
         .eq("id", id);
 
@@ -534,6 +556,28 @@ const TaskEdit = () => {
                 </Button>
               )}
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Responsável</label>
+            <Select
+              value={formData.assigned_to || "none"}
+              onValueChange={(value) =>
+                setFormData({ ...formData, assigned_to: value === "none" ? null : value })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecionar responsável..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Nenhum responsável</SelectItem>
+                {collaborators.map((user) => (
+                  <SelectItem key={user.id} value={user.id}>
+                    {user.name} {user.role && `(${user.role})`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">

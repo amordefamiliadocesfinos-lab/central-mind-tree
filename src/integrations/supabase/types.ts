@@ -1455,6 +1455,7 @@ export type Database = {
       tasks: {
         Row: {
           active_time_entry_id: string | null
+          assigned_to: string | null
           checklist: Json | null
           created_at: string
           deleted_at: string | null
@@ -1480,6 +1481,7 @@ export type Database = {
         }
         Insert: {
           active_time_entry_id?: string | null
+          assigned_to?: string | null
           checklist?: Json | null
           created_at?: string
           deleted_at?: string | null
@@ -1505,6 +1507,7 @@ export type Database = {
         }
         Update: {
           active_time_entry_id?: string | null
+          assigned_to?: string | null
           checklist?: Json | null
           created_at?: string
           deleted_at?: string | null
@@ -1529,6 +1532,13 @@ export type Database = {
           use_checklist_progress?: boolean | null
         }
         Relationships: [
+          {
+            foreignKeyName: "tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "tasks_dependency_id_fkey"
             columns: ["dependency_id"]
