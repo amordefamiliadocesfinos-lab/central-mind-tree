@@ -412,7 +412,14 @@ export function StockCheckWizard() {
               </div>
 
               <div className="text-sm text-muted-foreground">
-                {selectedItems.length} item(s) selecionado(s)
+                {searchTerm || lowStockOnly ? (
+                  <>
+                    {filteredProducts.filter(p => selectedItems.some(i => i.product.id === p.id)).length} de {filteredProducts.length} exibidos selecionados
+                    <span className="ml-2 text-xs">({selectedItems.length} total)</span>
+                  </>
+                ) : (
+                  <>{selectedItems.length} item(s) selecionado(s)</>
+                )}
               </div>
 
               <div className="space-y-2">
