@@ -67,7 +67,7 @@ export const useStockCheckStore = create<StockCheckState>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
         lastStockCheckDate: state.lastStockCheckDate,
-        // Don't persist remindAt as it should reset on page refresh
+        remindAt: state.remindAt, // Persist reminder across sessions
       }),
     }
   )
