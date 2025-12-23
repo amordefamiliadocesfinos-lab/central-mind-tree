@@ -10,6 +10,7 @@ import { UndoRedoProvider } from "@/contexts/UndoRedoContext";
 import { LinesModeProvider } from "@/contexts/LinesModeContext";
 import { StockCheckAlert, StockCheckWizard } from "@/components/stock-check";
 import { AssistantPanel } from "@/components/assistant";
+import { SwipeNavigationWrapper } from "@/components/SwipeNavigationWrapper";
 import { AnimatePresence, motion, Variants } from "framer-motion";
 import Index from "./pages/Index";
 import TaskEdit from "./pages/TaskEdit";
@@ -92,7 +93,9 @@ function AppContent() {
         <AssistantPanel />
       </div>
       <GlobalSearchBar />
-      <AnimatedRoutes />
+      <SwipeNavigationWrapper>
+        <AnimatedRoutes />
+      </SwipeNavigationWrapper>
       <GlobalFooterBar />
       <StockCheckAlert />
       <StockCheckWizard />
