@@ -357,8 +357,8 @@ const TaskEdit = () => {
         </div>
       </div>
 
-      {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-32">
+      {/* Scrollable Content - extra padding for fixed footer + bottom nav */}
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-40 md:pb-24">
         <div className="max-w-2xl mx-auto space-y-4">
           {/* Form */}
           <div className="space-y-4 bg-card border rounded-lg p-4 md:p-6">
@@ -656,8 +656,8 @@ const TaskEdit = () => {
         </div>
       </div>
 
-      {/* Fixed Footer Actions */}
-      <div className="flex-shrink-0 p-4 border-t bg-background safe-area-bottom">
+      {/* Fixed Footer Actions - above bottom nav */}
+      <div className="fixed bottom-16 md:bottom-0 left-0 right-0 p-4 border-t bg-background z-40">
         <div className="max-w-2xl mx-auto flex gap-3">
           <Button onClick={handleSave} className="flex-1" disabled={saving}>
             <Save className="h-4 w-4 mr-2" />
