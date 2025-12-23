@@ -87,44 +87,48 @@ export function useOrders() {
   const [loading, setLoading] = useState(true);
 
   const fetchOrders = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .order('order_date', { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*, order_items(*, product:products(*))')
+        .is('deleted_at', null)
+        .order('order_date', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching orders:', error);
-      return;
+      if (error) {
+        console.error('Error fetching orders:', error);
+        return;
+      }
+
+      // Transform to match expected format
+      const ordersWithItems = (data || []).map(order => ({
+        ...order,
+        items: order.order_items || [],
+      }));
+
+      setOrders(ordersWithItems as Order[]);
+    } catch (err) {
+      console.error('Error in fetchOrders:', err);
     }
-
-    // Fetch items for each order
-    const ordersWithItems = await Promise.all(
-      (data || []).map(async (order) => {
-        const { data: items } = await supabase
-          .from('order_items')
-          .select('*, product:products(*)')
-          .eq('order_id', order.id);
-        return { ...order, items: items || [] };
-      })
-    );
-
-    setOrders(ordersWithItems as Order[]);
   }, []);
 
   const fetchProducts = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('is_active', true)
-      .is('deleted_at', null)
-      .order('name');
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('is_active', true)
+        .is('deleted_at', null)
+        .order('name');
 
-    if (error) {
-      console.error('Error fetching products:', error);
-      return;
+      if (error) {
+        console.error('Error fetching products:', error);
+        return;
+      }
+
+      setProducts((data as Product[]) || []);
+    } catch (err) {
+      console.error('Error in fetchProducts:', err);
     }
-
-    setProducts((data as Product[]) || []);
   }, []);
 
   const deleteProduct = useCallback(async (productId: string) => {
@@ -148,17 +152,22 @@ export function useOrders() {
   }, [fetchProducts]);
 
   const fetchInventory = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('inventory')
-      .select('*, product:products(*)');
+    try {
+      const { data, error } = await supabase
+        .from('inventory')
+        .select('*, product:products(*)');
 
-    if (error) {
-      console.error('Error fetching inventory:', error);
-      return;
+      if (error) {
+        console.error('Error fetching inventory:', error);
+        return;
+      }
+
+      setInventory((data as InventoryItem[]) || []);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error in fetchInventory:', err);
+      setLoading(false);
     }
-
-    setInventory((data as InventoryItem[]) || []);
-    setLoading(false);
   }, []);
 
   const createProduct = useCallback(async (product: Partial<Product>) => {
@@ -452,9 +461,10 @@ export function useOrders() {
   }, [orders, inventory, products]);
 
   useEffect(() => {
-    fetchOrders();
-    fetchProducts();
-    fetchInventory();
+    // Fetch all data in parallel for better performance
+    Promise.all([fetchOrders(), fetchProducts(), fetchInventory()]).catch(err => {
+      console.error('Error fetching initial data:', err);
+    });
 
     const channel = supabase
       .channel('orders-changes')
@@ -463,6 +473,16 @@ export function useOrders() {
         schema: 'public',
         table: 'orders',
       }, fetchOrders)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'products',
+      }, fetchProducts)
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'inventory',
+      }, fetchInventory)
       .subscribe();
 
     return () => {

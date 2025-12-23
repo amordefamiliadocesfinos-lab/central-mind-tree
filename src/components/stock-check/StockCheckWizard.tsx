@@ -69,7 +69,8 @@ export function StockCheckWizard() {
 
   // Item selection filters
   const [searchTerm, setSearchTerm] = useState('');
-  const [lowStockOnly, setLowStockOnly] = useState(true);
+  const [lowStockOnly, setLowStockOnly] = useState(false);
+  const [hasPreselected, setHasPreselected] = useState(false);
 
   // Current counting state
   const [countedQuantity, setCountedQuantity] = useState<number>(0);
@@ -139,6 +140,37 @@ export function StockCheckWizard() {
   const goNext = async () => {
     const stepIndex = STEPS.findIndex(s => s.key === currentStep);
     if (stepIndex < STEPS.length - 1) {
+      if (currentStep === 'locations' && !hasPreselected) {
+        // Pre-select ALL products when entering items step
+        setLoading(true);
+        try {
+          const activeProducts = products.filter(p => p.is_active);
+          const itemsWithBalances = await Promise.all(
+            activeProducts.map(async (product) => {
+              const balances = await getProductInventoryByLocation(product.id);
+              const filteredBalances = balances.filter(b => 
+                selectedLocations.includes(b.location || '')
+              );
+              return {
+                product: {
+                  id: product.id,
+                  name: product.name,
+                  sku: product.sku,
+                  min_stock: product.min_stock || 0,
+                  unit: product.unit,
+                  category: product.category,
+                },
+                locationBalances: filteredBalances,
+              } as SelectedItem;
+            })
+          );
+          setSelectedItems(itemsWithBalances);
+          setHasPreselected(true);
+        } finally {
+          setLoading(false);
+        }
+      }
+      
       if (currentStep === 'items') {
         // Prepare for counting step
         setCurrentItemIndex(0);
@@ -239,7 +271,8 @@ export function StockCheckWizard() {
     setCurrentItemIndex(0);
     setAdjustments([]);
     setSearchTerm('');
-    setLowStockOnly(true);
+    setLowStockOnly(false);
+    setHasPreselected(false);
     setCountedQuantity(0);
     setAdjustmentType('adjust');
     setJustification('');
