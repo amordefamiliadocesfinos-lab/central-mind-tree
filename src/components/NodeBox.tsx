@@ -351,7 +351,7 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-6 w-6 md:h-8 md:w-8 hover:bg-background/20 hidden md:flex"
+                      className="h-6 w-6 md:h-8 md:w-8 hover:bg-background/20"
                       onClick={handleToggleVisibility}
                     >
                       <Eye className="h-3 w-3 md:h-4 md:w-4" />
@@ -359,7 +359,7 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-6 w-6 md:h-8 md:w-8 hover:bg-background/20 hidden md:flex"
+                      className="h-6 w-6 md:h-8 md:w-8 hover:bg-background/20"
                       onClick={handleDelete}
                     >
                       <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
