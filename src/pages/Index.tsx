@@ -11,6 +11,7 @@ import { FollowUpBanner } from "@/components/FollowUpBanner";
 import { CEOLegend } from "@/components/CEOLegend";
 import { useToast } from "@/hooks/use-toast";
 import { useLinesMode } from "@/contexts/LinesModeContext";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface Node {
   id: string;
@@ -39,6 +40,11 @@ const Index = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
+  
+  // Touch handling for mobile
+  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
+  const [lastTouchDistance, setLastTouchDistance] = useState<number | null>(null);
 
   // Enable taskbar when on Index page
   useEffect(() => {
@@ -338,6 +344,48 @@ const Index = () => {
     setIsDragging(false);
   };
 
+  // Touch handlers for mobile
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (isDialogOpen) return;
+    
+    if (e.touches.length === 1) {
+      setTouchStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+      setDragStart({ x: e.touches[0].clientX - position.x, y: e.touches[0].clientY - position.y });
+    } else if (e.touches.length === 2) {
+      const distance = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      setLastTouchDistance(distance);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (isDialogOpen) return;
+    
+    if (e.touches.length === 1 && touchStart) {
+      // Pan
+      setPosition({
+        x: e.touches[0].clientX - dragStart.x,
+        y: e.touches[0].clientY - dragStart.y,
+      });
+    } else if (e.touches.length === 2 && lastTouchDistance) {
+      // Pinch to zoom
+      const distance = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const delta = distance / lastTouchDistance;
+      setScale((prev) => Math.min(Math.max(prev * delta, 0.2), 3));
+      setLastTouchDistance(distance);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    setTouchStart(null);
+    setLastTouchDistance(null);
+  };
+
   if (!rootNode) {
     return (
       <div className="flex items-center justify-center w-screen h-screen bg-background">
@@ -350,12 +398,15 @@ const Index = () => {
     <>
       <div
         ref={containerRef}
-        className="w-screen h-screen overflow-hidden bg-background canvas-grid"
+        className="w-screen h-screen overflow-hidden bg-background canvas-grid touch-none"
         onWheel={isDialogOpen ? undefined : handleWheel}
         onMouseDown={isDialogOpen ? undefined : handleMouseDown}
         onMouseMove={isDialogOpen ? undefined : handleMouseMove}
         onMouseUp={isDialogOpen ? undefined : handleMouseUp}
         onMouseLeave={isDialogOpen ? undefined : handleMouseUp}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         style={{ 
           cursor: isDragging ? "grabbing" : "grab",
           pointerEvents: isDialogOpen ? "none" : "auto",

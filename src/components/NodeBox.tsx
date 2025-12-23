@@ -240,17 +240,17 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
   }
 
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className="flex flex-col items-center gap-2 md:gap-4">
       <div className="flex flex-col items-center">
         <div
           data-node-id={node.id}
-          className={`${colors.bg} ${colors.text} rounded-xl p-4 min-w-[220px] node-box-enhanced border-2 border-background/50 relative backdrop-blur-sm`}
+          className={`${colors.bg} ${colors.text} rounded-lg md:rounded-xl p-2 md:p-4 min-w-[140px] md:min-w-[220px] node-box-enhanced border-2 border-background/50 relative backdrop-blur-sm`}
         >
           {hasTasks && (
-            <div className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-background/60 ring-2 ring-background/30"></div>
+            <div className="absolute top-1 md:top-2 right-1 md:right-2 w-2 md:w-2.5 h-2 md:h-2.5 rounded-full bg-background/60 ring-2 ring-background/30"></div>
           )}
           {hasChildren && (
-            <div className="absolute bottom-1.5 right-1/2 translate-x-1/2 text-background/60 text-xs font-medium">
+            <div className="absolute bottom-1 md:bottom-1.5 right-1/2 translate-x-1/2 text-background/60 text-[10px] md:text-xs font-medium">
               ▾
             </div>
           )}
@@ -288,12 +288,12 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
                 onClick={() => showChildren(node.id)}
                 className="cursor-pointer hover:opacity-80 transition-opacity"
               >
-                <h3 className="text-lg font-semibold text-center">{node.title}</h3>
+                <h3 className="text-sm md:text-lg font-semibold text-center leading-tight">{node.title}</h3>
               </div>
               
-              {/* Progress Indicator */}
+              {/* Progress Indicator - hidden on mobile */}
               {averageProgress !== null && (
-                <div className="px-2">
+                <div className="hidden md:block px-2">
                   <div className="flex items-center justify-between gap-2 mb-1">
                     <span className="text-xs opacity-70">Progresso</span>
                     <span className="text-xs font-semibold">{averageProgress}%</span>
@@ -307,69 +307,69 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
                 </div>
               )}
               
-              <div className="flex gap-2 justify-center">
+              <div className="flex gap-1 md:gap-2 justify-center flex-wrap">
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-8 w-8 hover:bg-background/20"
+                  className="h-6 w-6 md:h-8 md:w-8 hover:bg-background/20"
                   onClick={handleAddSubnode}
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-3 w-3 md:h-4 md:w-4" />
                 </Button>
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-8 w-8 hover:bg-background/20"
+                  className="h-6 w-6 md:h-8 md:w-8 hover:bg-background/20"
                   onClick={() => {
                     setIsEditDialogOpen(true);
                     onDialogOpenChange?.(true);
                   }}
                 >
-                  <Pencil className="h-4 w-4" />
+                  <Pencil className="h-3 w-3 md:h-4 md:w-4" />
                 </Button>
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-8 w-8 hover:bg-background/20"
+                  className="h-6 w-6 md:h-8 md:w-8 hover:bg-background/20 hidden md:flex"
                   onClick={() => setIsMoveDialogOpen(true)}
                 >
-                  <Move className="h-4 w-4" />
+                  <Move className="h-3 w-3 md:h-4 md:w-4" />
                 </Button>
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-8 w-8 hover:bg-background/20"
+                  className="h-6 w-6 md:h-8 md:w-8 hover:bg-background/20"
                   onClick={() => {
                     setIsTasksDialogOpen(true);
                     onDialogOpenChange?.(true);
                   }}
                 >
-                  <ListTodo className="h-4 w-4" />
+                  <ListTodo className="h-3 w-3 md:h-4 md:w-4" />
                 </Button>
                 {node.parent_id !== null && (
                   <>
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-8 w-8 hover:bg-background/20"
+                      className="h-6 w-6 md:h-8 md:w-8 hover:bg-background/20 hidden md:flex"
                       onClick={handleToggleVisibility}
                     >
-                      <Eye className="h-4 w-4" />
+                      <Eye className="h-3 w-3 md:h-4 md:w-4" />
                     </Button>
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="h-8 w-8 hover:bg-background/20"
+                      className="h-6 w-6 md:h-8 md:w-8 hover:bg-background/20 hidden md:flex"
                       onClick={handleDelete}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
                     </Button>
                   </>
                 )}
               </div>
               
               {/* Task Status Indicators */}
-              <div className="flex gap-2 justify-center mt-2 pt-2 border-t border-current/20">
+              <div className="flex gap-1 md:gap-2 justify-center mt-1 md:mt-2 pt-1 md:pt-2 border-t border-current/20">
                 {/* Estrutural - Roxo */}
                 <button 
                   onClick={() => {
@@ -378,7 +378,7 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
                     setIsTasksDialogOpen(true);
                     onDialogOpenChange?.(true);
                   }}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity ${
+                  className={`w-5 h-5 md:w-8 md:h-8 rounded-full flex items-center justify-center text-[10px] md:text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity ${
                     taskCounts.estrutural > 0 
                       ? 'bg-node-roxo text-node-roxo-foreground' 
                       : 'bg-background/20 text-current/40'
@@ -395,7 +395,7 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
                     setIsTasksDialogOpen(true);
                     onDialogOpenChange?.(true);
                   }}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity ${
+                  className={`w-5 h-5 md:w-8 md:h-8 rounded-full flex items-center justify-center text-[10px] md:text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity ${
                     taskCounts.andamento > 0 
                       ? 'bg-node-vermelho text-node-vermelho-foreground' 
                       : 'bg-background/20 text-current/40'
@@ -412,7 +412,7 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
                     setIsTasksDialogOpen(true);
                     onDialogOpenChange?.(true);
                   }}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity ${
+                  className={`w-5 h-5 md:w-8 md:h-8 rounded-full flex items-center justify-center text-[10px] md:text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity ${
                     taskCounts.pendente > 0 
                       ? 'bg-node-amarelo text-node-amarelo-foreground' 
                       : 'bg-background/20 text-current/40'
@@ -429,7 +429,7 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
                     setIsTasksDialogOpen(true);
                     onDialogOpenChange?.(true);
                   }}
-                  className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity ${
+                  className={`w-5 h-5 md:w-8 md:h-8 rounded-full flex items-center justify-center text-[10px] md:text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity ${
                     taskCounts.concluido > 0 
                       ? 'bg-node-verde text-node-verde-foreground' 
                       : 'bg-background/20 text-current/40'
@@ -441,10 +441,10 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
             </div>
           )}
         </div>
-        {children && <div className="w-0.5 h-8 node-connector rounded-full"></div>}
+        {children && <div className="w-0.5 h-4 md:h-8 node-connector rounded-full"></div>}
       </div>
       {children && (
-        <div className="flex gap-10 items-start relative">{children}</div>
+        <div className="flex gap-3 md:gap-10 items-start relative">{children}</div>
       )}
 
       <MoveNodeDialog
