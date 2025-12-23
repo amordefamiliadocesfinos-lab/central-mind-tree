@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { ProductionLog, PRODUCTION_PERIODS, PRODUCTION_PROCESSES, PROCESS_LABELS } from '@/hooks/useProductionLogs';
 import { Product } from '@/hooks/useOrders';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { AlertTriangle, Package } from 'lucide-react';
 
 interface ProductionLogFormProps {
@@ -20,6 +22,7 @@ interface ProductionLogFormProps {
   onUpdate?: (id: string, log: Partial<ProductionLog>) => Promise<ProductionLog | null>;
   onDelete?: (id: string) => Promise<boolean>;
   defaultDate?: string;
+  onRefreshEmployees?: () => void;
 }
 
 export function ProductionLogForm({
@@ -32,6 +35,7 @@ export function ProductionLogForm({
   onUpdate,
   onDelete,
   defaultDate,
+  onRefreshEmployees,
 }: ProductionLogFormProps) {
   const [formData, setFormData] = useState({
     date: defaultDate || new Date().toISOString().split('T')[0],
@@ -110,8 +114,20 @@ export function ProductionLogForm({
     }
   };
 
-  const handleAddNewEmployee = () => {
+  const handleAddNewEmployee = async () => {
     if (newEmployee.trim()) {
+      // Add to app_users table
+      const { error } = await supabase
+        .from('app_users')
+        .insert({ name: newEmployee.trim(), is_active: true });
+      
+      if (error) {
+        toast.error('Erro ao adicionar colaborador');
+      } else {
+        toast.success('Colaborador adicionado!');
+        onRefreshEmployees?.();
+      }
+      
       setFormData({ ...formData, employee_name: newEmployee.trim() });
       setShowNewEmployee(false);
       setNewEmployee('');
