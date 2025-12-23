@@ -13,6 +13,13 @@ import { useToast } from "@/hooks/use-toast";
 import { useUndoRedoContext } from "@/contexts/UndoRedoContext";
 import { useNotifications } from "@/hooks/useNotifications";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { useLinesMode } from "@/contexts/LinesModeContext";
+
+interface Task {
+  id: string;
+  status: "estrutural" | "andamento" | "pendente" | "concluído";
+}
 
 // Timer sound - simple beep using Web Audio API
 function playAlertSound() {
@@ -50,10 +57,57 @@ export function GlobalFooterBar() {
   const [isEditing, setIsEditing] = useState(false);
   const [timeInput, setTimeInput] = useState("00:00:00");
   const [stateId, setStateId] = useState<string | null>(null);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const location = useLocation();
   const { toast } = useToast();
   const { undo, redo, canUndo, canRedo } = useUndoRedoContext();
   const { notify, requestPermission, permission } = useNotifications();
+  const isMobile = useIsMobile();
+  const { linesMode, setLinesMode, showTaskBar } = useLinesMode();
+
+  // Fetch tasks for status counters
+  useEffect(() => {
+    if (!showTaskBar) return;
+    
+    const fetchTasks = async () => {
+      const { data, error } = await supabase
+        .from("tasks")
+        .select("id, status")
+        .order("created_at", { ascending: false });
+
+      if (!error && data) {
+        setTasks(data as Task[]);
+      }
+    };
+
+    fetchTasks();
+
+    const channel = supabase
+      .channel('tasks-footer')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'tasks'
+        },
+        () => {
+          fetchTasks();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [showTaskBar]);
+
+  const statusCounts = {
+    estrutural: tasks.filter(t => t.status === "estrutural").length,
+    andamento: tasks.filter(t => t.status === "andamento").length,
+    pendente: tasks.filter(t => t.status === "pendente").length,
+    concluído: tasks.filter(t => t.status === "concluído").length,
+  };
 
   // Load timer state from DB
   useEffect(() => {
@@ -249,52 +303,154 @@ export function GlobalFooterBar() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[9999] h-12 bg-background border-t border-border shadow-lg">
-      <div className="h-full flex items-center justify-between px-4 gap-4">
-        {/* Left: Undo/Redo */}
-        <div className="flex items-center gap-1">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                onClick={() => undo()} 
-                disabled={!canUndo}
-                size="sm" 
-                variant="ghost" 
-                className="h-8 w-8 p-0"
+      <div className="h-full flex items-center justify-between px-2 md:px-4 gap-1 md:gap-4">
+        {/* Left: Task status counters + Lines mode (only when showTaskBar is true) */}
+        {showTaskBar && tasks.length > 0 ? (
+          <div className="flex items-center gap-1">
+            {/* Status counter buttons */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className={cn(
+                    "h-6 w-6 md:h-7 md:w-7 rounded-full flex items-center justify-center text-[10px] md:text-xs font-semibold",
+                    statusCounts.estrutural > 0 ? "bg-node-roxo text-white" : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {statusCounts.estrutural}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Estrutural</TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className={cn(
+                    "h-6 w-6 md:h-7 md:w-7 rounded-full flex items-center justify-center text-[10px] md:text-xs font-semibold",
+                    statusCounts.andamento > 0 ? "bg-node-vermelho text-white" : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {statusCounts.andamento}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Em andamento</TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className={cn(
+                    "h-6 w-6 md:h-7 md:w-7 rounded-full flex items-center justify-center text-[10px] md:text-xs font-semibold",
+                    statusCounts.pendente > 0 ? "bg-node-amarelo text-white" : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {statusCounts.pendente}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Pendente</TooltipContent>
+            </Tooltip>
+            
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  className={cn(
+                    "h-6 w-6 md:h-7 md:w-7 rounded-full flex items-center justify-center text-[10px] md:text-xs font-semibold",
+                    statusCounts.concluído > 0 ? "bg-node-verde text-white" : "bg-muted text-muted-foreground"
+                  )}
+                >
+                  {statusCounts.concluído}
+                </button>
+              </TooltipTrigger>
+              <TooltipContent>Concluído</TooltipContent>
+            </Tooltip>
+
+            {/* Divider */}
+            <div className="h-4 w-px bg-border mx-0.5" />
+
+            {/* Lines mode selector */}
+            <div className="flex items-center gap-0.5 bg-muted rounded p-0.5">
+              <button
+                onClick={() => setLinesMode("off")}
+                className={cn(
+                  "px-1.5 md:px-2 py-0.5 text-[10px] md:text-xs rounded transition-colors",
+                  linesMode === "off" 
+                    ? "bg-background text-foreground shadow-sm" 
+                    : "text-muted-foreground hover:text-foreground"
+                )}
               >
-                <Undo2 className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Desfazer (Ctrl+Z)</TooltipContent>
-          </Tooltip>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                onClick={() => redo()} 
-                disabled={!canRedo}
-                size="sm" 
-                variant="ghost" 
-                className="h-8 w-8 p-0"
+                Off
+              </button>
+              <button
+                onClick={() => setLinesMode("resumo")}
+                className={cn(
+                  "px-1.5 md:px-2 py-0.5 text-[10px] md:text-xs rounded transition-colors",
+                  linesMode === "resumo" 
+                    ? "bg-background text-foreground shadow-sm" 
+                    : "text-muted-foreground hover:text-foreground"
+                )}
               >
-                <Redo2 className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Refazer (Ctrl+Y)</TooltipContent>
-          </Tooltip>
-        </div>
+                {isMobile ? "L" : "Linhas"}
+              </button>
+              <button
+                onClick={() => setLinesMode("ceo")}
+                className={cn(
+                  "px-1.5 md:px-2 py-0.5 text-[10px] md:text-xs rounded transition-colors",
+                  linesMode === "ceo" 
+                    ? "bg-node-vermelho text-white shadow-sm" 
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                CEO
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* Left: Undo/Redo (when no TaskBar) */
+          <div className="flex items-center gap-1">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  onClick={() => undo()} 
+                  disabled={!canUndo}
+                  size="sm" 
+                  variant="ghost" 
+                  className="h-8 w-8 p-0"
+                >
+                  <Undo2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Desfazer (Ctrl+Z)</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button 
+                  onClick={() => redo()} 
+                  disabled={!canRedo}
+                  size="sm" 
+                  variant="ghost" 
+                  className="h-8 w-8 p-0"
+                >
+                  <Redo2 className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Refazer (Ctrl+Y)</TooltipContent>
+            </Tooltip>
+          </div>
+        )}
 
         {/* Center: Navigation */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5 md:gap-1">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 asChild
                 size="sm"
                 variant={isActive('/') ? 'secondary' : 'ghost'}
-                className={cn("h-8 px-3 text-xs", isActive('/') && "bg-secondary")}
+                className={cn("h-8 w-8 md:w-auto md:px-3 p-0 md:p-2 text-xs", isActive('/') && "bg-secondary")}
               >
                 <Link to="/">
-                  <Home className="h-4 w-4 mr-1" />
-                  Início
+                  <Home className="h-4 w-4" />
+                  <span className="hidden md:inline ml-1">Início</span>
                 </Link>
               </Button>
             </TooltipTrigger>
@@ -307,11 +463,11 @@ export function GlobalFooterBar() {
                 asChild
                 size="sm"
                 variant={isActive('/foco') ? 'secondary' : 'ghost'}
-                className={cn("h-8 px-3 text-xs", isActive('/foco') && "bg-secondary")}
+                className={cn("h-8 w-8 md:w-auto md:px-3 p-0 md:p-2 text-xs", isActive('/foco') && "bg-secondary")}
               >
                 <Link to="/foco">
-                  <Focus className="h-4 w-4 mr-1" />
-                  FOCO
+                  <Focus className="h-4 w-4" />
+                  <span className="hidden md:inline ml-1">FOCO</span>
                 </Link>
               </Button>
             </TooltipTrigger>
@@ -324,11 +480,11 @@ export function GlobalFooterBar() {
                 asChild
                 size="sm"
                 variant={isActive('/calendario') ? 'secondary' : 'ghost'}
-                className={cn("h-8 px-3 text-xs", isActive('/calendario') && "bg-secondary")}
+                className={cn("h-8 w-8 md:w-auto md:px-3 p-0 md:p-2 text-xs", isActive('/calendario') && "bg-secondary")}
               >
                 <Link to="/calendario">
-                  <Calendar className="h-4 w-4 mr-1" />
-                  CAL
+                  <Calendar className="h-4 w-4" />
+                  <span className="hidden md:inline ml-1">CAL</span>
                 </Link>
               </Button>
             </TooltipTrigger>
@@ -341,11 +497,11 @@ export function GlobalFooterBar() {
                 asChild
                 size="sm"
                 variant={isActive('/rotina') ? 'secondary' : 'ghost'}
-                className={cn("h-8 px-3 text-xs", isActive('/rotina') && "bg-secondary")}
+                className={cn("h-8 w-8 md:w-auto md:px-3 p-0 md:p-2 text-xs", isActive('/rotina') && "bg-secondary")}
               >
                 <Link to="/rotina">
-                  <Timer className="h-4 w-4 mr-1" />
-                  ROTINA
+                  <Timer className="h-4 w-4" />
+                  <span className="hidden md:inline ml-1">ROTINA</span>
                 </Link>
               </Button>
             </TooltipTrigger>
@@ -356,7 +512,7 @@ export function GlobalFooterBar() {
             asChild
             size="sm"
             variant={isActive('/operacoes') ? 'secondary' : 'ghost'}
-            className={cn("h-8 px-2 text-xs", isActive('/operacoes') && "bg-secondary")}
+            className={cn("h-8 w-8 p-0", isActive('/operacoes') && "bg-secondary")}
           >
             <Link to="/operacoes">
               <ShoppingCart className="h-4 w-4" />
@@ -367,7 +523,7 @@ export function GlobalFooterBar() {
             asChild
             size="sm"
             variant={isActive('/conteudo') ? 'secondary' : 'ghost'}
-            className={cn("h-8 px-2 text-xs", isActive('/conteudo') && "bg-secondary")}
+            className={cn("h-8 w-8 p-0", isActive('/conteudo') && "bg-secondary")}
           >
             <Link to="/conteudo">
               <FileText className="h-4 w-4" />
@@ -378,7 +534,7 @@ export function GlobalFooterBar() {
             asChild
             size="sm"
             variant={isActive('/planilhas') ? 'secondary' : 'ghost'}
-            className={cn("h-8 px-2 text-xs", isActive('/planilhas') && "bg-secondary")}
+            className={cn("h-8 w-8 p-0", isActive('/planilhas') && "bg-secondary")}
           >
             <Link to="/planilhas">
               <FileSpreadsheet className="h-4 w-4" />
@@ -389,7 +545,7 @@ export function GlobalFooterBar() {
             asChild
             size="sm"
             variant={isActive('/reunioes') ? 'secondary' : 'ghost'}
-            className={cn("h-8 px-2 text-xs", isActive('/reunioes') && "bg-secondary")}
+            className={cn("h-8 w-8 p-0", isActive('/reunioes') && "bg-secondary")}
           >
             <Link to="/reunioes">
               <Users className="h-4 w-4" />
@@ -400,7 +556,7 @@ export function GlobalFooterBar() {
             asChild
             size="sm"
             variant={isActive('/minha-area') ? 'secondary' : 'ghost'}
-            className={cn("h-8 px-2 text-xs", isActive('/minha-area') && "bg-secondary")}
+            className={cn("h-8 w-8 p-0", isActive('/minha-area') && "bg-secondary")}
           >
             <Link to="/minha-area">
               <User className="h-4 w-4" />
@@ -409,7 +565,7 @@ export function GlobalFooterBar() {
         </div>
 
         {/* Right: Timer */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 md:gap-2">
           {isEditing ? (
             <div className="flex items-center gap-1">
               <Input
@@ -417,7 +573,7 @@ export function GlobalFooterBar() {
                 value={timeInput}
                 onChange={(e) => setTimeInput(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSetTime()}
-                className="text-center w-20 h-7 text-xs"
+                className="text-center w-16 md:w-20 h-7 text-xs"
                 autoFocus
               />
               <Button onClick={handleSetTime} size="sm" className="h-7 px-2 text-xs">
@@ -436,7 +592,7 @@ export function GlobalFooterBar() {
             <>
               <div
                 className={cn(
-                  "text-lg font-mono cursor-pointer hover:text-primary transition-colors px-2",
+                  "text-sm md:text-lg font-mono cursor-pointer hover:text-primary transition-colors px-1 md:px-2",
                   status === "running" && "text-primary"
                 )}
                 onClick={() => {
@@ -456,17 +612,19 @@ export function GlobalFooterBar() {
                     <Button onClick={handleStart} size="sm" variant="ghost" className="h-7 w-7 p-0">
                       <Play className="h-3.5 w-3.5" />
                     </Button>
-                    <Button
-                      onClick={() => {
-                        setIsEditing(true);
-                        setTimeInput(formatTime(remainingSeconds));
-                      }}
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 w-7 p-0"
-                    >
-                      <Clock className="h-3.5 w-3.5" />
-                    </Button>
+                    {!isMobile && (
+                      <Button
+                        onClick={() => {
+                          setIsEditing(true);
+                          setTimeInput(formatTime(remainingSeconds));
+                        }}
+                        size="sm"
+                        variant="ghost"
+                        className="h-7 w-7 p-0"
+                      >
+                        <Clock className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
                   </>
                 )}
 

@@ -7,6 +7,7 @@ import { GlobalSearchBar } from "@/components/GlobalSearchBar";
 import { GlobalFooterBar } from "@/components/GlobalFooterBar";
 import { LightboxProvider, LightboxRoot } from "@/components/lightbox";
 import { UndoRedoProvider } from "@/contexts/UndoRedoContext";
+import { LinesModeProvider } from "@/contexts/LinesModeContext";
 import { StockCheckAlert, StockCheckWizard } from "@/components/stock-check";
 import { AssistantPanel } from "@/components/assistant";
 import { AnimatePresence, motion, Variants } from "framer-motion";
@@ -103,12 +104,14 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <UndoRedoProvider>
-        <LightboxProvider>
-          <Toaster />
-          <Sonner />
-          <AppContent />
-          <LightboxRoot />
-        </LightboxProvider>
+        <LinesModeProvider>
+          <LightboxProvider>
+            <Toaster />
+            <Sonner />
+            <AppContent />
+            <LightboxRoot />
+          </LightboxProvider>
+        </LinesModeProvider>
       </UndoRedoProvider>
     </TooltipProvider>
   </QueryClientProvider>
