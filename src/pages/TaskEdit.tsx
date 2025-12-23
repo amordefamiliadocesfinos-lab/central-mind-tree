@@ -311,7 +311,7 @@ const TaskEdit = () => {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-background">
+    <div className="flex flex-col min-h-[100dvh] h-[100dvh] bg-background">
       {/* Fixed Header */}
       <div className="flex-shrink-0 p-4 md:p-6 border-b bg-background">
         <div className="max-w-2xl mx-auto flex items-center gap-3 md:gap-4">
@@ -357,8 +357,8 @@ const TaskEdit = () => {
         </div>
       </div>
 
-      {/* Scrollable Content - extra padding for fixed footer + bottom nav */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-40 md:pb-24">
+      {/* Scrollable Content - extra padding for fixed footer + bottom bar */}
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-[calc(9rem+env(safe-area-inset-bottom))]">
         <div className="max-w-2xl mx-auto space-y-4">
           {/* Form */}
           <div className="space-y-4 bg-card border rounded-lg p-4 md:p-6">
@@ -656,8 +656,8 @@ const TaskEdit = () => {
         </div>
       </div>
 
-      {/* Fixed Footer Actions - above bottom nav */}
-      <div className="fixed bottom-16 md:bottom-0 left-0 right-0 p-4 border-t bg-background z-40">
+      {/* Fixed Footer Actions */}
+      <div className="fixed left-0 right-0 bottom-[calc(3rem+env(safe-area-inset-bottom))] p-4 border-t bg-background z-[10000]">
         <div className="max-w-2xl mx-auto flex gap-3">
           <Button onClick={handleSave} className="flex-1" disabled={saving}>
             <Save className="h-4 w-4 mr-2" />
