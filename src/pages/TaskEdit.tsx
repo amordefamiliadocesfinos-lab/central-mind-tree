@@ -311,13 +311,14 @@ const TaskEdit = () => {
   }
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-2xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
+    <div className="flex flex-col h-screen bg-background">
+      {/* Fixed Header */}
+      <div className="flex-shrink-0 p-4 md:p-6 border-b bg-background">
+        <div className="max-w-2xl mx-auto flex items-center gap-3 md:gap-4">
           <Button
             variant="ghost"
             size="icon"
+            className="flex-shrink-0"
             onClick={() => navigate("/", { 
               state: { 
                 openTasksDialog: true, 
@@ -328,9 +329,9 @@ const TaskEdit = () => {
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold">Editar Tarefa</h1>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-lg md:text-2xl font-bold truncate">Editar Tarefa</h1>
               <OnHoldBadge
                 onHold={task.on_hold}
                 who={task.on_hold_who}
@@ -340,7 +341,7 @@ const TaskEdit = () => {
               />
             </div>
             {node && (
-              <p className="text-sm text-muted-foreground">Nó: {node.title}</p>
+              <p className="text-xs md:text-sm text-muted-foreground truncate">Nó: {node.title}</p>
             )}
           </div>
           <Button
@@ -348,321 +349,328 @@ const TaskEdit = () => {
             size="sm"
             onClick={() => task.on_hold ? handleOnHoldToggle() : setShowOnHoldDialog(true)}
             disabled={onHoldLoading}
-            className="gap-1"
+            className="gap-1 flex-shrink-0 text-xs md:text-sm"
           >
             <Clock className="h-4 w-4" />
-            {task.on_hold ? "Remover Espera" : "Em Espera"}
+            <span className="hidden sm:inline">{task.on_hold ? "Remover Espera" : "Em Espera"}</span>
           </Button>
         </div>
+      </div>
 
-        {/* Form */}
-        <div className="space-y-4 bg-card border rounded-lg p-6">
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Título</label>
-            <Input
-              placeholder="Título da tarefa"
-              value={formData.title}
-              onChange={(e) =>
-                setFormData({ ...formData, title: e.target.value })
-              }
-            />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">Descrição</label>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowChecklist(!showChecklist)}
-                className="gap-1"
-              >
-                <ListChecks className="h-4 w-4" />
-                Check-list
-              </Button>
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-32">
+        <div className="max-w-2xl mx-auto space-y-4">
+          {/* Form */}
+          <div className="space-y-4 bg-card border rounded-lg p-4 md:p-6">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Título</label>
+              <Input
+                placeholder="Título da tarefa"
+                value={formData.title}
+                onChange={(e) =>
+                  setFormData({ ...formData, title: e.target.value })
+                }
+              />
             </div>
-            <Textarea
-              placeholder="Descrição da tarefa (opcional)"
-              value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
-              rows={12}
-              className="min-h-[200px]"
-            />
-          </div>
 
-          {/* Checklist Section */}
-          {showChecklist && (
-            <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+            <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-medium">Check-list</h3>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">
-                    Usar check-list para calcular progresso
-                  </span>
-                  <Switch
-                    checked={useChecklistProgress}
-                    onCheckedChange={setUseChecklistProgress}
-                  />
-                </div>
-              </div>
-
-              {/* Checklist Items */}
-              <div className="space-y-2">
-                {checklist.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center gap-2 p-2 rounded bg-background border"
-                  >
-                    <Checkbox
-                      checked={item.done}
-                      onCheckedChange={() => toggleChecklistItem(item.id)}
-                    />
-                    <span className={`flex-1 text-sm ${item.done ? 'line-through text-muted-foreground' : ''}`}>
-                      {item.text}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6 text-destructive hover:text-destructive"
-                      onClick={() => removeChecklistItem(item.id)}
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-
-              {/* Add new item */}
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Novo item..."
-                  value={newItemText}
-                  onChange={(e) => setNewItemText(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && addChecklistItem()}
-                  className="flex-1"
-                />
-                <Button size="icon" onClick={addChecklistItem}>
-                  <Plus className="h-4 w-4" />
+                <label className="text-sm font-medium">Descrição</label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowChecklist(!showChecklist)}
+                  className="gap-1"
+                >
+                  <ListChecks className="h-4 w-4" />
+                  Check-list
                 </Button>
               </div>
+              <Textarea
+                placeholder="Descrição da tarefa (opcional)"
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
+                rows={8}
+                className="min-h-[120px] md:min-h-[200px]"
+              />
+            </div>
 
-              {checklist.length > 0 && (
+            {/* Checklist Section */}
+            {showChecklist && (
+              <div className="space-y-3 p-4 border rounded-lg bg-muted/30">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <h3 className="text-sm font-medium">Check-list</h3>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      Usar check-list para calcular progresso
+                    </span>
+                    <Switch
+                      checked={useChecklistProgress}
+                      onCheckedChange={setUseChecklistProgress}
+                    />
+                  </div>
+                </div>
+
+                {/* Checklist Items */}
+                <div className="space-y-2">
+                  {checklist.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-center gap-2 p-2 rounded bg-background border"
+                    >
+                      <Checkbox
+                        checked={item.done}
+                        onCheckedChange={() => toggleChecklistItem(item.id)}
+                      />
+                      <span className={`flex-1 text-sm ${item.done ? 'line-through text-muted-foreground' : ''}`}>
+                        {item.text}
+                      </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-destructive hover:text-destructive"
+                        onClick={() => removeChecklistItem(item.id)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Add new item */}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Novo item..."
+                    value={newItemText}
+                    onChange={(e) => setNewItemText(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && addChecklistItem()}
+                    className="flex-1"
+                  />
+                  <Button size="icon" onClick={addChecklistItem}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {checklist.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {checklist.filter(i => i.done).length}/{checklist.length} itens concluídos
+                    {useChecklistProgress && ` (${calculatedProgress}%)`}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Status</label>
+              <Select
+                value={formData.status}
+                onValueChange={(value: Task["status"]) =>
+                  setFormData({ ...formData, status: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="estrutural">Estrutural</SelectItem>
+                  <SelectItem value="andamento">Em Andamento</SelectItem>
+                  <SelectItem value="pendente">Pendente</SelectItem>
+                  <SelectItem value="concluído">Concluído</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Data Limite</label>
+              <div className="flex gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "flex-1 justify-start text-left font-normal",
+                        !formData.due_date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.due_date ? format(formData.due_date, "PPP", { locale: ptBR }) : "Selecionar data"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={formData.due_date || undefined}
+                      onSelect={(date) => setFormData({ ...formData, due_date: date || null })}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+                {formData.due_date && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setFormData({ ...formData, due_date: null })}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Data de Agendamento</label>
+              <p className="text-xs text-muted-foreground">
+                Quando esta data chegar, a tarefa será promovida automaticamente para "Em Andamento"
+              </p>
+              <div className="flex gap-2">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "flex-1 justify-start text-left font-normal",
+                        !formData.scheduled_date && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.scheduled_date ? format(formData.scheduled_date, "PPP", { locale: ptBR }) : "Selecionar data"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={formData.scheduled_date || undefined}
+                      onSelect={(date) => setFormData({ ...formData, scheduled_date: date || null })}
+                      initialFocus
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+                {formData.scheduled_date && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setFormData({ ...formData, scheduled_date: null })}
+                    className="text-muted-foreground hover:text-destructive"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Responsável</label>
+              <Select
+                value={formData.assigned_to || "none"}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, assigned_to: value === "none" ? null : value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecionar responsável..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhum responsável</SelectItem>
+                  {collaborators.map((user) => (
+                    <SelectItem key={user.id} value={user.id}>
+                      {user.name} {user.role && `(${user.role})`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Dependência</label>
+              <Select
+                value={formData.dependency_id || "none"}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, dependency_id: value === "none" ? null : value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Depende de..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Nenhuma dependência</SelectItem>
+                  {availableTasks.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.title}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Progresso</label>
+                <span className="text-sm text-muted-foreground">{effectiveProgress}%</span>
+              </div>
+              <Input
+                type="number"
+                min="0"
+                max="100"
+                value={formData.progress}
+                onChange={(e) =>
+                  setFormData({ 
+                    ...formData, 
+                    progress: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)) 
+                  })
+                }
+                disabled={useChecklistProgress}
+              />
+              <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-primary transition-all duration-300"
+                  style={{ width: `${effectiveProgress}%` }}
+                />
+              </div>
+              {useChecklistProgress && (
                 <p className="text-xs text-muted-foreground">
-                  {checklist.filter(i => i.done).length}/{checklist.length} itens concluídos
-                  {useChecklistProgress && ` (${calculatedProgress}%)`}
+                  Progresso calculado automaticamente pelo check-list
                 </p>
               )}
             </div>
-          )}
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Status</label>
-            <Select
-              value={formData.status}
-              onValueChange={(value: Task["status"]) =>
-                setFormData({ ...formData, status: value })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="estrutural">Estrutural</SelectItem>
-                <SelectItem value="andamento">Em Andamento</SelectItem>
-                <SelectItem value="pendente">Pendente</SelectItem>
-                <SelectItem value="concluído">Concluído</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Data Limite</label>
-            <div className="flex gap-2">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "flex-1 justify-start text-left font-normal",
-                      !formData.due_date && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.due_date ? format(formData.due_date, "PPP", { locale: ptBR }) : "Selecionar data"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={formData.due_date || undefined}
-                    onSelect={(date) => setFormData({ ...formData, due_date: date || null })}
-                    initialFocus
-                    className="pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-              {formData.due_date && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setFormData({ ...formData, due_date: null })}
-                  className="text-muted-foreground hover:text-destructive"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
+            {/* Media Attachments */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Anexos de Mídia</label>
+              <MediaUploader media={media} onChange={setMedia} entityType="task" entityId={id || ""} />
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Data de Agendamento</label>
-            <p className="text-xs text-muted-foreground">
-              Quando esta data chegar, a tarefa será promovida automaticamente para "Em Andamento"
-            </p>
-            <div className="flex gap-2">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={cn(
-                      "flex-1 justify-start text-left font-normal",
-                      !formData.scheduled_date && "text-muted-foreground"
-                    )}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.scheduled_date ? format(formData.scheduled_date, "PPP", { locale: ptBR }) : "Selecionar data"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="single"
-                    selected={formData.scheduled_date || undefined}
-                    onSelect={(date) => setFormData({ ...formData, scheduled_date: date || null })}
-                    initialFocus
-                    className="pointer-events-auto"
-                  />
-                </PopoverContent>
-              </Popover>
-              {formData.scheduled_date && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setFormData({ ...formData, scheduled_date: null })}
-                  className="text-muted-foreground hover:text-destructive"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
+            {/* Spreadsheets Section */}
+            <div className="space-y-2 pt-4 border-t">
+              <div className="flex items-center gap-2 mb-2">
+                <FileSpreadsheet className="h-5 w-5 text-primary" />
+                <label className="text-sm font-medium">Planilhas</label>
+              </div>
+              <SheetList taskId={id} />
             </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Responsável</label>
-            <Select
-              value={formData.assigned_to || "none"}
-              onValueChange={(value) =>
-                setFormData({ ...formData, assigned_to: value === "none" ? null : value })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecionar responsável..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Nenhum responsável</SelectItem>
-                {collaborators.map((user) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.name} {user.role && `(${user.role})`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Dependência</label>
-            <Select
-              value={formData.dependency_id || "none"}
-              onValueChange={(value) =>
-                setFormData({ ...formData, dependency_id: value === "none" ? null : value })
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Depende de..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">Nenhuma dependência</SelectItem>
-                {availableTasks.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.title}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-sm font-medium">Progresso</label>
-              <span className="text-sm text-muted-foreground">{effectiveProgress}%</span>
-            </div>
-            <Input
-              type="number"
-              min="0"
-              max="100"
-              value={formData.progress}
-              onChange={(e) =>
-                setFormData({ 
-                  ...formData, 
-                  progress: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)) 
-                })
-              }
-              disabled={useChecklistProgress}
-            />
-            <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-primary transition-all duration-300"
-                style={{ width: `${effectiveProgress}%` }}
-              />
-            </div>
-            {useChecklistProgress && (
-              <p className="text-xs text-muted-foreground">
-                Progresso calculado automaticamente pelo check-list
-              </p>
-            )}
-          </div>
-
-          {/* Media Attachments */}
-          <div className="space-y-2">
-            <label className="text-sm font-medium">Anexos de Mídia</label>
-            <MediaUploader media={media} onChange={setMedia} entityType="task" entityId={id || ""} />
-          </div>
-
-          {/* Spreadsheets Section */}
-          <div className="space-y-2 pt-4 border-t">
-            <div className="flex items-center gap-2 mb-2">
-              <FileSpreadsheet className="h-5 w-5 text-primary" />
-              <label className="text-sm font-medium">Planilhas</label>
-            </div>
-            <SheetList taskId={id} />
           </div>
         </div>
+      </div>
 
-        {/* Actions */}
-        <div className="flex gap-3">
+      {/* Fixed Footer Actions */}
+      <div className="flex-shrink-0 p-4 border-t bg-background safe-area-bottom">
+        <div className="max-w-2xl mx-auto flex gap-3">
           <Button onClick={handleSave} className="flex-1" disabled={saving}>
             <Save className="h-4 w-4 mr-2" />
-            {saving ? "Salvando..." : "Salvar e Voltar"}
+            {saving ? "Salvando..." : "Salvar"}
           </Button>
-          <Button variant="outline" onClick={() => navigate("/", { 
+          <Button variant="outline" className="flex-1" onClick={() => navigate("/", { 
             state: { 
               openTasksDialog: true, 
               nodeId: task?.node_id,
               nodeTitle: node?.title 
             } 
           })}>
-            Cancelar
+            Voltar
           </Button>
         </div>
       </div>
