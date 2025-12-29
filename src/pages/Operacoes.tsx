@@ -7,6 +7,7 @@ import { useMultiLocationInventory } from '@/hooks/useMultiLocationInventory';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { DecimalInput } from '@/components/ui/decimal-input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -154,14 +155,33 @@ export default function Operacoes() {
     media_urls: [],
     cover_image_url: null,
   });
+  const [newProductPriceText, setNewProductPriceText] = useState('');
+  const [newProductCostText, setNewProductCostText] = useState('');
+
   const [newOrder, setNewOrder] = useState({
     customer_name: '',
     channel: 'direto',
     due_date: '',
-    items: [] as { product_id: string; quantity: number; unit_price: number }[],
+    items: [] as { product_id: string; quantity: number; unit_price: number; _unit_price_text?: string }[],
   });
 
+  const [editingCostText, setEditingCostText] = useState('');
+  const [editingPriceText, setEditingPriceText] = useState('');
+
   const getProductBalance = (productId: string) => productBalances[productId] || 0;
+
+  useEffect(() => {
+    if (!showProductDialog) return;
+    setNewProductPriceText(newProduct.price != null ? String(newProduct.price) : '');
+    setNewProductCostText(newProduct.cost != null ? String(newProduct.cost) : '');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showProductDialog]);
+
+  useEffect(() => {
+    if (!editingProduct) return;
+    setEditingCostText(editingProduct.cost != null ? String(editingProduct.cost) : '');
+    setEditingPriceText(editingProduct.price != null ? String(editingProduct.price) : '');
+  }, [editingProduct]);
 
   // Handlers
   const handleAddProduct = async () => {
@@ -169,6 +189,8 @@ export default function Operacoes() {
     if (result) {
       setShowProductDialog(false);
       setNewProduct({ sku: '', name: '', min_stock: 0, price: 0, category: '', unit: 'un', media_urls: [], cover_image_url: null });
+      setNewProductPriceText('');
+      setNewProductCostText('');
     }
   };
 
@@ -408,12 +430,20 @@ export default function Operacoes() {
                             value={item.quantity}
                             onChange={(e) => updateOrderItem(i, 'quantity', parseInt(e.target.value) || 1)}
                           />
-                          <Input
-                            type="number"
+                          <DecimalInput
                             className="w-20 h-10"
                             placeholder="R$"
-                            value={item.unit_price}
-                            onChange={(e) => updateOrderItem(i, 'unit_price', parseFloat(e.target.value) || 0)}
+                            value={(item as any)._unit_price_text ?? String(item.unit_price ?? '')}
+                            onValueChange={(v) => {
+                              const items = [...newOrder.items];
+                              (items[i] as any)._unit_price_text = v;
+                              setNewOrder({ ...newOrder, items });
+                            }}
+                            onValueCommit={(parsed) => {
+                              updateOrderItem(i, 'unit_price', parsed?.number ?? 0);
+                            }}
+                            min={0}
+                            maxDecimals={10}
                           />
                           <Button size="icon" variant="ghost" className="h-10 w-10" onClick={() => removeOrderItem(i)}>
                             <Trash2 className="h-4 w-4" />
@@ -558,23 +588,29 @@ export default function Operacoes() {
                       </div>
                       <div>
                         <Label>Preço (R$)</Label>
-                        <Input
-                          type="number"
-                          step="any"
+                        <DecimalInput
                           className="h-12"
-                          value={newProduct.price || 0}
-                          onChange={(e) => setNewProduct({ ...newProduct, price: parseFloat(e.target.value) || 0 })}
+                          value={newProductPriceText}
+                          onValueChange={setNewProductPriceText}
+                          onValueCommit={(parsed) => {
+                            setNewProduct({ ...newProduct, price: parsed ? parsed.number : null });
+                          }}
+                          min={0}
+                          maxDecimals={10}
                         />
                       </div>
                     </div>
                     <div>
                       <Label>Custo (R$)</Label>
-                      <Input
-                        type="number"
-                        step="any"
+                      <DecimalInput
                         className="h-12"
-                        value={newProduct.cost || 0}
-                        onChange={(e) => setNewProduct({ ...newProduct, cost: parseFloat(e.target.value) || 0 })}
+                        value={newProductCostText}
+                        onValueChange={setNewProductCostText}
+                        onValueCommit={(parsed) => {
+                          setNewProduct({ ...newProduct, cost: parsed ? parsed.number : null });
+                        }}
+                        min={0}
+                        maxDecimals={10}
                       />
                     </div>
                     <Button onClick={handleAddProduct} className="w-full h-12 text-base">
@@ -826,46 +862,52 @@ export default function Operacoes() {
                 />
               </div>
               
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <Label>Mínimo</Label>
-                  <Input
-                    type="number"
-                    className="h-12"
-                    value={editingProduct.min_stock}
-                    onChange={(e) => setEditingProduct({ 
-                      ...editingProduct, 
-                      min_stock: parseInt(e.target.value) || 0 
-                    })}
-                  />
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <Label>Mínimo</Label>
+                    <Input
+                      type="number"
+                      className="h-12"
+                      value={editingProduct.min_stock}
+                      onChange={(e) => setEditingProduct({ 
+                        ...editingProduct, 
+                        min_stock: parseInt(e.target.value) || 0 
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <Label>Custo</Label>
+                    <DecimalInput
+                      className="h-12"
+                      value={editingCostText}
+                      onValueChange={setEditingCostText}
+                      onValueCommit={(parsed) => {
+                        setEditingProduct({
+                          ...editingProduct,
+                          cost: parsed ? parsed.number : null,
+                        });
+                      }}
+                      min={0}
+                      maxDecimals={10}
+                    />
+                  </div>
+                  <div>
+                    <Label>Preço</Label>
+                    <DecimalInput
+                      className="h-12"
+                      value={editingPriceText}
+                      onValueChange={setEditingPriceText}
+                      onValueCommit={(parsed) => {
+                        setEditingProduct({
+                          ...editingProduct,
+                          price: parsed ? parsed.number : null,
+                        });
+                      }}
+                      min={0}
+                      maxDecimals={10}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label>Custo</Label>
-                  <Input
-                    type="number"
-                    step="any"
-                    className="h-12"
-                    value={editingProduct.cost || 0}
-                    onChange={(e) => setEditingProduct({ 
-                      ...editingProduct, 
-                      cost: parseFloat(e.target.value) || 0 
-                    })}
-                  />
-                </div>
-                <div>
-                  <Label>Preço</Label>
-                  <Input
-                    type="number"
-                    step="any"
-                    className="h-12"
-                    value={editingProduct.price || 0}
-                    onChange={(e) => setEditingProduct({ 
-                      ...editingProduct, 
-                      price: parseFloat(e.target.value) || 0 
-                    })}
-                  />
-                </div>
-              </div>
 
               <div className="flex gap-2">
                 <Button 
