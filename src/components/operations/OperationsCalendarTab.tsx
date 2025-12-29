@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ChevronLeft, ChevronRight, Calendar, Package } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 
 interface OperationsCalendarTabProps {
   orders: Order[];
@@ -243,7 +243,7 @@ export function OperationsCalendarTab({
                         <Package className="h-3 w-3" />
                         <span>{order.items?.length || 0} itens</span>
                         {order.total_value && (
-                          <span>• R$ {order.total_value.toFixed(2)}</span>
+                          <span>• {formatCurrency(order.total_value)}</span>
                         )}
                       </div>
                     </div>

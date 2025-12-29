@@ -9,7 +9,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Plus, Pencil, Trash2, Cog } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 
 export function ProcessesManager() {
   const { processes, loading, createProcess, updateProcess, deleteProcess } = useProcesses();
@@ -115,7 +115,7 @@ export function ProcessesManager() {
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-lg">
-                      R$ {process.value_per_unit.toFixed(2)}
+                      {formatCurrency(process.value_per_unit)}
                     </p>
                     <p className="text-xs text-muted-foreground">por {process.unit}</p>
                   </div>

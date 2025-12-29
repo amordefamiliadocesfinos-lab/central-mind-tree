@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Plus, Trash2, Calendar } from 'lucide-react';
 import { Order, OrderItem, Product } from '@/hooks/useOrders';
+import { formatCurrency } from '@/lib/utils';
 interface OrderEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -242,7 +243,7 @@ export function OrderEditDialog({
               <div className="flex justify-between items-center mt-4 pt-3 border-t">
                 <span className="font-medium">Total</span>
                 <span className="text-xl font-bold">
-                  R$ {calculateTotal().toFixed(2)}
+                  {formatCurrency(calculateTotal())}
                 </span>
               </div>
             </CardContent>

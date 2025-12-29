@@ -61,7 +61,7 @@ export function ProductCard({
             
             <div className="flex items-center justify-between mt-2">
               <span className="text-sm font-bold">
-                R$ {(product.price || 0).toFixed(2)}
+                {formatCurrency(product.price || 0)}
               </span>
               <span className={cn(
                 "text-xs",

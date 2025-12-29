@@ -18,7 +18,7 @@ import {
   Plus, Factory, Package, Users, CheckCircle2, 
   ChevronRight, Clock, Trash2, Play, Check
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -334,7 +334,7 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
                         <span>{process.name}</span>
                       </div>
                       <span className="text-sm text-muted-foreground">
-                        R$ {process.value_per_unit.toFixed(2)}/{process.unit}
+                        {formatCurrency(process.value_per_unit)}/{process.unit}
                       </span>
                     </div>
                   );
@@ -497,7 +497,7 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
                               <div className="text-right">
                                 <p className="text-xl font-bold">{entry.quantity}</p>
                                 <p className="text-sm text-green-600">
-                                  R$ {entry.total_value.toFixed(2)}
+                                  {formatCurrency(entry.total_value)}
                                 </p>
                                 <Button 
                                   size="sm" 
@@ -530,7 +530,7 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
                         <Card>
                           <CardContent className="pt-4 text-center">
                             <p className="text-3xl font-bold text-green-600">
-                              R$ {totalPayment.toFixed(2)}
+                              {formatCurrency(totalPayment)}
                             </p>
                             <p className="text-sm text-muted-foreground">Total a Pagar</p>
                           </CardContent>
@@ -542,14 +542,14 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
                               <CardTitle className="text-sm flex items-center gap-2">
                                 <Users className="h-4 w-4" />
                                 {employee}
-                                <Badge className="ml-auto">R$ {data.total.toFixed(2)}</Badge>
+                                <Badge className="ml-auto">{formatCurrency(data.total)}</Badge>
                               </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-1">
                               {Object.entries(data.byProcess).map(([process, info]) => (
                                 <div key={process} className="flex justify-between text-sm">
                                   <span className="text-muted-foreground">{process}</span>
-                                  <span>{info.qty} un = R$ {info.value.toFixed(2)}</span>
+                                  <span>{info.qty} un = {formatCurrency(info.value)}</span>
                                 </div>
                               ))}
                             </CardContent>
