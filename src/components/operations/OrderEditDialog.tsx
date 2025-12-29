@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { FullScreenDialog } from '@/components/ui/responsive-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { DecimalInput } from '@/components/ui/decimal-input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -221,13 +222,14 @@ export function OrderEditDialog({
                         value={item.quantity || ''}
                         onChange={(e) => updateItem(i, 'quantity', parseInt(e.target.value) || 1)}
                       />
-                      <Input
-                        type="number"
+                      <DecimalInput
                         className="w-24 h-10"
                         placeholder="R$"
-                        step="any"
-                        value={item.unit_price || ''}
-                        onChange={(e) => updateItem(i, 'unit_price', parseFloat(e.target.value) || 0)}
+                        value={(item as any)._unit_price_text ?? String(item.unit_price ?? '')}
+                        onValueChange={(v) => updateItem(i, '_unit_price_text', v)}
+                        onValueCommit={(parsed) => updateItem(i, 'unit_price', parsed?.number ?? 0)}
+                        min={0}
+                        maxDecimals={10}
                       />
                       <Button size="icon" variant="ghost" className="h-10 w-10" onClick={() => removeItem(i)}>
                         <Trash2 className="h-4 w-4" />

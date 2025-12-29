@@ -3,6 +3,7 @@ import { useProcesses, Process } from '@/hooks/useProcesses';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { DecimalInput } from '@/components/ui/decimal-input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +15,7 @@ export function ProcessesManager() {
   const { processes, loading, createProcess, updateProcess, deleteProcess } = useProcesses();
   const [showForm, setShowForm] = useState(false);
   const [editingProcess, setEditingProcess] = useState<Process | null>(null);
+  const [valueText, setValueText] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     unit: 'un',
@@ -31,6 +33,7 @@ export function ProcessesManager() {
         is_active: editingProcess.is_active,
         description: editingProcess.description || '',
       });
+      setValueText(String(editingProcess.value_per_unit ?? 0));
     } else {
       setFormData({
         name: '',
@@ -39,6 +42,7 @@ export function ProcessesManager() {
         is_active: true,
         description: '',
       });
+      setValueText('0');
     }
   }, [editingProcess]);
 
@@ -156,12 +160,15 @@ export function ProcessesManager() {
               </div>
               <div>
                 <Label>Valor (R$)</Label>
-                <Input
-                  type="number"
-                  step="any"
+                <DecimalInput
                   className="h-12"
-                  value={formData.value_per_unit}
-                  onChange={(e) => setFormData({ ...formData, value_per_unit: parseFloat(e.target.value) || 0 })}
+                  value={valueText}
+                  onValueChange={setValueText}
+                  onValueCommit={(parsed) => {
+                    setFormData({ ...formData, value_per_unit: parsed?.number ?? 0 });
+                  }}
+                  min={0}
+                  maxDecimals={10}
                 />
               </div>
             </div>
