@@ -1,6 +1,6 @@
 import { Card, CardContent } from '@/components/ui/card';
-import { ShoppingCart, DollarSign, TrendingUp, AlertTriangle } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { ShoppingCart, DollarSign, TrendingUp, AlertTriangle, Package } from 'lucide-react';
+import { cn, formatCurrency } from '@/lib/utils';
 
 interface KPIs {
   totalOrders: number;
@@ -9,31 +9,40 @@ interface KPIs {
   lowStock: { id: string }[];
 }
 
+interface StockValue {
+  totalStockValue: number;
+  totalStockQuantity: number;
+}
+
 interface KPICardsProps {
   kpis: KPIs;
+  stockValue?: StockValue;
   compact?: boolean;
 }
 
-export function KPICards({ kpis, compact = false }: KPICardsProps) {
+export function KPICards({ kpis, stockValue, compact = false }: KPICardsProps) {
   const cards = [
     {
       label: 'Pedidos',
       value: kpis.totalOrders,
       format: (v: number) => v.toString(),
+      subtitle: undefined,
       icon: ShoppingCart,
       color: 'text-primary',
     },
     {
       label: 'Faturamento',
       value: kpis.totalValue,
-      format: (v: number) => `R$ ${v.toFixed(0)}`,
+      format: (v: number) => formatCurrency(v, { compact: true }),
+      subtitle: undefined,
       icon: DollarSign,
       color: 'text-emerald-600',
     },
     {
       label: 'Ticket Médio',
       value: kpis.avgTicket,
-      format: (v: number) => `R$ ${v.toFixed(0)}`,
+      format: (v: number) => formatCurrency(v, { compact: true }),
+      subtitle: undefined,
       icon: TrendingUp,
       color: 'text-blue-600',
     },
@@ -41,10 +50,23 @@ export function KPICards({ kpis, compact = false }: KPICardsProps) {
       label: 'Estoque Baixo',
       value: kpis.lowStock.length,
       format: (v: number) => v.toString(),
+      subtitle: undefined,
       icon: AlertTriangle,
       color: kpis.lowStock.length > 0 ? 'text-amber-500' : 'text-muted-foreground',
     },
   ];
+
+  // Add stock value card if available
+  if (stockValue) {
+    cards.push({
+      label: 'Valor em Estoque',
+      value: stockValue.totalStockValue,
+      format: (v: number) => formatCurrency(v, { compact: true }),
+      subtitle: `${stockValue.totalStockQuantity} unidades`,
+      icon: Package,
+      color: 'text-violet-600',
+    });
+  }
 
   if (compact) {
     return (
@@ -60,6 +82,9 @@ export function KPICards({ kpis, compact = false }: KPICardsProps) {
                     {card.format(card.value)}
                   </p>
                   <p className="text-[10px] text-muted-foreground">{card.label}</p>
+                  {card.subtitle && (
+                    <p className="text-[9px] text-muted-foreground/70">{card.subtitle}</p>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -85,6 +110,9 @@ export function KPICards({ kpis, compact = false }: KPICardsProps) {
                     {card.format(card.value)}
                   </p>
                   <p className="text-xs text-muted-foreground">{card.label}</p>
+                  {card.subtitle && (
+                    <p className="text-[10px] text-muted-foreground/70">{card.subtitle}</p>
+                  )}
                 </div>
               </div>
             </CardContent>

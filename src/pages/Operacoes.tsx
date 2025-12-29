@@ -43,7 +43,7 @@ import {
   OrderItem as StoreOrderItem,
 } from '@/stores/appStore';
 import { useStockCheckStore } from '@/stores/stockCheckStore';
-import { useKPIsSelector, useFilteredOrders, useFilteredProducts, useSearchFilters } from '@/stores/selectors';
+import { useKPIsSelector, useFilteredOrders, useFilteredProducts, useSearchFilters, useStockValueSelector } from '@/stores/selectors';
 import type { Order, OrderItem, Product } from '@/hooks/useOrders';
 
 const VALID_TABS: OperationsTab[] = ['overview', 'orders', 'products', 'inventory', 'production', 'mrp', 'calendar'];
@@ -128,6 +128,7 @@ export default function Operacoes() {
 
   // KPIs from selector
   const kpis = useKPIsSelector();
+  const stockValue = useStockValueSelector();
 
   // Filtered and sorted data
   const filteredOrders = sortOrdersByStatus(useFilteredOrders());
@@ -252,7 +253,7 @@ export default function Operacoes() {
       case 'overview':
         return (
           <div className="space-y-4">
-            <KPICards kpis={kpis} />
+            <KPICards kpis={kpis} stockValue={stockValue} />
             
             <Card>
               <CardHeader className="pb-2">

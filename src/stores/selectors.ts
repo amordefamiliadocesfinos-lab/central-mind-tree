@@ -50,6 +50,52 @@ export function useKPIsSelector(): KPIs {
   };
 }
 
+// ====== Stock Value Selectors ======
+export interface StockValueData {
+  totalStockValue: number;
+  totalStockQuantity: number;
+  productValues: Record<string, { quantity: number; avgCost: number; value: number }>;
+}
+
+/**
+ * Calcula o valor total em estoque usando custo médio ponderado.
+ * - Usa o custo (cost) do produto cadastrado como fallback
+ * - Se não houver custo, considera R$ 0
+ */
+export function useStockValueSelector(): StockValueData {
+  const products = useAppStore((state) => state.products);
+  const productBalances = useAppStore((state) => state.productBalances);
+
+  // Para cada produto, calcular valor = saldo * custo médio
+  const productValues: Record<string, { quantity: number; avgCost: number; value: number }> = {};
+  let totalStockValue = 0;
+  let totalStockQuantity = 0;
+
+  for (const product of products) {
+    const quantity = productBalances[product.id] || 0;
+    
+    // Usar o custo cadastrado no produto como custo médio
+    // (em implementações futuras, pode calcular média ponderada a partir dos movimentos)
+    const avgCost = product.cost || 0;
+    const value = quantity * avgCost;
+
+    productValues[product.id] = {
+      quantity,
+      avgCost,
+      value,
+    };
+
+    totalStockValue += value;
+    totalStockQuantity += quantity;
+  }
+
+  return {
+    totalStockValue,
+    totalStockQuantity,
+    productValues,
+  };
+}
+
 // ====== Filtered Data Selectors ======
 export function useFilteredOrders(): Order[] {
   const orders = useAppStore((state) => state.orders);
