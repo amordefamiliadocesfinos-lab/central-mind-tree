@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Plus, Calendar, Users, Check, Trash2, DollarSign } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 import { format, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -77,10 +77,9 @@ export function ProductionClosingTab() {
         <Card>
           <CardContent className="pt-4 text-center">
             <p className="text-3xl font-bold text-green-600">
-              R$ {closings
+              {formatCurrency(closings
                 .filter(c => c.status === 'pago')
-                .reduce((sum, c) => sum + c.total_value, 0)
-                .toFixed(2)}
+                .reduce((sum, c) => sum + c.total_value, 0))}
             </p>
             <p className="text-xs text-muted-foreground">Total Pago</p>
           </CardContent>
@@ -88,10 +87,9 @@ export function ProductionClosingTab() {
         <Card>
           <CardContent className="pt-4 text-center">
             <p className="text-3xl font-bold text-amber-600">
-              R$ {closings
+              {formatCurrency(closings
                 .filter(c => c.status === 'aberto')
-                .reduce((sum, c) => sum + c.total_value, 0)
-                .toFixed(2)}
+                .reduce((sum, c) => sum + c.total_value, 0))}
             </p>
             <p className="text-xs text-muted-foreground">Em Aberto</p>
           </CardContent>
@@ -135,7 +133,7 @@ export function ProductionClosingTab() {
                       </p>
                     </div>
                     <p className="text-2xl font-bold text-green-600">
-                      R$ {closing.total_value.toFixed(2)}
+                      {formatCurrency(closing.total_value)}
                     </p>
                   </div>
                 </CardContent>
@@ -218,7 +216,7 @@ export function ProductionClosingTab() {
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Total:</span>
                       <span className="font-bold text-lg text-green-600">
-                        R$ {selectedClosing.total_value.toFixed(2)}
+                        {formatCurrency(selectedClosing.total_value)}
                       </span>
                     </div>
                     {selectedClosing.notes && (
@@ -241,7 +239,7 @@ export function ProductionClosingTab() {
                           <Users className="h-4 w-4" />
                           {employee}
                           <Badge className="ml-auto bg-green-600">
-                            R$ {data.total.toFixed(2)}
+                            {formatCurrency(data.total)}
                           </Badge>
                         </CardTitle>
                       </CardHeader>
@@ -252,7 +250,7 @@ export function ProductionClosingTab() {
                               {item.process?.name || 'Processo'}
                             </span>
                             <span>
-                              {item.total_quantity} un = R$ {item.total_value.toFixed(2)}
+                              {item.total_quantity} un = {formatCurrency(item.total_value)}
                             </span>
                           </div>
                         ))}

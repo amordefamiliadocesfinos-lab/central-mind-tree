@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertTriangle, ShoppingBag, Package, Download, RefreshCw, Check, Play, CheckCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
 
 interface MRPTabProps {
@@ -176,7 +176,7 @@ export function MRPTab({ orders = [], onReserve, onConsume }: MRPTabProps) {
                     {order.customer_name || `#${order.order_number || order.id.slice(0, 8)}`}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {order.items?.length || 0} itens • R$ {(order.total_value || 0).toFixed(2)}
+                    {order.items?.length || 0} itens • {formatCurrency(order.total_value || 0)}
                   </p>
                 </div>
                 <Button 
@@ -216,7 +216,7 @@ export function MRPTab({ orders = [], onReserve, onConsume }: MRPTabProps) {
                     {order.customer_name || `#${order.order_number || order.id.slice(0, 8)}`}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {order.items?.length || 0} itens • R$ {(order.total_value || 0).toFixed(2)}
+                    {order.items?.length || 0} itens • {formatCurrency(order.total_value || 0)}
                   </p>
                 </div>
                 <Button 
