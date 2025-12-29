@@ -80,9 +80,9 @@ export function BOMEditor({ productId, productName, availableComponents }: BOMEd
                 <TableCell className="text-right">
                   <Input
                     type="number"
-                    step="0.01"
-                    min="0.01"
-                    className="w-20 h-8 text-right"
+                    step="any"
+                    min="0.000001"
+                    className="w-24 h-8 text-right"
                     value={comp.qty_per_unit}
                     onChange={(e) => {
                       const val = parseFloat(e.target.value);
@@ -123,12 +123,12 @@ export function BOMEditor({ productId, productName, availableComponents }: BOMEd
             </SelectContent>
           </Select>
         </div>
-        <div className="w-20">
+        <div className="w-24">
           <Label className="text-xs">Qtd/un</Label>
           <Input
             type="number"
-            step="0.01"
-            min="0.01"
+            step="any"
+            min="0.000001"
             className="h-9"
             value={newQty}
             onChange={(e) => setNewQty(parseFloat(e.target.value) || 1)}
