@@ -245,9 +245,10 @@ export function ProductionLogForm({
             <Label>Quantidade</Label>
             <Input
               type="number"
+              step="any"
               className="h-12 text-lg"
               value={formData.quantity || ''}
-              onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })}
+              onChange={(e) => setFormData({ ...formData, quantity: parseFloat(e.target.value) || 0 })}
             />
           </div>
 

@@ -223,9 +223,9 @@ export function OrderEditDialog({
                       />
                       <Input
                         type="number"
-                        className="w-20 h-10"
+                        className="w-24 h-10"
                         placeholder="R$"
-                        step="0.01"
+                        step="any"
                         value={item.unit_price || ''}
                         onChange={(e) => updateItem(i, 'unit_price', parseFloat(e.target.value) || 0)}
                       />

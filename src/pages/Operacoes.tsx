@@ -560,7 +560,7 @@ export default function Operacoes() {
                         <Label>Preço (R$)</Label>
                         <Input
                           type="number"
-                          step="0.01"
+                          step="any"
                           className="h-12"
                           value={newProduct.price || 0}
                           onChange={(e) => setNewProduct({ ...newProduct, price: parseFloat(e.target.value) || 0 })}
@@ -571,7 +571,7 @@ export default function Operacoes() {
                       <Label>Custo (R$)</Label>
                       <Input
                         type="number"
-                        step="0.01"
+                        step="any"
                         className="h-12"
                         value={newProduct.cost || 0}
                         onChange={(e) => setNewProduct({ ...newProduct, cost: parseFloat(e.target.value) || 0 })}
@@ -843,7 +843,7 @@ export default function Operacoes() {
                   <Label>Custo</Label>
                   <Input
                     type="number"
-                    step="0.01"
+                    step="any"
                     className="h-12"
                     value={editingProduct.cost || 0}
                     onChange={(e) => setEditingProduct({ 
@@ -856,7 +856,7 @@ export default function Operacoes() {
                   <Label>Preço</Label>
                   <Input
                     type="number"
-                    step="0.01"
+                    step="any"
                     className="h-12"
                     value={editingProduct.price || 0}
                     onChange={(e) => setEditingProduct({ 

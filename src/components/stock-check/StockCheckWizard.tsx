@@ -517,9 +517,10 @@ export function StockCheckWizard() {
                         <Label>Contagem Física</Label>
                         <Input
                           type="number"
+                          step="any"
                           className="h-12 text-lg font-semibold"
                           value={countedQuantity}
-                          onChange={(e) => setCountedQuantity(parseInt(e.target.value) || 0)}
+                          onChange={(e) => setCountedQuantity(parseFloat(e.target.value) || 0)}
                           min={0}
                         />
                       </div>
