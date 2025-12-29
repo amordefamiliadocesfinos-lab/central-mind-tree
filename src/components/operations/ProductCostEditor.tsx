@@ -12,6 +12,7 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Cog, Package, DollarSign, Trash2, RefreshCw } from 'lucide-react';
+import { formatCurrency, formatNumber } from '@/lib/utils';
 
 interface ProductCostEditorProps {
   productId: string;
@@ -127,19 +128,19 @@ export function ProductCostEditor({
             <CardContent className="pt-4">
               <div className="grid grid-cols-4 gap-2 text-center">
                 <div>
-                  <p className="text-lg font-bold">{costBreakdown.materials.toFixed(2)}</p>
+                  <p className="text-lg font-bold">{formatCurrency(costBreakdown.materials)}</p>
                   <p className="text-xs text-muted-foreground">Materiais</p>
                 </div>
                 <div>
-                  <p className="text-lg font-bold">{costBreakdown.processes.toFixed(2)}</p>
+                  <p className="text-lg font-bold">{formatCurrency(costBreakdown.processes)}</p>
                   <p className="text-xs text-muted-foreground">Processos</p>
                 </div>
                 <div>
-                  <p className="text-lg font-bold">{costBreakdown.optionals.toFixed(2)}</p>
+                  <p className="text-lg font-bold">{formatCurrency(costBreakdown.optionals)}</p>
                   <p className="text-xs text-muted-foreground">Opcionais</p>
                 </div>
                 <div>
-                  <p className="text-lg font-bold text-primary">{costBreakdown.total.toFixed(2)}</p>
+                  <p className="text-lg font-bold text-primary">{formatCurrency(costBreakdown.total)}</p>
                   <p className="text-xs text-muted-foreground">Total</p>
                 </div>
               </div>
@@ -177,7 +178,7 @@ export function ProductCostEditor({
                     <div>
                       <p className="font-medium">{comp.component?.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {comp.qty_per_unit} {comp.component?.unit}
+                        {formatNumber(comp.qty_per_unit)} {comp.component?.unit}
                       </p>
                     </div>
                     <Badge variant="secondary">BOM</Badge>
@@ -209,14 +210,14 @@ export function ProductCostEditor({
                     <div>
                       <p className="font-medium">{pp.process?.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        Base: R$ {pp.process?.value_per_unit.toFixed(2)}
+                        Base: {formatCurrency(pp.process?.value_per_unit || 0)}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <Input
                         type="number"
-                        step="0.01"
-                        className="w-24 h-8 text-right"
+                        step="any"
+                        className="w-28 h-8 text-right"
                         value={pp.cost_per_unit}
                         onChange={(e) => {
                           updateProductProcess(pp.id, parseFloat(e.target.value) || 0);
@@ -265,7 +266,7 @@ export function ProductCostEditor({
                     <Label>Custo por Unidade (R$)</Label>
                     <Input
                       type="number"
-                      step="0.01"
+                      step="any"
                       value={newProcess.cost_per_unit}
                       onChange={(e) => setNewProcess({ ...newProcess, cost_per_unit: parseFloat(e.target.value) || 0 })}
                     />
@@ -312,7 +313,7 @@ export function ProductCostEditor({
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">R$ {cost.cost_per_unit.toFixed(2)}</span>
+                      <span className="font-medium">{formatCurrency(cost.cost_per_unit)}</span>
                       <Button 
                         size="icon" 
                         variant="ghost"
@@ -342,7 +343,7 @@ export function ProductCostEditor({
                     <Label>Custo por Unidade (R$)</Label>
                     <Input
                       type="number"
-                      step="0.01"
+                      step="any"
                       value={newOptional.cost_per_unit}
                       onChange={(e) => setNewOptional({ ...newOptional, cost_per_unit: parseFloat(e.target.value) || 0 })}
                     />
