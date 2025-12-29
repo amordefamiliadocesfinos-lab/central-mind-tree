@@ -2,7 +2,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Image, AlertTriangle, ArrowUpDown, History, Edit } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 import { Product } from '@/hooks/useOrders';
 
 interface ProductCardProps {
@@ -70,6 +70,15 @@ export function ProductCard({
                 Est: {balance} {product.unit || 'un'}
               </span>
             </div>
+            
+            {showInventoryActions && balance > 0 && (product.cost || 0) > 0 && (
+              <div className="flex items-center justify-between mt-1 pt-1 border-t border-dashed border-muted">
+                <span className="text-xs text-muted-foreground">Valor em estoque:</span>
+                <span className="text-sm font-semibold text-primary">
+                  {formatCurrency(balance * (product.cost || 0))}
+                </span>
+              </div>
+            )}
           </div>
         </div>
         
