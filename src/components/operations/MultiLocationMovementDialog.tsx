@@ -175,10 +175,11 @@ export function MultiLocationMovementDialog({
                 <Label>Quantidade</Label>
                 <Input
                   type="number"
-                  min={1}
+                  step="any"
+                  min={0.000001}
                   className="h-12"
                   value={quantity}
-                  onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
+                  onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
                 />
               </div>
               <div className="p-3 bg-green-50 dark:bg-green-950 rounded-lg text-center">
@@ -209,11 +210,12 @@ export function MultiLocationMovementDialog({
                 <Label>Quantidade</Label>
                 <Input
                   type="number"
-                  min={1}
+                  step="any"
+                  min={0.000001}
                   max={getBalanceForLocation(location)}
                   className="h-12"
                   value={quantity}
-                  onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
+                  onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
                 />
               </div>
               <div className="p-3 bg-red-50 dark:bg-red-950 rounded-lg text-center">
@@ -259,11 +261,12 @@ export function MultiLocationMovementDialog({
                 <Label>Quantidade</Label>
                 <Input
                   type="number"
-                  min={1}
+                  step="any"
+                  min={0.000001}
                   max={getBalanceForLocation(fromLocation)}
                   className="h-12"
                   value={quantity}
-                  onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
+                  onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
                 />
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -302,10 +305,11 @@ export function MultiLocationMovementDialog({
                 <Label>Novo Saldo</Label>
                 <Input
                   type="number"
+                  step="any"
                   min={0}
                   className="h-12"
                   value={quantity}
-                  onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
+                  onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
                 />
               </div>
               <div className="p-3 bg-blue-50 dark:bg-blue-950 rounded-lg text-center">

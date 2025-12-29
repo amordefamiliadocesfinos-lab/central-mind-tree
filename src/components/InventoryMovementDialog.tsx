@@ -116,9 +116,10 @@ export function InventoryMovementDialog({
             </Label>
             <Input
               type="number"
-              min={type === 'adjust' ? 0 : 1}
+              step="any"
+              min={type === 'adjust' ? 0 : 0.000001}
               value={quantity}
-              onChange={(e) => setQuantity(parseInt(e.target.value) || 0)}
+              onChange={(e) => setQuantity(parseFloat(e.target.value) || 0)}
             />
           </div>
 

@@ -158,7 +158,7 @@ export function ProcessesManager() {
                 <Label>Valor (R$)</Label>
                 <Input
                   type="number"
-                  step="0.01"
+                  step="any"
                   className="h-12"
                   value={formData.value_per_unit}
                   onChange={(e) => setFormData({ ...formData, value_per_unit: parseFloat(e.target.value) || 0 })}
