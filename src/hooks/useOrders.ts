@@ -285,9 +285,51 @@ export function useOrders() {
       if (itemsError) {
         console.error('Error adding items:', itemsError);
       }
+
+      // Auto-create production orders for each item
+      for (const item of items) {
+        if (!item.product_id) continue;
+
+        // Get processes associated with this product
+        const { data: productProcesses } = await supabase
+          .from('product_processes')
+          .select('process_id')
+          .eq('product_id', item.product_id);
+
+        const orderNumber = `OP-${Date.now().toString(36).toUpperCase()}-${item.product_id.slice(0, 4)}`;
+
+        // Create production order
+        const { data: prodOrder, error: prodError } = await supabase
+          .from('production_orders')
+          .insert({
+            order_number: orderNumber,
+            product_id: item.product_id,
+            target_quantity: item.quantity || 1,
+            status: 'aberto',
+            notes: `Gerado automaticamente do pedido ${newOrder.order_number}`,
+          })
+          .select()
+          .single();
+
+        if (prodError) {
+          console.error('Error creating production order:', prodError);
+          continue;
+        }
+
+        // Add processes to production order if any exist
+        if (productProcesses && productProcesses.length > 0) {
+          await supabase
+            .from('production_order_processes')
+            .insert(productProcesses.map(p => ({
+              production_order_id: prodOrder.id,
+              process_id: p.process_id,
+              is_required: true,
+            })));
+        }
+      }
     }
 
-    toast.success('Pedido criado!');
+    toast.success('Pedido e ordens de produção criados!');
     fetchOrders();
     return newOrder as Order;
   }, [fetchOrders]);
