@@ -53,11 +53,35 @@ export const getWeekStartISO = (date?: Date): string => {
 };
 
 /**
- * Format date for display in PT-BR locale
+ * Format date for display in PT-BR locale (DD/MM/YYYY)
  */
 export const formatDatePtBR = (date: Date | string, formatStr: string = "dd/MM/yyyy"): string => {
   const d = typeof date === "string" ? parseISO(date) : date;
   return format(d, formatStr, { locale: ptBR });
+};
+
+/**
+ * Format date for display (DD/MM/YYYY) - safe with null/undefined
+ */
+export const formatDisplayDate = (dateStr: string | null | undefined): string => {
+  if (!dateStr) return '';
+  try {
+    return format(parseISO(dateStr), "dd/MM/yyyy");
+  } catch {
+    return dateStr;
+  }
+};
+
+/**
+ * Format date for display (DD/MM) - short format
+ */
+export const formatDisplayDateShort = (dateStr: string | null | undefined): string => {
+  if (!dateStr) return '';
+  try {
+    return format(parseISO(dateStr), "dd/MM");
+  } catch {
+    return dateStr;
+  }
 };
 
 /**

@@ -103,7 +103,7 @@ export default function MinhaArea() {
     const d = parseISO(date);
     if (isToday(d)) return 'Hoje';
     if (isTomorrow(d)) return 'Amanhã';
-    return format(d, "EEE, d 'de' MMM", { locale: ptBR });
+    return format(d, "dd/MM/yyyy", { locale: ptBR });
   };
 
   if (loading) {
@@ -263,7 +263,7 @@ export default function MinhaArea() {
                               <span className="font-medium">{task.title}</span>
                             </div>
                             <Badge variant="destructive" className="text-xs">
-                              {task.due_date && format(parseISO(task.due_date), 'd/MM')}
+                              {task.due_date && format(parseISO(task.due_date), 'dd/MM')}
                             </Badge>
                           </div>
                         </CardContent>
@@ -302,7 +302,7 @@ export default function MinhaArea() {
                             </div>
                             {task.due_date && (
                               <span className="text-xs text-muted-foreground">
-                                {format(parseISO(task.due_date), 'd/MM')}
+                                {format(parseISO(task.due_date), 'dd/MM')}
                               </span>
                             )}
                           </div>

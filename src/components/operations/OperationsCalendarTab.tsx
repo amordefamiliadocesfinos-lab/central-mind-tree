@@ -217,7 +217,7 @@ export function OperationsCalendarTab({
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              Pedidos para {new Date(selectedDate + 'T12:00:00').toLocaleDateString('pt-BR')}
+              Pedidos para {selectedDate.split('-').reverse().join('/')}
             </CardTitle>
           </CardHeader>
           <CardContent>

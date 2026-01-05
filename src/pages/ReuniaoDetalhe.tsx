@@ -164,7 +164,7 @@ export default function ReuniaoDetalhe() {
     if (!meeting) return;
     
     let content = `# Ata da Reunião: ${meeting.title}\n\n`;
-    content += `**Data:** ${format(new Date(meeting.meeting_date + 'T12:00:00'), "d 'de' MMMM 'de' yyyy", { locale: ptBR })}\n`;
+    content += `**Data:** ${format(new Date(meeting.meeting_date + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR })}\n`;
     content += `**Horário:** ${meeting.start_time.substring(0, 5)}\n`;
     content += `**Duração:** ${meeting.duration_minutes} minutos\n`;
     if (meeting.location) content += `**Local:** ${meeting.location}\n`;
@@ -237,7 +237,7 @@ export default function ReuniaoDetalhe() {
               <div className="min-w-0">
                 <h1 className="text-base md:text-xl font-bold truncate">{meeting.title}</h1>
                 <p className="text-xs md:text-sm text-muted-foreground truncate">
-                  {format(new Date(meeting.meeting_date + 'T12:00:00'), "EEE, d MMM", { locale: ptBR })} • {meeting.start_time.substring(0, 5)}
+                  {format(new Date(meeting.meeting_date + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR })} • {meeting.start_time.substring(0, 5)}
                 </p>
               </div>
             </div>
