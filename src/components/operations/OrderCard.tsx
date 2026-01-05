@@ -4,6 +4,16 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChevronRight, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { format, parseISO } from 'date-fns';
+
+const formatDate = (dateStr: string | null | undefined): string => {
+  if (!dateStr) return '';
+  try {
+    return format(parseISO(dateStr), 'dd/MM/yyyy');
+  } catch {
+    return dateStr;
+  }
+};
 
 interface OrderItem {
   quantity: number;
@@ -56,11 +66,11 @@ export function OrderCard({ order, orderStatus, orderChannels, onStatusChange, o
             <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-muted-foreground mt-1">
               <span>{orderChannels[order.channel as keyof typeof orderChannels] || order.channel}</span>
               <span>•</span>
-              <span>{order.order_date}</span>
+              <span>{formatDate(order.order_date)}</span>
               {order.due_date && (
                 <>
                   <span>•</span>
-                  <span className="text-amber-600 font-medium">Entrega: {order.due_date}</span>
+                  <span className="text-amber-600 font-medium">Entrega: {formatDate(order.due_date)}</span>
                 </>
               )}
             </div>
