@@ -325,14 +325,43 @@ export default function Foco() {
     localStorage.setItem(STORAGE_KEYS.queue, JSON.stringify(queue));
   }, [queue]);
 
-  const fetchTasks = async () => {
-    const { data: tasksData } = await supabase
+  const fetchTasks = useCallback(async () => {
+    // Fetch tasks that are either in the queue OR have status 'andamento'
+    const currentQueue = JSON.parse(localStorage.getItem(STORAGE_KEYS.queue) || '[]');
+    
+    let tasksData: Task[] = [];
+    
+    // First, get all tasks in the queue (regardless of status)
+    if (currentQueue.length > 0) {
+      const { data: queueTasks } = await supabase
+        .from('tasks')
+        .select('id, title, description, node_id, progress, order_index, dependency_id, status')
+        .in('id', currentQueue)
+        .in('status', ['andamento', 'pendente']);
+      
+      if (queueTasks) {
+        tasksData = queueTasks;
+      }
+    }
+    
+    // Also fetch any 'andamento' tasks not in queue for potential addition
+    const { data: andamentoTasks } = await supabase
       .from('tasks')
       .select('id, title, description, node_id, progress, order_index, dependency_id, status')
       .eq('status', 'andamento')
       .order('order_index');
+    
+    if (andamentoTasks) {
+      // Merge, avoiding duplicates
+      const existingIds = new Set(tasksData.map(t => t.id));
+      andamentoTasks.forEach(t => {
+        if (!existingIds.has(t.id)) {
+          tasksData.push(t);
+        }
+      });
+    }
 
-    if (tasksData) {
+    if (tasksData.length > 0) {
       setTasks(tasksData);
       const nodeIds = [...new Set(tasksData.map(t => t.node_id))];
       if (nodeIds.length > 0) {
@@ -356,8 +385,10 @@ export default function Foco() {
           setDependencyTasks(Object.fromEntries(depTasks.map(t => [t.id, t])));
         }
       }
+    } else {
+      setTasks([]);
     }
-  };
+  }, []);
 
   const formatTime = (ms: number) => {
     const totalSeconds = Math.floor(ms / 1000);
