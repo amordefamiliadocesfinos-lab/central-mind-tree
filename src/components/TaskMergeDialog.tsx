@@ -146,7 +146,7 @@ export const TaskMergeDialog = ({
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {newDate
-                          ? format(newDate, "PPP", { locale: ptBR })
+                          ? format(newDate, "dd/MM/yyyy", { locale: ptBR })
                           : "Selecionar data"}
                       </Button>
                     </PopoverTrigger>

@@ -99,7 +99,7 @@ export default function Reunioes() {
   };
 
   const formatDate = (date: string) => {
-    return format(new Date(date + 'T12:00:00'), "EEE, d 'de' MMM", { locale: ptBR });
+    return format(new Date(date + 'T12:00:00'), "dd/MM/yyyy", { locale: ptBR });
   };
 
   if (loading) {

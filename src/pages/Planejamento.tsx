@@ -880,7 +880,7 @@ const Planejamento = () => {
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {taskForm.due_date ? format(taskForm.due_date, "PPP", { locale: ptBR }) : "Selecionar data"}
+                      {taskForm.due_date ? format(taskForm.due_date, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -921,7 +921,7 @@ const Planejamento = () => {
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {taskForm.scheduled_date ? format(taskForm.scheduled_date, "PPP", { locale: ptBR }) : "Selecionar data"}
+                      {taskForm.scheduled_date ? format(taskForm.scheduled_date, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">

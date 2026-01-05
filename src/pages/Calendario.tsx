@@ -460,7 +460,7 @@ const Calendario = () => {
                     className="px-3 py-2 rounded-full text-sm font-medium text-white cursor-move hover:opacity-80 transition-opacity flex items-center gap-2"
                     style={{ backgroundColor: MEETING_COLOR }}
                   >
-                    <span>{meeting.meeting_date.slice(5, 10).replace('-', '/')}</span>
+                    <span>{meeting.meeting_date.split('-').reverse().join('/').slice(0, 5)}</span>
                     <span className="max-w-[120px] truncate">{meeting.title}</span>
                   </div>
                 ))}
@@ -473,7 +473,7 @@ const Calendario = () => {
       <ResponsiveDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
-        title={`Nova Tarefa - ${selectedDate}`}
+        title={`Nova Tarefa - ${selectedDate.split('-').reverse().join('/')}`}
       >
         <div className="space-y-4">
           <div className="space-y-2">
@@ -548,7 +548,7 @@ const Calendario = () => {
         open={choiceDialogOpen}
         onOpenChange={setChoiceDialogOpen}
         title="O que deseja criar?"
-        description={`Data: ${selectedDate}`}
+        description={`Data: ${selectedDate.split('-').reverse().join('/')}`}
       >
         <div className="flex gap-3">
           <Button 
@@ -574,7 +574,7 @@ const Calendario = () => {
       <ResponsiveDialog
         open={createMeetingDialogOpen}
         onOpenChange={setCreateMeetingDialogOpen}
-        title={`Nova Reunião - ${selectedDate}`}
+        title={`Nova Reunião - ${selectedDate.split('-').reverse().join('/')}`}
       >
         <div className="space-y-4">
           <div className="space-y-2">

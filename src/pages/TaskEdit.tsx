@@ -495,7 +495,7 @@ const TaskEdit = () => {
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.due_date ? format(formData.due_date, "PPP", { locale: ptBR }) : "Selecionar data"}
+                      {formData.due_date ? format(formData.due_date, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -537,7 +537,7 @@ const TaskEdit = () => {
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {formData.scheduled_date ? format(formData.scheduled_date, "PPP", { locale: ptBR }) : "Selecionar data"}
+                      {formData.scheduled_date ? format(formData.scheduled_date, "dd/MM/yyyy", { locale: ptBR }) : "Selecionar data"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
