@@ -168,19 +168,27 @@ export function useProductionOrders() {
     return true;
   }, []);
 
-  // Calculate consolidated quantity (minimum across required processes)
+  // Calculate consolidated quantity (minimum across required processes, or min across all entries if no required processes)
   const calculateConsolidation = useCallback((order: ProductionOrder) => {
-    const requiredProcesses = order.processes?.filter(p => p.is_required) || [];
-    if (requiredProcesses.length === 0) return 0;
+    const entries = order.entries || [];
+    if (entries.length === 0) return 0;
 
     const entriesByProcess: Record<string, number> = {};
-    (order.entries || []).forEach(entry => {
+    entries.forEach(entry => {
       entriesByProcess[entry.process_id] = (entriesByProcess[entry.process_id] || 0) + entry.quantity;
     });
 
-    // Get minimum quantity across all required processes
-    const quantities = requiredProcesses.map(p => entriesByProcess[p.process_id] || 0);
-    return Math.min(...quantities);
+    const requiredProcesses = order.processes?.filter(p => p.is_required) || [];
+    
+    // If there are required processes, use minimum across them
+    if (requiredProcesses.length > 0) {
+      const quantities = requiredProcesses.map(p => entriesByProcess[p.process_id] || 0);
+      return Math.min(...quantities);
+    }
+    
+    // If no required processes defined, use minimum across all processes with entries
+    const allQuantities = Object.values(entriesByProcess);
+    return allQuantities.length > 0 ? Math.min(...allQuantities) : 0;
   }, []);
 
   // Add production entry
