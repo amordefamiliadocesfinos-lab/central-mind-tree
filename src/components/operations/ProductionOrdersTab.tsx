@@ -581,11 +581,18 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
                   <SelectValue placeholder="Selecione o processo" />
                 </SelectTrigger>
                 <SelectContent>
-                  {(selectedOrder?.processes || []).map((op) => (
-                    <SelectItem key={op.process_id} value={op.process_id}>
-                      {op.process?.name}
-                    </SelectItem>
-                  ))}
+                  {(selectedOrder?.processes && selectedOrder.processes.length > 0)
+                    ? selectedOrder.processes.map((op) => (
+                        <SelectItem key={op.process_id} value={op.process_id}>
+                          {op.process?.name}
+                        </SelectItem>
+                      ))
+                    : activeProcesses.map((process) => (
+                        <SelectItem key={process.id} value={process.id}>
+                          {process.name}
+                        </SelectItem>
+                      ))
+                  }
                 </SelectContent>
               </Select>
             </div>
