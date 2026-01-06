@@ -57,10 +57,10 @@ export function useProductionClosing() {
     setLoading(false);
   }, []);
 
-  // Create a new closing period
+  // Create a new closing period - combines production_entries (OPs) and production_logs (legacy)
   const createClosing = useCallback(async (startDate: string, endDate: string, notes?: string) => {
-    // Get all entries in the period
-    const { data: entries, error: entriesError } = await supabase
+    // Get entries from production_entries (new OP system)
+    const { data: opEntries, error: opError } = await supabase
       .from('production_entries')
       .select(`
         employee_name,
@@ -72,34 +72,70 @@ export function useProductionClosing() {
       .gte('date', startDate)
       .lte('date', endDate);
 
-    if (entriesError) {
+    // Get entries from production_logs (legacy system)
+    const { data: legacyLogs, error: legacyError } = await supabase
+      .from('production_logs')
+      .select(`
+        employee_name,
+        process,
+        quantity
+      `)
+      .gte('date', startDate)
+      .lte('date', endDate);
+
+    if (opError || legacyError) {
       toast.error('Erro ao buscar lançamentos');
       return null;
     }
 
-    if (!entries || entries.length === 0) {
+    const hasOPEntries = opEntries && opEntries.length > 0;
+    const hasLegacyLogs = legacyLogs && legacyLogs.length > 0;
+
+    if (!hasOPEntries && !hasLegacyLogs) {
       toast.error('Nenhum lançamento no período');
       return null;
     }
 
     // Aggregate by employee + process
-    const aggregated: Record<string, { employee_name: string; process_id: string; total_quantity: number; total_value: number }> = {};
+    const aggregated: Record<string, { employee_name: string; process_id: string | null; process_name: string; total_quantity: number; total_value: number }> = {};
     let grandTotal = 0;
 
-    entries.forEach((entry: any) => {
-      const key = `${entry.employee_name}|${entry.process_id}`;
-      if (!aggregated[key]) {
-        aggregated[key] = {
-          employee_name: entry.employee_name,
-          process_id: entry.process_id,
-          total_quantity: 0,
-          total_value: 0,
-        };
-      }
-      aggregated[key].total_quantity += entry.quantity;
-      aggregated[key].total_value += entry.total_value;
-      grandTotal += entry.total_value;
-    });
+    // Process OP entries
+    if (opEntries) {
+      opEntries.forEach((entry: any) => {
+        const key = `${entry.employee_name}|${entry.process_id || 'no-process'}`;
+        if (!aggregated[key]) {
+          aggregated[key] = {
+            employee_name: entry.employee_name,
+            process_id: entry.process_id,
+            process_name: entry.process?.name || 'Processo',
+            total_quantity: 0,
+            total_value: 0,
+          };
+        }
+        aggregated[key].total_quantity += entry.quantity;
+        aggregated[key].total_value += entry.total_value || 0;
+        grandTotal += entry.total_value || 0;
+      });
+    }
+
+    // Process legacy logs (no value, just quantity)
+    if (legacyLogs) {
+      legacyLogs.forEach((log: any) => {
+        const key = `${log.employee_name}|legacy-${log.process}`;
+        if (!aggregated[key]) {
+          aggregated[key] = {
+            employee_name: log.employee_name,
+            process_id: null,
+            process_name: log.process,
+            total_quantity: 0,
+            total_value: 0,
+          };
+        }
+        aggregated[key].total_quantity += log.quantity;
+        // Legacy logs don't have value
+      });
+    }
 
     // Create closing
     const { data: closing, error: closingError } = await supabase
