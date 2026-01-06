@@ -298,7 +298,7 @@ export function useOrders() {
 
         const orderNumber = `OP-${Date.now().toString(36).toUpperCase()}-${item.product_id.slice(0, 4)}`;
 
-        // Create production order
+        // Create production order with source_order_id link
         const { data: prodOrder, error: prodError } = await supabase
           .from('production_orders')
           .insert({
@@ -307,7 +307,8 @@ export function useOrders() {
             target_quantity: item.quantity || 1,
             status: 'aberto',
             notes: `Gerado automaticamente do pedido ${newOrder.order_number}`,
-          })
+            source_order_id: newOrder.id,
+          } as any)
           .select()
           .single();
 

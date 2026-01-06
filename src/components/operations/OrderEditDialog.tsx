@@ -7,9 +7,11 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
-import { Plus, Trash2, Calendar } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Plus, Trash2, Calendar, Factory, ExternalLink } from 'lucide-react';
 import { Order, OrderItem, Product } from '@/hooks/useOrders';
 import { formatCurrency } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
 interface OrderEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -34,6 +36,26 @@ export function OrderEditDialog({
   const [formData, setFormData] = useState<Partial<Order>>({});
   const [items, setItems] = useState<Partial<OrderItem>[]>([]);
   const [saving, setSaving] = useState(false);
+  const [linkedProductionOrders, setLinkedProductionOrders] = useState<any[]>([]);
+
+  // Fetch linked production orders
+  useEffect(() => {
+    if (!order?.id) {
+      setLinkedProductionOrders([]);
+      return;
+    }
+
+    const fetchLinkedOrders = async () => {
+      const { data } = await supabase
+        .from('production_orders')
+        .select('id, order_number, status, target_quantity, product_id, products(name)')
+        .eq('source_order_id', order.id);
+      
+      setLinkedProductionOrders(data || []);
+    };
+
+    fetchLinkedOrders();
+  }, [order?.id]);
 
   useEffect(() => {
     if (order) {
@@ -183,6 +205,42 @@ export function OrderEditDialog({
               rows={2}
             />
           </div>
+
+          {/* Linked Production Orders */}
+          {linkedProductionOrders.length > 0 && (
+            <Card className="border-primary/20 bg-primary/5">
+              <CardContent className="pt-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Factory className="h-4 w-4 text-primary" />
+                  <Label className="text-base font-semibold">Ordens de Produção</Label>
+                  <Badge variant="secondary" className="ml-auto">
+                    {linkedProductionOrders.length} OP{linkedProductionOrders.length > 1 ? 's' : ''}
+                  </Badge>
+                </div>
+                <div className="space-y-2">
+                  {linkedProductionOrders.map((op) => (
+                    <div 
+                      key={op.id} 
+                      className="flex items-center justify-between p-2 bg-background rounded-md border"
+                    >
+                      <div className="flex-1">
+                        <div className="font-medium text-sm">{op.order_number}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {(op.products as any)?.name || 'Produto'} • {op.target_quantity} un
+                        </div>
+                      </div>
+                      <Badge 
+                        variant={op.status === 'concluido' ? 'default' : 'outline'}
+                        className="text-xs"
+                      >
+                        {op.status}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Items */}
           <Card>
