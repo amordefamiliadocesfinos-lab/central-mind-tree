@@ -9,10 +9,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { formatCurrency, cn } from '@/lib/utils';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subWeeks, subMonths } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
   Plus, Search, MoreVertical, Download, DollarSign, CheckCircle, Trash2, 
@@ -81,6 +83,13 @@ export function FinancialEntriesList({
   const [selectedAccount, setSelectedAccount] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [formTab, setFormTab] = useState('pagamento');
+  
+  // Period picker state
+  const [periodPickerOpen, setPeriodPickerOpen] = useState(false);
+  const [periodStart, setPeriodStart] = useState<Date | undefined>(startOfMonth(new Date()));
+  const [periodEnd, setPeriodEnd] = useState<Date | undefined>(endOfMonth(new Date()));
+  const [tempPeriodStart, setTempPeriodStart] = useState<Date | undefined>(periodStart);
+  const [tempPeriodEnd, setTempPeriodEnd] = useState<Date | undefined>(periodEnd);
 
   // Form state
   const [form, setForm] = useState({
@@ -102,9 +111,64 @@ export function FinancialEntriesList({
   const title = type === 'pagar' ? 'Contas a pagar' : 'Contas a receber';
   const typeEntries = entries.filter(e => e.type === type);
 
+  // Period preset functions
+  const applyPeriodPreset = (preset: string) => {
+    const today = new Date();
+    let start: Date;
+    let end: Date;
+
+    switch (preset) {
+      case 'today':
+        start = startOfDay(today);
+        end = endOfDay(today);
+        break;
+      case 'thisWeek':
+        start = startOfWeek(today, { weekStartsOn: 1 });
+        end = endOfWeek(today, { weekStartsOn: 1 });
+        break;
+      case 'lastWeek':
+        start = startOfWeek(subWeeks(today, 1), { weekStartsOn: 1 });
+        end = endOfWeek(subWeeks(today, 1), { weekStartsOn: 1 });
+        break;
+      case 'thisMonth':
+        start = startOfMonth(today);
+        end = endOfMonth(today);
+        break;
+      case 'lastMonth':
+        start = startOfMonth(subMonths(today, 1));
+        end = endOfMonth(subMonths(today, 1));
+        break;
+      default:
+        return;
+    }
+    
+    setTempPeriodStart(start);
+    setTempPeriodEnd(end);
+  };
+
+  const handleApplyPeriod = () => {
+    setPeriodStart(tempPeriodStart);
+    setPeriodEnd(tempPeriodEnd);
+    setPeriodPickerOpen(false);
+  };
+
+  const handleCancelPeriod = () => {
+    setTempPeriodStart(periodStart);
+    setTempPeriodEnd(periodEnd);
+    setPeriodPickerOpen(false);
+  };
+
   // Apply filters
   const filteredEntries = useMemo(() => {
     let filtered = [...typeEntries];
+
+    // Filter by period
+    if (periodStart && periodEnd) {
+      filtered = filtered.filter(e => {
+        const dueDate = parseISO(e.due_date);
+        return dueDate >= startOfDay(periodStart) && dueDate <= endOfDay(periodEnd);
+      });
+    }
 
     if (statusFilter !== 'all') {
       filtered = filtered.filter(e => getEntryStatus(e) === statusFilter);
@@ -127,7 +191,7 @@ export function FinancialEntriesList({
     }
 
     return filtered;
-  }, [typeEntries, statusFilter, searchQuery, categoryFilter, selectedAccount]);
+  }, [typeEntries, statusFilter, searchQuery, categoryFilter, selectedAccount, periodStart, periodEnd]);
 
   // Summary
   const summary = useMemo(() => {
@@ -365,10 +429,121 @@ export function FinancialEntriesList({
                 className="pl-9"
               />
             </div>
-            <Button variant="outline" size="sm">
-              <Calendar className="h-4 w-4 mr-1" />
-              {format(new Date(), "dd/MM/yyyy")} até {format(new Date(), "dd/MM/yyyy")}
-            </Button>
+            <Popover open={periodPickerOpen} onOpenChange={setPeriodPickerOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Calendar className="h-4 w-4 mr-1" />
+                  {periodStart && periodEnd ? (
+                    `${format(periodStart, "dd/MM/yyyy")} até ${format(periodEnd, "dd/MM/yyyy")}`
+                  ) : (
+                    'Selecionar período'
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <div className="flex">
+                  {/* Calendars */}
+                  <div className="p-4 border-r">
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Início do período</Label>
+                          <Input 
+                            type="text" 
+                            value={tempPeriodStart ? format(tempPeriodStart, "dd/MM/yyyy") : ''} 
+                            readOnly 
+                            className="h-9"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Fim do período</Label>
+                          <Input 
+                            type="text" 
+                            value={tempPeriodEnd ? format(tempPeriodEnd, "dd/MM/yyyy") : ''} 
+                            readOnly 
+                            className="h-9"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <CalendarComponent
+                          mode="single"
+                          selected={tempPeriodStart}
+                          onSelect={setTempPeriodStart}
+                          locale={ptBR}
+                          className="pointer-events-auto"
+                        />
+                        <CalendarComponent
+                          mode="single"
+                          selected={tempPeriodEnd}
+                          onSelect={setTempPeriodEnd}
+                          locale={ptBR}
+                          className="pointer-events-auto"
+                        />
+                      </div>
+                      <div className="flex justify-end gap-2 pt-2 border-t">
+                        <Button variant="outline" size="sm" onClick={handleCancelPeriod}>
+                          Cancelar
+                        </Button>
+                        <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={handleApplyPeriod}>
+                          Filtrar
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Presets */}
+                  <div className="p-4 space-y-1 min-w-[160px]">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="w-full justify-start"
+                      onClick={() => applyPeriodPreset('today')}
+                    >
+                      Hoje
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="w-full justify-start"
+                      onClick={() => applyPeriodPreset('thisWeek')}
+                    >
+                      Esta semana
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="w-full justify-start"
+                      onClick={() => applyPeriodPreset('lastWeek')}
+                    >
+                      Semana passada
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="w-full justify-start"
+                      onClick={() => applyPeriodPreset('thisMonth')}
+                    >
+                      Este mês
+                    </Button>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="w-full justify-start"
+                      onClick={() => applyPeriodPreset('lastMonth')}
+                    >
+                      Mês passado
+                    </Button>
+                    <Button 
+                      variant="default" 
+                      size="sm" 
+                      className="w-full justify-start bg-emerald-600 hover:bg-emerald-700 mt-2"
+                    >
+                      Período customizado
+                    </Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
             <Button variant="outline" size="icon">
               <Printer className="h-4 w-4" />
             </Button>
