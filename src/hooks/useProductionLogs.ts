@@ -58,7 +58,9 @@ export function useProductionLogs() {
 
   const fetchLogs = useCallback(async (date?: string) => {
     setLoading(true);
-    let query = supabase
+    
+    // Fetch legacy production_logs
+    let legacyQuery = supabase
       .from('production_logs')
       .select(`
         *,
@@ -67,18 +69,71 @@ export function useProductionLogs() {
       .order('created_at', { ascending: false });
 
     if (date) {
-      query = query.eq('date', date);
+      legacyQuery = legacyQuery.eq('date', date);
     }
 
-    const { data, error } = await query.limit(100);
+    // Fetch OP entries (production_entries) to combine
+    let opQuery = supabase
+      .from('production_entries')
+      .select(`
+        id,
+        date,
+        period,
+        employee_name,
+        process_id,
+        quantity,
+        notes,
+        production_order_id,
+        created_at,
+        updated_at,
+        process:processes(id, name)
+      `)
+      .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Error fetching production logs:', error);
-      setLoading(false);
-      return;
+    if (date) {
+      opQuery = opQuery.eq('date', date);
     }
 
-    setLogs((data || []) as ProductionLog[]);
+    const [legacyResult, opResult] = await Promise.all([
+      legacyQuery.limit(100),
+      opQuery.limit(100)
+    ]);
+
+    if (legacyResult.error) {
+      console.error('Error fetching production logs:', legacyResult.error);
+    }
+    
+    if (opResult.error) {
+      console.error('Error fetching OP entries:', opResult.error);
+    }
+
+    const legacyLogs = (legacyResult.data || []) as ProductionLog[];
+    
+    // Convert OP entries to ProductionLog format
+    const opLogs: ProductionLog[] = (opResult.data || []).map((entry: any) => ({
+      id: `op-${entry.id}`,
+      date: entry.date,
+      period: entry.period,
+      employee_name: entry.employee_name,
+      process: entry.process?.name || 'Processo OP',
+      product_id: null,
+      quantity: entry.quantity,
+      notes: entry.notes,
+      warnings: null,
+      order_id: null,
+      created_at: entry.created_at,
+      updated_at: entry.updated_at,
+      product: undefined,
+      // Mark as OP entry for differentiation
+      _source: 'op' as const,
+    }));
+
+    // Combine and sort by created_at desc
+    const combinedLogs = [...legacyLogs, ...opLogs].sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+
+    setLogs(combinedLogs);
     setLoading(false);
   }, []);
 
