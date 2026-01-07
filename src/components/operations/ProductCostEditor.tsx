@@ -126,28 +126,36 @@ export function ProductCostEditor({
         {costBreakdown && (
           <Card className="bg-muted/50">
             <CardContent className="pt-4">
-              <div className="grid grid-cols-4 gap-2 text-center">
-                <div>
-                  <p className="text-lg font-bold">{formatCurrency(costBreakdown.materials)}</p>
-                  <p className="text-xs text-muted-foreground">Materiais</p>
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div className="text-center p-2 bg-background rounded-md">
+                  <p className="text-xs text-muted-foreground mb-1">Materiais</p>
+                  <p className="text-sm font-bold truncate" title={formatCurrency(costBreakdown.materials)}>
+                    {formatCurrency(costBreakdown.materials)}
+                  </p>
                 </div>
-                <div>
-                  <p className="text-lg font-bold">{formatCurrency(costBreakdown.processes)}</p>
-                  <p className="text-xs text-muted-foreground">Processos</p>
+                <div className="text-center p-2 bg-background rounded-md">
+                  <p className="text-xs text-muted-foreground mb-1">Processos</p>
+                  <p className="text-sm font-bold truncate" title={formatCurrency(costBreakdown.processes)}>
+                    {formatCurrency(costBreakdown.processes)}
+                  </p>
                 </div>
-                <div>
-                  <p className="text-lg font-bold">{formatCurrency(costBreakdown.optionals)}</p>
-                  <p className="text-xs text-muted-foreground">Opcionais</p>
+                <div className="text-center p-2 bg-background rounded-md">
+                  <p className="text-xs text-muted-foreground mb-1">Opcionais</p>
+                  <p className="text-sm font-bold truncate" title={formatCurrency(costBreakdown.optionals)}>
+                    {formatCurrency(costBreakdown.optionals)}
+                  </p>
                 </div>
-                <div>
-                  <p className="text-lg font-bold text-primary">{formatCurrency(costBreakdown.total)}</p>
-                  <p className="text-xs text-muted-foreground">Total</p>
+                <div className="text-center p-2 bg-primary/10 rounded-md border border-primary/20">
+                  <p className="text-xs text-muted-foreground mb-1">Total</p>
+                  <p className="text-sm font-bold text-primary truncate" title={formatCurrency(costBreakdown.total)}>
+                    {formatCurrency(costBreakdown.total)}
+                  </p>
                 </div>
               </div>
               <Button 
                 variant="outline" 
                 size="sm" 
-                className="w-full mt-3"
+                className="w-full"
                 onClick={handleSyncCost}
               >
                 <RefreshCw className="h-4 w-4 mr-2" />
