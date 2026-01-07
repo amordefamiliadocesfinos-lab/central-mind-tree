@@ -182,6 +182,212 @@ export type Database = {
         }
         Relationships: []
       }
+      financial_accounts: {
+        Row: {
+          account_number: string | null
+          agency: string | null
+          bank_name: string | null
+          created_at: string
+          current_balance: number
+          id: string
+          initial_balance: number
+          is_active: boolean
+          name: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          account_number?: string | null
+          agency?: string | null
+          bank_name?: string | null
+          created_at?: string
+          current_balance?: number
+          id?: string
+          initial_balance?: number
+          is_active?: boolean
+          name: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          account_number?: string | null
+          agency?: string | null
+          bank_name?: string | null
+          created_at?: string
+          current_balance?: number
+          id?: string
+          initial_balance?: number
+          is_active?: boolean
+          name?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      financial_categories: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          type: string
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          type: string
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          type?: string
+        }
+        Relationships: []
+      }
+      financial_entries: {
+        Row: {
+          account_id: string | null
+          category_id: string | null
+          conciliated_at: string | null
+          contact_id: string | null
+          created_at: string
+          description: string
+          document_number: string | null
+          due_date: string
+          id: string
+          is_conciliated: boolean
+          notes: string | null
+          order_id: string | null
+          payment_date: string | null
+          type: string
+          updated_at: string
+          value: number
+          value_paid: number
+        }
+        Insert: {
+          account_id?: string | null
+          category_id?: string | null
+          conciliated_at?: string | null
+          contact_id?: string | null
+          created_at?: string
+          description: string
+          document_number?: string | null
+          due_date: string
+          id?: string
+          is_conciliated?: boolean
+          notes?: string | null
+          order_id?: string | null
+          payment_date?: string | null
+          type: string
+          updated_at?: string
+          value: number
+          value_paid?: number
+        }
+        Update: {
+          account_id?: string | null
+          category_id?: string | null
+          conciliated_at?: string | null
+          contact_id?: string | null
+          created_at?: string
+          description?: string
+          document_number?: string | null
+          due_date?: string
+          id?: string
+          is_conciliated?: boolean
+          notes?: string | null
+          order_id?: string | null
+          payment_date?: string | null
+          type?: string
+          updated_at?: string
+          value?: number
+          value_paid?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_entries_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entries_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "financial_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entries_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entries_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_movements: {
+        Row: {
+          account_id: string | null
+          created_at: string
+          created_by: string | null
+          entry_id: string
+          id: string
+          movement_date: string
+          notes: string | null
+          value: number
+        }
+        Insert: {
+          account_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          entry_id: string
+          id?: string
+          movement_date?: string
+          notes?: string | null
+          value: number
+        }
+        Update: {
+          account_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          entry_id?: string
+          id?: string
+          movement_date?: string
+          notes?: string | null
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_movements_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_movements_entry_id_fkey"
+            columns: ["entry_id"]
+            isOneToOne: false
+            referencedRelation: "financial_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory: {
         Row: {
           id: string

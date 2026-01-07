@@ -24,6 +24,7 @@ import Planilhas from "./pages/Planilhas";
 import Reunioes from "./pages/Reunioes";
 import ReuniaoDetalhe from "./pages/ReuniaoDetalhe";
 import MinhaArea from "./pages/MinhaArea";
+import Financeiro from "./pages/Financeiro";
 import NotFound from "./pages/NotFound";
 import { useScheduledTaskPromotion } from "./hooks/useScheduledTaskPromotion";
 
@@ -76,6 +77,7 @@ function AnimatedRoutes() {
           <Route path="/reunioes" element={<Reunioes />} />
           <Route path="/reunioes/:id" element={<ReuniaoDetalhe />} />
           <Route path="/minha-area" element={<MinhaArea />} />
+          <Route path="/financeiro" element={<Financeiro />} />
           <Route path="/task/:id" element={<TaskEdit />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
