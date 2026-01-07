@@ -9,10 +9,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Textarea } from '@/components/ui/textarea';
 import { FinancialAccount, FinancialMovement, FinancialCategory } from '@/hooks/useFinancial';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency, cn } from '@/lib/utils';
-import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
   Plus, Building2, CreditCard, Wallet, Edit, Search, Calendar,
@@ -110,11 +111,14 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
     description: '',
     value: '',
     date: format(new Date(), 'yyyy-MM-dd'),
+    competence_date: format(new Date(), 'yyyy-MM-dd'),
     category_id: '',
     account_id: '',
     contact_name: '',
     notes: '',
   });
+  
+  const [showFiltersSidebar, setShowFiltersSidebar] = useState(true);
 
   // Fetch movements
   const fetchMovements = async () => {
@@ -405,6 +409,7 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
       description: '',
       value: '',
       date: format(new Date(), 'yyyy-MM-dd'),
+      competence_date: format(new Date(), 'yyyy-MM-dd'),
       category_id: '',
       account_id: accounts[0]?.id || '',
       contact_name: '',
@@ -493,7 +498,76 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
         </Button>
       </div>
 
-      <div className={cn("grid gap-4", isMobile ? "grid-cols-1" : "grid-cols-[1fr_280px]")}>
+      <div className={cn("grid gap-4", isMobile ? "grid-cols-1" : "grid-cols-[200px_1fr_260px]")}>
+        {/* Left Sidebar - Filters */}
+        {showFiltersSidebar && !isMobile && (
+          <Card className="p-4 space-y-4 h-fit">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium flex items-center gap-1">
+                <Filter className="h-4 w-4" /> Filtrar
+              </span>
+              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowFiltersSidebar(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <Label className="text-xs flex items-center gap-1">
+                  Categoria <Settings2 className="h-3 w-3" />
+                </Label>
+                <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue placeholder="Todas categorias" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas categorias</SelectItem>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs">Situação</Label>
+                <Select value={situationFilter} onValueChange={setSituationFilter}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="registrados">Registrados</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs">Situação da conciliação</Label>
+                <Select value={conciliationFilter} onValueChange={setConciliationFilter}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    <SelectItem value="conciliado">Conciliado</SelectItem>
+                    <SelectItem value="nao_conciliado">Não conciliado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs">Valor</Label>
+                <Input placeholder="" className="h-9" />
+              </div>
+
+              <Button variant="outline" size="sm" className="w-full" onClick={clearFilters}>
+                Filtrar
+              </Button>
+            </div>
+          </Card>
+        )}
+
         {/* Main content */}
         <div className="space-y-4">
           {/* Search and actions bar */}
@@ -522,94 +596,44 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
               <Download className="h-4 w-4 mr-1" />
               {!isMobile && "Exportar extrato"}
             </Button>
-            <Button 
-              variant="outline" 
-              size="icon"
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              <Filter className="h-4 w-4" />
+            <Button variant="outline" size="icon">
+              <Printer className="h-4 w-4" />
             </Button>
+            <Button variant="outline" size="icon">
+              <Trash2 className="h-4 w-4" />
+            </Button>
+            {!showFiltersSidebar && !isMobile && (
+              <Button variant="outline" size="icon" onClick={() => setShowFiltersSidebar(true)}>
+                <Filter className="h-4 w-4" />
+              </Button>
+            )}
           </div>
 
           {/* Active filters */}
-          {(categoryFilter !== 'all' || conciliationFilter !== 'all') && (
+          {(situationFilter !== 'all' || conciliationFilter !== 'all' || categoryFilter !== 'all') && (
             <div className="flex flex-wrap items-center gap-2 text-sm">
+              {situationFilter !== 'all' && (
+                <Badge variant="secondary" className="gap-1">
+                  Situação: {situationFilter === 'registrados' ? 'Registrados' : 'Todos'}
+                  <X className="h-3 w-3 cursor-pointer" onClick={() => setSituationFilter('all')} />
+                </Badge>
+              )}
+              {conciliationFilter !== 'all' && (
+                <Badge variant="secondary" className="gap-1">
+                  Situação da conciliação: {conciliationFilter === 'conciliado' ? 'Conciliados' : 'Não conciliados'}
+                  <X className="h-3 w-3 cursor-pointer" onClick={() => setConciliationFilter('all')} />
+                </Badge>
+              )}
               {categoryFilter !== 'all' && (
                 <Badge variant="secondary" className="gap-1">
                   Categoria: {categories.find(c => c.id === categoryFilter)?.name}
                   <X className="h-3 w-3 cursor-pointer" onClick={() => setCategoryFilter('all')} />
                 </Badge>
               )}
-              {conciliationFilter !== 'all' && (
-                <Badge variant="secondary" className="gap-1">
-                  Conciliação: {conciliationFilter === 'conciliado' ? 'Conciliado' : 'Não conciliado'}
-                  <X className="h-3 w-3 cursor-pointer" onClick={() => setConciliationFilter('all')} />
-                </Badge>
-              )}
               <Button variant="link" size="sm" className="h-auto p-0" onClick={clearFilters}>
                 Limpar
               </Button>
             </div>
-          )}
-
-          {/* Filters panel */}
-          {showFilters && (
-            <Card className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-medium flex items-center gap-1">
-                  <Filter className="h-4 w-4" /> Filtrar
-                </span>
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowFilters(false)}>
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
-                <div className="space-y-1">
-                  <Label className="text-xs">Categoria</Label>
-                  <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                    <SelectTrigger className="h-8">
-                      <SelectValue placeholder="Todas categorias" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas categorias</SelectItem>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Situação</Label>
-                  <Select value={situationFilter} onValueChange={setSituationFilter}>
-                    <SelectTrigger className="h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      <SelectItem value="registrados">Registrados</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Situação da conciliação</Label>
-                  <Select value={conciliationFilter} onValueChange={setConciliationFilter}>
-                    <SelectTrigger className="h-8">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas</SelectItem>
-                      <SelectItem value="conciliado">Conciliado</SelectItem>
-                      <SelectItem value="nao_conciliado">Não conciliado</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex items-end">
-                  <Button size="sm" variant="outline" className="w-full" onClick={clearFilters}>
-                    Limpar filtros
-                  </Button>
-                </div>
-              </div>
-            </Card>
           )}
 
           {/* Tabs */}
@@ -657,7 +681,7 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
                             <Checkbox />
                           </TableCell>
                           <TableCell className="text-sm">
-                            {format(new Date(mov.movement_date), 'dd/MM/yyyy')}
+                            {format(parseISO(mov.movement_date), 'dd/MM/yyyy')}
                           </TableCell>
                           <TableCell>
                             <span className="text-sm">{mov.entry?.category?.name || '-'}</span>
@@ -1044,53 +1068,27 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
         </DialogContent>
       </Dialog>
 
-      {/* Entry Dialog - Incluir lançamento */}
+      {/* Entry Dialog - Lançamento caixa */}
       <Dialog open={entryDialogOpen} onOpenChange={setEntryDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Incluir Lançamento</DialogTitle>
+            <DialogTitle>Lançamento caixa</DialogTitle>
+            <p className="text-sm text-muted-foreground">(*) Campos obrigatórios</p>
           </DialogHeader>
 
           <form onSubmit={handleCreateEntry} className="space-y-4">
-            {/* Tipo */}
-            <div className="space-y-2">
-              <Label>Tipo *</Label>
-              <Select 
-                value={entryForm.type} 
-                onValueChange={(v) => setEntryForm({ ...entryForm, type: v as 'pagar' | 'receber', category_id: '' })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="pagar">Saída (Pagamento)</SelectItem>
-                  <SelectItem value="receber">Entrada (Recebimento)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Descrição */}
-            <div className="space-y-2">
-              <Label>Histórico / Descrição *</Label>
-              <Input
-                value={entryForm.description}
-                onChange={(e) => setEntryForm({ ...entryForm, description: e.target.value })}
-                placeholder="Ex: Pagamento de fornecedor"
-                required
-              />
-            </div>
-
             {/* Categoria */}
             <div className="space-y-2">
               <Label>Categoria</Label>
               <Select 
-                value={entryForm.category_id} 
-                onValueChange={(v) => setEntryForm({ ...entryForm, category_id: v })}
+                value={entryForm.category_id || 'none'} 
+                onValueChange={(v) => setEntryForm({ ...entryForm, category_id: v === 'none' ? '' : v })}
               >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecionar categoria" />
+                <SelectTrigger className="bg-emerald-50 border-emerald-200">
+                  <SelectValue placeholder="Sem categoria" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">Sem categoria</SelectItem>
                   {filteredCategories.map((cat) => (
                     <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                   ))}
@@ -1098,10 +1096,23 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
               </Select>
             </div>
 
-            {/* Valor e Data */}
-            <div className="grid grid-cols-2 gap-4">
+            {/* Data, Valor, Tipo */}
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label>Valor *</Label>
+                <Label>Data *</Label>
+                <div className="relative">
+                  <Input
+                    type="date"
+                    value={entryForm.date}
+                    onChange={(e) => setEntryForm({ ...entryForm, date: e.target.value })}
+                    required
+                    className="pr-8"
+                  />
+                  <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-emerald-600 pointer-events-none" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Valor (R$) *</Label>
                 <Input
                   type="number"
                   step="0.01"
@@ -1113,59 +1124,96 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Data *</Label>
-                <Input
-                  type="date"
-                  value={entryForm.date}
-                  onChange={(e) => setEntryForm({ ...entryForm, date: e.target.value })}
-                  required
-                />
+                <Label>Tipo</Label>
+                <Select 
+                  value={entryForm.type} 
+                  onValueChange={(v) => setEntryForm({ ...entryForm, type: v as 'pagar' | 'receber', category_id: '' })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pagar">Saída</SelectItem>
+                    <SelectItem value="receber">Entrada</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
-            {/* Conta */}
+            {/* Competência e Conta */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Competência *</Label>
+                <div className="relative">
+                  <Input
+                    type="date"
+                    value={entryForm.competence_date}
+                    onChange={(e) => setEntryForm({ ...entryForm, competence_date: e.target.value })}
+                    required
+                    className="pr-8"
+                  />
+                  <Calendar className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-emerald-600 pointer-events-none" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Conta financeira</Label>
+                <Select 
+                  value={entryForm.account_id} 
+                  onValueChange={(v) => setEntryForm({ ...entryForm, account_id: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecionar conta" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accounts.map((acc) => (
+                      <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Histórico */}
             <div className="space-y-2">
-              <Label>Conta *</Label>
-              <Select 
-                value={entryForm.account_id} 
-                onValueChange={(v) => setEntryForm({ ...entryForm, account_id: v })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecionar conta" />
-                </SelectTrigger>
-                <SelectContent>
-                  {accounts.map((acc) => (
-                    <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Label>Histórico *</Label>
+              <Textarea
+                value={entryForm.description}
+                onChange={(e) => setEntryForm({ ...entryForm, description: e.target.value })}
+                placeholder="Descrição do lançamento"
+                required
+                rows={3}
+              />
             </div>
 
             {/* Cliente/Fornecedor */}
             <div className="space-y-2">
-              <Label>Cliente / Fornecedor</Label>
-              <Input
-                value={entryForm.contact_name}
-                onChange={(e) => setEntryForm({ ...entryForm, contact_name: e.target.value })}
-                placeholder="Nome do cliente ou fornecedor"
-              />
+              <Label className="flex items-center gap-1">
+                Cliente ou fornecedor 
+                <span className="text-blue-500 cursor-help">ℹ</span>
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  value={entryForm.contact_name}
+                  onChange={(e) => setEntryForm({ ...entryForm, contact_name: e.target.value })}
+                  placeholder=""
+                  className="flex-1"
+                />
+                <Button type="button" variant="outline" size="icon">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
 
-            {/* Observações */}
-            <div className="space-y-2">
-              <Label>Observações</Label>
-              <Input
-                value={entryForm.notes}
-                onChange={(e) => setEntryForm({ ...entryForm, notes: e.target.value })}
-                placeholder="Notas adicionais"
-              />
-            </div>
+            {/* Separator */}
+            <div className="border-t border-dashed pt-4" />
 
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setEntryDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button type="submit">Salvar</Button>
+              <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700">
+                Salvar
+              </Button>
             </div>
           </form>
         </DialogContent>
