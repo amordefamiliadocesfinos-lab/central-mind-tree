@@ -6,3 +6,4 @@ export { AccountsManager } from './AccountsManager';
 export { CategoriesManager } from './CategoriesManager';
 export { ContactsManager } from './ContactsManager';
 export { ContactFormDialog } from './ContactFormDialog';
+export { ContactOrderHistory } from './ContactOrderHistory';

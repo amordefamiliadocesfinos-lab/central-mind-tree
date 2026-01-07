@@ -34,9 +34,11 @@ import {
   Printer,
   FileSpreadsheet,
   MessageCircle,
+  ShoppingCart,
 } from 'lucide-react';
 import { useContacts, Contact } from '@/hooks/useContacts';
 import { ContactFormDialog } from './ContactFormDialog';
+import { ContactOrderHistory } from './ContactOrderHistory';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -59,6 +61,8 @@ export function ContactsManager() {
   const [editingContact, setEditingContact] = useState<Contact | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyContact, setHistoryContact] = useState<Contact | null>(null);
 
   const filteredContacts = contacts.filter((contact) => {
     // Filter by active status
@@ -125,6 +129,11 @@ export function ContactsManager() {
       const fullPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
       window.open(`https://wa.me/${fullPhone}`, '_blank');
     }
+  };
+
+  const handleHistoryClick = (contact: Contact) => {
+    setHistoryContact(contact);
+    setHistoryOpen(true);
   };
 
   const formatDocument = (doc?: string) => {
@@ -288,6 +297,10 @@ export function ContactsManager() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleHistoryClick(contact)}>
+                            <ShoppingCart className="h-4 w-4 mr-2" />
+                            Histórico de Pedidos
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleEditClick(contact)}>
                             <Edit className="h-4 w-4 mr-2" />
                             Editar
@@ -336,6 +349,13 @@ export function ContactsManager() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Order History Dialog */}
+      <ContactOrderHistory
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        contact={historyContact}
+      />
     </div>
   );
 }
