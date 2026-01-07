@@ -8,12 +8,13 @@ import { MobileHeader } from '@/components/ui/mobile-header';
 import { 
   FinancialDashboard, 
   FinancialEntriesList, 
-  AccountsManager 
+  AccountsManager,
+  CategoriesManager,
 } from '@/components/financial';
 import { useFinancial, EntryStatus } from '@/hooks/useFinancial';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarIcon, LayoutDashboard, TrendingDown, TrendingUp, Wallet } from 'lucide-react';
+import { CalendarIcon, LayoutDashboard, TrendingDown, TrendingUp, Wallet, Tag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -40,6 +41,7 @@ export default function Financeiro() {
     conciliateEntry,
     exportToCSV,
     saveAccount,
+    saveCategory,
   } = useFinancial();
 
   const handleDateRangeChange = (start: Date | undefined, end: Date | undefined) => {
@@ -102,7 +104,7 @@ export default function Financeiro() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className={cn("grid w-full", isMobile ? "grid-cols-2" : "grid-cols-4")}>
+          <TabsList className={cn("grid w-full", isMobile ? "grid-cols-3" : "grid-cols-5")}>
             <TabsTrigger value="dashboard" className="gap-2">
               <LayoutDashboard className="h-4 w-4" />
               {!isMobile && "Dashboard"}
@@ -111,15 +113,19 @@ export default function Financeiro() {
               <TrendingUp className="h-4 w-4" />
               {!isMobile && "A Receber"}
             </TabsTrigger>
+            <TabsTrigger value="pagar" className="gap-2">
+              <TrendingDown className="h-4 w-4" />
+              {!isMobile && "A Pagar"}
+            </TabsTrigger>
             {!isMobile && (
               <>
-                <TabsTrigger value="pagar" className="gap-2">
-                  <TrendingDown className="h-4 w-4" />
-                  A Pagar
-                </TabsTrigger>
                 <TabsTrigger value="contas" className="gap-2">
                   <Wallet className="h-4 w-4" />
                   Caixas/Bancos
+                </TabsTrigger>
+                <TabsTrigger value="categorias" className="gap-2">
+                  <Tag className="h-4 w-4" />
+                  Categorias
                 </TabsTrigger>
               </>
             )}
@@ -127,11 +133,11 @@ export default function Financeiro() {
 
           {isMobile && (
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="pagar" className="gap-2">
-                <TrendingDown className="h-4 w-4" />
-              </TabsTrigger>
               <TabsTrigger value="contas" className="gap-2">
                 <Wallet className="h-4 w-4" />
+              </TabsTrigger>
+              <TabsTrigger value="categorias" className="gap-2">
+                <Tag className="h-4 w-4" />
               </TabsTrigger>
             </TabsList>
           )}
@@ -182,6 +188,10 @@ export default function Financeiro() {
 
           <TabsContent value="contas">
             <AccountsManager accounts={accounts} onSave={saveAccount} />
+          </TabsContent>
+
+          <TabsContent value="categorias">
+            <CategoriesManager categories={categories} onSave={saveCategory} />
           </TabsContent>
         </Tabs>
       </div>
