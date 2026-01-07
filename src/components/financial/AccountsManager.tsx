@@ -64,6 +64,7 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
+  const [entryDialogOpen, setEntryDialogOpen] = useState(false);
   const [editing, setEditing] = useState<FinancialAccount | null>(null);
   const [movements, setMovements] = useState<MovementWithDetails[]>([]);
   const [loading, setLoading] = useState(false);
@@ -80,7 +81,7 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [situationFilter, setSituationFilter] = useState('all');
   const [conciliationFilter, setConciliationFilter] = useState('all');
-  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [categories, setCategories] = useState<{ id: string; name: string; type: string }[]>([]);
 
   const [form, setForm] = useState({
     name: '',
@@ -101,6 +102,17 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
   const [adjustForm, setAdjustForm] = useState({
     account_id: '',
     new_balance: '',
+    notes: '',
+  });
+
+  const [entryForm, setEntryForm] = useState({
+    type: 'pagar' as 'pagar' | 'receber',
+    description: '',
+    value: '',
+    date: format(new Date(), 'yyyy-MM-dd'),
+    category_id: '',
+    account_id: '',
+    contact_name: '',
     notes: '',
   });
 
@@ -131,7 +143,7 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
   const fetchCategories = async () => {
     const { data } = await supabase
       .from('financial_categories')
-      .select('id, name')
+      .select('id, name, type')
       .eq('is_active', true);
     if (data) setCategories(data);
   };
@@ -387,7 +399,73 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
     setSearchQuery('');
   };
 
+  const handleOpenEntryDialog = () => {
+    setEntryForm({
+      type: 'pagar',
+      description: '',
+      value: '',
+      date: format(new Date(), 'yyyy-MM-dd'),
+      category_id: '',
+      account_id: accounts[0]?.id || '',
+      contact_name: '',
+      notes: '',
+    });
+    setEntryDialogOpen(true);
+  };
+
+  const handleCreateEntry = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const value = parseFloat(entryForm.value);
+    if (!entryForm.description || !value || !entryForm.account_id) {
+      toast({ variant: 'destructive', title: 'Preencha os campos obrigatórios' });
+      return;
+    }
+
+    // Create entry
+    const { data: entry, error: entryError } = await supabase
+      .from('financial_entries')
+      .insert({
+        type: entryForm.type,
+        description: entryForm.description,
+        value,
+        due_date: entryForm.date,
+        payment_date: entryForm.date,
+        category_id: entryForm.category_id || null,
+        notes: entryForm.notes || null,
+      })
+      .select()
+      .single();
+
+    if (entryError) {
+      toast({ variant: 'destructive', title: 'Erro ao criar lançamento' });
+      return;
+    }
+
+    // Create movement (already paid/received)
+    const { error: movError } = await supabase.from('financial_movements').insert({
+      entry_id: entry.id,
+      account_id: entryForm.account_id,
+      value,
+      movement_date: entryForm.date,
+      notes: entryForm.contact_name ? `${entryForm.contact_name}` : null,
+    });
+
+    if (movError) {
+      toast({ variant: 'destructive', title: 'Erro ao registrar movimentação' });
+      return;
+    }
+
+    toast({ title: 'Lançamento criado!' });
+    setEntryDialogOpen(false);
+    fetchMovements();
+  };
+
   const totalBalance = accounts.reduce((sum, a) => sum + a.current_balance, 0);
+
+  // Filter categories by entry type
+  const filteredCategories = categories.filter(c => 
+    c.type === entryForm.type || c.type === 'ambos'
+  );
 
   return (
     <div className="space-y-4">
@@ -409,7 +487,7 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
             </SelectContent>
           </Select>
         </div>
-        <Button onClick={handleNew} className="bg-emerald-600 hover:bg-emerald-700">
+        <Button onClick={handleOpenEntryDialog} className="bg-emerald-600 hover:bg-emerald-700">
           <Plus className="h-4 w-4 mr-1" />
           Incluir lançamento
         </Button>
@@ -961,6 +1039,133 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
                 Cancelar
               </Button>
               <Button type="submit">Ajustar</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Entry Dialog - Incluir lançamento */}
+      <Dialog open={entryDialogOpen} onOpenChange={setEntryDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Incluir Lançamento</DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleCreateEntry} className="space-y-4">
+            {/* Tipo */}
+            <div className="space-y-2">
+              <Label>Tipo *</Label>
+              <Select 
+                value={entryForm.type} 
+                onValueChange={(v) => setEntryForm({ ...entryForm, type: v as 'pagar' | 'receber', category_id: '' })}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pagar">Saída (Pagamento)</SelectItem>
+                  <SelectItem value="receber">Entrada (Recebimento)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Descrição */}
+            <div className="space-y-2">
+              <Label>Histórico / Descrição *</Label>
+              <Input
+                value={entryForm.description}
+                onChange={(e) => setEntryForm({ ...entryForm, description: e.target.value })}
+                placeholder="Ex: Pagamento de fornecedor"
+                required
+              />
+            </div>
+
+            {/* Categoria */}
+            <div className="space-y-2">
+              <Label>Categoria</Label>
+              <Select 
+                value={entryForm.category_id} 
+                onValueChange={(v) => setEntryForm({ ...entryForm, category_id: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecionar categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredCategories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Valor e Data */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Valor *</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={entryForm.value}
+                  onChange={(e) => setEntryForm({ ...entryForm, value: e.target.value })}
+                  placeholder="0,00"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Data *</Label>
+                <Input
+                  type="date"
+                  value={entryForm.date}
+                  onChange={(e) => setEntryForm({ ...entryForm, date: e.target.value })}
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Conta */}
+            <div className="space-y-2">
+              <Label>Conta *</Label>
+              <Select 
+                value={entryForm.account_id} 
+                onValueChange={(v) => setEntryForm({ ...entryForm, account_id: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecionar conta" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map((acc) => (
+                    <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Cliente/Fornecedor */}
+            <div className="space-y-2">
+              <Label>Cliente / Fornecedor</Label>
+              <Input
+                value={entryForm.contact_name}
+                onChange={(e) => setEntryForm({ ...entryForm, contact_name: e.target.value })}
+                placeholder="Nome do cliente ou fornecedor"
+              />
+            </div>
+
+            {/* Observações */}
+            <div className="space-y-2">
+              <Label>Observações</Label>
+              <Input
+                value={entryForm.notes}
+                onChange={(e) => setEntryForm({ ...entryForm, notes: e.target.value })}
+                placeholder="Notas adicionais"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setEntryDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit">Salvar</Button>
             </div>
           </form>
         </DialogContent>
