@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -6,14 +6,46 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
-import { FinancialAccount } from '@/hooks/useFinancial';
-import { formatCurrency } from '@/lib/utils';
-import { Plus, Building2, CreditCard, Wallet, Edit } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { FinancialAccount, FinancialMovement, FinancialCategory } from '@/hooks/useFinancial';
+import { supabase } from '@/integrations/supabase/client';
+import { formatCurrency, cn } from '@/lib/utils';
+import { format, startOfMonth, endOfMonth } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { 
+  Plus, Building2, CreditCard, Wallet, Edit, Search, Calendar,
+  Printer, Download, Trash2, ArrowRightLeft, Settings2, 
+  MoreVertical, Filter, ChevronDown, X, Eye, EyeOff
+} from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface AccountsManagerProps {
   accounts: FinancialAccount[];
   onSave: (account: Partial<FinancialAccount> & { name: string; type: string }) => Promise<void>;
+}
+
+interface MovementWithDetails {
+  id: string;
+  entry_id: string;
+  account_id: string | null;
+  value: number;
+  movement_date: string;
+  notes: string | null;
+  created_at: string;
+  entry?: {
+    id: string;
+    type: string;
+    description: string;
+    category_id: string | null;
+    contact_id: string | null;
+    is_conciliated: boolean;
+    category?: { id: string; name: string; color: string } | null;
+    contact?: { id: string; name: string } | null;
+  };
+  account?: { id: string; name: string; type: string } | null;
 }
 
 const accountTypeIcons: Record<string, React.ReactNode> = {
@@ -30,7 +62,26 @@ const accountTypeLabels: Record<string, string> = {
 
 export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
   const [editing, setEditing] = useState<FinancialAccount | null>(null);
+  const [movements, setMovements] = useState<MovementWithDetails[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedAccount, setSelectedAccount] = useState<string>('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('movimentacoes');
+  const [showFilters, setShowFilters] = useState(false);
+  const [showInfo, setShowInfo] = useState(true);
+  const [selectedMovements, setSelectedMovements] = useState<string[]>([]);
+  const { toast } = useToast();
+  const isMobile = useIsMobile();
+
+  // Filters
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [situationFilter, setSituationFilter] = useState('all');
+  const [conciliationFilter, setConciliationFilter] = useState('all');
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+
   const [form, setForm] = useState({
     name: '',
     type: 'caixa',
@@ -39,6 +90,125 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
     agency: '',
     account_number: '',
   });
+
+  const [transferForm, setTransferForm] = useState({
+    from_account: '',
+    to_account: '',
+    value: '',
+    notes: '',
+  });
+
+  const [adjustForm, setAdjustForm] = useState({
+    account_id: '',
+    new_balance: '',
+    notes: '',
+  });
+
+  // Fetch movements
+  const fetchMovements = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('financial_movements')
+      .select(`
+        *,
+        entry:financial_entries(
+          id, type, description, category_id, contact_id, is_conciliated,
+          category:financial_categories(id, name, color),
+          contact:contacts(id, name)
+        ),
+        account:financial_accounts(id, name, type)
+      `)
+      .order('movement_date', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (!error && data) {
+      setMovements(data as MovementWithDetails[]);
+    }
+    setLoading(false);
+  };
+
+  // Fetch categories for filter
+  const fetchCategories = async () => {
+    const { data } = await supabase
+      .from('financial_categories')
+      .select('id, name')
+      .eq('is_active', true);
+    if (data) setCategories(data);
+  };
+
+  useEffect(() => {
+    fetchMovements();
+    fetchCategories();
+  }, []);
+
+  // Filtered movements
+  const filteredMovements = useMemo(() => {
+    let filtered = [...movements];
+
+    // Filter by account
+    if (selectedAccount !== 'all') {
+      filtered = filtered.filter(m => m.account_id === selectedAccount);
+    }
+
+    // Filter by tab (entradas/saidas)
+    if (activeTab === 'entradas') {
+      filtered = filtered.filter(m => m.entry?.type === 'receber');
+    } else if (activeTab === 'saidas') {
+      filtered = filtered.filter(m => m.entry?.type === 'pagar');
+    }
+
+    // Filter by search
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(m => 
+        m.entry?.description?.toLowerCase().includes(query) ||
+        m.entry?.contact?.name?.toLowerCase().includes(query) ||
+        m.notes?.toLowerCase().includes(query)
+      );
+    }
+
+    // Filter by category
+    if (categoryFilter !== 'all') {
+      filtered = filtered.filter(m => m.entry?.category_id === categoryFilter);
+    }
+
+    // Filter by conciliation
+    if (conciliationFilter === 'conciliado') {
+      filtered = filtered.filter(m => m.entry?.is_conciliated);
+    } else if (conciliationFilter === 'nao_conciliado') {
+      filtered = filtered.filter(m => !m.entry?.is_conciliated);
+    }
+
+    return filtered;
+  }, [movements, selectedAccount, activeTab, searchQuery, categoryFilter, conciliationFilter]);
+
+  // Calculate summaries
+  const summary = useMemo(() => {
+    const accountMovements = selectedAccount === 'all' 
+      ? movements 
+      : movements.filter(m => m.account_id === selectedAccount);
+
+    const entradas = accountMovements
+      .filter(m => m.entry?.type === 'receber')
+      .reduce((sum, m) => sum + m.value, 0);
+
+    const saidas = accountMovements
+      .filter(m => m.entry?.type === 'pagar')
+      .reduce((sum, m) => sum + m.value, 0);
+
+    const selectedAccountData = accounts.find(a => a.id === selectedAccount);
+    const currentBalance = selectedAccount === 'all'
+      ? accounts.reduce((sum, a) => sum + a.current_balance, 0)
+      : selectedAccountData?.current_balance || 0;
+
+    return {
+      count: filteredMovements.length,
+      currentBalance,
+      entradas,
+      saidas,
+      saldo: entradas - saidas,
+    };
+  }, [movements, filteredMovements, accounts, selectedAccount]);
 
   const handleEdit = (account: FinancialAccount) => {
     setEditing(account);
@@ -80,87 +250,501 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
     setDialogOpen(false);
   };
 
+  const handleTransfer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const value = parseFloat(transferForm.value);
+    if (!transferForm.from_account || !transferForm.to_account || !value) {
+      toast({ variant: 'destructive', title: 'Preencha todos os campos' });
+      return;
+    }
+
+    // Create entries for transfer
+    const { data: saidaEntry, error: saidaError } = await supabase
+      .from('financial_entries')
+      .insert({
+        type: 'pagar',
+        description: `Transferência para ${accounts.find(a => a.id === transferForm.to_account)?.name}`,
+        value,
+        due_date: format(new Date(), 'yyyy-MM-dd'),
+        notes: transferForm.notes,
+      })
+      .select()
+      .single();
+
+    if (saidaError) {
+      toast({ variant: 'destructive', title: 'Erro ao criar transferência' });
+      return;
+    }
+
+    const { data: entradaEntry, error: entradaError } = await supabase
+      .from('financial_entries')
+      .insert({
+        type: 'receber',
+        description: `Transferência de ${accounts.find(a => a.id === transferForm.from_account)?.name}`,
+        value,
+        due_date: format(new Date(), 'yyyy-MM-dd'),
+        notes: transferForm.notes,
+      })
+      .select()
+      .single();
+
+    if (entradaError) {
+      toast({ variant: 'destructive', title: 'Erro ao criar transferência' });
+      return;
+    }
+
+    // Create movements
+    await supabase.from('financial_movements').insert([
+      {
+        entry_id: saidaEntry.id,
+        account_id: transferForm.from_account,
+        value,
+        movement_date: format(new Date(), 'yyyy-MM-dd'),
+      },
+      {
+        entry_id: entradaEntry.id,
+        account_id: transferForm.to_account,
+        value,
+        movement_date: format(new Date(), 'yyyy-MM-dd'),
+      },
+    ]);
+
+    toast({ title: 'Transferência realizada!' });
+    setTransferDialogOpen(false);
+    setTransferForm({ from_account: '', to_account: '', value: '', notes: '' });
+    fetchMovements();
+  };
+
+  const handleAdjustBalance = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const account = accounts.find(a => a.id === adjustForm.account_id);
+    if (!account) return;
+
+    const newBalance = parseFloat(adjustForm.new_balance);
+    const difference = newBalance - account.current_balance;
+    
+    if (difference === 0) {
+      toast({ title: 'Saldo já está correto' });
+      return;
+    }
+
+    // Create adjustment entry
+    const { data: entry, error: entryError } = await supabase
+      .from('financial_entries')
+      .insert({
+        type: difference > 0 ? 'receber' : 'pagar',
+        description: `Ajuste de saldo - ${account.name}`,
+        value: Math.abs(difference),
+        due_date: format(new Date(), 'yyyy-MM-dd'),
+        notes: adjustForm.notes || 'Ajuste manual de saldo',
+      })
+      .select()
+      .single();
+
+    if (entryError) {
+      toast({ variant: 'destructive', title: 'Erro ao ajustar saldo' });
+      return;
+    }
+
+    // Create movement
+    await supabase.from('financial_movements').insert({
+      entry_id: entry.id,
+      account_id: adjustForm.account_id,
+      value: Math.abs(difference),
+      movement_date: format(new Date(), 'yyyy-MM-dd'),
+    });
+
+    toast({ title: 'Saldo ajustado!' });
+    setAdjustDialogOpen(false);
+    setAdjustForm({ account_id: '', new_balance: '', notes: '' });
+    fetchMovements();
+  };
+
+  const exportCSV = () => {
+    const headers = ['Data', 'Categoria', 'Histórico', 'Cliente/Fornecedor', 'Conta', 'Valor', 'Conciliado'];
+    const rows = filteredMovements.map(m => [
+      format(new Date(m.movement_date), 'dd/MM/yyyy'),
+      m.entry?.category?.name || '',
+      m.entry?.description || '',
+      m.entry?.contact?.name || '',
+      m.account?.name || '',
+      (m.entry?.type === 'pagar' ? '-' : '') + m.value.toFixed(2),
+      m.entry?.is_conciliated ? 'Sim' : 'Não',
+    ]);
+
+    const csv = [headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `extrato_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    link.click();
+  };
+
+  const clearFilters = () => {
+    setCategoryFilter('all');
+    setSituationFilter('all');
+    setConciliationFilter('all');
+    setSearchQuery('');
+  };
+
   const totalBalance = accounts.reduce((sum, a) => sum + a.current_balance, 0);
 
   return (
-    <>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
-          <CardTitle>Caixas e Bancos</CardTitle>
-          <Button size="sm" onClick={handleNew}>
-            <Plus className="mr-2 h-4 w-4" />
-            Nova Conta
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {accounts.length === 0 ? (
-            <div className="py-8 text-center text-muted-foreground">
-              Nenhuma conta cadastrada
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold">Caixas e Bancos</h2>
+          <Select value={selectedAccount} onValueChange={setSelectedAccount}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Todas contas" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas contas</SelectItem>
+              {accounts.map((acc) => (
+                <SelectItem key={acc.id} value={acc.id}>
+                  {acc.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <Button onClick={handleNew} className="bg-emerald-600 hover:bg-emerald-700">
+          <Plus className="h-4 w-4 mr-1" />
+          Incluir lançamento
+        </Button>
+      </div>
+
+      <div className={cn("grid gap-4", isMobile ? "grid-cols-1" : "grid-cols-[1fr_280px]")}>
+        {/* Main content */}
+        <div className="space-y-4">
+          {/* Search and actions bar */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative flex-1 min-w-[200px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Pesquisar por nome ou histórico"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
             </div>
-          ) : (
-            <div className="rounded-lg border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Conta</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead className="text-right">Saldo Inicial</TableHead>
-                    <TableHead className="text-right">Saldo Atual</TableHead>
-                    <TableHead className="w-10"></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {accounts.map((account) => (
-                    <TableRow key={account.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {accountTypeIcons[account.type]}
-                          <div>
-                            <p className="font-medium">{account.name}</p>
-                            {account.bank_name && (
-                              <p className="text-xs text-muted-foreground">
-                                {account.bank_name} - Ag: {account.agency} / CC: {account.account_number}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{accountTypeLabels[account.type]}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(account.initial_balance)}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        <span className={account.current_balance >= 0 ? 'text-emerald-500' : 'text-red-500'}>
-                          {formatCurrency(account.current_balance)}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        <Button size="icon" variant="ghost" onClick={() => handleEdit(account)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  <TableRow className="bg-muted/50">
-                    <TableCell colSpan={3} className="font-medium">
-                      Total
-                    </TableCell>
-                    <TableCell className="text-right font-bold">
-                      <span className={totalBalance >= 0 ? 'text-emerald-500' : 'text-red-500'}>
-                        {formatCurrency(totalBalance)}
-                      </span>
-                    </TableCell>
-                    <TableCell></TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
+            <Button variant="outline" size="sm" onClick={() => {
+              const start = startOfMonth(new Date());
+              const end = endOfMonth(new Date());
+            }}>
+              <Calendar className="h-4 w-4 mr-1" />
+              Este mês
+            </Button>
+            <Button variant="outline" size="sm">
+              <Printer className="h-4 w-4 mr-1" />
+              {!isMobile && "Imprimir saldos"}
+            </Button>
+            <Button variant="outline" size="sm" onClick={exportCSV}>
+              <Download className="h-4 w-4 mr-1" />
+              {!isMobile && "Exportar extrato"}
+            </Button>
+            <Button 
+              variant="outline" 
+              size="icon"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <Filter className="h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Active filters */}
+          {(categoryFilter !== 'all' || conciliationFilter !== 'all') && (
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              {categoryFilter !== 'all' && (
+                <Badge variant="secondary" className="gap-1">
+                  Categoria: {categories.find(c => c.id === categoryFilter)?.name}
+                  <X className="h-3 w-3 cursor-pointer" onClick={() => setCategoryFilter('all')} />
+                </Badge>
+              )}
+              {conciliationFilter !== 'all' && (
+                <Badge variant="secondary" className="gap-1">
+                  Conciliação: {conciliationFilter === 'conciliado' ? 'Conciliado' : 'Não conciliado'}
+                  <X className="h-3 w-3 cursor-pointer" onClick={() => setConciliationFilter('all')} />
+                </Badge>
+              )}
+              <Button variant="link" size="sm" className="h-auto p-0" onClick={clearFilters}>
+                Limpar
+              </Button>
             </div>
           )}
-        </CardContent>
-      </Card>
 
+          {/* Filters panel */}
+          {showFilters && (
+            <Card className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium flex items-center gap-1">
+                  <Filter className="h-4 w-4" /> Filtrar
+                </span>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setShowFilters(false)}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+                <div className="space-y-1">
+                  <Label className="text-xs">Categoria</Label>
+                  <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                    <SelectTrigger className="h-8">
+                      <SelectValue placeholder="Todas categorias" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas categorias</SelectItem>
+                      {categories.map((cat) => (
+                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Situação</Label>
+                  <Select value={situationFilter} onValueChange={setSituationFilter}>
+                    <SelectTrigger className="h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="registrados">Registrados</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Situação da conciliação</Label>
+                  <Select value={conciliationFilter} onValueChange={setConciliationFilter}>
+                    <SelectTrigger className="h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      <SelectItem value="conciliado">Conciliado</SelectItem>
+                      <SelectItem value="nao_conciliado">Não conciliado</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-end">
+                  <Button size="sm" variant="outline" className="w-full" onClick={clearFilters}>
+                    Limpar filtros
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          )}
+
+          {/* Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList>
+              <TabsTrigger value="movimentacoes">Movimentações</TabsTrigger>
+              <TabsTrigger value="entradas">Entradas</TabsTrigger>
+              <TabsTrigger value="saidas">Saídas</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value={activeTab} className="mt-4">
+              <div className="rounded-lg border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-10">
+                        <Checkbox />
+                      </TableHead>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Categoria</TableHead>
+                      <TableHead>Histórico</TableHead>
+                      <TableHead>Cliente/Fornecedor</TableHead>
+                      <TableHead>Conta</TableHead>
+                      <TableHead className="text-right">Valor</TableHead>
+                      <TableHead className="w-10"></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loading ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                          Carregando...
+                        </TableCell>
+                      </TableRow>
+                    ) : filteredMovements.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                          Nenhuma movimentação encontrada
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredMovements.map((mov) => (
+                        <TableRow key={mov.id}>
+                          <TableCell>
+                            <Checkbox />
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {format(new Date(mov.movement_date), 'dd/MM/yyyy')}
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm">{mov.entry?.category?.name || '-'}</span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm">{mov.entry?.description || '-'}</span>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm">{mov.entry?.contact?.name || '-'}</span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="text-xs">
+                              {mov.account?.name || '-'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <span className={cn(
+                                "font-medium",
+                                mov.entry?.type === 'pagar' ? 'text-red-500' : 'text-emerald-600'
+                              )}>
+                                {mov.entry?.type === 'pagar' ? '- ' : ''}
+                                {formatCurrency(mov.value)}
+                              </span>
+                              {mov.entry?.is_conciliated && (
+                                <Badge variant="secondary" className="h-5 w-5 p-0 flex items-center justify-center text-[10px]">
+                                  R
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Button variant="ghost" size="icon" className="h-7 w-7">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Sidebar */}
+        {!isMobile && (
+          <div className="space-y-4">
+            {/* Actions */}
+            <Card className="p-4 space-y-3">
+              <Button 
+                variant="outline" 
+                className="w-full justify-start gap-2"
+                onClick={() => setTransferDialogOpen(true)}
+              >
+                <ArrowRightLeft className="h-4 w-4" />
+                Transferência entre contas
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full justify-start gap-2"
+                onClick={() => setAdjustDialogOpen(true)}
+              >
+                <Settings2 className="h-4 w-4" />
+                Ajustar saldos
+              </Button>
+            </Card>
+
+            {/* Summary */}
+            <Card className="p-4 space-y-3">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Quantidade de registros</span>
+                <span className="font-medium text-blue-600">{summary.count}</span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Saldo atual da conta</span>
+                <span className={cn(
+                  "font-bold",
+                  summary.currentBalance >= 0 ? 'text-emerald-600' : 'text-red-500'
+                )}>
+                  {formatCurrency(summary.currentBalance)}
+                </span>
+              </div>
+            </Card>
+
+            {/* Info panel */}
+            <Card className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="font-medium text-sm">Informações</span>
+                <Button 
+                  variant="link" 
+                  size="sm" 
+                  className="h-auto p-0 text-xs"
+                  onClick={() => setShowInfo(!showInfo)}
+                >
+                  {showInfo ? 'ocultar' : 'mostrar'}
+                </Button>
+              </div>
+              {showInfo && (
+                <div className="space-y-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Entradas</span>
+                    <span className="font-medium text-emerald-600">{formatCurrency(summary.entradas)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Saídas</span>
+                    <span className="font-medium text-red-500">{formatCurrency(summary.saidas)}</span>
+                  </div>
+                  <div className="border-t pt-2 flex items-center justify-between">
+                    <span className="text-muted-foreground">Saldo do período</span>
+                    <span className={cn(
+                      "font-bold",
+                      summary.saldo >= 0 ? 'text-emerald-600' : 'text-red-500'
+                    )}>
+                      {formatCurrency(summary.saldo)}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </Card>
+
+            {/* Accounts list */}
+            <Card className="p-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="font-medium text-sm">Contas</span>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleNew}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {accounts.map((acc) => (
+                  <div 
+                    key={acc.id}
+                    className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 cursor-pointer"
+                    onClick={() => setSelectedAccount(acc.id === selectedAccount ? 'all' : acc.id)}
+                  >
+                    <div className="flex items-center gap-2">
+                      {accountTypeIcons[acc.type]}
+                      <span className="text-sm">{acc.name}</span>
+                    </div>
+                    <span className={cn(
+                      "text-sm font-medium",
+                      acc.current_balance >= 0 ? 'text-emerald-600' : 'text-red-500'
+                    )}>
+                      {formatCurrency(acc.current_balance)}
+                    </span>
+                  </div>
+                ))}
+                <div className="border-t pt-2 flex items-center justify-between">
+                  <span className="text-sm font-medium">Total</span>
+                  <span className={cn(
+                    "font-bold",
+                    totalBalance >= 0 ? 'text-emerald-600' : 'text-red-500'
+                  )}>
+                    {formatCurrency(totalBalance)}
+                  </span>
+                </div>
+              </div>
+            </Card>
+          </div>
+        )}
+      </div>
+
+      {/* Account Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -242,6 +826,145 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
           </form>
         </DialogContent>
       </Dialog>
-    </>
+
+      {/* Transfer Dialog */}
+      <Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Transferência entre contas</DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleTransfer} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Conta de origem *</Label>
+              <Select 
+                value={transferForm.from_account} 
+                onValueChange={(v) => setTransferForm({ ...transferForm, from_account: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecionar conta" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map((acc) => (
+                    <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Conta de destino *</Label>
+              <Select 
+                value={transferForm.to_account} 
+                onValueChange={(v) => setTransferForm({ ...transferForm, to_account: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecionar conta" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.filter(a => a.id !== transferForm.from_account).map((acc) => (
+                    <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Valor *</Label>
+              <Input
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={transferForm.value}
+                onChange={(e) => setTransferForm({ ...transferForm, value: e.target.value })}
+                placeholder="0,00"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Observações</Label>
+              <Input
+                value={transferForm.notes}
+                onChange={(e) => setTransferForm({ ...transferForm, notes: e.target.value })}
+                placeholder="Descrição da transferência"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setTransferDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit">Transferir</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Adjust Balance Dialog */}
+      <Dialog open={adjustDialogOpen} onOpenChange={setAdjustDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Ajustar saldo</DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleAdjustBalance} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Conta *</Label>
+              <Select 
+                value={adjustForm.account_id} 
+                onValueChange={(v) => {
+                  const acc = accounts.find(a => a.id === v);
+                  setAdjustForm({ 
+                    ...adjustForm, 
+                    account_id: v,
+                    new_balance: acc?.current_balance.toString() || '',
+                  });
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecionar conta" />
+                </SelectTrigger>
+                <SelectContent>
+                  {accounts.map((acc) => (
+                    <SelectItem key={acc.id} value={acc.id}>
+                      {acc.name} - Saldo atual: {formatCurrency(acc.current_balance)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Novo saldo *</Label>
+              <Input
+                type="number"
+                step="0.01"
+                value={adjustForm.new_balance}
+                onChange={(e) => setAdjustForm({ ...adjustForm, new_balance: e.target.value })}
+                placeholder="0,00"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Motivo do ajuste</Label>
+              <Input
+                value={adjustForm.notes}
+                onChange={(e) => setAdjustForm({ ...adjustForm, notes: e.target.value })}
+                placeholder="Ex: Conferência de caixa"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setAdjustDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit">Ajustar</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
