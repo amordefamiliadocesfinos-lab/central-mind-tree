@@ -336,6 +336,10 @@ export function useOrders() {
   }, [fetchOrders]);
 
   const updateOrderStatus = useCallback(async (orderId: string, status: string) => {
+    // Get current order to check if status is changing to 'enviado'
+    const currentOrder = orders.find(o => o.id === orderId);
+    const isChangingToEnviado = status === 'enviado' && currentOrder?.status !== 'enviado';
+
     const { error } = await supabase
       .from('orders')
       .update({ status })
@@ -346,9 +350,39 @@ export function useOrders() {
       return;
     }
 
+    // Auto-create financial entry when status changes to 'enviado'
+    if (isChangingToEnviado && currentOrder) {
+      // Check if entry already exists for this order
+      const { data: existingEntry } = await supabase
+        .from('financial_entries')
+        .select('id')
+        .eq('order_id', orderId)
+        .maybeSingle();
+
+      if (!existingEntry) {
+        const { error: finError } = await supabase
+          .from('financial_entries')
+          .insert({
+            type: 'receber',
+            description: `Pedido ${currentOrder.order_number || orderId.slice(0, 8)} - ${currentOrder.customer_name || 'Cliente'}`,
+            value: currentOrder.total_value || 0,
+            due_date: currentOrder.due_date || new Date().toISOString().split('T')[0],
+            order_id: orderId,
+            notes: `Gerado automaticamente do pedido enviado`,
+          });
+
+        if (finError) {
+          console.error('Error creating financial entry:', finError);
+          toast.error('Erro ao criar conta a receber');
+        } else {
+          toast.success('Conta a receber gerada automaticamente!');
+        }
+      }
+    }
+
     toast.success('Status atualizado!');
     fetchOrders();
-  }, [fetchOrders]);
+  }, [fetchOrders, orders]);
 
   const updateOrder = useCallback(async (
     orderId: string, 
