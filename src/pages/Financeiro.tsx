@@ -10,8 +10,10 @@ import {
   FinancialEntriesList, 
   AccountsManager,
   CategoriesManager,
+  ContactsManager,
 } from '@/components/financial';
 import { useFinancial, EntryStatus } from '@/hooks/useFinancial';
+import { Users } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, LayoutDashboard, TrendingDown, TrendingUp, Wallet, Tag } from 'lucide-react';
@@ -104,7 +106,7 @@ export default function Financeiro() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className={cn("grid w-full", isMobile ? "grid-cols-3" : "grid-cols-5")}>
+          <TabsList className={cn("grid w-full", isMobile ? "grid-cols-3" : "grid-cols-6")}>
             <TabsTrigger value="dashboard" className="gap-2">
               <LayoutDashboard className="h-4 w-4" />
               {!isMobile && "Dashboard"}
@@ -122,6 +124,10 @@ export default function Financeiro() {
                 <TabsTrigger value="contas" className="gap-2">
                   <Wallet className="h-4 w-4" />
                   Caixas/Bancos
+                </TabsTrigger>
+                <TabsTrigger value="contatos" className="gap-2">
+                  <Users className="h-4 w-4" />
+                  Clientes/Forn.
                 </TabsTrigger>
                 <TabsTrigger value="categorias" className="gap-2">
                   <Tag className="h-4 w-4" />
@@ -188,6 +194,10 @@ export default function Financeiro() {
 
           <TabsContent value="contas">
             <AccountsManager accounts={accounts} onSave={saveAccount} />
+          </TabsContent>
+
+          <TabsContent value="contatos">
+            <ContactsManager />
           </TabsContent>
 
           <TabsContent value="categorias">

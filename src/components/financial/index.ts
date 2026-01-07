@@ -4,3 +4,5 @@ export { FinancialEntryForm } from './FinancialEntryForm';
 export { PaymentDialog } from './PaymentDialog';
 export { AccountsManager } from './AccountsManager';
 export { CategoriesManager } from './CategoriesManager';
+export { ContactsManager } from './ContactsManager';
+export { ContactFormDialog } from './ContactFormDialog';
