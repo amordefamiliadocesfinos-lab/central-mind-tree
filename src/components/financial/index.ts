@@ -3,3 +3,4 @@ export { FinancialEntriesList } from './FinancialEntriesList';
 export { FinancialEntryForm } from './FinancialEntryForm';
 export { PaymentDialog } from './PaymentDialog';
 export { AccountsManager } from './AccountsManager';
+export { CategoriesManager } from './CategoriesManager';
