@@ -12,7 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { formatCurrency, cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
   Plus, Search, MoreVertical, Download, DollarSign, CheckCircle, Trash2, 
@@ -463,7 +463,7 @@ export function FinancialEntriesList({
                         </TableCell>
                         <TableCell>-</TableCell>
                         <TableCell>
-                          {format(new Date(entry.due_date), "dd/MM/yyyy")}
+                          {format(parseISO(entry.due_date), "dd/MM/yyyy")}
                         </TableCell>
                         <TableCell className="text-right font-medium">
                           {formatCurrency(entry.value)}
