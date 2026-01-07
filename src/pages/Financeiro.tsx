@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { MobileHeader } from '@/components/ui/mobile-header';
@@ -11,15 +10,15 @@ import {
   AccountsManager,
   CategoriesManager,
   ContactsManager,
+  PricingManager,
 } from '@/components/financial';
 import { useFinancial, EntryStatus } from '@/hooks/useFinancial';
-import { Users } from 'lucide-react';
+import { Users, DollarSign } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, LayoutDashboard, TrendingDown, TrendingUp, Wallet, Tag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
-
 export default function Financeiro() {
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -106,7 +105,7 @@ export default function Financeiro() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className={cn("grid w-full", isMobile ? "grid-cols-3" : "grid-cols-6")}>
+          <TabsList className={cn("grid w-full", isMobile ? "grid-cols-3" : "grid-cols-7")}>
             <TabsTrigger value="dashboard" className="gap-2">
               <LayoutDashboard className="h-4 w-4" />
               {!isMobile && "Dashboard"}
@@ -133,17 +132,24 @@ export default function Financeiro() {
                   <Tag className="h-4 w-4" />
                   Categorias
                 </TabsTrigger>
+                <TabsTrigger value="valores" className="gap-2">
+                  <DollarSign className="h-4 w-4" />
+                  Valores
+                </TabsTrigger>
               </>
             )}
           </TabsList>
 
           {isMobile && (
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="contas" className="gap-2">
                 <Wallet className="h-4 w-4" />
               </TabsTrigger>
               <TabsTrigger value="categorias" className="gap-2">
                 <Tag className="h-4 w-4" />
+              </TabsTrigger>
+              <TabsTrigger value="valores" className="gap-2">
+                <DollarSign className="h-4 w-4" />
               </TabsTrigger>
             </TabsList>
           )}
@@ -202,6 +208,10 @@ export default function Financeiro() {
 
           <TabsContent value="categorias">
             <CategoriesManager categories={categories} onSave={saveCategory} />
+          </TabsContent>
+
+          <TabsContent value="valores">
+            <PricingManager />
           </TabsContent>
         </Tabs>
       </div>

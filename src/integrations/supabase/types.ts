@@ -1031,6 +1031,80 @@ export type Database = {
           },
         ]
       }
+      price_channels: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: []
+      }
+      price_params: {
+        Row: {
+          channel_id: string
+          created_at: string
+          extra_fee_pct: number
+          id: string
+          is_active: boolean
+          name: string
+          packaging_cost: number
+          payment_fee_pct: number
+          platform_fee_pct: number
+          shipping_cost: number
+          target_margin_pct: number
+          updated_at: string
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string
+          extra_fee_pct?: number
+          id?: string
+          is_active?: boolean
+          name: string
+          packaging_cost?: number
+          payment_fee_pct?: number
+          platform_fee_pct?: number
+          shipping_cost?: number
+          target_margin_pct?: number
+          updated_at?: string
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string
+          extra_fee_pct?: number
+          id?: string
+          is_active?: boolean
+          name?: string
+          packaging_cost?: number
+          payment_fee_pct?: number
+          platform_fee_pct?: number
+          shipping_cost?: number
+          target_margin_pct?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_params_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "price_channels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       processes: {
         Row: {
           created_at: string
