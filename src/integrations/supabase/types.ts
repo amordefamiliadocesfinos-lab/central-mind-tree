@@ -131,53 +131,194 @@ export type Database = {
       contacts: {
         Row: {
           address: string | null
+          address_complement: string | null
+          address_number: string | null
+          avg_load_percentage: number | null
+          billing_address: string | null
+          billing_city: string | null
+          billing_complement: string | null
+          billing_neighborhood: string | null
+          billing_number: string | null
+          billing_state: string | null
+          billing_zip_code: string | null
+          birth_date: string | null
+          birthplace: string | null
+          category: string | null
           city: string | null
+          code: string | null
           company_name: string | null
+          contact_info: string | null
+          contact_people: Json | null
+          contact_type: string | null
           created_at: string
+          credit_limit_type: string | null
+          credit_limit_value: number | null
+          customer_since: string | null
+          default_operation_nature: string | null
           document: string | null
           email: string | null
+          fantasy_name: string | null
+          father_cpf: string | null
+          father_name: string | null
+          fax: string | null
+          gender: string | null
           id: string
           is_active: boolean
+          issuing_agency: string | null
+          landline: string | null
+          marital_status: string | null
+          mobile: string | null
+          mobile_carrier: string | null
+          mother_cpf: string | null
+          mother_name: string | null
           name: string
+          neighborhood: string | null
+          next_visit: string | null
+          nfe_email: string | null
           notes: string | null
+          payment_condition: string | null
+          person_type: string | null
           phone: string | null
+          photo_url: string | null
+          profession: string | null
+          rg: string | null
+          salesperson: string | null
+          skype: string | null
           state: string | null
+          state_registration: string | null
+          taxpayer_type: string | null
           type: string
           updated_at: string
+          website: string | null
+          whatsapp: string | null
           zip_code: string | null
         }
         Insert: {
           address?: string | null
+          address_complement?: string | null
+          address_number?: string | null
+          avg_load_percentage?: number | null
+          billing_address?: string | null
+          billing_city?: string | null
+          billing_complement?: string | null
+          billing_neighborhood?: string | null
+          billing_number?: string | null
+          billing_state?: string | null
+          billing_zip_code?: string | null
+          birth_date?: string | null
+          birthplace?: string | null
+          category?: string | null
           city?: string | null
+          code?: string | null
           company_name?: string | null
+          contact_info?: string | null
+          contact_people?: Json | null
+          contact_type?: string | null
           created_at?: string
+          credit_limit_type?: string | null
+          credit_limit_value?: number | null
+          customer_since?: string | null
+          default_operation_nature?: string | null
           document?: string | null
           email?: string | null
+          fantasy_name?: string | null
+          father_cpf?: string | null
+          father_name?: string | null
+          fax?: string | null
+          gender?: string | null
           id?: string
           is_active?: boolean
+          issuing_agency?: string | null
+          landline?: string | null
+          marital_status?: string | null
+          mobile?: string | null
+          mobile_carrier?: string | null
+          mother_cpf?: string | null
+          mother_name?: string | null
           name: string
+          neighborhood?: string | null
+          next_visit?: string | null
+          nfe_email?: string | null
           notes?: string | null
+          payment_condition?: string | null
+          person_type?: string | null
           phone?: string | null
+          photo_url?: string | null
+          profession?: string | null
+          rg?: string | null
+          salesperson?: string | null
+          skype?: string | null
           state?: string | null
+          state_registration?: string | null
+          taxpayer_type?: string | null
           type?: string
           updated_at?: string
+          website?: string | null
+          whatsapp?: string | null
           zip_code?: string | null
         }
         Update: {
           address?: string | null
+          address_complement?: string | null
+          address_number?: string | null
+          avg_load_percentage?: number | null
+          billing_address?: string | null
+          billing_city?: string | null
+          billing_complement?: string | null
+          billing_neighborhood?: string | null
+          billing_number?: string | null
+          billing_state?: string | null
+          billing_zip_code?: string | null
+          birth_date?: string | null
+          birthplace?: string | null
+          category?: string | null
           city?: string | null
+          code?: string | null
           company_name?: string | null
+          contact_info?: string | null
+          contact_people?: Json | null
+          contact_type?: string | null
           created_at?: string
+          credit_limit_type?: string | null
+          credit_limit_value?: number | null
+          customer_since?: string | null
+          default_operation_nature?: string | null
           document?: string | null
           email?: string | null
+          fantasy_name?: string | null
+          father_cpf?: string | null
+          father_name?: string | null
+          fax?: string | null
+          gender?: string | null
           id?: string
           is_active?: boolean
+          issuing_agency?: string | null
+          landline?: string | null
+          marital_status?: string | null
+          mobile?: string | null
+          mobile_carrier?: string | null
+          mother_cpf?: string | null
+          mother_name?: string | null
           name?: string
+          neighborhood?: string | null
+          next_visit?: string | null
+          nfe_email?: string | null
           notes?: string | null
+          payment_condition?: string | null
+          person_type?: string | null
           phone?: string | null
+          photo_url?: string | null
+          profession?: string | null
+          rg?: string | null
+          salesperson?: string | null
+          skype?: string | null
           state?: string | null
+          state_registration?: string | null
+          taxpayer_type?: string | null
           type?: string
           updated_at?: string
+          website?: string | null
+          whatsapp?: string | null
           zip_code?: string | null
         }
         Relationships: []
