@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { 
   Play, Pause, RotateCcw, Clock, Focus, Calendar, Timer, 
   ShoppingCart, FileText, Undo2, Redo2, Home, FileSpreadsheet,
-  Users, User, UsersRound
+  Users, User, UsersRound, DollarSign
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUndoRedoContext } from "@/contexts/UndoRedoContext";
@@ -564,6 +564,22 @@ export function GlobalFooterBar() {
               <User className="h-4 w-4" />
             </Link>
           </Button>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                asChild
+                size="sm"
+                variant={isActive('/financeiro') ? 'secondary' : 'ghost'}
+                className={cn("h-8 w-8 p-0", isActive('/financeiro') && "bg-secondary")}
+              >
+                <Link to="/financeiro">
+                  <DollarSign className="h-4 w-4" />
+                </Link>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Financeiro</TooltipContent>
+          </Tooltip>
 
           {/* Collaborators button */}
           <Tooltip>
