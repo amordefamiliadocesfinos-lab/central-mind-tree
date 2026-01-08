@@ -196,11 +196,18 @@ export function FinancialEntriesList({
   // Summary
   const summary = useMemo(() => {
     const total = filteredEntries.reduce((sum, e) => sum + (e.value - e.value_paid), 0);
+    
+    // Calculate selected items summary
+    const selectedItems = filteredEntries.filter(e => selectedIds.includes(e.id));
+    const selectedValue = selectedItems.reduce((sum, e) => sum + e.value, 0);
+    
     return {
       count: filteredEntries.length,
       total,
+      selectedCount: selectedIds.length,
+      selectedValue,
     };
-  }, [filteredEntries]);
+  }, [filteredEntries, selectedIds]);
 
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => 
@@ -558,18 +565,24 @@ export function FinancialEntriesList({
           </div>
 
           {/* Active filters indicator */}
-          {(statusFilter !== 'all' || categoryFilter !== 'all') && (
-            <div className="text-sm text-muted-foreground">
+          {(statusFilter !== 'all' || categoryFilter !== 'all' || selectedIds.length > 0) && (
+            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
               {statusFilter !== 'all' && (
-                <Badge variant="secondary" className="mr-2">
+                <Badge variant="secondary" className="gap-1">
                   {getStatusLabel(statusFilter as EntryStatus)}
-                  <X className="h-3 w-3 ml-1 cursor-pointer" onClick={() => onStatusFilterChange('all')} />
+                  <X className="h-3 w-3 cursor-pointer" onClick={() => onStatusFilterChange('all')} />
                 </Badge>
               )}
               {categoryFilter !== 'all' && (
-                <Badge variant="secondary" className="mr-2">
+                <Badge variant="secondary" className="gap-1">
                   {categories.find(c => c.id === categoryFilter)?.name}
-                  <X className="h-3 w-3 ml-1 cursor-pointer" onClick={() => setCategoryFilter('all')} />
+                  <X className="h-3 w-3 cursor-pointer" onClick={() => setCategoryFilter('all')} />
+                </Badge>
+              )}
+              {selectedIds.length > 0 && (
+                <Badge variant="secondary" className="gap-1">
+                  Selecionados: {selectedIds.length} cadastros
+                  <X className="h-3 w-3 cursor-pointer" onClick={() => setSelectedIds([])} />
                 </Badge>
               )}
               <Button variant="link" size="sm" className="h-auto p-0" onClick={clearFilters}>
@@ -618,7 +631,10 @@ export function FinancialEntriesList({
                   filteredEntries.map((entry) => {
                     const status = getEntryStatus(entry);
                     return (
-                      <TableRow key={entry.id}>
+                      <TableRow 
+                        key={entry.id}
+                        className={cn(selectedIds.includes(entry.id) && "bg-emerald-50 dark:bg-emerald-950")}
+                      >
                         <TableCell>
                           <Checkbox
                             checked={selectedIds.includes(entry.id)}
@@ -717,13 +733,29 @@ export function FinancialEntriesList({
 
             {/* Summary */}
             <Card className="p-4 space-y-3">
-              <span className="font-medium text-sm">Informações</span>
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Quantidade de contas a {type}</span>
-                  <span className="font-medium text-blue-600">{summary.count}</span>
-                </div>
-                <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Quantidade de registros</span>
+                <span className="font-medium text-blue-600">{summary.count}</span>
+              </div>
+              {summary.selectedCount > 0 && (
+                <>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Valor</span>
+                    <span className={cn(
+                      "font-bold text-lg",
+                      type === 'pagar' ? 'text-red-500' : 'text-emerald-600'
+                    )}>
+                      {formatCurrency(summary.selectedValue)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Selecionados</span>
+                    <span className="font-medium text-blue-600">{summary.selectedCount}</span>
+                  </div>
+                </>
+              )}
+              {summary.selectedCount === 0 && (
+                <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Valor total</span>
                   <span className={cn(
                     "font-bold text-lg",
@@ -732,7 +764,7 @@ export function FinancialEntriesList({
                     {formatCurrency(summary.total)}
                   </span>
                 </div>
-              </div>
+              )}
             </Card>
 
             {/* Tools */}
