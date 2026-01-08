@@ -199,7 +199,12 @@ export default function Financeiro() {
           </TabsContent>
 
           <TabsContent value="contas">
-            <AccountsManager accounts={accounts} onSave={saveAccount} />
+            <AccountsManager 
+              accounts={accounts} 
+              onSave={saveAccount} 
+              startDate={filters.startDate}
+              endDate={filters.endDate}
+            />
           </TabsContent>
 
           <TabsContent value="contatos">

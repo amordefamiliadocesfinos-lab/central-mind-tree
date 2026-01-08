@@ -30,6 +30,8 @@ import { useContacts } from '@/hooks/useContacts';
 interface AccountsManagerProps {
   accounts: FinancialAccount[];
   onSave: (account: Partial<FinancialAccount> & { name: string; type: string }) => Promise<void>;
+  startDate?: Date;
+  endDate?: Date;
 }
 
 interface MovementWithDetails {
@@ -65,7 +67,7 @@ const accountTypeLabels: Record<string, string> = {
   cartao: 'Cartão',
 };
 
-export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
+export function AccountsManager({ accounts, onSave, startDate, endDate }: AccountsManagerProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
@@ -144,7 +146,8 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
   // Fetch movements
   const fetchMovements = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    
+    let query = supabase
       .from('financial_movements')
       .select(`
         *,
@@ -157,6 +160,16 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
       `)
       .order('movement_date', { ascending: false })
       .order('created_at', { ascending: false });
+    
+    // Apply date filters if provided
+    if (startDate) {
+      query = query.gte('movement_date', format(startDate, 'yyyy-MM-dd'));
+    }
+    if (endDate) {
+      query = query.lte('movement_date', format(endDate, 'yyyy-MM-dd'));
+    }
+    
+    const { data, error } = await query;
 
     if (!error && data) {
       setMovements(data as MovementWithDetails[]);
@@ -176,7 +189,7 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
   useEffect(() => {
     fetchMovements();
     fetchCategories();
-  }, []);
+  }, [startDate, endDate]);
 
   // Filtered movements
   const filteredMovements = useMemo(() => {
