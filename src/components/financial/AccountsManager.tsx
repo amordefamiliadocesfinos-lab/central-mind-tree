@@ -7,15 +7,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Textarea } from '@/components/ui/textarea';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { FinancialAccount, FinancialMovement, FinancialCategory } from '@/hooks/useFinancial';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency, cn } from '@/lib/utils';
-import { format, startOfMonth, endOfMonth, parseISO } from 'date-fns';
+import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subWeeks, subMonths, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
   Plus, Building2, CreditCard, Wallet, Edit, Search, Calendar,
@@ -32,6 +34,7 @@ interface AccountsManagerProps {
   onSave: (account: Partial<FinancialAccount> & { name: string; type: string }) => Promise<void>;
   startDate?: Date;
   endDate?: Date;
+  onPeriodChange?: (start: Date | undefined, end: Date | undefined) => void;
 }
 
 interface MovementWithDetails {
@@ -67,7 +70,7 @@ const accountTypeLabels: Record<string, string> = {
   cartao: 'Cartão',
 };
 
-export function AccountsManager({ accounts, onSave, startDate, endDate }: AccountsManagerProps) {
+export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriodChange }: AccountsManagerProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
@@ -106,6 +109,54 @@ export function AccountsManager({ accounts, onSave, startDate, endDate }: Accoun
   const [situationFilter, setSituationFilter] = useState('all');
   const [conciliationFilter, setConciliationFilter] = useState('all');
   const [categories, setCategories] = useState<{ id: string; name: string; type: string }[]>([]);
+
+  // Period picker (controls the global period via onPeriodChange)
+  const [periodPickerOpen, setPeriodPickerOpen] = useState(false);
+  const [tempPeriodStart, setTempPeriodStart] = useState<Date | undefined>(startDate ?? startOfMonth(new Date()));
+  const [tempPeriodEnd, setTempPeriodEnd] = useState<Date | undefined>(endDate ?? endOfMonth(new Date()));
+
+  const applyPeriodPreset = (preset: 'today' | 'thisWeek' | 'lastWeek' | 'thisMonth' | 'lastMonth') => {
+    const today = new Date();
+    let start: Date;
+    let end: Date;
+
+    switch (preset) {
+      case 'today':
+        start = startOfDay(today);
+        end = endOfDay(today);
+        break;
+      case 'thisWeek':
+        start = startOfWeek(today, { weekStartsOn: 1 });
+        end = endOfWeek(today, { weekStartsOn: 1 });
+        break;
+      case 'lastWeek':
+        start = startOfWeek(subWeeks(today, 1), { weekStartsOn: 1 });
+        end = endOfWeek(subWeeks(today, 1), { weekStartsOn: 1 });
+        break;
+      case 'thisMonth':
+        start = startOfMonth(today);
+        end = endOfMonth(today);
+        break;
+      case 'lastMonth':
+        start = startOfMonth(subMonths(today, 1));
+        end = endOfMonth(subMonths(today, 1));
+        break;
+    }
+
+    setTempPeriodStart(start);
+    setTempPeriodEnd(end);
+  };
+
+  const handleApplyPeriod = () => {
+    onPeriodChange?.(tempPeriodStart, tempPeriodEnd);
+    setPeriodPickerOpen(false);
+  };
+
+  const handleCancelPeriod = () => {
+    setTempPeriodStart(startDate ?? startOfMonth(new Date()));
+    setTempPeriodEnd(endDate ?? endOfMonth(new Date()));
+    setPeriodPickerOpen(false);
+  };
 
   const [form, setForm] = useState({
     name: '',
@@ -187,10 +238,16 @@ export function AccountsManager({ accounts, onSave, startDate, endDate }: Accoun
   };
 
   useEffect(() => {
-    console.log('AccountsManager: Fetching movements with dates:', { startDate, endDate });
     fetchMovements();
     fetchCategories();
   }, [startDate, endDate]);
+
+  // Keep temp period in sync with the global period (when picker is closed)
+  useEffect(() => {
+    if (periodPickerOpen) return;
+    setTempPeriodStart(startDate ?? startOfMonth(new Date()));
+    setTempPeriodEnd(endDate ?? endOfMonth(new Date()));
+  }, [startDate, endDate, periodPickerOpen]);
 
   // Filtered movements
   const filteredMovements = useMemo(() => {
@@ -768,12 +825,130 @@ export function AccountsManager({ accounts, onSave, startDate, endDate }: Accoun
                 className="pl-9"
               />
             </div>
-            {startDate && endDate && (
-              <Badge variant="outline" className="gap-1 px-3 py-1.5">
-                <Calendar className="h-4 w-4" />
-                {format(startDate, 'dd/MM/yyyy')} até {format(endDate, 'dd/MM/yyyy')}
-              </Badge>
-            )}
+            <Popover
+              open={periodPickerOpen}
+              onOpenChange={(open) => {
+                setPeriodPickerOpen(open);
+                if (open) {
+                  setTempPeriodStart(startDate ?? startOfMonth(new Date()));
+                  setTempPeriodEnd(endDate ?? endOfMonth(new Date()));
+                }
+              }}
+            >
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <Calendar className="h-4 w-4 mr-1" />
+                  {startDate && endDate ? (
+                    `${format(startDate, 'dd/MM/yyyy')} até ${format(endDate, 'dd/MM/yyyy')}`
+                  ) : (
+                    'Selecionar período'
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <div className="flex">
+                  {/* Calendars */}
+                  <div className="p-4 border-r">
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Início do período</Label>
+                          <Input
+                            type="text"
+                            value={tempPeriodStart ? format(tempPeriodStart, 'dd/MM/yyyy') : ''}
+                            readOnly
+                            className="h-9"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Fim do período</Label>
+                          <Input
+                            type="text"
+                            value={tempPeriodEnd ? format(tempPeriodEnd, 'dd/MM/yyyy') : ''}
+                            readOnly
+                            className="h-9"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <CalendarComponent
+                          mode="single"
+                          selected={tempPeriodStart}
+                          onSelect={setTempPeriodStart}
+                          locale={ptBR}
+                          className="pointer-events-auto"
+                        />
+                        <CalendarComponent
+                          mode="single"
+                          selected={tempPeriodEnd}
+                          onSelect={setTempPeriodEnd}
+                          locale={ptBR}
+                          className="pointer-events-auto"
+                        />
+                      </div>
+                      <div className="flex justify-end gap-2 pt-2 border-t">
+                        <Button variant="outline" size="sm" onClick={handleCancelPeriod}>
+                          Cancelar
+                        </Button>
+                        <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700" onClick={handleApplyPeriod}>
+                          Filtrar
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Presets */}
+                  <div className="p-4 space-y-1 min-w-[160px]">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={() => applyPeriodPreset('today')}
+                    >
+                      Hoje
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={() => applyPeriodPreset('thisWeek')}
+                    >
+                      Esta semana
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={() => applyPeriodPreset('lastWeek')}
+                    >
+                      Semana passada
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={() => applyPeriodPreset('thisMonth')}
+                    >
+                      Este mês
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full justify-start"
+                      onClick={() => applyPeriodPreset('lastMonth')}
+                    >
+                      Mês passado
+                    </Button>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="w-full justify-start bg-emerald-600 hover:bg-emerald-700 mt-2"
+                    >
+                      Período customizado
+                    </Button>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
             <Button variant="outline" size="sm">
               <Printer className="h-4 w-4 mr-1" />
               {!isMobile && "Imprimir saldos"}

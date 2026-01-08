@@ -204,6 +204,7 @@ export default function Financeiro() {
               onSave={saveAccount} 
               startDate={filters.startDate}
               endDate={filters.endDate}
+              onPeriodChange={handleDateRangeChange}
             />
           </TabsContent>
 
