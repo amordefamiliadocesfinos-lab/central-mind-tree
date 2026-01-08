@@ -187,6 +187,7 @@ export function AccountsManager({ accounts, onSave, startDate, endDate }: Accoun
   };
 
   useEffect(() => {
+    console.log('AccountsManager: Fetching movements with dates:', { startDate, endDate });
     fetchMovements();
     fetchCategories();
   }, [startDate, endDate]);
