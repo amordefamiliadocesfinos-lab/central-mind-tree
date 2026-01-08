@@ -767,13 +767,12 @@ export function AccountsManager({ accounts, onSave, startDate, endDate }: Accoun
                 className="pl-9"
               />
             </div>
-            <Button variant="outline" size="sm" onClick={() => {
-              const start = startOfMonth(new Date());
-              const end = endOfMonth(new Date());
-            }}>
-              <Calendar className="h-4 w-4 mr-1" />
-              Este mês
-            </Button>
+            {startDate && endDate && (
+              <Badge variant="outline" className="gap-1 px-3 py-1.5">
+                <Calendar className="h-4 w-4" />
+                {format(startDate, 'dd/MM/yyyy')} até {format(endDate, 'dd/MM/yyyy')}
+              </Badge>
+            )}
             <Button variant="outline" size="sm">
               <Printer className="h-4 w-4 mr-1" />
               {!isMobile && "Imprimir saldos"}
