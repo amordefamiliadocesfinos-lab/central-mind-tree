@@ -84,6 +84,8 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
   const [editMovementDialogOpen, setEditMovementDialogOpen] = useState(false);
   const [deleteMovementDialogOpen, setDeleteMovementDialogOpen] = useState(false);
   const [movementToDelete, setMovementToDelete] = useState<MovementWithDetails | null>(null);
+  const [deleteAccountDialogOpen, setDeleteAccountDialogOpen] = useState(false);
+  const [accountToDelete, setAccountToDelete] = useState<FinancialAccount | null>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { createContact } = useContacts();
@@ -606,6 +608,43 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
     fetchMovements();
   };
 
+  // Delete account
+  const handleDeleteAccount = async () => {
+    if (!accountToDelete) return;
+
+    // Check if account has movements
+    const { data: accountMovements } = await supabase
+      .from('financial_movements')
+      .select('id')
+      .eq('account_id', accountToDelete.id)
+      .limit(1);
+
+    if (accountMovements && accountMovements.length > 0) {
+      toast({ 
+        variant: 'destructive', 
+        title: 'Não é possível excluir', 
+        description: 'Esta conta possui movimentações vinculadas.' 
+      });
+      setDeleteAccountDialogOpen(false);
+      setAccountToDelete(null);
+      return;
+    }
+
+    const { error } = await supabase
+      .from('financial_accounts')
+      .delete()
+      .eq('id', accountToDelete.id);
+
+    if (error) {
+      toast({ variant: 'destructive', title: 'Erro ao excluir conta' });
+      return;
+    }
+
+    toast({ title: 'Conta excluída!' });
+    setDeleteAccountDialogOpen(false);
+    setAccountToDelete(null);
+  };
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -999,19 +1038,50 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
                 {accounts.map((acc) => (
                   <div 
                     key={acc.id}
-                    className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 cursor-pointer"
-                    onClick={() => setSelectedAccount(acc.id === selectedAccount ? 'all' : acc.id)}
+                    className="flex items-center justify-between p-2 rounded-md hover:bg-muted/50 group"
                   >
-                    <div className="flex items-center gap-2">
+                    <div 
+                      className="flex items-center gap-2 flex-1 cursor-pointer"
+                      onClick={() => setSelectedAccount(acc.id === selectedAccount ? 'all' : acc.id)}
+                    >
                       {accountTypeIcons[acc.type]}
                       <span className="text-sm">{acc.name}</span>
                     </div>
-                    <span className={cn(
-                      "text-sm font-medium",
-                      acc.current_balance >= 0 ? 'text-emerald-600' : 'text-red-500'
-                    )}>
-                      {formatCurrency(acc.current_balance)}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={cn(
+                        "text-sm font-medium",
+                        acc.current_balance >= 0 ? 'text-emerald-600' : 'text-red-500'
+                      )}>
+                        {formatCurrency(acc.current_balance)}
+                      </span>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleEdit(acc)}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="text-red-500"
+                            onClick={() => {
+                              setAccountToDelete(acc);
+                              setDeleteAccountDialogOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                 ))}
                 <div className="border-t pt-2 flex items-center justify-between">
@@ -1517,6 +1587,32 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
             <AlertDialogAction
               className="bg-red-500 hover:bg-red-600"
               onClick={handleDeleteMovement}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Account Dialog */}
+      <AlertDialog open={deleteAccountDialogOpen} onOpenChange={setDeleteAccountDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta conta? Esta ação não pode ser desfeita.
+              {accountToDelete?.name && (
+                <span className="block mt-2 font-medium">
+                  "{accountToDelete.name}"
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setAccountToDelete(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-500 hover:bg-red-600"
+              onClick={handleDeleteAccount}
             >
               Excluir
             </AlertDialogAction>
