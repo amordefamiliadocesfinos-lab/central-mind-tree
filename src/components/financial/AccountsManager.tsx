@@ -22,6 +22,8 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { ContactFormDialog } from './ContactFormDialog';
+import { useContacts } from '@/hooks/useContacts';
 
 interface AccountsManagerProps {
   accounts: FinancialAccount[];
@@ -66,6 +68,7 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
   const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
   const [entryDialogOpen, setEntryDialogOpen] = useState(false);
+  const [contactDialogOpen, setContactDialogOpen] = useState(false);
   const [editing, setEditing] = useState<FinancialAccount | null>(null);
   const [movements, setMovements] = useState<MovementWithDetails[]>([]);
   const [loading, setLoading] = useState(false);
@@ -77,6 +80,7 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
   const [selectedMovements, setSelectedMovements] = useState<string[]>([]);
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const { createContact } = useContacts();
 
   // Filters
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -1198,7 +1202,12 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
                   placeholder=""
                   className="flex-1"
                 />
-                <Button type="button" variant="outline" size="icon">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => setContactDialogOpen(true)}
+                >
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
@@ -1218,6 +1227,19 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Contact Form Dialog */}
+      <ContactFormDialog
+        open={contactDialogOpen}
+        onOpenChange={setContactDialogOpen}
+        onSave={async (data) => {
+          await createContact(data);
+          setContactDialogOpen(false);
+          if (data.name) {
+            setEntryForm({ ...entryForm, contact_name: data.name });
+          }
+        }}
+      />
     </div>
   );
 }
