@@ -4,7 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
@@ -78,9 +80,22 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
   const [showFilters, setShowFilters] = useState(false);
   const [showInfo, setShowInfo] = useState(true);
   const [selectedMovements, setSelectedMovements] = useState<string[]>([]);
+  const [editingMovement, setEditingMovement] = useState<MovementWithDetails | null>(null);
+  const [editMovementDialogOpen, setEditMovementDialogOpen] = useState(false);
+  const [deleteMovementDialogOpen, setDeleteMovementDialogOpen] = useState(false);
+  const [movementToDelete, setMovementToDelete] = useState<MovementWithDetails | null>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const { createContact } = useContacts();
+
+  // Edit movement form
+  const [editMovementForm, setEditMovementForm] = useState({
+    description: '',
+    value: '',
+    movement_date: '',
+    category_id: '',
+    notes: '',
+  });
 
   // Filters
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -497,6 +512,100 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
     c.type === entryForm.type || c.type === 'ambos'
   );
 
+  // Handle edit movement
+  const handleEditMovement = (movement: MovementWithDetails) => {
+    setEditingMovement(movement);
+    setEditMovementForm({
+      description: movement.entry?.description || '',
+      value: movement.value.toString(),
+      movement_date: movement.movement_date,
+      category_id: movement.entry?.category_id || '',
+      notes: movement.notes || '',
+    });
+    setEditMovementDialogOpen(true);
+  };
+
+  // Update movement
+  const handleUpdateMovement = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMovement) return;
+
+    const value = parseFloat(editMovementForm.value);
+    if (!editMovementForm.description || !value) {
+      toast({ variant: 'destructive', title: 'Preencha os campos obrigatórios' });
+      return;
+    }
+
+    // Update the entry
+    const { error: entryError } = await supabase
+      .from('financial_entries')
+      .update({
+        description: editMovementForm.description,
+        value,
+        category_id: editMovementForm.category_id || null,
+      })
+      .eq('id', editingMovement.entry_id);
+
+    if (entryError) {
+      toast({ variant: 'destructive', title: 'Erro ao atualizar lançamento' });
+      return;
+    }
+
+    // Update the movement
+    const { error: movError } = await supabase
+      .from('financial_movements')
+      .update({
+        value,
+        movement_date: editMovementForm.movement_date,
+        notes: editMovementForm.notes || null,
+      })
+      .eq('id', editingMovement.id);
+
+    if (movError) {
+      toast({ variant: 'destructive', title: 'Erro ao atualizar movimentação' });
+      return;
+    }
+
+    toast({ title: 'Movimentação atualizada!' });
+    setEditMovementDialogOpen(false);
+    setEditingMovement(null);
+    fetchMovements();
+  };
+
+  // Delete movement
+  const handleDeleteMovement = async () => {
+    if (!movementToDelete) return;
+
+    // Delete movement first
+    const { error: movError } = await supabase
+      .from('financial_movements')
+      .delete()
+      .eq('id', movementToDelete.id);
+
+    if (movError) {
+      toast({ variant: 'destructive', title: 'Erro ao excluir movimentação' });
+      return;
+    }
+
+    // Delete entry if no other movements reference it
+    const { data: otherMovements } = await supabase
+      .from('financial_movements')
+      .select('id')
+      .eq('entry_id', movementToDelete.entry_id);
+
+    if (!otherMovements || otherMovements.length === 0) {
+      await supabase
+        .from('financial_entries')
+        .delete()
+        .eq('id', movementToDelete.entry_id);
+    }
+
+    toast({ title: 'Movimentação excluída!' });
+    setDeleteMovementDialogOpen(false);
+    setMovementToDelete(null);
+    fetchMovements();
+  };
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -754,9 +863,29 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <Button variant="ghost" size="icon" className="h-7 w-7">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-7 w-7">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEditMovement(mov)}>
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuItem 
+                                  className="text-red-500"
+                                  onClick={() => {
+                                    setMovementToDelete(mov);
+                                    setDeleteMovementDialogOpen(true);
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Excluir
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </TableCell>
                         </TableRow>
                       ))
@@ -1290,6 +1419,110 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
           }
         }}
       />
+
+      {/* Edit Movement Dialog */}
+      <Dialog open={editMovementDialogOpen} onOpenChange={setEditMovementDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Movimentação</DialogTitle>
+            <DialogDescription>Altere os dados da movimentação abaixo.</DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleUpdateMovement} className="space-y-4">
+            <div className="space-y-2">
+              <Label>Descrição *</Label>
+              <Input
+                value={editMovementForm.description}
+                onChange={(e) => setEditMovementForm({ ...editMovementForm, description: e.target.value })}
+                placeholder="Descrição do lançamento"
+                required
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Valor *</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  value={editMovementForm.value}
+                  onChange={(e) => setEditMovementForm({ ...editMovementForm, value: e.target.value })}
+                  placeholder="0,00"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Data</Label>
+                <Input
+                  type="date"
+                  value={editMovementForm.movement_date}
+                  onChange={(e) => setEditMovementForm({ ...editMovementForm, movement_date: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Categoria</Label>
+              <Select 
+                value={editMovementForm.category_id} 
+                onValueChange={(v) => setEditMovementForm({ ...editMovementForm, category_id: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecionar categoria" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Observações</Label>
+              <Textarea
+                value={editMovementForm.notes}
+                onChange={(e) => setEditMovementForm({ ...editMovementForm, notes: e.target.value })}
+                placeholder="Observações adicionais"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setEditMovementDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit">Salvar</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Movement Dialog */}
+      <AlertDialog open={deleteMovementDialogOpen} onOpenChange={setDeleteMovementDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir esta movimentação? Esta ação não pode ser desfeita.
+              {movementToDelete?.entry?.description && (
+                <span className="block mt-2 font-medium">
+                  "{movementToDelete.entry.description}"
+                </span>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setMovementToDelete(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-500 hover:bg-red-600"
+              onClick={handleDeleteMovement}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
