@@ -784,7 +784,7 @@ export function AccountsManager({ accounts, onSave }: AccountsManagerProps) {
               <TabsTrigger value="saidas">Saídas</TabsTrigger>
             </TabsList>
 
-            <TabsContent value={activeTab} className="mt-4">
+            <TabsContent value={activeTab} className="mt-4 pb-20">
               <div className="rounded-lg border">
                 <Table>
                   <TableHeader>
