@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { RoutineBlock, FOCUS_TYPES, FocusType } from '@/hooks/useRoutine';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,26 @@ import {
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import {
+  DndContext,
+  DragOverlay,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  TouchSensor,
+  useSensor,
+  useSensors,
+  DragStartEvent,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface RoutineDayViewProps {
   date: Date;
@@ -55,6 +75,51 @@ export function RoutineDayView({
   onGenerateDay,
   kpis,
 }: RoutineDayViewProps) {
+  const [activeId, setActiveId] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: { delay: 200, tolerance: 5 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const activeBlockDrag = useMemo(
+    () => blocks.find((b) => b.id === activeId),
+    [blocks, activeId]
+  );
+
+  const sortableIds = useMemo(() => blocks.map((b) => b.id), [blocks]);
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(event.active.id as string);
+    // Haptic feedback on mobile
+    if (navigator.vibrate) {
+      navigator.vibrate(50);
+    }
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveId(null);
+
+    if (over && active.id !== over.id) {
+      const oldIndex = blocks.findIndex((b) => b.id === active.id);
+      const newIndex = blocks.findIndex((b) => b.id === over.id);
+      const reordered = arrayMove(blocks, oldIndex, newIndex);
+      onReorderBlocks(reordered);
+      // Haptic feedback on drop
+      if (navigator.vibrate) {
+        navigator.vibrate(30);
+      }
+    }
+  };
+
   const formatTime = (time: string | null) => {
     if (!time) return '--:--';
     return time.slice(0, 5);
@@ -168,7 +233,7 @@ export function RoutineDayView({
         )}
       </div>
 
-      {/* Blocks Timeline */}
+      {/* Blocks Timeline with Drag and Drop */}
       {blocks.length === 0 ? (
         <Card className="p-8 text-center">
           <p className="text-muted-foreground mb-4">Nenhum bloco para este dia.</p>
@@ -177,30 +242,64 @@ export function RoutineDayView({
           </Button>
         </Card>
       ) : (
-        <div className="space-y-3">
-          {blocks.map((block) => (
-            <BlockCard
-              key={block.id}
-              block={block}
-              isActive={block.status === 'andamento'}
-              progress={getBlockProgress(block)}
-              formatTime={formatTime}
-              onStart={() => onStartBlock(block.id)}
-              onComplete={() => onCompleteBlock(block.id)}
-              onSkip={() => onSkipBlock(block.id)}
-              onEdit={() => onEditBlock(block)}
-              onDelete={() => onDeleteBlock(block.id)}
-            />
-          ))}
-        </div>
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+            <div className="space-y-3">
+              {blocks.map((block) => (
+                <SortableBlockCard
+                  key={block.id}
+                  block={block}
+                  isActive={block.status === 'andamento'}
+                  isDragging={activeId === block.id}
+                  progress={getBlockProgress(block)}
+                  formatTime={formatTime}
+                  onStart={() => onStartBlock(block.id)}
+                  onComplete={() => onCompleteBlock(block.id)}
+                  onSkip={() => onSkipBlock(block.id)}
+                  onEdit={() => onEditBlock(block)}
+                  onDelete={() => onDeleteBlock(block.id)}
+                />
+              ))}
+            </div>
+          </SortableContext>
+
+          {/* Drag Overlay for visual feedback */}
+          <DragOverlay dropAnimation={{
+            duration: 200,
+            easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+          }}>
+            {activeBlockDrag ? (
+              <div className="opacity-90 shadow-2xl scale-105">
+                <BlockCardContent
+                  block={activeBlockDrag}
+                  isActive={activeBlockDrag.status === 'andamento'}
+                  isDragging={true}
+                  progress={getBlockProgress(activeBlockDrag)}
+                  formatTime={formatTime}
+                  onStart={() => {}}
+                  onComplete={() => {}}
+                  onSkip={() => {}}
+                  onEdit={() => {}}
+                  onDelete={() => {}}
+                />
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
       )}
     </div>
   );
 }
 
-interface BlockCardProps {
+interface SortableBlockCardProps {
   block: RoutineBlock;
   isActive: boolean;
+  isDragging: boolean;
   progress: number;
   formatTime: (time: string | null) => string;
   onStart: () => void;
@@ -210,9 +309,61 @@ interface BlockCardProps {
   onDelete: () => void;
 }
 
-function BlockCard({
+function SortableBlockCard(props: SortableBlockCardProps) {
+  const { block, isDragging } = props;
+  
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging: isSorting,
+  } = useSortable({ 
+    id: block.id,
+    disabled: block.status !== 'pendente',
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        'transition-opacity',
+        (isDragging || isSorting) && 'opacity-50'
+      )}
+    >
+      <BlockCardContent
+        {...props}
+        dragHandleProps={{ ...attributes, ...listeners }}
+      />
+    </div>
+  );
+}
+
+interface BlockCardContentProps {
+  block: RoutineBlock;
+  isActive: boolean;
+  isDragging: boolean;
+  progress: number;
+  formatTime: (time: string | null) => string;
+  onStart: () => void;
+  onComplete: () => void;
+  onSkip: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
+  dragHandleProps?: Record<string, unknown>;
+}
+
+function BlockCardContent({
   block,
   isActive,
+  isDragging,
   progress,
   formatTime,
   onStart,
@@ -220,24 +371,29 @@ function BlockCard({
   onSkip,
   onEdit,
   onDelete,
-}: BlockCardProps) {
+  dragHandleProps = {},
+}: BlockCardContentProps) {
   const focusInfo = FOCUS_TYPES[block.focus as FocusType] || FOCUS_TYPES.trabalho_profundo;
 
   return (
     <Card
       className={cn(
-        'transition-all',
+        'transition-all duration-200',
         isActive && 'ring-2 ring-primary shadow-lg',
         block.status === 'concluido' && 'opacity-60 bg-muted/30',
-        block.status === 'pulado' && 'opacity-40'
+        block.status === 'pulado' && 'opacity-40',
+        isDragging && 'ring-2 ring-primary shadow-2xl'
       )}
     >
       <CardContent className="p-3">
         <div className="flex items-center gap-3">
           {/* Drag Handle */}
           {block.status === 'pendente' && (
-            <div className="cursor-grab active:cursor-grabbing">
-              <GripVertical className="h-4 w-4 text-muted-foreground" />
+            <div 
+              {...dragHandleProps}
+              className="cursor-grab active:cursor-grabbing touch-none"
+            >
+              <GripVertical className="h-5 w-5 text-muted-foreground" />
             </div>
           )}
 
