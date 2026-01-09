@@ -95,6 +95,7 @@ const actionTypeLabels: Record<string, { label: string; icon: string; color: str
 };
 
 interface InsightChatMessage {
+  id?: string;
   role: 'user' | 'assistant';
   content: string;
 }
@@ -116,8 +117,17 @@ function InsightCard({
   const [chatMessages, setChatMessages] = useState<InsightChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const historyLoaded = useRef(false);
+
+  // Load chat history when opening
+  useEffect(() => {
+    if (chatOpen && !historyLoaded.current) {
+      loadChatHistory();
+    }
+  }, [chatOpen]);
 
   useEffect(() => {
     if (chatOpen && chatEndRef.current) {
@@ -125,12 +135,48 @@ function InsightCard({
     }
   }, [chatMessages, chatOpen]);
 
+  const loadChatHistory = async () => {
+    setLoadingHistory(true);
+    try {
+      const { data, error } = await supabase
+        .from('ai_insight_messages')
+        .select('id, role, content')
+        .eq('insight_id', insight.id)
+        .order('created_at', { ascending: true });
+
+      if (error) throw error;
+      if (data && data.length > 0) {
+        setChatMessages(data.map(m => ({ 
+          id: m.id, 
+          role: m.role as 'user' | 'assistant', 
+          content: m.content 
+        })));
+      }
+      historyLoaded.current = true;
+    } catch (error) {
+      console.error('Error loading chat history:', error);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const saveMessage = async (role: 'user' | 'assistant', content: string) => {
+    try {
+      await supabase
+        .from('ai_insight_messages')
+        .insert({ insight_id: insight.id, role, content });
+    } catch (error) {
+      console.error('Error saving message:', error);
+    }
+  };
+
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isLoading) return;
 
     const userMessage = inputValue.trim();
     setInputValue('');
     setChatMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    saveMessage('user', userMessage);
     setIsLoading(true);
 
     try {
@@ -183,12 +229,16 @@ Responda de forma direta e concisa. Se o usuário pedir para aprovar, rejeitar, 
           }
         }
       }
+
+      // Save assistant message after streaming is complete
+      if (assistantMessage) {
+        saveMessage('assistant', assistantMessage);
+      }
     } catch (error) {
       console.error('Error sending message:', error);
-      setChatMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: 'Desculpe, ocorreu um erro ao processar sua mensagem.' 
-      }]);
+      const errorMessage = 'Desculpe, ocorreu um erro ao processar sua mensagem.';
+      setChatMessages(prev => [...prev, { role: 'assistant', content: errorMessage }]);
+      saveMessage('assistant', errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -299,17 +349,27 @@ Responda de forma direta e concisa. Se o usuário pedir para aprovar, rejeitar, 
               >
                 <MessageSquare className="h-4 w-4" />
                 <span>Discutir com CEO IA</span>
+                {chatMessages.length > 0 && !chatOpen && (
+                  <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                    {chatMessages.length}
+                  </Badge>
+                )}
                 {chatOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               </Button>
               
               {chatOpen && (
                 <div className="mt-2 border rounded-lg bg-muted/30 overflow-hidden">
                   {/* Mensagens do chat */}
-                  {chatMessages.length > 0 && (
+                  {loadingHistory ? (
+                    <div className="p-4 flex items-center justify-center">
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      <span className="text-sm text-muted-foreground">Carregando histórico...</span>
+                    </div>
+                  ) : chatMessages.length > 0 ? (
                     <div className="max-h-48 overflow-y-auto p-3 space-y-2">
                       {chatMessages.map((msg, idx) => (
                         <div
-                          key={idx}
+                          key={msg.id || idx}
                           className={`text-sm p-2 rounded-lg ${
                             msg.role === 'user'
                               ? 'bg-primary text-primary-foreground ml-8'
@@ -322,6 +382,10 @@ Responda de forma direta e concisa. Se o usuário pedir para aprovar, rejeitar, 
                         </div>
                       ))}
                       <div ref={chatEndRef} />
+                    </div>
+                  ) : (
+                    <div className="p-3 text-center text-sm text-muted-foreground">
+                      Faça perguntas sobre esta decisão antes de aprovar ou rejeitar
                     </div>
                   )}
                   
