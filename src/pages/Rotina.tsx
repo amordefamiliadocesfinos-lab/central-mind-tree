@@ -226,6 +226,7 @@ export default function Rotina() {
             onReorderBlocks={reorderBlocks}
             onAddBlock={handleAddBlock}
             onQuickAdd={handleQuickAdd}
+            onGenerateDay={autoPlanDay}
             kpis={currentDayKPIs}
           />
         )}
