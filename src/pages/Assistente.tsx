@@ -25,8 +25,10 @@ import {
   Settings2,
   Zap,
   RefreshCw,
+  MessageSquare,
 } from 'lucide-react';
 import { useAICEO, AIInsight, AIPolicy, AIAction } from '@/hooks/useAICEO';
+import { CEOChat } from '@/components/assistant/CEOChat';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -332,8 +334,12 @@ export default function Assistente() {
           </Button>
         </div>
 
-        <Tabs defaultValue="insights" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+        <Tabs defaultValue="chat" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="chat" className="flex items-center gap-1">
+              <MessageSquare className="h-4 w-4" />
+              <span className="hidden sm:inline">Chat</span>
+            </TabsTrigger>
             <TabsTrigger value="insights" className="flex items-center gap-1">
               <Zap className="h-4 w-4" />
               <span className="hidden sm:inline">Decisões</span>
@@ -352,6 +358,10 @@ export default function Assistente() {
               <span className="hidden sm:inline">Log</span>
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="chat" className="mt-4">
+            <CEOChat />
+          </TabsContent>
 
           <TabsContent value="insights" className="mt-4 space-y-4">
             {/* Filters */}
