@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +8,7 @@ import { Slider } from '@/components/ui/slider';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { MobileHeader } from '@/components/ui/mobile-header';
+import { Input } from '@/components/ui/input';
 import {
   Brain,
   Sparkles,
@@ -26,10 +27,14 @@ import {
   Zap,
   RefreshCw,
   MessageSquare,
+  Send,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { useAICEO, AIInsight, AIPolicy, AIAction } from '@/hooks/useAICEO';
 import { CEOChat } from '@/components/assistant/CEOChat';
 import { format } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
 import { ptBR } from 'date-fns/locale';
 
 const areaIcons: Record<string, React.ReactNode> = {
@@ -89,6 +94,11 @@ const actionTypeLabels: Record<string, { label: string; icon: string; color: str
   notification: { label: 'Notificação', icon: '🔔', color: 'bg-muted text-muted-foreground' },
 };
 
+interface InsightChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
 function InsightCard({
   insight,
   onApprove,
@@ -101,6 +111,95 @@ function InsightCard({
   const isPending = insight.status === 'proposto';
   const decision = insight.decision as { type: string; payload?: Record<string, unknown> } | null;
   const actionInfo = decision?.type ? actionTypeLabels[decision.type] : null;
+  
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatMessages, setChatMessages] = useState<InsightChatMessage[]>([]);
+  const [inputValue, setInputValue] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (chatOpen && chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages, chatOpen]);
+
+  const handleSendMessage = async () => {
+    if (!inputValue.trim() || isLoading) return;
+
+    const userMessage = inputValue.trim();
+    setInputValue('');
+    setChatMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+    setIsLoading(true);
+
+    try {
+      const contextMessage = `
+[CONTEXTO DO INSIGHT]
+Título: ${insight.title}
+Área: ${insight.area}
+Severidade: ${insight.severity}
+Descrição: ${insight.description}
+${actionInfo ? `Ação proposta: ${actionInfo.label}` : ''}
+${decision?.payload ? `Payload: ${JSON.stringify(decision.payload)}` : ''}
+Impacto: ${Math.round(insight.impact * 100)}%
+Risco: ${Math.round(insight.risk * 100)}%
+Confiança: ${Math.round(insight.confidence * 100)}%
+
+[PERGUNTA DO USUÁRIO]
+${userMessage}
+
+Responda de forma direta e concisa. Se o usuário pedir para aprovar, rejeitar, modificar ou executar a ação, confirme a instrução para que ele possa clicar no botão correspondente.`;
+
+      const response = await supabase.functions.invoke('ai-ceo/chat', {
+        body: { message: contextMessage }
+      });
+
+      if (response.error) throw response.error;
+      
+      const reader = response.data.getReader();
+      const decoder = new TextDecoder();
+      let assistantMessage = '';
+
+      setChatMessages(prev => [...prev, { role: 'assistant', content: '' }]);
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+        
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const data = line.slice(6);
+            if (data === '[DONE]') continue;
+            assistantMessage += data;
+            setChatMessages(prev => {
+              const updated = [...prev];
+              updated[updated.length - 1] = { role: 'assistant', content: assistantMessage };
+              return updated;
+            });
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Error sending message:', error);
+      setChatMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: 'Desculpe, ocorreu um erro ao processar sua mensagem.' 
+      }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
 
   return (
     <Card className="overflow-hidden border-l-4" style={{ 
@@ -183,6 +282,74 @@ function InsightCard({
                 <X className="h-4 w-4 mr-1" />
                 Rejeitar
               </Button>
+            </div>
+            
+            {/* Chat de diálogo inline */}
+            <div className="mt-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setChatOpen(!chatOpen);
+                  if (!chatOpen) {
+                    setTimeout(() => inputRef.current?.focus(), 100);
+                  }
+                }}
+                className="w-full flex items-center justify-center gap-2 text-muted-foreground hover:text-foreground"
+              >
+                <MessageSquare className="h-4 w-4" />
+                <span>Discutir com CEO IA</span>
+                {chatOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </Button>
+              
+              {chatOpen && (
+                <div className="mt-2 border rounded-lg bg-muted/30 overflow-hidden">
+                  {/* Mensagens do chat */}
+                  {chatMessages.length > 0 && (
+                    <div className="max-h-48 overflow-y-auto p-3 space-y-2">
+                      {chatMessages.map((msg, idx) => (
+                        <div
+                          key={idx}
+                          className={`text-sm p-2 rounded-lg ${
+                            msg.role === 'user'
+                              ? 'bg-primary text-primary-foreground ml-8'
+                              : 'bg-background border mr-8'
+                          }`}
+                        >
+                          {msg.content || (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          )}
+                        </div>
+                      ))}
+                      <div ref={chatEndRef} />
+                    </div>
+                  )}
+                  
+                  {/* Input do chat */}
+                  <div className="p-2 border-t bg-background flex gap-2">
+                    <Input
+                      ref={inputRef}
+                      placeholder="Pergunte sobre esta decisão..."
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      disabled={isLoading}
+                      className="flex-1 text-sm"
+                    />
+                    <Button
+                      size="icon"
+                      onClick={handleSendMessage}
+                      disabled={!inputValue.trim() || isLoading}
+                    >
+                      {isLoading ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </>
         )}
