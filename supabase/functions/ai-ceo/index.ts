@@ -10,19 +10,30 @@ const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
+// Tipos de ação expandidos para CRUD completo
+type ActionType = 
+  | "task_create" | "task_update" | "task_delete"
+  | "node_create" | "node_update" | "node_delete"
+  | "order_create" | "order_update" | "order_delete"
+  | "financial_create" | "financial_update" | "financial_delete" | "financial_pay"
+  | "contact_create" | "contact_update" | "contact_delete"
+  | "product_create" | "product_update" | "product_delete"
+  | "routine_create" | "routine_update" | "routine_delete"
+  | "post_create" | "post_update" | "post_delete"
+  | "notification";
+
 interface Decision {
   area: "Financeiro" | "Projetos" | "Tempo" | "Recursos";
   title: string;
   why: string;
   action: {
-    type: "api_call" | "task_change" | "agenda_block" | "notification";
-    endpoint?: string;
+    type: ActionType;
+    entity?: string;
     payload?: Record<string, unknown>;
   };
   impact: number;
   risk: number;
   confidence: number;
-  requires_approval: boolean;
 }
 
 interface Policy {
@@ -111,19 +122,24 @@ serve(async (req) => {
       };
 
       // System prompt for CEO agent
-      const systemPrompt = `Você é um CEO operacional de IA. Seu objetivo é maximizar a entrega de projetos e manter a saúde financeira.
+      const systemPrompt = `Você é um CEO operacional de IA com AUTONOMIA TOTAL para operar o sistema. Seu objetivo é maximizar a entrega de projetos e manter a saúde financeira.
+
+VOCÊ PODE EXECUTAR QUALQUER OPERAÇÃO (todas requerem aprovação do usuário):
+- CRIAR, EDITAR, EXCLUIR tarefas (tasks)
+- CRIAR, EDITAR, EXCLUIR nós/projetos (nodes)
+- CRIAR, EDITAR, EXCLUIR pedidos (orders)
+- CRIAR, EDITAR, EXCLUIR lançamentos financeiros (financial_entries)
+- CRIAR, EDITAR, EXCLUIR contatos (contacts)
+- CRIAR, EDITAR, EXCLUIR produtos (products)
+- CRIAR, EDITAR, EXCLUIR blocos de rotina (routine_blocks)
+- CRIAR, EDITAR, EXCLUIR posts de conteúdo (posts)
+- Dar baixa em pagamentos
 
 ESTRUTURA DE TAREFAS (prioridade):
 1. "estrutural" - Topo, guia o resto (NUNCA rebaixar)
 2. "andamento" - Em execução ativa
 3. "pendente" - Aguardando início
 4. "concluído" - Finalizado
-
-REGRAS:
-- Priorize reduzir risco de caixa, gargalos e retrabalho
-- Proponha mudanças claras e de baixo custo
-- Sempre retorne decisões no formato JSON especificado
-- Seja objetivo e prático
 
 DADOS ATUAIS:
 - Data de hoje: ${today}
@@ -132,36 +148,34 @@ DADOS ATUAIS:
 - Tarefas pendentes: ${context.tasks.filter((t: any) => t.status === "pendente").length}
 - Entradas financeiras: ${context.financialEntries.length}
 - Pedidos ativos: ${context.orders.length}
-- Blocos de rotina hoje: ${context.routineBlocks.filter((b: any) => b.date === today).length}
+- Blocos de rotina: ${context.routineBlocks.length}
 
-HEURÍSTICAS PARA ANÁLISE:
-1. FINANCEIRO:
-   - Contas atrasadas com alto impacto de multa
-   - Recebíveis que podem ser antecipados
-   - Sugerir baixa parcial quando apropriado
-   - Fluxo de caixa negativo iminente
+HEURÍSTICAS:
+1. FINANCEIRO: Contas atrasadas, fluxo de caixa, baixas pendentes
+2. PROJETOS: Tarefas estagnadas, prazos, dependências bloqueantes
+3. TEMPO: Blocos de foco, gaps improdutivos
+4. RECURSOS: Sobrecarga, distribuição de trabalho
 
-2. PROJETOS:
-   - Tarefas "andamento" estagnadas (>7 dias sem progresso)
-   - Tarefas com prazo próximo e baixo progresso
-   - Reorganização de prioridades baseada em dependências
-   - Promoção de tarefas bloqueantes
+TIPOS DE AÇÃO DISPONÍVEIS:
+- task_create, task_update, task_delete
+- node_create, node_update, node_delete
+- order_create, order_update, order_delete
+- financial_create, financial_update, financial_delete, financial_pay
+- contact_create, contact_update, contact_delete
+- product_create, product_update, product_delete
+- routine_create, routine_update, routine_delete
+- post_create, post_update, post_delete
+- notification
 
-3. TEMPO:
-   - Blocos de tempo para entregas críticas
-   - Consolidação de reuniões
-   - Gaps improdutivos na agenda
+Analise os dados e gere de 1 a 5 insights acionáveis com operações concretas.`;
 
-4. RECURSOS:
-   - Sobrecarga (>8h/dia planejadas)
-   - Distribuição desigual de trabalho
-
-Analise os dados e gere de 1 a 5 insights acionáveis.`;
-
-      const userPrompt = `Analise estes dados e gere insights acionáveis:
+      const userPrompt = `Analise estes dados e gere insights acionáveis com operações CONCRETAS:
 
 TAREFAS (${context.tasks.length} total):
 ${JSON.stringify(context.tasks.slice(0, 20), null, 2)}
+
+NÓS/PROJETOS:
+${JSON.stringify(context.nodes.slice(0, 20), null, 2)}
 
 ENTRADAS FINANCEIRAS (${context.financialEntries.length} total):
 ${JSON.stringify(context.financialEntries.slice(0, 20), null, 2)}
@@ -172,7 +186,7 @@ ${JSON.stringify(context.accounts, null, 2)}
 PEDIDOS ATIVOS:
 ${JSON.stringify(context.orders.slice(0, 10), null, 2)}
 
-BLOCOS DE ROTINA (próximos):
+BLOCOS DE ROTINA:
 ${JSON.stringify(context.routineBlocks.slice(0, 10), null, 2)}
 
 Retorne um array JSON com insights no formato:
@@ -180,16 +194,26 @@ Retorne um array JSON com insights no formato:
   "insights": [
     {
       "area": "Financeiro|Projetos|Tempo|Recursos",
-      "title": "título curto",
-      "why": "explicação objetiva",
-      "action": { "type": "api_call|task_change|agenda_block|notification", "endpoint": "...", "payload": {...} },
+      "title": "título curto da ação",
+      "why": "explicação objetiva do porquê",
+      "action": { 
+        "type": "task_create|task_update|task_delete|node_create|node_update|node_delete|order_create|order_update|order_delete|financial_create|financial_update|financial_delete|financial_pay|contact_create|contact_update|contact_delete|product_create|product_update|product_delete|routine_create|routine_update|routine_delete|post_create|post_update|post_delete|notification",
+        "entity": "tasks|nodes|orders|financial_entries|contacts|products|routine_blocks|posts",
+        "payload": { "id": "uuid-se-update-ou-delete", ...campos_para_criar_ou_atualizar }
+      },
       "impact": 0.0-1.0,
       "risk": 0.0-1.0,
-      "confidence": 0.0-1.0,
-      "requires_approval": true|false
+      "confidence": 0.0-1.0
     }
   ]
-}`;
+}
+
+EXEMPLOS DE PAYLOAD:
+- task_create: { "node_id": "uuid", "title": "Nova tarefa", "status": "pendente" }
+- task_update: { "id": "uuid", "status": "concluído", "progress": 100 }
+- task_delete: { "id": "uuid" }
+- financial_pay: { "id": "uuid", "value": 150.00, "account_id": "uuid" }
+- routine_create: { "title": "Foco em entregas", "date": "2026-01-10", "duration_minutes": 120 }`;
 
       // Call Lovable AI
       const aiResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -272,24 +296,25 @@ Retorne um array JSON com insights no formato:
 
         createdInsights.push(insightRecord);
 
-        // Check autopilot policy
+        // CEO IA SEMPRE requer aprovação - nunca auto-executa
+        // O autopilot só permite auto-execução de ações de baixo risco como notificações
         const policy = policiesMap.get(insight.area) as Policy | undefined;
-        const canAutoExecute =
+        const isLowRiskNotification = 
+          insight.action.type === "notification" &&
           policy?.autopilot &&
-          insight.risk <= (policy?.max_risk || 0.4) &&
-          !insight.requires_approval;
+          insight.risk <= (policy?.max_risk || 0.4);
 
-        if (canAutoExecute && insightRecord) {
-          // Auto-execute action
+        if (isLowRiskNotification && insightRecord) {
+          // Apenas notificações de baixo risco podem auto-executar
           const actionResult = await executeAction(supabase, insight.action, insightRecord.id);
           executedActions.push(actionResult);
 
-          // Update insight status
           await supabase
             .from("ai_insights")
             .update({ status: "executado" })
             .eq("id", insightRecord.id);
         }
+        // Todas as outras ações (CRUD) ficam como "proposto" aguardando aprovação
       }
 
       return new Response(
@@ -411,58 +436,355 @@ async function executeAction(
   };
 
   try {
+    const payload = action.payload || {};
+    const entity = action.entity;
+
     switch (action.type) {
-      case "task_change":
-        if (action.payload?.taskId && action.payload?.updates) {
-          const { error } = await supabase
-            .from("tasks")
-            .update(action.payload.updates)
-            .eq("id", action.payload.taskId);
-
-          if (error) throw error;
-          actionRecord.status = "ok";
-          actionRecord.result = `Task ${action.payload.taskId} updated`;
-        }
+      // === TASKS ===
+      case "task_create": {
+        const { data, error } = await supabase
+          .from("tasks")
+          .insert({
+            node_id: payload.node_id,
+            title: payload.title,
+            description: payload.description,
+            status: payload.status || "pendente",
+            progress: payload.progress || 0,
+            due_date: payload.due_date,
+          })
+          .select()
+          .single();
+        if (error) throw error;
+        actionRecord.status = "ok";
+        actionRecord.result = `Tarefa criada: ${payload.title}`;
         break;
+      }
+      case "task_update": {
+        const { error } = await supabase
+          .from("tasks")
+          .update(payload)
+          .eq("id", payload.id);
+        if (error) throw error;
+        actionRecord.status = "ok";
+        actionRecord.result = `Tarefa atualizada: ${payload.id}`;
+        break;
+      }
+      case "task_delete": {
+        const { error } = await supabase
+          .from("tasks")
+          .update({ deleted_at: new Date().toISOString() })
+          .eq("id", payload.id);
+        if (error) throw error;
+        actionRecord.status = "ok";
+        actionRecord.result = `Tarefa excluída: ${payload.id}`;
+        break;
+      }
 
-      case "agenda_block":
-        if (action.payload?.title) {
-          const { error } = await supabase.from("routine_blocks").insert({
-            title: action.payload.title,
-            date: action.payload.date || new Date().toISOString().split("T")[0],
-            duration_minutes: action.payload.duration || 60,
-            block_type: "focus",
-            status: "pending",
+      // === NODES ===
+      case "node_create": {
+        const { data, error } = await supabase
+          .from("nodes")
+          .insert({
+            title: payload.title,
+            color: payload.color || "bg-gray-100",
+            parent_id: payload.parent_id,
+          })
+          .select()
+          .single();
+        if (error) throw error;
+        actionRecord.status = "ok";
+        actionRecord.result = `Nó criado: ${payload.title}`;
+        break;
+      }
+      case "node_update": {
+        const { error } = await supabase
+          .from("nodes")
+          .update(payload)
+          .eq("id", payload.id);
+        if (error) throw error;
+        actionRecord.status = "ok";
+        actionRecord.result = `Nó atualizado: ${payload.id}`;
+        break;
+      }
+      case "node_delete": {
+        const { error } = await supabase
+          .from("nodes")
+          .delete()
+          .eq("id", payload.id);
+        if (error) throw error;
+        actionRecord.status = "ok";
+        actionRecord.result = `Nó excluído: ${payload.id}`;
+        break;
+      }
+
+      // === ORDERS ===
+      case "order_create": {
+        const { data, error } = await supabase
+          .from("orders")
+          .insert({
+            customer_name: payload.customer_name,
+            customer_contact: payload.customer_contact,
+            status: payload.status || "pendente",
+            due_date: payload.due_date,
+            notes: payload.notes,
+          })
+          .select()
+          .single();
+        if (error) throw error;
+        actionRecord.status = "ok";
+        actionRecord.result = `Pedido criado: ${payload.customer_name}`;
+        break;
+      }
+      case "order_update": {
+        const { error } = await supabase
+          .from("orders")
+          .update(payload)
+          .eq("id", payload.id);
+        if (error) throw error;
+        actionRecord.status = "ok";
+        actionRecord.result = `Pedido atualizado: ${payload.id}`;
+        break;
+      }
+      case "order_delete": {
+        const { error } = await supabase
+          .from("orders")
+          .update({ deleted_at: new Date().toISOString() })
+          .eq("id", payload.id);
+        if (error) throw error;
+        actionRecord.status = "ok";
+        actionRecord.result = `Pedido excluído: ${payload.id}`;
+        break;
+      }
+
+      // === FINANCIAL ===
+      case "financial_create": {
+        const { data, error } = await supabase
+          .from("financial_entries")
+          .insert({
+            description: payload.description,
+            value: payload.value,
+            type: payload.type || "pagar",
+            due_date: payload.due_date,
+            category_id: payload.category_id,
+            contact_id: payload.contact_id,
+          })
+          .select()
+          .single();
+        if (error) throw error;
+        actionRecord.status = "ok";
+        actionRecord.result = `Lançamento criado: ${payload.description}`;
+        break;
+      }
+      case "financial_update": {
+        const { error } = await supabase
+          .from("financial_entries")
+          .update(payload)
+          .eq("id", payload.id);
+        if (error) throw error;
+        actionRecord.status = "ok";
+        actionRecord.result = `Lançamento atualizado: ${payload.id}`;
+        break;
+      }
+      case "financial_delete": {
+        const { error } = await supabase
+          .from("financial_entries")
+          .delete()
+          .eq("id", payload.id);
+        if (error) throw error;
+        actionRecord.status = "ok";
+        actionRecord.result = `Lançamento excluído: ${payload.id}`;
+        break;
+      }
+      case "financial_pay": {
+        // Dar baixa - criar movimento financeiro
+        const { error } = await supabase
+          .from("financial_movements")
+          .insert({
+            entry_id: payload.id,
+            account_id: payload.account_id,
+            value: payload.value,
+            movement_date: new Date().toISOString(),
           });
-
-          if (error) throw error;
-          actionRecord.status = "ok";
-          actionRecord.result = `Routine block created: ${action.payload.title}`;
-        }
-        break;
-
-      case "notification":
-        // Just log the notification for now
+        if (error) throw error;
         actionRecord.status = "ok";
-        actionRecord.result = `Notification: ${action.payload?.title || "Alert"}`;
+        actionRecord.result = `Baixa realizada: R$ ${payload.value}`;
         break;
+      }
 
-      case "api_call":
-        // Generic API call - log for manual execution
+      // === CONTACTS ===
+      case "contact_create": {
+        const { data, error } = await supabase
+          .from("contacts")
+          .insert({
+            name: payload.name,
+            email: payload.email,
+            phone: payload.phone,
+            type: payload.type || "cliente",
+          })
+          .select()
+          .single();
+        if (error) throw error;
         actionRecord.status = "ok";
-        actionRecord.result = `API call logged: ${action.endpoint}`;
+        actionRecord.result = `Contato criado: ${payload.name}`;
         break;
+      }
+      case "contact_update": {
+        const { error } = await supabase
+          .from("contacts")
+          .update(payload)
+          .eq("id", payload.id);
+        if (error) throw error;
+        actionRecord.status = "ok";
+        actionRecord.result = `Contato atualizado: ${payload.id}`;
+        break;
+      }
+      case "contact_delete": {
+        const { error } = await supabase
+          .from("contacts")
+          .update({ is_active: false })
+          .eq("id", payload.id);
+        if (error) throw error;
+        actionRecord.status = "ok";
+        actionRecord.result = `Contato desativado: ${payload.id}`;
+        break;
+      }
+
+      // === PRODUCTS ===
+      case "product_create": {
+        const { data, error } = await supabase
+          .from("products")
+          .insert({
+            name: payload.name,
+            sku: payload.sku || `SKU-${Date.now()}`,
+            price: payload.price,
+            cost: payload.cost,
+            category: payload.category,
+          })
+          .select()
+          .single();
+        if (error) throw error;
+        actionRecord.status = "ok";
+        actionRecord.result = `Produto criado: ${payload.name}`;
+        break;
+      }
+      case "product_update": {
+        const { error } = await supabase
+          .from("products")
+          .update(payload)
+          .eq("id", payload.id);
+        if (error) throw error;
+        actionRecord.status = "ok";
+        actionRecord.result = `Produto atualizado: ${payload.id}`;
+        break;
+      }
+      case "product_delete": {
+        const { error } = await supabase
+          .from("products")
+          .update({ deleted_at: new Date().toISOString() })
+          .eq("id", payload.id);
+        if (error) throw error;
+        actionRecord.status = "ok";
+        actionRecord.result = `Produto excluído: ${payload.id}`;
+        break;
+      }
+
+      // === ROUTINE BLOCKS ===
+      case "routine_create": {
+        const { data, error } = await supabase
+          .from("routine_blocks")
+          .insert({
+            title: payload.title,
+            date: payload.date || new Date().toISOString().split("T")[0],
+            duration_minutes: payload.duration_minutes || 60,
+            block_type: payload.block_type || "focus",
+            status: "pending",
+            planned_start: payload.planned_start,
+            planned_end: payload.planned_end,
+          })
+          .select()
+          .single();
+        if (error) throw error;
+        actionRecord.status = "ok";
+        actionRecord.result = `Bloco de rotina criado: ${payload.title}`;
+        break;
+      }
+      case "routine_update": {
+        const { error } = await supabase
+          .from("routine_blocks")
+          .update(payload)
+          .eq("id", payload.id);
+        if (error) throw error;
+        actionRecord.status = "ok";
+        actionRecord.result = `Bloco de rotina atualizado: ${payload.id}`;
+        break;
+      }
+      case "routine_delete": {
+        const { error } = await supabase
+          .from("routine_blocks")
+          .delete()
+          .eq("id", payload.id);
+        if (error) throw error;
+        actionRecord.status = "ok";
+        actionRecord.result = `Bloco de rotina excluído: ${payload.id}`;
+        break;
+      }
+
+      // === POSTS ===
+      case "post_create": {
+        const { data, error } = await supabase
+          .from("posts")
+          .insert({
+            title: payload.title,
+            content: payload.content,
+            status: payload.status || "rascunho",
+            scheduled_date: payload.scheduled_date,
+            node_id: payload.node_id,
+          })
+          .select()
+          .single();
+        if (error) throw error;
+        actionRecord.status = "ok";
+        actionRecord.result = `Post criado: ${payload.title}`;
+        break;
+      }
+      case "post_update": {
+        const { error } = await supabase
+          .from("posts")
+          .update(payload)
+          .eq("id", payload.id);
+        if (error) throw error;
+        actionRecord.status = "ok";
+        actionRecord.result = `Post atualizado: ${payload.id}`;
+        break;
+      }
+      case "post_delete": {
+        const { error } = await supabase
+          .from("posts")
+          .delete()
+          .eq("id", payload.id);
+        if (error) throw error;
+        actionRecord.status = "ok";
+        actionRecord.result = `Post excluído: ${payload.id}`;
+        break;
+      }
+
+      // === NOTIFICATION ===
+      case "notification": {
+        actionRecord.status = "ok";
+        actionRecord.result = `Notificação: ${payload.title || payload.message || "Alerta"}`;
+        break;
+      }
 
       default:
         actionRecord.status = "erro";
-        actionRecord.result = `Unknown action type: ${action.type}`;
+        actionRecord.result = `Tipo de ação desconhecido: ${action.type}`;
     }
   } catch (error) {
     actionRecord.status = "erro";
-    actionRecord.result = error instanceof Error ? error.message : "Execution failed";
+    actionRecord.result = error instanceof Error ? error.message : "Execução falhou";
   }
 
-  // Save action record
+  // Salvar registro da ação
   await supabase.from("ai_actions").insert({
     ...actionRecord,
     executed_at: new Date().toISOString(),

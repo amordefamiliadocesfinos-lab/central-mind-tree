@@ -57,6 +57,36 @@ const statusColors: Record<string, string> = {
   rejeitado: 'bg-muted text-muted-foreground line-through',
 };
 
+// Mapa de tipos de ação para descrição amigável
+const actionTypeLabels: Record<string, { label: string; icon: string; color: string }> = {
+  task_create: { label: 'Criar Tarefa', icon: '➕', color: 'bg-emerald-500/20 text-emerald-700' },
+  task_update: { label: 'Editar Tarefa', icon: '✏️', color: 'bg-blue-500/20 text-blue-700' },
+  task_delete: { label: 'Excluir Tarefa', icon: '🗑️', color: 'bg-red-500/20 text-red-700' },
+  node_create: { label: 'Criar Nó', icon: '➕', color: 'bg-emerald-500/20 text-emerald-700' },
+  node_update: { label: 'Editar Nó', icon: '✏️', color: 'bg-blue-500/20 text-blue-700' },
+  node_delete: { label: 'Excluir Nó', icon: '🗑️', color: 'bg-red-500/20 text-red-700' },
+  order_create: { label: 'Criar Pedido', icon: '➕', color: 'bg-emerald-500/20 text-emerald-700' },
+  order_update: { label: 'Editar Pedido', icon: '✏️', color: 'bg-blue-500/20 text-blue-700' },
+  order_delete: { label: 'Excluir Pedido', icon: '🗑️', color: 'bg-red-500/20 text-red-700' },
+  financial_create: { label: 'Criar Lançamento', icon: '➕', color: 'bg-emerald-500/20 text-emerald-700' },
+  financial_update: { label: 'Editar Lançamento', icon: '✏️', color: 'bg-blue-500/20 text-blue-700' },
+  financial_delete: { label: 'Excluir Lançamento', icon: '🗑️', color: 'bg-red-500/20 text-red-700' },
+  financial_pay: { label: 'Dar Baixa', icon: '💰', color: 'bg-amber-500/20 text-amber-700' },
+  contact_create: { label: 'Criar Contato', icon: '➕', color: 'bg-emerald-500/20 text-emerald-700' },
+  contact_update: { label: 'Editar Contato', icon: '✏️', color: 'bg-blue-500/20 text-blue-700' },
+  contact_delete: { label: 'Excluir Contato', icon: '🗑️', color: 'bg-red-500/20 text-red-700' },
+  product_create: { label: 'Criar Produto', icon: '➕', color: 'bg-emerald-500/20 text-emerald-700' },
+  product_update: { label: 'Editar Produto', icon: '✏️', color: 'bg-blue-500/20 text-blue-700' },
+  product_delete: { label: 'Excluir Produto', icon: '🗑️', color: 'bg-red-500/20 text-red-700' },
+  routine_create: { label: 'Criar Bloco', icon: '📅', color: 'bg-purple-500/20 text-purple-700' },
+  routine_update: { label: 'Editar Bloco', icon: '✏️', color: 'bg-blue-500/20 text-blue-700' },
+  routine_delete: { label: 'Excluir Bloco', icon: '🗑️', color: 'bg-red-500/20 text-red-700' },
+  post_create: { label: 'Criar Post', icon: '📝', color: 'bg-emerald-500/20 text-emerald-700' },
+  post_update: { label: 'Editar Post', icon: '✏️', color: 'bg-blue-500/20 text-blue-700' },
+  post_delete: { label: 'Excluir Post', icon: '🗑️', color: 'bg-red-500/20 text-red-700' },
+  notification: { label: 'Notificação', icon: '🔔', color: 'bg-muted text-muted-foreground' },
+};
+
 function InsightCard({
   insight,
   onApprove,
@@ -67,9 +97,13 @@ function InsightCard({
   onReject: () => void;
 }) {
   const isPending = insight.status === 'proposto';
+  const decision = insight.decision as { type: string; payload?: Record<string, unknown> } | null;
+  const actionInfo = decision?.type ? actionTypeLabels[decision.type] : null;
 
   return (
-    <Card className="overflow-hidden">
+    <Card className="overflow-hidden border-l-4" style={{ 
+      borderLeftColor: isPending ? 'hsl(var(--primary))' : 'transparent' 
+    }}>
       <CardHeader className="pb-2">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -83,7 +117,7 @@ function InsightCard({
               </CardDescription>
             </div>
           </div>
-          <div className="flex gap-1">
+          <div className="flex gap-1 flex-wrap justify-end">
             <Badge variant="outline" className={severityColors[insight.severity]}>
               {insight.severity}
             </Badge>
@@ -95,6 +129,26 @@ function InsightCard({
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-sm text-muted-foreground">{insight.description}</p>
+        
+        {/* Ação proposta */}
+        {actionInfo && decision && (
+          <div className={`p-3 rounded-lg ${actionInfo.color} border`}>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-lg">{actionInfo.icon}</span>
+              <span className="font-medium text-sm">{actionInfo.label}</span>
+            </div>
+            {decision.payload && (
+              <div className="text-xs space-y-1 opacity-80">
+                {Object.entries(decision.payload).slice(0, 4).map(([key, value]) => (
+                  <div key={key} className="flex gap-2">
+                    <span className="font-medium">{key}:</span>
+                    <span className="truncate">{String(value)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         
         <div className="flex gap-4 text-xs">
           <div className="flex items-center gap-1">
@@ -114,10 +168,14 @@ function InsightCard({
         {isPending && (
           <>
             <Separator />
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-md p-2 text-xs text-amber-700 dark:text-amber-400 flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+              <span>Esta ação requer sua aprovação para ser executada</span>
+            </div>
             <div className="flex gap-2">
               <Button size="sm" variant="default" onClick={onApprove} className="flex-1">
                 <Check className="h-4 w-4 mr-1" />
-                Aprovar
+                Aprovar e Executar
               </Button>
               <Button size="sm" variant="outline" onClick={onReject} className="flex-1">
                 <X className="h-4 w-4 mr-1" />
@@ -259,8 +317,8 @@ export default function Assistente() {
               <h1 className="text-xl font-bold">CEO IA</h1>
               <p className="text-sm text-muted-foreground">
                 {pendingCount > 0
-                  ? `${pendingCount} sugestões pendentes`
-                  : 'Nenhuma sugestão pendente'}
+                  ? `${pendingCount} ações aguardando aprovação`
+                  : 'Autonomia total com sua aprovação'}
               </p>
             </div>
           </div>
