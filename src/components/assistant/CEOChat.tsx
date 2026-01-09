@@ -583,12 +583,21 @@ export function CEOChat() {
 
     try {
       await streamChat(newMessages);
-      // Get the last assistant message to save
+
+      // Salva a última resposta do assistente e executa automaticamente ações detectadas
       setMessages((prev) => {
-        const lastMsg = prev[prev.length - 1];
+        const lastIndex = prev.length - 1;
+        const lastMsg = prev[lastIndex];
+
         if (lastMsg?.role === 'assistant') {
           saveMessage('assistant', lastMsg.content);
+
+          if (lastMsg.pendingActions?.length && !lastMsg.actionsExecuted) {
+            // Executa direto no chat (sem exigir aprovação)
+            setTimeout(() => executeActions(lastIndex), 0);
+          }
         }
+
         return prev;
       });
     } catch (error) {
