@@ -111,10 +111,40 @@ export function GlobalFooterBar() {
     concluído: tasks.filter(t => t.status === "concluído").length,
   };
 
-  // Load timer state from DB
+  // Load timer state from DB and subscribe to realtime changes
   useEffect(() => {
     loadTimerState();
-  }, []);
+
+    // Subscribe to timer_state changes to sync across pages
+    const channel = supabase
+      .channel('timer-state-sync')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'timer_state'
+        },
+        (payload) => {
+          const newState = payload.new as { remaining_seconds: number; status: string; id: string };
+          // Only update if the change came from another source (e.g., Rotina page)
+          if (newState.id === stateId) {
+            setRemainingSeconds(newState.remaining_seconds);
+            setStatus(newState.status as "stopped" | "running" | "paused");
+          } else if (!stateId) {
+            // First time - just set the id and values
+            setStateId(newState.id);
+            setRemainingSeconds(newState.remaining_seconds);
+            setStatus(newState.status as "stopped" | "running" | "paused");
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [stateId]);
 
   // Timer countdown logic
   useEffect(() => {
