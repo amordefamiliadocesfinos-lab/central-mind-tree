@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Plus, Users, ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { ArrowLeft, Plus, Users, ChevronLeft, ChevronRight, Calendar, Sparkles } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -18,12 +18,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { DayTasksModal } from "@/components/DayTasksModal";
 import { useMeetings, Meeting } from "@/hooks/useMeetings";
 import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import { useSeasonalDays, SeasonalDay, SeasonalOccurrence } from "@/hooks/useSeasonalDays";
+import { SeasonalDayModal, SeasonalDaysList, SeasonalBadge } from "@/components/seasonal";
 
 interface Task {
   id: string;
@@ -89,6 +92,21 @@ const Calendario = () => {
   const [newMeetingDuration, setNewMeetingDuration] = useState(60);
   const [newMeetingOwnerId, setNewMeetingOwnerId] = useState("");
   const [creatingMeeting, setCreatingMeeting] = useState(false);
+
+  // Seasonal Days
+  const {
+    seasonalDays,
+    createSeasonalDay,
+    updateSeasonalDay,
+    deleteSeasonalDay,
+    getOccurrencesForYear,
+    getOccurrencesForDate,
+  } = useSeasonalDays();
+  const [showSeasonalDays, setShowSeasonalDays] = useState(true);
+  const [seasonalModalOpen, setSeasonalModalOpen] = useState(false);
+  const [editingSeasonal, setEditingSeasonal] = useState<SeasonalDay | null>(null);
+  const [seasonalDefaultDate, setSeasonalDefaultDate] = useState<string>("");
+  const [seasonalFilterImportance, setSeasonalFilterImportance] = useState<number | null>(null);
 
   useEffect(() => {
     loadData();
@@ -226,6 +244,58 @@ const Calendario = () => {
     return map;
   }, [meetings]);
 
+  // Seasonal occurrences by date for quick lookup
+  const seasonalOccurrences = useMemo(() => {
+    return getOccurrencesForYear(selectedYear);
+  }, [selectedYear, getOccurrencesForYear]);
+
+  const seasonalByDate = useMemo(() => {
+    const map: Record<string, SeasonalOccurrence[]> = {};
+    seasonalOccurrences.forEach((occ) => {
+      if (occ.isRange && occ.endDate) {
+        // Add to all dates in range
+        let current = new Date(occ.date);
+        const end = new Date(occ.endDate);
+        while (current <= end) {
+          const dateStr = current.toISOString().split('T')[0];
+          if (!map[dateStr]) map[dateStr] = [];
+          map[dateStr].push(occ);
+          current.setDate(current.getDate() + 1);
+        }
+      } else {
+        if (!map[occ.date]) map[occ.date] = [];
+        map[occ.date].push(occ);
+      }
+    });
+    return map;
+  }, [seasonalOccurrences]);
+
+  const handleSeasonalSave = async (data: Omit<SeasonalDay, 'id' | 'created_at' | 'updated_at'>) => {
+    if (editingSeasonal) {
+      const success = await updateSeasonalDay(editingSeasonal.id, data);
+      if (success) {
+        toast.success('Dia sazonal atualizado');
+        return true;
+      }
+      toast.error('Erro ao atualizar');
+      return false;
+    } else {
+      const created = await createSeasonalDay(data);
+      if (created) {
+        toast.success('Dia sazonal criado');
+        return true;
+      }
+      toast.error('Erro ao criar');
+      return false;
+    }
+  };
+
+  const handleOpenSeasonalModal = (dateKey?: string, sd?: SeasonalDay) => {
+    setEditingSeasonal(sd || null);
+    setSeasonalDefaultDate(dateKey || '');
+    setSeasonalModalOpen(true);
+  };
+
   const handleMeetingDragStart = (e: React.DragEvent, meeting: Meeting) => {
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', meeting.id);
@@ -326,25 +396,32 @@ const Calendario = () => {
       </header>
 
       <main className="px-4 py-4 space-y-4 pb-8 no-overflow-x">
-        {/* Legend */}
-        <div className="scroll-x-container">
-          {Object.entries(STATUS_COLORS).map(([status, color]) => (
-            <div key={status} className="flex items-center gap-1.5 shrink-0 text-sm">
+        {/* Legend + Seasonal Toggle */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="scroll-x-container flex-1">
+            {Object.entries(STATUS_COLORS).map(([status, color]) => (
+              <div key={status} className="flex items-center gap-1.5 shrink-0 text-sm">
+                <div
+                  className="w-2.5 h-2.5 rounded-full"
+                  style={{ backgroundColor: color }}
+                />
+                <span className="text-muted-foreground whitespace-nowrap">
+                  {status === "concluído" ? "Concluído" : status === "andamento" ? "Andamento" : status}
+                </span>
+              </div>
+            ))}
+            <div className="flex items-center gap-1.5 shrink-0 text-sm">
               <div
                 className="w-2.5 h-2.5 rounded-full"
-                style={{ backgroundColor: color }}
+                style={{ backgroundColor: MEETING_COLOR }}
               />
-              <span className="text-muted-foreground whitespace-nowrap">
-                {status === "concluído" ? "Concluído" : status === "andamento" ? "Andamento" : status}
-              </span>
+              <span className="text-muted-foreground">Reunião</span>
             </div>
-          ))}
-          <div className="flex items-center gap-1.5 shrink-0 text-sm">
-            <div
-              className="w-2.5 h-2.5 rounded-full"
-              style={{ backgroundColor: MEETING_COLOR }}
-            />
-            <span className="text-muted-foreground">Reunião</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Sparkles className="h-4 w-4 text-muted-foreground" />
+            <span className="text-sm text-muted-foreground hidden sm:inline">Sazonais</span>
+            <Switch checked={showSeasonalDays} onCheckedChange={setShowSeasonalDays} />
           </div>
         </div>
 
@@ -382,8 +459,10 @@ const Calendario = () => {
                     const dateKey = formatDateKey(selectedYear, monthIndex, day);
                     const dayTasks = tasksByDate[dateKey] || [];
                     const dayMeetings = meetingsByDate[dateKey] || [];
+                    const daySeasonal = showSeasonalDays ? (seasonalByDate[dateKey] || []) : [];
                     const hasScheduledTasks = dayTasks.length > 0;
                     const hasMeetings = dayMeetings.length > 0;
+                    const hasSeasonal = daySeasonal.length > 0;
                     const hasContent = hasScheduledTasks || hasMeetings;
                     const todayHighlight = isToday(dateKey);
                     const totalItems = dayTasks.length + dayMeetings.length;
@@ -393,6 +472,11 @@ const Calendario = () => {
                       : hasScheduledTasks
                         ? STATUS_COLORS[dayTasks[0].status] || "#6B7280"
                         : undefined;
+
+                    // Get most important seasonal for border
+                    const topSeasonal = daySeasonal.length > 0 
+                      ? daySeasonal.reduce((a, b) => a.seasonalDay.importance > b.seasonalDay.importance ? a : b)
+                      : null;
 
                     return (
                       <button
@@ -412,6 +496,9 @@ const Calendario = () => {
                         )}
                         style={{
                           backgroundColor: hasContent ? dominantColor : undefined,
+                          borderWidth: hasSeasonal ? 2 : 0,
+                          borderColor: topSeasonal?.seasonalDay.color,
+                          borderStyle: topSeasonal?.isPrepDay ? 'dashed' : 'solid',
                         }}
                       >
                         {day}
@@ -419,6 +506,12 @@ const Calendario = () => {
                           <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] bg-background text-foreground text-[9px] rounded-full flex items-center justify-center border font-bold px-0.5">
                             {totalItems}
                           </span>
+                        )}
+                        {hasSeasonal && !hasContent && (
+                          <div 
+                            className="absolute bottom-0.5 left-0.5 right-0.5 h-1 rounded-full"
+                            style={{ backgroundColor: topSeasonal?.seasonalDay.color, opacity: topSeasonal?.isPrepDay ? 0.5 : 1 }}
+                          />
                         )}
                       </button>
                     );
@@ -467,7 +560,28 @@ const Calendario = () => {
             </div>
           </div>
         )}
+
+        {/* Seasonal Days List */}
+        {showSeasonalDays && (
+          <SeasonalDaysList
+            seasonalDays={seasonalDays}
+            filterImportance={seasonalFilterImportance}
+            onFilterChange={setSeasonalFilterImportance}
+            onEdit={(sd) => handleOpenSeasonalModal(undefined, sd)}
+            onAdd={() => handleOpenSeasonalModal()}
+          />
+        )}
       </main>
+
+      {/* Seasonal Day Modal */}
+      <SeasonalDayModal
+        open={seasonalModalOpen}
+        onOpenChange={setSeasonalModalOpen}
+        seasonalDay={editingSeasonal}
+        defaultDate={seasonalDefaultDate}
+        onSave={handleSeasonalSave}
+        onDelete={deleteSeasonalDay}
+      />
 
       {/* Create Task Dialog */}
       <ResponsiveDialog
