@@ -7,8 +7,9 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { 
   Play, Pause, RotateCcw, Clock, Focus, Calendar, Timer, 
   ShoppingCart, FileText, Undo2, Redo2, Home, FileSpreadsheet,
-  Users, User, UsersRound, DollarSign
+  Users, User, UsersRound, DollarSign, Brain
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useUndoRedoContext } from "@/contexts/UndoRedoContext";
 import { useNotifications } from "@/hooks/useNotifications";
@@ -20,6 +21,70 @@ import { CollaboratorsPanel } from "./CollaboratorsPanel";
 interface Task {
   id: string;
   status: "estrutural" | "andamento" | "pendente" | "concluído";
+}
+
+// AI Assistant Button component with pending count badge
+function AIAssistantButton({ isActive }: { isActive: (path: string) => boolean }) {
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    const fetchPendingCount = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('ai_insights')
+          .select('id', { count: 'exact', head: true })
+          .eq('status', 'proposto');
+        
+        if (!error && data !== null) {
+          setPendingCount((data as any)?.length ?? 0);
+        }
+      } catch (e) {
+        console.error('Error fetching AI insights count:', e);
+      }
+    };
+
+    fetchPendingCount();
+
+    // Subscribe to changes
+    const channel = supabase
+      .channel('ai-insights-badge')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'ai_insights' },
+        () => fetchPendingCount()
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          asChild
+          size="sm"
+          variant={isActive('/assistente') ? 'secondary' : 'ghost'}
+          className={cn("h-8 w-8 p-0 relative", isActive('/assistente') && "bg-secondary")}
+        >
+          <Link to="/assistente">
+            <Brain className="h-4 w-4" />
+            {pendingCount > 0 && (
+              <Badge 
+                variant="destructive" 
+                className="absolute -top-1 -right-1 h-4 min-w-4 px-1 text-[10px] flex items-center justify-center"
+              >
+                {pendingCount > 9 ? '9+' : pendingCount}
+              </Badge>
+            )}
+          </Link>
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>Assistente IA</TooltipContent>
+    </Tooltip>
+  );
 }
 
 // Timer sound - simple beep using Web Audio API
@@ -605,6 +670,9 @@ export function GlobalFooterBar() {
             </TooltipTrigger>
             <TooltipContent>Financeiro</TooltipContent>
           </Tooltip>
+
+          {/* AI Assistant button */}
+          <AIAssistantButton isActive={isActive} />
 
           {/* Collaborators button */}
           <Tooltip>
