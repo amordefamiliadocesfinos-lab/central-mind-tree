@@ -1782,6 +1782,7 @@ export type Database = {
           created_at: string
           date: string
           duration_minutes: number
+          focus: string | null
           id: string
           node_id: string | null
           notes: string | null
@@ -1799,6 +1800,7 @@ export type Database = {
           created_at?: string
           date?: string
           duration_minutes?: number
+          focus?: string | null
           id?: string
           node_id?: string | null
           notes?: string | null
@@ -1816,6 +1818,7 @@ export type Database = {
           created_at?: string
           date?: string
           duration_minutes?: number
+          focus?: string | null
           id?: string
           node_id?: string | null
           notes?: string | null
@@ -1850,11 +1853,86 @@ export type Database = {
           },
         ]
       }
+      routine_prefs: {
+        Row: {
+          breaks: Json | null
+          capacity_targets: Json | null
+          created_at: string
+          default_template_id: string | null
+          id: string
+          updated_at: string
+          work_hours_end: string
+          work_hours_start: string
+        }
+        Insert: {
+          breaks?: Json | null
+          capacity_targets?: Json | null
+          created_at?: string
+          default_template_id?: string | null
+          id?: string
+          updated_at?: string
+          work_hours_end?: string
+          work_hours_start?: string
+        }
+        Update: {
+          breaks?: Json | null
+          capacity_targets?: Json | null
+          created_at?: string
+          default_template_id?: string | null
+          id?: string
+          updated_at?: string
+          work_hours_end?: string
+          work_hours_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routine_prefs_default_template_id_fkey"
+            columns: ["default_template_id"]
+            isOneToOne: false
+            referencedRelation: "routine_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      routine_stats: {
+        Row: {
+          atendimento_min: number
+          context_switches: number
+          created_at: string
+          date: string
+          deep_work_min: number
+          done_min: number
+          id: string
+          planned_min: number
+        }
+        Insert: {
+          atendimento_min?: number
+          context_switches?: number
+          created_at?: string
+          date: string
+          deep_work_min?: number
+          done_min?: number
+          id?: string
+          planned_min?: number
+        }
+        Update: {
+          atendimento_min?: number
+          context_switches?: number
+          created_at?: string
+          date?: string
+          deep_work_min?: number
+          done_min?: number
+          id?: string
+          planned_min?: number
+        }
+        Relationships: []
+      }
       routine_templates: {
         Row: {
           block_type: string
           created_at: string
           duration_minutes: number
+          focus: string | null
           id: string
           is_active: boolean
           node_id: string | null
@@ -1866,6 +1944,7 @@ export type Database = {
           block_type?: string
           created_at?: string
           duration_minutes?: number
+          focus?: string | null
           id?: string
           is_active?: boolean
           node_id?: string | null
@@ -1877,6 +1956,7 @@ export type Database = {
           block_type?: string
           created_at?: string
           duration_minutes?: number
+          focus?: string | null
           id?: string
           is_active?: boolean
           node_id?: string | null
