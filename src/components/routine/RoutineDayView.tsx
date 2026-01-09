@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { 
   Play, Check, SkipForward, Pencil, Trash2, 
-  GripVertical, Plus, Clock, Target
+  GripVertical, Plus, Clock, Target, Sparkles
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -24,6 +24,7 @@ interface RoutineDayViewProps {
   onReorderBlocks: (blocks: RoutineBlock[]) => void;
   onAddBlock: () => void;
   onQuickAdd: (duration: number) => void;
+  onGenerateDay: () => void;
   kpis: {
     totalBlocks: number;
     completed: number;
@@ -51,6 +52,7 @@ export function RoutineDayView({
   onReorderBlocks,
   onAddBlock,
   onQuickAdd,
+  onGenerateDay,
   kpis,
 }: RoutineDayViewProps) {
   const formatTime = (time: string | null) => {
@@ -124,42 +126,47 @@ export function RoutineDayView({
         </CardContent>
       </Card>
 
-      {/* Quick Add Buttons */}
-      {isToday && (
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => onQuickAdd(25)}
-            className="flex-1"
-          >
-            <Plus className="h-3 w-3 mr-1" /> 25min
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => onQuickAdd(50)}
-            className="flex-1"
-          >
-            <Plus className="h-3 w-3 mr-1" /> 50min
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => onQuickAdd(90)}
-            className="flex-1"
-          >
-            <Plus className="h-3 w-3 mr-1" /> 90min
-          </Button>
-          <Button 
-            size="sm" 
-            onClick={onAddBlock}
-            className="flex-1"
-          >
-            <Plus className="h-3 w-3 mr-1" /> Custom
-          </Button>
-        </div>
-      )}
+      {/* Generate Day + Quick Add Buttons */}
+      <div className="flex gap-2 flex-wrap">
+        <Button 
+          onClick={onGenerateDay}
+          className="flex-1 min-w-[140px]"
+        >
+          <Sparkles className="h-4 w-4 mr-2" /> Gerar Dia
+        </Button>
+        {isToday && (
+          <>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => onQuickAdd(25)}
+            >
+              <Plus className="h-3 w-3 mr-1" /> 25min
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => onQuickAdd(50)}
+            >
+              <Plus className="h-3 w-3 mr-1" /> 50min
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => onQuickAdd(90)}
+            >
+              <Plus className="h-3 w-3 mr-1" /> 90min
+            </Button>
+            <Button 
+              size="sm" 
+              variant="secondary"
+              onClick={onAddBlock}
+            >
+              <Plus className="h-3 w-3 mr-1" /> Custom
+            </Button>
+          </>
+        )}
+      </div>
 
       {/* Blocks Timeline */}
       {blocks.length === 0 ? (
