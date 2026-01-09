@@ -99,13 +99,13 @@ serve(async (req) => {
         { data: policies },
         { data: orders },
       ] = await Promise.all([
-        supabase.from("tasks").select("*").is("deleted_at", null).limit(100),
-        supabase.from("nodes").select("*").limit(100),
-        supabase.from("financial_entries").select("*").order("due_date").limit(100),
+        supabase.from("tasks").select("*").is("deleted_at", null).limit(300),
+        supabase.from("nodes").select("*"),
+        supabase.from("financial_entries").select("*").order("due_date").limit(200),
         supabase.from("financial_accounts").select("*"),
-        supabase.from("routine_blocks").select("*").gte("date", new Date().toISOString().split("T")[0]).limit(50),
+        supabase.from("routine_blocks").select("*").gte("date", new Date().toISOString().split("T")[0]).limit(100),
         supabase.from("ai_policies").select("*"),
-        supabase.from("orders").select("*").is("deleted_at", null).order("due_date").limit(50),
+        supabase.from("orders").select("*").is("deleted_at", null).order("due_date").limit(100),
       ]);
 
       const today = new Date().toISOString().split("T")[0];
@@ -172,22 +172,22 @@ Analise os dados e gere de 1 a 5 insights acionáveis com operações concretas.
       const userPrompt = `Analise estes dados e gere insights acionáveis com operações CONCRETAS:
 
 TAREFAS (${context.tasks.length} total):
-${JSON.stringify(context.tasks.slice(0, 20), null, 2)}
+${JSON.stringify(context.tasks.slice(0, 50), null, 2)}
 
-NÓS/PROJETOS:
-${JSON.stringify(context.nodes.slice(0, 20), null, 2)}
+NÓS/PROJETOS (TODOS - ${context.nodes.length} total):
+${JSON.stringify(context.nodes, null, 2)}
 
 ENTRADAS FINANCEIRAS (${context.financialEntries.length} total):
-${JSON.stringify(context.financialEntries.slice(0, 20), null, 2)}
+${JSON.stringify(context.financialEntries.slice(0, 40), null, 2)}
 
 CONTAS BANCÁRIAS:
 ${JSON.stringify(context.accounts, null, 2)}
 
-PEDIDOS ATIVOS:
-${JSON.stringify(context.orders.slice(0, 10), null, 2)}
+PEDIDOS ATIVOS (${context.orders.length} total):
+${JSON.stringify(context.orders.slice(0, 20), null, 2)}
 
 BLOCOS DE ROTINA:
-${JSON.stringify(context.routineBlocks.slice(0, 10), null, 2)}
+${JSON.stringify(context.routineBlocks.slice(0, 20), null, 2)}
 
 Retorne um array JSON com insights no formato:
 {
