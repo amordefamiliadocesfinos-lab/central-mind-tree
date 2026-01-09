@@ -115,28 +115,23 @@ export function GlobalFooterBar() {
   useEffect(() => {
     loadTimerState();
 
-    // Subscribe to timer_state changes to sync across pages
+    // Subscribe to timer_state changes to sync across pages (Rotina/Foco/etc.)
+    // This table is expected to have a single row, so we can always apply the latest values.
     const channel = supabase
       .channel('timer-state-sync')
       .on(
         'postgres_changes',
         {
-          event: 'UPDATE',
+          event: '*',
           schema: 'public',
-          table: 'timer_state'
+          table: 'timer_state',
         },
         (payload) => {
-          const newState = payload.new as { remaining_seconds: number; status: string; id: string };
-          // Only update if the change came from another source (e.g., Rotina page)
-          if (newState.id === stateId) {
-            setRemainingSeconds(newState.remaining_seconds);
-            setStatus(newState.status as "stopped" | "running" | "paused");
-          } else if (!stateId) {
-            // First time - just set the id and values
-            setStateId(newState.id);
-            setRemainingSeconds(newState.remaining_seconds);
-            setStatus(newState.status as "stopped" | "running" | "paused");
-          }
+          const next = payload.new as { id: string; remaining_seconds: number; status: string };
+          if (!next?.id) return;
+          setStateId(next.id);
+          setRemainingSeconds(next.remaining_seconds ?? 0);
+          setStatus((next.status as "stopped" | "running" | "paused") ?? "stopped");
         }
       )
       .subscribe();
@@ -144,7 +139,7 @@ export function GlobalFooterBar() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [stateId]);
+  }, []);
 
   // Timer countdown logic
   useEffect(() => {
