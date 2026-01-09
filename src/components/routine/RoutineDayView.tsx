@@ -229,7 +229,7 @@ function BlockCard({
         <div className="flex items-center gap-3">
           {/* Drag Handle */}
           {block.status === 'pendente' && (
-            <div {...dragHandleProps} className="cursor-grab active:cursor-grabbing">
+            <div className="cursor-grab active:cursor-grabbing">
               <GripVertical className="h-4 w-4 text-muted-foreground" />
             </div>
           )}
