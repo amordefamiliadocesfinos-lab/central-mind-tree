@@ -422,12 +422,12 @@ EXEMPLOS DE PAYLOAD:
         { data: orders },
         { data: recentInsights },
       ] = await Promise.all([
-        supabase.from("tasks").select("id, title, status, progress, due_date, node_id").is("deleted_at", null).limit(50),
-        supabase.from("nodes").select("id, title, color").limit(30),
-        supabase.from("financial_entries").select("id, description, value, type, due_date, payment_date").order("due_date").limit(30),
+        supabase.from("tasks").select("id, title, status, progress, due_date, node_id").is("deleted_at", null).limit(200),
+        supabase.from("nodes").select("id, title, color, parent_id"),
+        supabase.from("financial_entries").select("id, description, value, type, due_date, payment_date").order("due_date").limit(100),
         supabase.from("financial_accounts").select("id, name, current_balance"),
-        supabase.from("orders").select("id, customer_name, status, due_date, total_value").is("deleted_at", null).limit(20),
-        supabase.from("ai_insights").select("id, title, area, status, created_at").order("created_at", { ascending: false }).limit(10),
+        supabase.from("orders").select("id, customer_name, status, due_date, total_value").is("deleted_at", null).limit(50),
+        supabase.from("ai_insights").select("id, title, area, status, created_at").order("created_at", { ascending: false }).limit(20),
       ]);
 
       const today = new Date().toISOString().split("T")[0];
@@ -445,11 +445,11 @@ CONTEXTO ATUAL (${today}):
 - Insights recentes: ${recentInsights?.length || 0}
 
 DADOS DISPONÍVEIS:
-Tarefas: ${JSON.stringify(tasks?.slice(0, 10) || [])}
-Nós: ${JSON.stringify(nodes?.slice(0, 10) || [])}
-Financeiro: ${JSON.stringify(financialEntries?.slice(0, 10) || [])}
+Tarefas: ${JSON.stringify(tasks?.slice(0, 30) || [])}
+Nós/Projetos (TODOS): ${JSON.stringify(nodes || [])}
+Financeiro: ${JSON.stringify(financialEntries?.slice(0, 20) || [])}
 Contas: ${JSON.stringify(accounts || [])}
-Pedidos: ${JSON.stringify(orders?.slice(0, 5) || [])}
+Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}
 
 COMO RESPONDER:
 1. Seja direto e objetivo
