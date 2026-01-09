@@ -32,6 +32,115 @@ function parseActionsFromResponse(content: string): PendingAction[] {
   
   // Helper to extract quoted or unquoted values
   const quotePattern = `["'""]([^"'""]+)["'""]`;
+
+  // ============ STRUCTURED ACTION DETECTION ============
+  // Detect structured responses like:
+  // Ação: Criar Pedido
+  // Cliente: DEIVIDI
+  // Status: confirmado
+  // Due Date: 2026-01-09
+  // Valor Total: 7.00
+  
+  const actionBlockMatch = content.match(/Ação:\s*[`"']?([^`"'\n]+)[`"']?/i);
+  if (actionBlockMatch) {
+    const actionType = actionBlockMatch[1].toLowerCase().trim();
+    
+    // Extract common fields
+    const clienteMatch = content.match(/Cliente:\s*[`"']?([^`"'\n]+)[`"']?/i);
+    const statusMatch = content.match(/Status:\s*[`"']?([^`"'\n]+)[`"']?/i);
+    const dueDateMatch = content.match(/Due\s*Date:\s*[`"']?([^`"'\n]+)[`"']?/i);
+    const valorMatch = content.match(/Valor\s*(?:Total)?:\s*[`"']?R?\$?\s*([0-9.,]+)[`"']?/i);
+    const descricaoMatch = content.match(/Descri[çc][aã]o:\s*[`"']?([^`"'\n]+)[`"']?/i);
+    const tituloMatch = content.match(/T[ií]tulo:\s*[`"']?([^`"'\n]+)[`"']?/i);
+    const noMatch = content.match(/(?:N[oó]|Projeto):\s*[`"']?([^`"'\n]+)[`"']?/i);
+    const tipoMatch = content.match(/Tipo:\s*[`"']?([^`"'\n]+)[`"']?/i);
+    
+    const parseValue = (v?: string) => {
+      if (!v) return undefined;
+      const normalized = v.replace(/\./g, '').replace(',', '.');
+      const n = parseFloat(normalized);
+      return isNaN(n) ? undefined : n;
+    };
+    
+    // Create order
+    if (actionType.includes('pedido') || actionType.includes('venda') || actionType.includes('order')) {
+      actions.push({
+        type: 'order_create',
+        title: `Pedido para "${clienteMatch?.[1]?.trim() || 'Cliente'}"`,
+        area: 'Projetos',
+        payload: {
+          customer_name: clienteMatch?.[1]?.trim(),
+          status: statusMatch?.[1]?.trim().toLowerCase() || 'pendente',
+          due_date: dueDateMatch?.[1]?.trim(),
+          total_value: parseValue(valorMatch?.[1]),
+        }
+      });
+    }
+    
+    // Create task
+    else if (actionType.includes('tarefa') || actionType.includes('task')) {
+      actions.push({
+        type: 'task_create',
+        title: tituloMatch?.[1]?.trim() || 'Nova tarefa',
+        description: descricaoMatch?.[1]?.trim(),
+        area: 'Projetos',
+        payload: {
+          title: tituloMatch?.[1]?.trim() || 'Nova tarefa',
+          description: descricaoMatch?.[1]?.trim(),
+          status: statusMatch?.[1]?.trim().toLowerCase() || 'pendente',
+          _nodeName: noMatch?.[1]?.trim()
+        }
+      });
+    }
+    
+    // Create financial entry
+    else if (actionType.includes('lançamento') || actionType.includes('lancamento') || actionType.includes('pagamento') || actionType.includes('recebimento')) {
+      const type = (tipoMatch?.[1]?.toLowerCase().includes('receber') || actionType.includes('receber')) ? 'receber' : 'pagar';
+      actions.push({
+        type: 'financial_create',
+        title: `${type === 'receber' ? 'Receber' : 'Pagar'} R$ ${valorMatch?.[1] || '0'}`,
+        area: 'Financeiro',
+        payload: {
+          value: parseValue(valorMatch?.[1]) || 0,
+          description: descricaoMatch?.[1]?.trim() || 'Lançamento via CEO IA',
+          type,
+          due_date: dueDateMatch?.[1]?.trim()
+        }
+      });
+    }
+    
+    // Create contact
+    else if (actionType.includes('cliente') || actionType.includes('contato') || actionType.includes('fornecedor')) {
+      const contactType = actionType.includes('fornecedor') ? 'supplier' : 'customer';
+      actions.push({
+        type: 'contact_create',
+        title: `${contactType === 'supplier' ? 'Fornecedor' : 'Cliente'}: ${clienteMatch?.[1]?.trim() || tituloMatch?.[1]?.trim() || 'Novo'}`,
+        area: 'Recursos',
+        payload: {
+          name: clienteMatch?.[1]?.trim() || tituloMatch?.[1]?.trim() || 'Novo contato',
+          type: contactType
+        }
+      });
+    }
+    
+    // Create node/project
+    else if (actionType.includes('nó') || actionType.includes('no') || actionType.includes('projeto')) {
+      actions.push({
+        type: 'node_create',
+        title: tituloMatch?.[1]?.trim() || noMatch?.[1]?.trim() || 'Novo projeto',
+        area: 'Projetos',
+        payload: {
+          title: tituloMatch?.[1]?.trim() || noMatch?.[1]?.trim() || 'Novo projeto',
+          color: 'bg-purple-100'
+        }
+      });
+    }
+  }
+
+  // If structured detection found actions, return early
+  if (actions.length > 0) {
+    return actions;
+  }
   
   // ============ TASKS ============
   
@@ -708,7 +817,7 @@ export function CEOChat() {
                       ) : (
                         <Play className="h-4 w-4" />
                       )}
-                      Já pode executar
+                      Executar
                     </Button>
                   )}
                 </div>
