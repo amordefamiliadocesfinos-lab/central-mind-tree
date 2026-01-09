@@ -117,6 +117,13 @@ export function useRoutineBlocks(date?: string) {
     // Request notification permission on first block start
     await requestPermission();
 
+    // Find the block to get its duration
+    const block = blocks.find(b => b.id === blockId);
+    if (!block) {
+      toast.error('Bloco não encontrado');
+      return;
+    }
+
     const { error } = await supabase
       .from('routine_blocks')
       .update({ 
@@ -130,9 +137,28 @@ export function useRoutineBlocks(date?: string) {
       return;
     }
 
+    // Update the global timer in timer_state table with block duration and start it
+    const durationSeconds = block.duration_minutes * 60;
+    const { data: timerData } = await supabase
+      .from('timer_state')
+      .select('id')
+      .limit(1)
+      .single();
+
+    if (timerData) {
+      await supabase
+        .from('timer_state')
+        .update({
+          remaining_seconds: durationSeconds,
+          status: 'running',
+          last_update: new Date().toISOString(),
+        })
+        .eq('id', timerData.id);
+    }
+
     toast.success('Bloco iniciado!');
     fetchBlocks();
-  }, [fetchBlocks, requestPermission]);
+  }, [blocks, fetchBlocks, requestPermission]);
 
   const completeBlock = useCallback(async (blockId: string) => {
     if (activeTimeout) {
