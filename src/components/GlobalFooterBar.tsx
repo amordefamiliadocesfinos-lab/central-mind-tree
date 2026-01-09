@@ -23,20 +23,51 @@ interface Task {
   status: "estrutural" | "andamento" | "pendente" | "concluído";
 }
 
+// Request notification permission on component mount
+function requestNotificationPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+// Show browser notification for high-priority insights
+function showInsightNotification(title: string, body: string) {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    const notification = new Notification(title, {
+      body,
+      icon: '/favicon.ico',
+      tag: 'ai-insight',
+      requireInteraction: true,
+    });
+
+    notification.onclick = () => {
+      window.focus();
+      window.location.href = '/assistente';
+      notification.close();
+    };
+
+    // Auto-close after 10 seconds
+    setTimeout(() => notification.close(), 10000);
+  }
+}
+
 // AI Assistant Button component with pending count badge
 function AIAssistantButton({ isActive }: { isActive: (path: string) => boolean }) {
   const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
+    // Request notification permission when component mounts
+    requestNotificationPermission();
+
     const fetchPendingCount = async () => {
       try {
-        const { data, error } = await supabase
+        const { count, error } = await supabase
           .from('ai_insights')
-          .select('id', { count: 'exact', head: true })
+          .select('*', { count: 'exact', head: true })
           .eq('status', 'proposto');
         
-        if (!error && data !== null) {
-          setPendingCount((data as any)?.length ?? 0);
+        if (!error && count !== null) {
+          setPendingCount(count);
         }
       } catch (e) {
         console.error('Error fetching AI insights count:', e);
@@ -45,12 +76,39 @@ function AIAssistantButton({ isActive }: { isActive: (path: string) => boolean }
 
     fetchPendingCount();
 
-    // Subscribe to changes
+    // Subscribe to changes - detect new high-priority insights
     const channel = supabase
       .channel('ai-insights-badge')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'ai_insights' },
+        { event: 'INSERT', schema: 'public', table: 'ai_insights' },
+        (payload) => {
+          fetchPendingCount();
+          
+          // Show notification for high severity (alta) insights
+          const newInsight = payload.new as { 
+            title: string; 
+            description: string | null; 
+            severity: string;
+            area: string;
+          };
+          
+          if (newInsight.severity === 'alta') {
+            showInsightNotification(
+              `⚠️ ${newInsight.area}: ${newInsight.title}`,
+              newInsight.description || 'Nova sugestão de alta prioridade do Assistente IA'
+            );
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'ai_insights' },
+        () => fetchPendingCount()
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'ai_insights' },
         () => fetchPendingCount()
       )
       .subscribe();
