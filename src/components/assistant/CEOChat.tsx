@@ -26,76 +26,228 @@ interface PendingAction {
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-ceo/chat`;
 const EXECUTE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-ceo/execute`;
 
-// Parse actions from AI response - improved patterns
+// Parse actions from AI response - comprehensive patterns
 function parseActionsFromResponse(content: string): PendingAction[] {
   const actions: PendingAction[] = [];
-  const lowerContent = content.toLowerCase();
   
-  // More flexible patterns for task creation
-  // Pattern: "criar a tarefa X" or 'criar a tarefa "X"' with optional description and node
-  const taskPatterns = [
-    // Pattern: criar a tarefa "TITULO" com a descrição "DESC" no nó "NODE"
-    /criar\s+(?:a\s+)?tarefa\s+["'""]([^"'""]+)["'""](?:\s+com\s+(?:a\s+)?descrição\s+["'""]([^"'""]+)["'""])?(?:\s+(?:no|na|ao|vinculad[ao]|associad[ao])\s+(?:ao\s+)?(?:nó|projeto)\s+["'""]([^"'""]+)["'""])?/gi,
-    // Pattern: criar tarefa TITULO com descrição DESC no nó NODE (without quotes)
-    /criar\s+(?:a\s+)?tarefa\s+(\S+)\s+com\s+(?:a\s+)?descrição\s+(\S+)\s+(?:no|na)\s+(?:nó|projeto)\s+(\S+)/gi,
-    // Pattern: vou criar a tarefa "X" ... no nó "Y"
-    /(?:vou\s+)?criar\s+(?:a\s+)?tarefa\s+["'""]([^"'""]+)["'""].*?(?:no|na)\s+(?:nó|projeto)\s+["'""]([^"'""]+)["'""]/gi,
-  ];
-
-  // Try first pattern - most complete
-  const fullMatch = content.match(/criar\s+(?:a\s+)?tarefa\s+["'""]([^"'""]+)["'""](?:\s+com\s+(?:a\s+)?descrição\s+["'""]([^"'""]+)["'""])?.*?(?:no|na)\s+(?:nó|projeto)\s+["'""]([^"'""]+)["'""]/i);
+  // Helper to extract quoted or unquoted values
+  const quotePattern = `["'""]([^"'""]+)["'""]`;
   
-  if (fullMatch) {
-    const taskTitle = fullMatch[1]?.trim();
-    const description = fullMatch[2]?.trim();
-    const nodeName = fullMatch[3]?.trim();
-    
-    if (taskTitle && nodeName) {
-      actions.push({
-        type: 'task_create',
-        title: taskTitle,
-        description: description || undefined,
-        area: 'Projetos',
-        payload: { 
-          title: taskTitle, 
-          description: description,
-          status: 'pendente',
-          _nodeName: nodeName
-        }
-      });
-      return actions; // Found a complete action
-    }
+  // ============ TASKS ============
+  
+  // Create task: "criar tarefa X no nó Y"
+  const taskCreateMatch = content.match(
+    new RegExp(`(?:vou\\s+)?criar\\s+(?:a\\s+)?tarefa\\s+${quotePattern}(?:\\s+com\\s+(?:a\\s+)?descrição\\s+${quotePattern})?.*?(?:no|na)\\s+(?:nó|projeto)\\s+${quotePattern}`, 'i')
+  );
+  if (taskCreateMatch) {
+    actions.push({
+      type: 'task_create',
+      title: taskCreateMatch[1]?.trim(),
+      description: taskCreateMatch[2]?.trim(),
+      area: 'Projetos',
+      payload: { 
+        title: taskCreateMatch[1]?.trim(), 
+        description: taskCreateMatch[2]?.trim(),
+        status: 'pendente',
+        _nodeName: taskCreateMatch[3]?.trim()
+      }
+    });
   }
-
-  // Fallback: try simpler pattern for task + node
-  const simpleMatch = content.match(/(?:vou\s+)?criar\s+(?:a\s+)?tarefa\s+["'""]([^"'""]+)["'""].*?(?:no|na)\s+(?:nó|projeto)\s+["'""]([^"'""]+)["'""]/i);
-  if (simpleMatch) {
-    const taskTitle = simpleMatch[1]?.trim();
-    const nodeName = simpleMatch[2]?.trim();
-    
-    if (taskTitle && nodeName) {
-      actions.push({
-        type: 'task_create',
-        title: taskTitle,
-        area: 'Projetos',
-        payload: { 
-          title: taskTitle, 
-          status: 'pendente',
-          _nodeName: nodeName
-        }
-      });
-      return actions;
-    }
+  
+  // Update task status: "atualizar/alterar tarefa X para status Y" or "marcar tarefa X como Y"
+  const taskUpdateMatch = content.match(
+    new RegExp(`(?:vou\\s+)?(?:atualizar|alterar|marcar|mudar)\\s+(?:a\\s+)?(?:tarefa|status\\s+d[ao])\\s+${quotePattern}\\s+(?:para|como)\\s+(?:status\\s+)?["'""]?(andamento|pendente|concluído|estrutural)["'""]?`, 'i')
+  );
+  if (taskUpdateMatch) {
+    actions.push({
+      type: 'task_update',
+      title: `Atualizar "${taskUpdateMatch[1]}" → ${taskUpdateMatch[2]}`,
+      area: 'Projetos',
+      payload: { 
+        _taskTitle: taskUpdateMatch[1]?.trim(),
+        status: taskUpdateMatch[2]?.toLowerCase()
+      }
+    });
   }
-
-  // Check for create node pattern
-  const nodeMatch = content.match(/criar\s+(?:o\s+)?(?:nó|projeto)\s+["'""]([^"'""]+)["'""]/i);
-  if (nodeMatch) {
+  
+  // Complete task: "concluir tarefa X"
+  const taskCompleteMatch = content.match(
+    new RegExp(`(?:vou\\s+)?(?:concluir|finalizar|completar)\\s+(?:a\\s+)?tarefa\\s+${quotePattern}`, 'i')
+  );
+  if (taskCompleteMatch) {
+    actions.push({
+      type: 'task_update',
+      title: `Concluir "${taskCompleteMatch[1]}"`,
+      area: 'Projetos',
+      payload: { 
+        _taskTitle: taskCompleteMatch[1]?.trim(),
+        status: 'concluído',
+        progress: 100
+      }
+    });
+  }
+  
+  // Delete task: "excluir/deletar/remover tarefa X"
+  const taskDeleteMatch = content.match(
+    new RegExp(`(?:vou\\s+)?(?:excluir|deletar|remover)\\s+(?:a\\s+)?tarefa\\s+${quotePattern}`, 'i')
+  );
+  if (taskDeleteMatch) {
+    actions.push({
+      type: 'task_delete',
+      title: `Excluir "${taskDeleteMatch[1]}"`,
+      area: 'Projetos',
+      payload: { _taskTitle: taskDeleteMatch[1]?.trim() }
+    });
+  }
+  
+  // ============ NODES ============
+  
+  // Create node: "criar nó/projeto X"
+  const nodeCreateMatch = content.match(
+    new RegExp(`(?:vou\\s+)?criar\\s+(?:o\\s+)?(?:nó|projeto)\\s+${quotePattern}`, 'i')
+  );
+  if (nodeCreateMatch && !taskCreateMatch) {
     actions.push({
       type: 'node_create',
-      title: nodeMatch[1].trim(),
+      title: nodeCreateMatch[1]?.trim(),
       area: 'Projetos',
-      payload: { title: nodeMatch[1].trim(), color: 'bg-purple-100' }
+      payload: { title: nodeCreateMatch[1]?.trim(), color: 'bg-purple-100' }
+    });
+  }
+  
+  // ============ ORDERS ============
+  
+  // Create order: "criar pedido para cliente X com valor Y"
+  const orderCreateMatch = content.match(
+    new RegExp(`(?:vou\\s+)?criar\\s+(?:um\\s+)?(?:pedido|venda)\\s+(?:para\\s+(?:o\\s+)?(?:cliente\\s+)?)?${quotePattern}(?:.*?(?:valor|total)\\s+(?:de\\s+)?R?\\$?\\s*([\\d.,]+))?`, 'i')
+  );
+  if (orderCreateMatch) {
+    const valueStr = orderCreateMatch[2]?.replace(/\./g, '').replace(',', '.');
+    actions.push({
+      type: 'order_create',
+      title: `Pedido para "${orderCreateMatch[1]}"`,
+      area: 'Projetos',
+      payload: { 
+        customer_name: orderCreateMatch[1]?.trim(),
+        total_value: valueStr ? parseFloat(valueStr) : undefined,
+        status: 'pendente'
+      }
+    });
+  }
+  
+  // Update order status
+  const orderUpdateMatch = content.match(
+    new RegExp(`(?:vou\\s+)?(?:atualizar|alterar|marcar|mudar)\\s+(?:o\\s+)?(?:pedido|status\\s+do\\s+pedido)\\s+(?:#)?(\\d+|${quotePattern})\\s+(?:para|como)\\s+["'""]?(pendente|confirmado|em_producao|pronto|entregue|cancelado)["'""]?`, 'i')
+  );
+  if (orderUpdateMatch) {
+    const orderRef = orderUpdateMatch[1] || orderUpdateMatch[2];
+    actions.push({
+      type: 'order_update',
+      title: `Pedido ${orderRef} → ${orderUpdateMatch[3] || orderUpdateMatch[2]}`,
+      area: 'Projetos',
+      payload: { 
+        _orderNumber: orderRef?.trim(),
+        status: (orderUpdateMatch[3] || orderUpdateMatch[2])?.toLowerCase()
+      }
+    });
+  }
+  
+  // ============ FINANCIAL ============
+  
+  // Create financial entry (pagar/receber): "criar lançamento de X reais para Y"
+  const financialCreateMatch = content.match(
+    new RegExp(`(?:vou\\s+)?(?:criar|lançar|registrar)\\s+(?:um\\s+)?(?:lançamento|conta|pagamento|recebimento)\\s+(?:a\\s+)?(?:pagar|receber)?\\s*(?:de\\s+)?R?\\$?\\s*([\\d.,]+)(?:.*?(?:para|de|referente)\\s+${quotePattern})?(?:.*?(?:vencimento|vence)\\s+(?:em\\s+)?(\\d{2}[/.-]\\d{2}[/.-]\\d{2,4}))?`, 'i')
+  );
+  if (financialCreateMatch) {
+    const valueStr = financialCreateMatch[1]?.replace(/\./g, '').replace(',', '.');
+    const type = content.toLowerCase().includes('receber') ? 'receber' : 'pagar';
+    actions.push({
+      type: 'financial_create',
+      title: `${type === 'receber' ? 'Receber' : 'Pagar'} R$ ${financialCreateMatch[1]}`,
+      area: 'Financeiro',
+      payload: { 
+        value: parseFloat(valueStr),
+        description: financialCreateMatch[2]?.trim() || 'Lançamento via CEO IA',
+        type,
+        due_date: financialCreateMatch[3] // Will be parsed on backend
+      }
+    });
+  }
+  
+  // Pay financial entry: "dar baixa/pagar lançamento X"
+  const financialPayMatch = content.match(
+    new RegExp(`(?:vou\\s+)?(?:dar\\s+baixa|pagar|quitar|liquidar)\\s+(?:no\\s+)?(?:lançamento|conta|pagamento)?\\s*${quotePattern}(?:.*?(?:valor|no\\s+valor)\\s+(?:de\\s+)?R?\\$?\\s*([\\d.,]+))?`, 'i')
+  );
+  if (financialPayMatch) {
+    const valueStr = financialPayMatch[2]?.replace(/\./g, '').replace(',', '.');
+    actions.push({
+      type: 'financial_pay',
+      title: `Baixa: "${financialPayMatch[1]}"`,
+      area: 'Financeiro',
+      payload: { 
+        _entryDescription: financialPayMatch[1]?.trim(),
+        value: valueStr ? parseFloat(valueStr) : undefined
+      }
+    });
+  }
+  
+  // ============ CONTACTS ============
+  
+  // Create contact: "criar cliente/fornecedor X"
+  const contactCreateMatch = content.match(
+    new RegExp(`(?:vou\\s+)?(?:criar|cadastrar|adicionar)\\s+(?:um\\s+)?(?:novo\\s+)?(?:cliente|fornecedor|contato)\\s+${quotePattern}`, 'i')
+  );
+  if (contactCreateMatch) {
+    const contactType = content.toLowerCase().includes('fornecedor') ? 'fornecedor' : 'cliente';
+    actions.push({
+      type: 'contact_create',
+      title: `${contactType === 'fornecedor' ? 'Fornecedor' : 'Cliente'}: "${contactCreateMatch[1]}"`,
+      area: 'Financeiro',
+      payload: { 
+        name: contactCreateMatch[1]?.trim(),
+        type: contactType
+      }
+    });
+  }
+  
+  // ============ PRODUCTS ============
+  
+  // Create product: "criar produto X com preço Y"
+  const productCreateMatch = content.match(
+    new RegExp(`(?:vou\\s+)?(?:criar|cadastrar|adicionar)\\s+(?:um\\s+)?(?:novo\\s+)?produto\\s+${quotePattern}(?:.*?(?:preço|valor|custo)\\s+(?:de\\s+)?R?\\$?\\s*([\\d.,]+))?`, 'i')
+  );
+  if (productCreateMatch) {
+    const priceStr = productCreateMatch[2]?.replace(/\./g, '').replace(',', '.');
+    actions.push({
+      type: 'product_create',
+      title: `Produto: "${productCreateMatch[1]}"`,
+      area: 'Projetos',
+      payload: { 
+        name: productCreateMatch[1]?.trim(),
+        sku: productCreateMatch[1]?.trim().toUpperCase().replace(/\s+/g, '-'),
+        price: priceStr ? parseFloat(priceStr) : undefined
+      }
+    });
+  }
+  
+  // ============ ROUTINE ============
+  
+  // Create routine block: "criar bloco de foco/rotina X"
+  const routineCreateMatch = content.match(
+    new RegExp(`(?:vou\\s+)?(?:criar|agendar|adicionar)\\s+(?:um\\s+)?(?:bloco\\s+(?:de\\s+)?)?(?:foco|rotina|pausa)\\s+${quotePattern}(?:.*?(\\d+)\\s*(?:min|minutos))?`, 'i')
+  );
+  if (routineCreateMatch) {
+    const blockType = content.toLowerCase().includes('pausa') ? 'pausa' : 'foco';
+    actions.push({
+      type: 'routine_create',
+      title: `Bloco: "${routineCreateMatch[1]}"`,
+      area: 'Tempo',
+      payload: { 
+        title: routineCreateMatch[1]?.trim(),
+        block_type: blockType,
+        duration_minutes: routineCreateMatch[2] ? parseInt(routineCreateMatch[2]) : 25,
+        date: new Date().toISOString().split('T')[0]
+      }
     });
   }
 
@@ -129,22 +281,40 @@ export function CEOChat() {
     const results: string[] = [];
 
     try {
-      // First, get all nodes to resolve node names to IDs
-      const { data: nodes } = await supabase.from('nodes').select('id, title');
+      // Fetch all reference data in parallel
+      const [
+        { data: nodes },
+        { data: tasks },
+        { data: financialEntries },
+        { data: orders }
+      ] = await Promise.all([
+        supabase.from('nodes').select('id, title'),
+        supabase.from('tasks').select('id, title').is('deleted_at', null),
+        supabase.from('financial_entries').select('id, description, value'),
+        supabase.from('orders').select('id, order_number, customer_name').is('deleted_at', null)
+      ]);
+      
       const nodeMap = new Map(nodes?.map(n => [n.title.toLowerCase(), n.id]) || []);
+      const taskMap = new Map(tasks?.map(t => [t.title.toLowerCase(), t.id]) || []);
+      const entryMap = new Map(financialEntries?.map(e => [e.description.toLowerCase(), { id: e.id, value: e.value }]) || []);
+      const orderMap = new Map(orders?.map(o => [
+        (o.order_number || o.customer_name || '').toLowerCase(), 
+        o.id
+      ]) || []);
 
       for (const action of message.pendingActions) {
         try {
-          // Resolve node reference if needed
           let payload = { ...action.payload };
           
+          // ============ Resolve references based on action type ============
+          
+          // Task actions - resolve node and task references
           if (action.type === 'task_create') {
             const nodeName = payload._nodeName as string | undefined;
             
             if (nodeName) {
               let nodeId = nodeMap.get(nodeName.toLowerCase());
               
-              // If node doesn't exist, create it first
               if (!nodeId) {
                 const { data: newNode, error: nodeError } = await supabase
                   .from('nodes')
@@ -153,7 +323,6 @@ export function CEOChat() {
                   .single();
                 
                 if (nodeError) {
-                  console.error('Error creating node:', nodeError);
                   results.push(`❌ Erro ao criar nó "${nodeName}"`);
                   continue;
                 }
@@ -166,20 +335,52 @@ export function CEOChat() {
               }
               
               if (!nodeId) {
-                results.push(`❌ Não foi possível encontrar/criar o nó "${nodeName}"`);
+                results.push(`❌ Nó "${nodeName}" não encontrado`);
                 continue;
               }
               
               payload.node_id = nodeId;
             }
-            
             delete payload._nodeName;
             
-            // Ensure we have a node_id for tasks
             if (!payload.node_id) {
-              results.push(`❌ Tarefa "${action.title}" precisa de um nó válido`);
+              results.push(`❌ Tarefa precisa de um nó válido`);
               continue;
             }
+          }
+          
+          // Task update/delete - resolve task title to ID
+          if ((action.type === 'task_update' || action.type === 'task_delete') && payload._taskTitle) {
+            const taskId = taskMap.get((payload._taskTitle as string).toLowerCase());
+            if (!taskId) {
+              results.push(`❌ Tarefa "${payload._taskTitle}" não encontrada`);
+              continue;
+            }
+            payload.id = taskId;
+            delete payload._taskTitle;
+          }
+          
+          // Order update - resolve order number to ID
+          if (action.type === 'order_update' && payload._orderNumber) {
+            const orderId = orderMap.get((payload._orderNumber as string).toLowerCase());
+            if (!orderId) {
+              results.push(`❌ Pedido "${payload._orderNumber}" não encontrado`);
+              continue;
+            }
+            payload.id = orderId;
+            delete payload._orderNumber;
+          }
+          
+          // Financial pay - resolve entry description to ID
+          if (action.type === 'financial_pay' && payload._entryDescription) {
+            const entry = entryMap.get((payload._entryDescription as string).toLowerCase());
+            if (!entry) {
+              results.push(`❌ Lançamento "${payload._entryDescription}" não encontrado`);
+              continue;
+            }
+            payload.id = entry.id;
+            if (!payload.value) payload.value = entry.value;
+            delete payload._entryDescription;
           }
 
           const response = await fetch(EXECUTE_URL, {
