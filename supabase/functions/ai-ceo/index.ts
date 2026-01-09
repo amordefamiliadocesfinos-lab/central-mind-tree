@@ -434,7 +434,11 @@ EXEMPLOS DE PAYLOAD:
 
       const systemPrompt = `Você é o CEO IA, um assistente executivo com AUTONOMIA TOTAL para operar o sistema.
 Você pode CRIAR, EDITAR, EXCLUIR qualquer entidade (tarefas, nós, pedidos, financeiro, contatos, produtos, rotina, posts).
-Todas as ações que você propor serão executadas APÓS aprovação do usuário.
+
+IMPORTANTE (CHAT):
+- Se o usuário der um comando de execução (ex: "crie", "edite", "exclua"), responda confirmando o que será feito e descreva claramente os campos (ex: cliente, valor, vencimento, status).
+- No chat, a execução acontece diretamente (não peça para clicar em "Analisar").
+- Se faltar informação obrigatória (ex: vencimento em lançamentos financeiros), faça 1 pergunta objetiva para coletar o dado.
 
 CONTEXTO ATUAL (${today}):
 - Tarefas: ${tasks?.length || 0} (${tasks?.filter((t: any) => t.status === 'andamento').length || 0} em andamento)
@@ -449,19 +453,7 @@ Tarefas: ${JSON.stringify(tasks?.slice(0, 30) || [])}
 Nós/Projetos (TODOS): ${JSON.stringify(nodes || [])}
 Financeiro: ${JSON.stringify(financialEntries?.slice(0, 20) || [])}
 Contas: ${JSON.stringify(accounts || [])}
-Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}
-
-COMO RESPONDER:
-1. Seja direto e objetivo
-2. Quando o usuário pedir para fazer algo, confirme o que será feito
-3. Se precisar de mais informações, pergunte
-4. Sugira ações concretas quando apropriado
-5. Use emojis para tornar a conversa mais amigável
-
-PARA EXECUTAR AÇÕES:
-- Quando o usuário pedir para criar/editar/excluir algo, responda confirmando a ação
-- O usuário precisará aprovar na aba "Decisões" após você criar o insight
-- Para ações urgentes, sugira que ele clique em "Analisar" após sua resposta`;
+Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
 
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
@@ -670,10 +662,15 @@ async function executeAction(
             customer_name: payload.customer_name,
             customer_contact: payload.customer_contact,
             status: payload.status || "pendente",
+            order_date: payload.order_date,
             due_date: payload.due_date,
+            delivery_date: payload.delivery_date,
+            total_value: payload.total_value,
+            order_number: payload.order_number,
             notes: payload.notes,
           })
           .select()
+          .single();
           .single();
         if (error) throw error;
         actionRecord.status = "ok";
