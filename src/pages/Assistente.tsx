@@ -30,6 +30,7 @@ import {
   Send,
   ChevronDown,
   ChevronUp,
+  Trash2,
 } from 'lucide-react';
 import { useAICEO, AIInsight, AIPolicy, AIAction } from '@/hooks/useAICEO';
 import { CEOChat } from '@/components/assistant/CEOChat';
@@ -167,6 +168,18 @@ function InsightCard({
         .insert({ insight_id: insight.id, role, content });
     } catch (error) {
       console.error('Error saving message:', error);
+    }
+  };
+
+  const clearChatHistory = async () => {
+    try {
+      await supabase
+        .from('ai_insight_messages')
+        .delete()
+        .eq('insight_id', insight.id);
+      setChatMessages([]);
+    } catch (error) {
+      console.error('Error clearing chat history:', error);
     }
   };
 
@@ -411,6 +424,17 @@ Responda de forma direta e concisa. Se o usuário pedir para aprovar, rejeitar, 
                         <Send className="h-4 w-4" />
                       )}
                     </Button>
+                    {chatMessages.length > 0 && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={clearChatHistory}
+                        className="text-muted-foreground hover:text-destructive"
+                        title="Limpar histórico"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               )}
