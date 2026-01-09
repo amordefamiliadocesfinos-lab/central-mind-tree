@@ -1974,6 +1974,72 @@ export type Database = {
           },
         ]
       }
+      seasonal_days: {
+        Row: {
+          auto_task_templates: Json | null
+          auto_tasks: boolean
+          color: string
+          created_at: string
+          day: number | null
+          end_day: number | null
+          end_month: number | null
+          id: string
+          importance: number
+          is_active: boolean
+          month: number | null
+          name: string
+          notes: string | null
+          nth_occurrence: number | null
+          prep_days: number
+          recurrence_type: string
+          reminders: Json | null
+          updated_at: string
+          weekday: number | null
+        }
+        Insert: {
+          auto_task_templates?: Json | null
+          auto_tasks?: boolean
+          color?: string
+          created_at?: string
+          day?: number | null
+          end_day?: number | null
+          end_month?: number | null
+          id?: string
+          importance?: number
+          is_active?: boolean
+          month?: number | null
+          name: string
+          notes?: string | null
+          nth_occurrence?: number | null
+          prep_days?: number
+          recurrence_type?: string
+          reminders?: Json | null
+          updated_at?: string
+          weekday?: number | null
+        }
+        Update: {
+          auto_task_templates?: Json | null
+          auto_tasks?: boolean
+          color?: string
+          created_at?: string
+          day?: number | null
+          end_day?: number | null
+          end_month?: number | null
+          id?: string
+          importance?: number
+          is_active?: boolean
+          month?: number | null
+          name?: string
+          notes?: string | null
+          nth_occurrence?: number | null
+          prep_days?: number
+          recurrence_type?: string
+          reminders?: Json | null
+          updated_at?: string
+          weekday?: number | null
+        }
+        Relationships: []
+      }
       sheet_cells: {
         Row: {
           cell_type: string
