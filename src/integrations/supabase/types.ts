@@ -55,6 +55,38 @@ export type Database = {
           },
         ]
       }
+      ai_insight_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          insight_id: string
+          role: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          insight_id: string
+          role: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          insight_id?: string
+          role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_insight_messages_insight_id_fkey"
+            columns: ["insight_id"]
+            isOneToOne: false
+            referencedRelation: "ai_insights"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_insights: {
         Row: {
           area: string
