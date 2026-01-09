@@ -671,7 +671,6 @@ async function executeAction(
           })
           .select()
           .single();
-          .single();
         if (error) throw error;
         actionRecord.status = "ok";
         actionRecord.result = `Pedido criado: ${payload.customer_name}`;
