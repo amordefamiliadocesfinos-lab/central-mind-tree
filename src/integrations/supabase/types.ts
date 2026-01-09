@@ -14,6 +14,119 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_actions: {
+        Row: {
+          action_type: string
+          created_at: string
+          executed_at: string | null
+          id: string
+          insight_id: string
+          payload: Json | null
+          result: string | null
+          status: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string
+          executed_at?: string | null
+          id?: string
+          insight_id: string
+          payload?: Json | null
+          result?: string | null
+          status?: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string
+          executed_at?: string | null
+          id?: string
+          insight_id?: string
+          payload?: Json | null
+          result?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_actions_insight_id_fkey"
+            columns: ["insight_id"]
+            isOneToOne: false
+            referencedRelation: "ai_insights"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_insights: {
+        Row: {
+          area: string
+          confidence: number
+          created_at: string
+          decision: Json | null
+          description: string | null
+          id: string
+          impact: number
+          risk: number
+          severity: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          area: string
+          confidence?: number
+          created_at?: string
+          decision?: Json | null
+          description?: string | null
+          id?: string
+          impact?: number
+          risk?: number
+          severity?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          area?: string
+          confidence?: number
+          created_at?: string
+          decision?: Json | null
+          description?: string | null
+          id?: string
+          impact?: number
+          risk?: number
+          severity?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ai_policies: {
+        Row: {
+          area: string
+          autopilot: boolean
+          created_at: string
+          id: string
+          max_risk: number
+          updated_at: string
+        }
+        Insert: {
+          area: string
+          autopilot?: boolean
+          created_at?: string
+          id?: string
+          max_risk?: number
+          updated_at?: string
+        }
+        Update: {
+          area?: string
+          autopilot?: boolean
+          created_at?: string
+          id?: string
+          max_risk?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       app_users: {
         Row: {
           created_at: string
