@@ -409,6 +409,97 @@ EXEMPLOS DE PAYLOAD:
       });
     }
 
+    // POST /chat - Streaming chat with CEO IA
+    if (req.method === "POST" && path === "/chat") {
+      const { messages } = await req.json();
+
+      // Gather context for the chat
+      const [
+        { data: tasks },
+        { data: nodes },
+        { data: financialEntries },
+        { data: accounts },
+        { data: orders },
+        { data: recentInsights },
+      ] = await Promise.all([
+        supabase.from("tasks").select("id, title, status, progress, due_date, node_id").is("deleted_at", null).limit(50),
+        supabase.from("nodes").select("id, title, color").limit(30),
+        supabase.from("financial_entries").select("id, description, value, type, due_date, payment_date").order("due_date").limit(30),
+        supabase.from("financial_accounts").select("id, name, current_balance"),
+        supabase.from("orders").select("id, customer_name, status, due_date, total_value").is("deleted_at", null).limit(20),
+        supabase.from("ai_insights").select("id, title, area, status, created_at").order("created_at", { ascending: false }).limit(10),
+      ]);
+
+      const today = new Date().toISOString().split("T")[0];
+
+      const systemPrompt = `Você é o CEO IA, um assistente executivo com AUTONOMIA TOTAL para operar o sistema.
+Você pode CRIAR, EDITAR, EXCLUIR qualquer entidade (tarefas, nós, pedidos, financeiro, contatos, produtos, rotina, posts).
+Todas as ações que você propor serão executadas APÓS aprovação do usuário.
+
+CONTEXTO ATUAL (${today}):
+- Tarefas: ${tasks?.length || 0} (${tasks?.filter((t: any) => t.status === 'andamento').length || 0} em andamento)
+- Projetos/Nós: ${nodes?.length || 0}
+- Lançamentos financeiros: ${financialEntries?.length || 0}
+- Saldo em contas: R$ ${accounts?.reduce((sum: number, a: any) => sum + (a.current_balance || 0), 0).toFixed(2)}
+- Pedidos: ${orders?.length || 0}
+- Insights recentes: ${recentInsights?.length || 0}
+
+DADOS DISPONÍVEIS:
+Tarefas: ${JSON.stringify(tasks?.slice(0, 10) || [])}
+Nós: ${JSON.stringify(nodes?.slice(0, 10) || [])}
+Financeiro: ${JSON.stringify(financialEntries?.slice(0, 10) || [])}
+Contas: ${JSON.stringify(accounts || [])}
+Pedidos: ${JSON.stringify(orders?.slice(0, 5) || [])}
+
+COMO RESPONDER:
+1. Seja direto e objetivo
+2. Quando o usuário pedir para fazer algo, confirme o que será feito
+3. Se precisar de mais informações, pergunte
+4. Sugira ações concretas quando apropriado
+5. Use emojis para tornar a conversa mais amigável
+
+PARA EXECUTAR AÇÕES:
+- Quando o usuário pedir para criar/editar/excluir algo, responda confirmando a ação
+- O usuário precisará aprovar na aba "Decisões" após você criar o insight
+- Para ações urgentes, sugira que ele clique em "Analisar" após sua resposta`;
+
+      const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: systemPrompt },
+            ...messages,
+          ],
+          stream: true,
+        }),
+      });
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
+            status: 429,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        if (response.status === 402) {
+          return new Response(JSON.stringify({ error: "Payment required" }), {
+            status: 402,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+        throw new Error(`AI error: ${response.status}`);
+      }
+
+      return new Response(response.body, {
+        headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+      });
+    }
+
     return new Response(JSON.stringify({ error: "Not found" }), {
       status: 404,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
