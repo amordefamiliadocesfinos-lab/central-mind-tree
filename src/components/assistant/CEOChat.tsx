@@ -26,49 +26,77 @@ interface PendingAction {
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-ceo/chat`;
 const EXECUTE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-ceo/execute`;
 
-// Parse actions from AI response
+// Parse actions from AI response - improved patterns
 function parseActionsFromResponse(content: string): PendingAction[] {
   const actions: PendingAction[] = [];
+  const lowerContent = content.toLowerCase();
   
-  // Pattern: numbered list with action keywords
-  const patterns = [
-    // Criar nó/tarefa/pedido etc
-    /(?:criar|adicionar|novo)\s+(?:o\s+)?(?:nó|node)\s+["']?([^"'\n]+)["']?/gi,
-    /(?:criar|adicionar|nova)\s+(?:a\s+)?(?:tarefa|task)\s+["']?([^"'\n]+)["']?(?:\s+(?:com|na|no|em)\s+(?:descrição|nó)\s+["']?([^"'\n]+)["']?)?/gi,
+  // More flexible patterns for task creation
+  // Pattern: "criar a tarefa X" or 'criar a tarefa "X"' with optional description and node
+  const taskPatterns = [
+    // Pattern: criar a tarefa "TITULO" com a descrição "DESC" no nó "NODE"
+    /criar\s+(?:a\s+)?tarefa\s+["'""]([^"'""]+)["'""](?:\s+com\s+(?:a\s+)?descrição\s+["'""]([^"'""]+)["'""])?(?:\s+(?:no|na|ao|vinculad[ao]|associad[ao])\s+(?:ao\s+)?(?:nó|projeto)\s+["'""]([^"'""]+)["'""])?/gi,
+    // Pattern: criar tarefa TITULO com descrição DESC no nó NODE (without quotes)
+    /criar\s+(?:a\s+)?tarefa\s+(\S+)\s+com\s+(?:a\s+)?descrição\s+(\S+)\s+(?:no|na)\s+(?:nó|projeto)\s+(\S+)/gi,
+    // Pattern: vou criar a tarefa "X" ... no nó "Y"
+    /(?:vou\s+)?criar\s+(?:a\s+)?tarefa\s+["'""]([^"'""]+)["'""].*?(?:no|na)\s+(?:nó|projeto)\s+["'""]([^"'""]+)["'""]/gi,
   ];
 
-  // Check for create node pattern
-  const nodeMatch = content.match(/criar\s+(?:o\s+)?nó\s+["']?([^"'\n]+?)["']?/i);
-  if (nodeMatch) {
-    actions.push({
-      type: 'node_create',
-      title: nodeMatch[1].trim(),
-      area: 'Projetos',
-      payload: { title: nodeMatch[1].trim(), color: 'bg-gray-100' }
-    });
-  }
-
-  // Check for create task pattern with description and node reference
-  const taskMatches = content.matchAll(/criar\s+(?:a\s+)?tarefa\s+["']?([^"'\n]+?)["']?(?:\s+com\s+(?:a\s+)?descrição\s+["']?([^"'\n]+?)["']?)?(?:\s+(?:vinculada|associada|no|na)\s+(?:ao\s+)?(?:nó|projeto)\s+["']?([^"'\n]+?)["']?)?/gi);
-  for (const match of taskMatches) {
-    const taskTitle = match[1]?.trim();
-    const description = match[2]?.trim();
-    const nodeName = match[3]?.trim();
+  // Try first pattern - most complete
+  const fullMatch = content.match(/criar\s+(?:a\s+)?tarefa\s+["'""]([^"'""]+)["'""](?:\s+com\s+(?:a\s+)?descrição\s+["'""]([^"'""]+)["'""])?.*?(?:no|na)\s+(?:nó|projeto)\s+["'""]([^"'""]+)["'""]/i);
+  
+  if (fullMatch) {
+    const taskTitle = fullMatch[1]?.trim();
+    const description = fullMatch[2]?.trim();
+    const nodeName = fullMatch[3]?.trim();
     
-    if (taskTitle) {
+    if (taskTitle && nodeName) {
       actions.push({
         type: 'task_create',
         title: taskTitle,
-        description: description,
+        description: description || undefined,
         area: 'Projetos',
         payload: { 
           title: taskTitle, 
           description: description,
           status: 'pendente',
-          _nodeName: nodeName // Reference to find node_id later
+          _nodeName: nodeName
         }
       });
+      return actions; // Found a complete action
     }
+  }
+
+  // Fallback: try simpler pattern for task + node
+  const simpleMatch = content.match(/(?:vou\s+)?criar\s+(?:a\s+)?tarefa\s+["'""]([^"'""]+)["'""].*?(?:no|na)\s+(?:nó|projeto)\s+["'""]([^"'""]+)["'""]/i);
+  if (simpleMatch) {
+    const taskTitle = simpleMatch[1]?.trim();
+    const nodeName = simpleMatch[2]?.trim();
+    
+    if (taskTitle && nodeName) {
+      actions.push({
+        type: 'task_create',
+        title: taskTitle,
+        area: 'Projetos',
+        payload: { 
+          title: taskTitle, 
+          status: 'pendente',
+          _nodeName: nodeName
+        }
+      });
+      return actions;
+    }
+  }
+
+  // Check for create node pattern
+  const nodeMatch = content.match(/criar\s+(?:o\s+)?(?:nó|projeto)\s+["'""]([^"'""]+)["'""]/i);
+  if (nodeMatch) {
+    actions.push({
+      type: 'node_create',
+      title: nodeMatch[1].trim(),
+      area: 'Projetos',
+      payload: { title: nodeMatch[1].trim(), color: 'bg-purple-100' }
+    });
   }
 
   return actions;
@@ -109,27 +137,49 @@ export function CEOChat() {
         try {
           // Resolve node reference if needed
           let payload = { ...action.payload };
-          if (action.type === 'task_create' && payload._nodeName) {
-            const nodeName = payload._nodeName as string;
-            let nodeId = nodeMap.get(nodeName.toLowerCase());
+          
+          if (action.type === 'task_create') {
+            const nodeName = payload._nodeName as string | undefined;
             
-            // If node doesn't exist, create it first
-            if (!nodeId) {
-              const { data: newNode, error: nodeError } = await supabase
-                .from('nodes')
-                .insert({ title: nodeName, color: 'bg-gray-100' })
-                .select()
-                .single();
+            if (nodeName) {
+              let nodeId = nodeMap.get(nodeName.toLowerCase());
               
-              if (!nodeError && newNode) {
-                nodeId = newNode.id;
-                nodeMap.set(nodeName.toLowerCase(), nodeId);
-                results.push(`✅ Nó "${nodeName}" criado`);
+              // If node doesn't exist, create it first
+              if (!nodeId) {
+                const { data: newNode, error: nodeError } = await supabase
+                  .from('nodes')
+                  .insert({ title: nodeName, color: 'bg-purple-100' })
+                  .select()
+                  .single();
+                
+                if (nodeError) {
+                  console.error('Error creating node:', nodeError);
+                  results.push(`❌ Erro ao criar nó "${nodeName}"`);
+                  continue;
+                }
+                
+                if (newNode) {
+                  nodeId = newNode.id;
+                  nodeMap.set(nodeName.toLowerCase(), nodeId);
+                  results.push(`✅ Nó "${nodeName}" criado`);
+                }
               }
+              
+              if (!nodeId) {
+                results.push(`❌ Não foi possível encontrar/criar o nó "${nodeName}"`);
+                continue;
+              }
+              
+              payload.node_id = nodeId;
             }
             
-            payload.node_id = nodeId;
             delete payload._nodeName;
+            
+            // Ensure we have a node_id for tasks
+            if (!payload.node_id) {
+              results.push(`❌ Tarefa "${action.title}" precisa de um nó válido`);
+              continue;
+            }
           }
 
           const response = await fetch(EXECUTE_URL, {
@@ -143,7 +193,7 @@ export function CEOChat() {
                 type: action.type,
                 title: action.title,
                 description: action.description,
-                area: action.area,
+                area: action.area || 'Projetos',
                 payload
               }
             }),
@@ -151,13 +201,13 @@ export function CEOChat() {
 
           const data = await response.json();
           if (data.success) {
-            results.push(`✅ ${data.result}`);
+            results.push(`✅ ${data.result || action.title}`);
           } else {
-            results.push(`❌ Falha: ${action.title || action.type}`);
+            results.push(`❌ Falha: ${data.error || action.title || action.type}`);
           }
         } catch (err) {
           console.error('Action execution error:', err);
-          results.push(`❌ Erro: ${action.title || action.type}`);
+          results.push(`❌ Erro: ${err instanceof Error ? err.message : action.title || action.type}`);
         }
       }
 
