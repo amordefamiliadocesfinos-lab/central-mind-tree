@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
-import { Send, Loader2, Bot, User, Sparkles, Play, CheckCircle } from 'lucide-react';
+import { Send, Loader2, Bot, User, Sparkles, Play, CheckCircle, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -254,18 +254,68 @@ function parseActionsFromResponse(content: string): PendingAction[] {
   return actions;
 }
 
+const WELCOME_MESSAGE: Message = {
+  role: 'assistant',
+  content: '👋 Olá! Sou o CEO IA, seu assistente executivo. Posso ajudar com:\n\n• **Análise** de tarefas, finanças e agenda\n• **Criar, editar ou excluir** qualquer item do sistema\n• **Orientações** sobre prioridades e decisões\n• **Resumos** do estado atual dos projetos\n\n💡 **Dica**: Quando eu propor ações, clique em "Já pode executar" para executar diretamente!\n\nComo posso ajudar você hoje?',
+};
+
 export function CEOChat() {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      role: 'assistant',
-      content: '👋 Olá! Sou o CEO IA, seu assistente executivo. Posso ajudar com:\n\n• **Análise** de tarefas, finanças e agenda\n• **Criar, editar ou excluir** qualquer item do sistema\n• **Orientações** sobre prioridades e decisões\n• **Resumos** do estado atual dos projetos\n\n💡 **Dica**: Quando eu propor ações, clique em "Já pode executar" para executar diretamente!\n\nComo posso ajudar você hoje?',
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Load chat history on mount
+  useEffect(() => {
+    const loadHistory = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('ai_chat_messages')
+          .select('role, content, created_at')
+          .order('created_at', { ascending: true });
+        
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          const history: Message[] = data.map(m => ({
+            role: m.role as 'user' | 'assistant',
+            content: m.content
+          }));
+          setMessages(history);
+        }
+      } catch (err) {
+        console.error('Error loading chat history:', err);
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    };
+    
+    loadHistory();
+  }, []);
+
+  // Save message to database
+  const saveMessage = async (role: 'user' | 'assistant', content: string) => {
+    try {
+      await supabase.from('ai_chat_messages').insert({ role, content });
+    } catch (err) {
+      console.error('Error saving message:', err);
+    }
+  };
+
+  // Clear chat history
+  const clearHistory = async () => {
+    try {
+      await supabase.from('ai_chat_messages').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      setMessages([WELCOME_MESSAGE]);
+      toast.success('Histórico limpo');
+    } catch (err) {
+      console.error('Error clearing history:', err);
+      toast.error('Erro ao limpar histórico');
+    }
+  };
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -528,17 +578,27 @@ export function CEOChat() {
     setInput('');
     setIsLoading(true);
 
+    // Save user message to database
+    await saveMessage('user', userMessage.content);
+
     try {
       await streamChat(newMessages);
+      // Get the last assistant message to save
+      setMessages((prev) => {
+        const lastMsg = prev[prev.length - 1];
+        if (lastMsg?.role === 'assistant') {
+          saveMessage('assistant', lastMsg.content);
+        }
+        return prev;
+      });
     } catch (error) {
       console.error('Chat error:', error);
+      const errorContent = `❌ ${error instanceof Error ? error.message : 'Erro ao processar sua mensagem'}`;
       setMessages((prev) => [
         ...prev,
-        {
-          role: 'assistant',
-          content: `❌ ${error instanceof Error ? error.message : 'Erro ao processar sua mensagem'}`,
-        },
+        { role: 'assistant', content: errorContent },
       ]);
+      saveMessage('assistant', errorContent);
     } finally {
       setIsLoading(false);
       inputRef.current?.focus();
@@ -559,8 +619,27 @@ export function CEOChat() {
 
   return (
     <Card className="flex flex-col h-[calc(100vh-320px)] min-h-[400px]">
+      {/* Header with clear button */}
+      <div className="flex items-center justify-between px-4 py-2 border-b">
+        <span className="text-sm font-medium text-muted-foreground">Conversa</span>
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          onClick={clearHistory}
+          disabled={messages.length <= 1 || isLoading}
+          className="h-8 px-2 text-muted-foreground hover:text-destructive"
+        >
+          <Trash2 className="h-4 w-4 mr-1" />
+          Limpar
+        </Button>
+      </div>
       {/* Messages */}
       <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+        {isLoadingHistory ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
         <div className="space-y-4">
           {messages.map((msg, i) => (
             <div key={i}>
@@ -638,6 +717,7 @@ export function CEOChat() {
             </div>
           )}
         </div>
+        )}
       </ScrollArea>
 
       {/* Quick actions */}
