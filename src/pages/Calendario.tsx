@@ -398,29 +398,35 @@ const Calendario = () => {
       <main className="px-4 py-4 space-y-4 pb-8 no-overflow-x">
         {/* Legend + Seasonal Toggle */}
         <div className="flex items-center justify-between gap-4">
-          <div className="scroll-x-container flex-1">
-            {Object.entries(STATUS_COLORS).map(([status, color]) => (
-              <div key={status} className="flex items-center gap-1.5 shrink-0 text-sm">
+          {showSeasonalDays ? (
+            <div className="flex-1 text-sm text-muted-foreground">
+              <span className="text-primary font-medium">Modo Sazonais:</span> clique em uma data para criar ou editar eventos sazonais
+            </div>
+          ) : (
+            <div className="scroll-x-container flex-1">
+              {Object.entries(STATUS_COLORS).map(([status, color]) => (
+                <div key={status} className="flex items-center gap-1.5 shrink-0 text-sm">
+                  <div
+                    className="w-2.5 h-2.5 rounded-full"
+                    style={{ backgroundColor: color }}
+                  />
+                  <span className="text-muted-foreground whitespace-nowrap">
+                    {status === "concluído" ? "Concluído" : status === "andamento" ? "Andamento" : status}
+                  </span>
+                </div>
+              ))}
+              <div className="flex items-center gap-1.5 shrink-0 text-sm">
                 <div
                   className="w-2.5 h-2.5 rounded-full"
-                  style={{ backgroundColor: color }}
+                  style={{ backgroundColor: MEETING_COLOR }}
                 />
-                <span className="text-muted-foreground whitespace-nowrap">
-                  {status === "concluído" ? "Concluído" : status === "andamento" ? "Andamento" : status}
-                </span>
+                <span className="text-muted-foreground">Reunião</span>
               </div>
-            ))}
-            <div className="flex items-center gap-1.5 shrink-0 text-sm">
-              <div
-                className="w-2.5 h-2.5 rounded-full"
-                style={{ backgroundColor: MEETING_COLOR }}
-              />
-              <span className="text-muted-foreground">Reunião</span>
             </div>
-          </div>
+          )}
           <div className="flex items-center gap-2 shrink-0">
-            <Sparkles className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground hidden sm:inline">Sazonais</span>
+            <Sparkles className={cn("h-4 w-4", showSeasonalDays ? "text-primary" : "text-muted-foreground")} />
+            <span className={cn("text-sm hidden sm:inline", showSeasonalDays ? "text-primary font-medium" : "text-muted-foreground")}>Sazonais</span>
             <Switch checked={showSeasonalDays} onCheckedChange={setShowSeasonalDays} />
           </div>
         </div>
@@ -459,12 +465,50 @@ const Calendario = () => {
                     const dateKey = formatDateKey(selectedYear, monthIndex, day);
                     const dayTasks = tasksByDate[dateKey] || [];
                     const dayMeetings = meetingsByDate[dateKey] || [];
-                    const daySeasonal = showSeasonalDays ? (seasonalByDate[dateKey] || []) : [];
+                    const daySeasonal = seasonalByDate[dateKey] || [];
                     const hasScheduledTasks = dayTasks.length > 0;
                     const hasMeetings = dayMeetings.length > 0;
                     const hasSeasonal = daySeasonal.length > 0;
-                    const hasContent = hasScheduledTasks || hasMeetings;
                     const todayHighlight = isToday(dateKey);
+                    
+                    // Modo sazonais: mostra APENAS eventos sazonais
+                    if (showSeasonalDays) {
+                      const topSeasonal = daySeasonal.length > 0 
+                        ? daySeasonal.reduce((a, b) => a.seasonalDay.importance > b.seasonalDay.importance ? a : b)
+                        : null;
+                      
+                      return (
+                        <button
+                          key={day}
+                          onClick={() => hasSeasonal ? handleOpenSeasonalModal(dateKey, topSeasonal?.seasonalDay) : handleOpenSeasonalModal(dateKey)}
+                          className={cn(
+                            "aspect-square flex items-center justify-center text-xs sm:text-sm rounded-lg relative",
+                            "touch-manipulation active:scale-95 transition-all duration-150",
+                            "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1",
+                            todayHighlight && "ring-2 ring-primary ring-offset-1",
+                            hasSeasonal ? "font-medium shadow-sm" : "text-foreground hover:bg-muted/50",
+                          )}
+                          style={{
+                            backgroundColor: hasSeasonal ? (topSeasonal?.isPrepDay ? undefined : topSeasonal?.seasonalDay.color + '20') : undefined,
+                            borderWidth: hasSeasonal ? 2 : 1,
+                            borderColor: hasSeasonal ? topSeasonal?.seasonalDay.color : 'transparent',
+                            borderStyle: topSeasonal?.isPrepDay ? 'dashed' : 'solid',
+                            color: hasSeasonal ? topSeasonal?.seasonalDay.color : undefined,
+                          }}
+                        >
+                          {day}
+                          {hasSeasonal && (
+                            <div 
+                              className="absolute bottom-0.5 left-0.5 right-0.5 h-1 rounded-full"
+                              style={{ backgroundColor: topSeasonal?.seasonalDay.color, opacity: topSeasonal?.isPrepDay ? 0.5 : 1 }}
+                            />
+                          )}
+                        </button>
+                      );
+                    }
+                    
+                    // Modo normal: mostra tarefas e reuniões
+                    const hasContent = hasScheduledTasks || hasMeetings;
                     const totalItems = dayTasks.length + dayMeetings.length;
 
                     const dominantColor = hasMeetings 
@@ -472,11 +516,6 @@ const Calendario = () => {
                       : hasScheduledTasks
                         ? STATUS_COLORS[dayTasks[0].status] || "#6B7280"
                         : undefined;
-
-                    // Get most important seasonal for border
-                    const topSeasonal = daySeasonal.length > 0 
-                      ? daySeasonal.reduce((a, b) => a.seasonalDay.importance > b.seasonalDay.importance ? a : b)
-                      : null;
 
                     return (
                       <button
@@ -496,9 +535,6 @@ const Calendario = () => {
                         )}
                         style={{
                           backgroundColor: hasContent ? dominantColor : undefined,
-                          borderWidth: hasSeasonal ? 2 : 0,
-                          borderColor: topSeasonal?.seasonalDay.color,
-                          borderStyle: topSeasonal?.isPrepDay ? 'dashed' : 'solid',
                         }}
                       >
                         {day}
@@ -506,12 +542,6 @@ const Calendario = () => {
                           <span className="absolute -top-0.5 -right-0.5 min-w-[14px] h-[14px] bg-background text-foreground text-[9px] rounded-full flex items-center justify-center border font-bold px-0.5">
                             {totalItems}
                           </span>
-                        )}
-                        {hasSeasonal && !hasContent && (
-                          <div 
-                            className="absolute bottom-0.5 left-0.5 right-0.5 h-1 rounded-full"
-                            style={{ backgroundColor: topSeasonal?.seasonalDay.color, opacity: topSeasonal?.isPrepDay ? 0.5 : 1 }}
-                          />
                         )}
                       </button>
                     );
@@ -569,6 +599,7 @@ const Calendario = () => {
             onFilterChange={setSeasonalFilterImportance}
             onEdit={(sd) => handleOpenSeasonalModal(undefined, sd)}
             onAdd={() => handleOpenSeasonalModal()}
+            selectedYear={selectedYear}
           />
         )}
       </main>
