@@ -2,6 +2,7 @@ export { FinancialDashboard } from './FinancialDashboard';
 export { FinancialEntriesList } from './FinancialEntriesList';
 export { FinancialEntryForm } from './FinancialEntryForm';
 export { PaymentDialog } from './PaymentDialog';
+export { AdvancedPaymentDialog } from './AdvancedPaymentDialog';
 export { AccountsManager } from './AccountsManager';
 export { CategoriesManager } from './CategoriesManager';
 export { ContactsManager } from './ContactsManager';

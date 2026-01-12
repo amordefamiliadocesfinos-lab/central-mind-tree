@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { FinancialEntry, EntryStatus, getEntryStatus, FinancialCategory, FinancialAccount } from '@/hooks/useFinancial';
 import { PaymentDialog } from './PaymentDialog';
+import { AdvancedPaymentDialog } from './AdvancedPaymentDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface FinancialEntriesListProps {
@@ -78,6 +79,8 @@ export function FinancialEntriesList({
   const [formOpen, setFormOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<FinancialEntry | undefined>();
   const [paymentEntry, setPaymentEntry] = useState<FinancialEntry | undefined>();
+  const [advancedPaymentEntries, setAdvancedPaymentEntries] = useState<FinancialEntry[]>([]);
+  const [isPartialPayment, setIsPartialPayment] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(!isMobile);
   const [selectedAccount, setSelectedAccount] = useState<string>('all');
@@ -676,10 +679,22 @@ export function FinancialEntriesList({
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               {status !== 'pago' && (
-                                <DropdownMenuItem onClick={() => setPaymentEntry(entry)}>
-                                  <DollarSign className="mr-2 h-4 w-4" />
-                                  Baixar
-                                </DropdownMenuItem>
+                                <>
+                                  <DropdownMenuItem onClick={() => {
+                                    setAdvancedPaymentEntries([entry]);
+                                    setIsPartialPayment(false);
+                                  }}>
+                                    <CheckCircle className="mr-2 h-4 w-4" />
+                                    Baixa total do {type === 'receber' ? 'recebimento' : 'pagamento'}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => {
+                                    setAdvancedPaymentEntries([entry]);
+                                    setIsPartialPayment(true);
+                                  }}>
+                                    <DollarSign className="mr-2 h-4 w-4" />
+                                    Baixa parcial do {type === 'receber' ? 'recebimento' : 'pagamento'}
+                                  </DropdownMenuItem>
+                                </>
                               )}
                               {status === 'pago' && !entry.is_conciliated && (
                                 <DropdownMenuItem onClick={() => onConciliate(entry.id)}>
@@ -1005,6 +1020,20 @@ export function FinancialEntriesList({
           onConfirm={async (value, accountId, notes) => {
             await onRegisterPayment(paymentEntry.id, value, accountId, notes);
             setPaymentEntry(undefined);
+          }}
+        />
+      )}
+
+      {advancedPaymentEntries.length > 0 && (
+        <AdvancedPaymentDialog
+          open={advancedPaymentEntries.length > 0}
+          onOpenChange={(open) => !open && setAdvancedPaymentEntries([])}
+          entries={advancedPaymentEntries}
+          accounts={accounts}
+          categories={categories}
+          isPartial={isPartialPayment}
+          onConfirm={async (id, value, accountId, notes) => {
+            await onRegisterPayment(id, value, accountId, notes);
           }}
         />
       )}
