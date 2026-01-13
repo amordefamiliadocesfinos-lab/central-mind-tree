@@ -471,51 +471,72 @@ const Calendario = () => {
                     const hasSeasonal = daySeasonal.length > 0;
                     const todayHighlight = isToday(dateKey);
                     
-                    // Modo sazonais: mostra APENAS eventos sazonais - visual clean
+                    // Modo sazonais: mostra TODAS as campanhas de forma clara
                     if (showSeasonalDays) {
-                      const sortedSeasonal = [...daySeasonal].sort((a, b) => b.seasonalDay.importance - a.seasonalDay.importance);
-                      const topSeasonal = sortedSeasonal[0] || null;
-                      const hasMultiple = daySeasonal.length > 1;
-                      const isPrepOnly = hasSeasonal && sortedSeasonal.every(s => s.isPrepDay);
+                      // Separar eventos principais de dias de prep
+                      const mainEvents = daySeasonal.filter(s => !s.isPrepDay);
+                      const prepEvents = daySeasonal.filter(s => s.isPrepDay);
+                      const allEvents = [...mainEvents, ...prepEvents].sort((a, b) => b.seasonalDay.importance - a.seasonalDay.importance);
+                      const hasMainEvent = mainEvents.length > 0;
                       
                       return (
                         <button
                           key={day}
-                          onClick={() => hasSeasonal ? handleOpenSeasonalModal(dateKey, topSeasonal?.seasonalDay) : handleOpenSeasonalModal(dateKey)}
+                          onClick={() => hasSeasonal ? handleOpenSeasonalModal(dateKey, allEvents[0]?.seasonalDay) : handleOpenSeasonalModal(dateKey)}
                           className={cn(
-                            "aspect-square flex items-center justify-center text-xs sm:text-sm rounded-md relative",
+                            "aspect-square flex flex-col items-center justify-center text-xs sm:text-sm rounded-md relative group",
                             "touch-manipulation active:scale-95 transition-all duration-150",
                             "focus:outline-none focus:ring-2 focus:ring-primary",
                             todayHighlight && "ring-2 ring-primary",
-                            !hasSeasonal && "text-muted-foreground/40 hover:bg-muted/30",
-                            hasSeasonal && !isPrepOnly && "text-foreground font-semibold",
-                            hasSeasonal && isPrepOnly && "text-muted-foreground",
+                            !hasSeasonal && "text-muted-foreground/30 hover:bg-muted/20",
+                            hasSeasonal && hasMainEvent && "font-bold bg-card shadow-sm border",
+                            hasSeasonal && !hasMainEvent && "text-muted-foreground bg-muted/30",
                           )}
-                          style={{
-                            backgroundColor: hasSeasonal && !isPrepOnly ? topSeasonal?.seasonalDay.color + '15' : undefined,
-                          }}
                         >
-                          {day}
+                          <span className="text-foreground">{day}</span>
                           
-                          {/* Indicador discreto: ponto colorido no canto */}
+                          {/* Indicadores coloridos para CADA campanha */}
                           {hasSeasonal && (
-                            <span 
-                              className={cn(
-                                "absolute bottom-1 w-1.5 h-1.5 rounded-full",
-                                hasMultiple ? "left-1/2 -translate-x-1/2" : "left-1/2 -translate-x-1/2"
+                            <div className="absolute bottom-0.5 left-0.5 right-0.5 flex justify-center gap-0.5">
+                              {allEvents.slice(0, 4).map((occ, idx) => (
+                                <div 
+                                  key={occ.seasonalDay.id + idx}
+                                  className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                                  style={{ 
+                                    backgroundColor: occ.seasonalDay.color,
+                                    opacity: occ.isPrepDay ? 0.35 : 1
+                                  }}
+                                  title={`${occ.seasonalDay.name}${occ.isPrepDay ? ' (prep)' : ''}`}
+                                />
+                              ))}
+                              {allEvents.length > 4 && (
+                                <span className="text-[6px] text-muted-foreground font-medium">+{allEvents.length - 4}</span>
                               )}
-                              style={{ 
-                                backgroundColor: topSeasonal?.seasonalDay.color,
-                                opacity: isPrepOnly ? 0.4 : 1
-                              }}
-                            />
+                            </div>
                           )}
                           
-                          {/* Badge discreto para múltiplos */}
-                          {hasMultiple && (
-                            <span className="absolute top-0.5 right-0.5 text-[7px] font-medium text-muted-foreground">
-                              +{daySeasonal.length - 1}
-                            </span>
+                          {/* Tooltip ao hover mostrando todas as campanhas */}
+                          {hasSeasonal && allEvents.length > 0 && (
+                            <div className="absolute z-50 hidden group-hover:flex flex-col gap-0.5 bottom-full left-1/2 -translate-x-1/2 mb-1 bg-popover border rounded-md shadow-lg p-1.5 min-w-max max-w-40">
+                              {allEvents.map((occ, idx) => (
+                                <div key={occ.seasonalDay.id + idx} className="flex items-center gap-1.5 text-[10px]">
+                                  <div 
+                                    className="w-2 h-2 rounded-full flex-shrink-0"
+                                    style={{ 
+                                      backgroundColor: occ.seasonalDay.color,
+                                      opacity: occ.isPrepDay ? 0.5 : 1
+                                    }}
+                                  />
+                                  <span className={cn(
+                                    "truncate",
+                                    occ.isPrepDay ? "text-muted-foreground" : "text-foreground font-medium"
+                                  )}>
+                                    {occ.seasonalDay.name}
+                                    {occ.isPrepDay && <span className="text-muted-foreground/70"> (prep)</span>}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
                           )}
                         </button>
                       );
