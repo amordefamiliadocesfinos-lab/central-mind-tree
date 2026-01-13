@@ -473,35 +473,57 @@ const Calendario = () => {
                     
                     // Modo sazonais: mostra APENAS eventos sazonais
                     if (showSeasonalDays) {
-                      const topSeasonal = daySeasonal.length > 0 
-                        ? daySeasonal.reduce((a, b) => a.seasonalDay.importance > b.seasonalDay.importance ? a : b)
-                        : null;
+                      // Ordenar por importância (maior primeiro)
+                      const sortedSeasonal = [...daySeasonal].sort((a, b) => b.seasonalDay.importance - a.seasonalDay.importance);
+                      const topSeasonal = sortedSeasonal[0] || null;
+                      const hasMultiple = daySeasonal.length > 1;
                       
                       return (
                         <button
                           key={day}
                           onClick={() => hasSeasonal ? handleOpenSeasonalModal(dateKey, topSeasonal?.seasonalDay) : handleOpenSeasonalModal(dateKey)}
                           className={cn(
-                            "aspect-square flex items-center justify-center text-xs sm:text-sm rounded-lg relative",
+                            "aspect-square flex flex-col items-center justify-center text-xs sm:text-sm rounded-lg relative overflow-hidden",
                             "touch-manipulation active:scale-95 transition-all duration-150",
                             "focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-1",
                             todayHighlight && "ring-2 ring-primary ring-offset-1",
-                            hasSeasonal ? "font-medium shadow-sm" : "text-foreground hover:bg-muted/50",
+                            hasSeasonal ? "font-medium shadow-md" : "text-foreground hover:bg-muted/50",
                           )}
                           style={{
-                            backgroundColor: hasSeasonal ? (topSeasonal?.isPrepDay ? undefined : topSeasonal?.seasonalDay.color + '20') : undefined,
+                            backgroundColor: hasSeasonal ? (topSeasonal?.isPrepDay ? 'hsl(var(--muted))' : topSeasonal?.seasonalDay.color + '25') : undefined,
                             borderWidth: hasSeasonal ? 2 : 1,
                             borderColor: hasSeasonal ? topSeasonal?.seasonalDay.color : 'transparent',
                             borderStyle: topSeasonal?.isPrepDay ? 'dashed' : 'solid',
                             color: hasSeasonal ? topSeasonal?.seasonalDay.color : undefined,
                           }}
                         >
-                          {day}
+                          <span className="relative z-10">{day}</span>
+                          
+                          {/* Indicador de múltiplas campanhas */}
+                          {hasMultiple && (
+                            <span 
+                              className="absolute top-0.5 right-0.5 text-[8px] font-bold px-1 rounded-full text-white"
+                              style={{ backgroundColor: topSeasonal?.seasonalDay.color }}
+                            >
+                              {daySeasonal.length}
+                            </span>
+                          )}
+                          
+                          {/* Barras coloridas para cada campanha (máx 3 visíveis) */}
                           {hasSeasonal && (
-                            <div 
-                              className="absolute bottom-0.5 left-0.5 right-0.5 h-1 rounded-full"
-                              style={{ backgroundColor: topSeasonal?.seasonalDay.color, opacity: topSeasonal?.isPrepDay ? 0.5 : 1 }}
-                            />
+                            <div className="absolute bottom-0 left-0 right-0 flex gap-0.5 p-0.5">
+                              {sortedSeasonal.slice(0, 3).map((occ, idx) => (
+                                <div 
+                                  key={occ.seasonalDay.id + idx}
+                                  className="flex-1 h-1.5 rounded-full"
+                                  style={{ 
+                                    backgroundColor: occ.seasonalDay.color, 
+                                    opacity: occ.isPrepDay ? 0.5 : 1 
+                                  }}
+                                  title={occ.seasonalDay.name}
+                                />
+                              ))}
+                            </div>
                           )}
                         </button>
                       );
