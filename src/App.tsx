@@ -19,7 +19,7 @@ import Planejamento from "./pages/Planejamento";
 import Calendario from "./pages/Calendario";
 import Rotina from "./pages/Rotina";
 import Operacoes from "./pages/Operacoes";
-import Conteudo from "./pages/Conteudo";
+import Digital from "./pages/Digital";
 import Planilhas from "./pages/Planilhas";
 import Reunioes from "./pages/Reunioes";
 import ReuniaoDetalhe from "./pages/ReuniaoDetalhe";
@@ -73,7 +73,7 @@ function AnimatedRoutes() {
           <Route path="/calendario" element={<Calendario />} />
           <Route path="/rotina" element={<Rotina />} />
           <Route path="/operacoes" element={<Operacoes />} />
-          <Route path="/conteudo" element={<Conteudo />} />
+          <Route path="/digital" element={<Digital />} />
           <Route path="/planilhas" element={<Planilhas />} />
           <Route path="/reunioes" element={<Reunioes />} />
           <Route path="/reunioes/:id" element={<ReuniaoDetalhe />} />
