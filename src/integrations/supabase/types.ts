@@ -489,6 +489,253 @@ export type Database = {
         }
         Relationships: []
       }
+      digital_ideas: {
+        Row: {
+          created_at: string
+          id: string
+          key_message: string | null
+          kpi: string | null
+          media_urls: Json | null
+          node_id: string | null
+          objective: string | null
+          order_index: number | null
+          status: string
+          target_audience: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key_message?: string | null
+          kpi?: string | null
+          media_urls?: Json | null
+          node_id?: string | null
+          objective?: string | null
+          order_index?: number | null
+          status?: string
+          target_audience?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key_message?: string | null
+          kpi?: string | null
+          media_urls?: Json | null
+          node_id?: string | null
+          objective?: string | null
+          order_index?: number | null
+          status?: string
+          target_audience?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "digital_ideas_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      digital_media: {
+        Row: {
+          created_at: string
+          file_size: number | null
+          file_type: string | null
+          filename: string | null
+          id: string
+          idea_id: string | null
+          tags: string[] | null
+          url: string
+          variation_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          file_size?: number | null
+          file_type?: string | null
+          filename?: string | null
+          id?: string
+          idea_id?: string | null
+          tags?: string[] | null
+          url: string
+          variation_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          file_size?: number | null
+          file_type?: string | null
+          filename?: string | null
+          id?: string
+          idea_id?: string | null
+          tags?: string[] | null
+          url?: string
+          variation_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "digital_media_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "digital_ideas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "digital_media_variation_id_fkey"
+            columns: ["variation_id"]
+            isOneToOne: false
+            referencedRelation: "digital_variations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      digital_templates: {
+        Row: {
+          checklist_template: Json | null
+          config: Json | null
+          created_at: string
+          id: string
+          name: string
+          platform: string
+        }
+        Insert: {
+          checklist_template?: Json | null
+          config?: Json | null
+          created_at?: string
+          id?: string
+          name: string
+          platform: string
+        }
+        Update: {
+          checklist_template?: Json | null
+          config?: Json | null
+          created_at?: string
+          id?: string
+          name?: string
+          platform?: string
+        }
+        Relationships: []
+      }
+      digital_variations: {
+        Row: {
+          aspect_ratio: string | null
+          caption: string | null
+          chapters: string | null
+          checklist: Json | null
+          cover_url: string | null
+          created_at: string
+          cta: string | null
+          description: string | null
+          duration_seconds: number | null
+          hashtags: string | null
+          id: string
+          idea_id: string
+          is_template: boolean | null
+          link: string | null
+          media_urls: Json | null
+          metric_clicks: number | null
+          metric_ctr: number | null
+          metric_engagement: number | null
+          metric_reach: number | null
+          metric_retention: number | null
+          music: string | null
+          order_index: number | null
+          platform: string
+          playlist: string | null
+          resolution: string | null
+          scheduled_date: string | null
+          scheduled_time: string | null
+          status: string
+          tags: string | null
+          template_name: string | null
+          thumbnail_url: string | null
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          aspect_ratio?: string | null
+          caption?: string | null
+          chapters?: string | null
+          checklist?: Json | null
+          cover_url?: string | null
+          created_at?: string
+          cta?: string | null
+          description?: string | null
+          duration_seconds?: number | null
+          hashtags?: string | null
+          id?: string
+          idea_id: string
+          is_template?: boolean | null
+          link?: string | null
+          media_urls?: Json | null
+          metric_clicks?: number | null
+          metric_ctr?: number | null
+          metric_engagement?: number | null
+          metric_reach?: number | null
+          metric_retention?: number | null
+          music?: string | null
+          order_index?: number | null
+          platform: string
+          playlist?: string | null
+          resolution?: string | null
+          scheduled_date?: string | null
+          scheduled_time?: string | null
+          status?: string
+          tags?: string | null
+          template_name?: string | null
+          thumbnail_url?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          aspect_ratio?: string | null
+          caption?: string | null
+          chapters?: string | null
+          checklist?: Json | null
+          cover_url?: string | null
+          created_at?: string
+          cta?: string | null
+          description?: string | null
+          duration_seconds?: number | null
+          hashtags?: string | null
+          id?: string
+          idea_id?: string
+          is_template?: boolean | null
+          link?: string | null
+          media_urls?: Json | null
+          metric_clicks?: number | null
+          metric_ctr?: number | null
+          metric_engagement?: number | null
+          metric_reach?: number | null
+          metric_retention?: number | null
+          music?: string | null
+          order_index?: number | null
+          platform?: string
+          playlist?: string | null
+          resolution?: string | null
+          scheduled_date?: string | null
+          scheduled_time?: string | null
+          status?: string
+          tags?: string | null
+          template_name?: string | null
+          thumbnail_url?: string | null
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "digital_variations_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "digital_ideas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_accounts: {
         Row: {
           account_number: string | null
