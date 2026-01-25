@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -341,6 +341,55 @@ export function useDigital() {
     fetchIdeas();
   }, [fetchIdeas]);
 
+  // Duplicate variation
+  const duplicateVariation = useCallback(async (variationId: string, targetPlatform?: keyof typeof PLATFORMS) => {
+    const idea = ideas.find(i => i.variations?.some(v => v.id === variationId));
+    const variation = idea?.variations?.find(v => v.id === variationId);
+    if (!variation) return null;
+
+    const platform = targetPlatform || variation.platform;
+    const platformConfig = PLATFORMS[platform];
+    const defaultChecklist = platformConfig.checklist.map(item => ({
+      ...item,
+      done: false,
+    }));
+
+    const { data, error } = await supabase
+      .from('digital_variations')
+      .insert({
+        idea_id: variation.idea_id,
+        platform,
+        status: 'pendente',
+        title: variation.title,
+        description: variation.description,
+        caption: variation.caption,
+        hashtags: variation.hashtags,
+        cta: variation.cta,
+        aspect_ratio: platformConfig.aspectRatio || variation.aspect_ratio,
+        checklist: defaultChecklist,
+        media_urls: targetPlatform ? [] : variation.media_urls,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      toast.error('Erro ao duplicar variação');
+      return null;
+    }
+
+    toast.success(`Variação duplicada para ${platformConfig.label}!`);
+    fetchIdeas();
+    return data as DigitalVariation;
+  }, [fetchIdeas, ideas]);
+
+  // Batch create variations
+  const batchCreateVariations = useCallback(async (ideaId: string, platforms: (keyof typeof PLATFORMS)[]) => {
+    const results = await Promise.all(
+      platforms.map(platform => createVariation(ideaId, platform))
+    );
+    return results.filter(Boolean);
+  }, [createVariation]);
+
   const toggleVariationChecklist = useCallback(async (variationId: string, itemId: string) => {
     const idea = ideas.find(i => i.variations?.some(v => v.id === variationId));
     const variation = idea?.variations?.find(v => v.id === variationId);
@@ -430,6 +479,13 @@ export function useDigital() {
     };
   }, [fetchIdeas]);
 
+  // Get all variations with idea title for charts
+  const allVariationsWithTitle = useMemo(() => {
+    return ideas.flatMap(idea => 
+      (idea.variations || []).map(v => ({ ...v, ideaTitle: idea.title }))
+    );
+  }, [ideas]);
+
   return {
     ideas,
     filteredIdeas,
@@ -447,8 +503,11 @@ export function useDigital() {
     createVariation,
     updateVariation,
     deleteVariation,
+    duplicateVariation,
+    batchCreateVariations,
     toggleVariationChecklist,
     getVariationsByDate,
+    allVariationsWithTitle,
     refetch: fetchIdeas,
     DIGITAL_STATUS,
     PLATFORMS,
