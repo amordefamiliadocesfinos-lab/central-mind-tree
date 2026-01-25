@@ -672,10 +672,10 @@ export function GlobalFooterBar() {
           <Button
             asChild
             size="sm"
-            variant={isActive('/conteudo') ? 'secondary' : 'ghost'}
-            className={cn("h-8 w-8 p-0", isActive('/conteudo') && "bg-secondary")}
+            variant={isActive('/digital') ? 'secondary' : 'ghost'}
+            className={cn("h-8 w-8 p-0", isActive('/digital') && "bg-secondary")}
           >
-            <Link to="/conteudo">
+            <Link to="/digital">
               <FileText className="h-4 w-4" />
             </Link>
           </Button>
