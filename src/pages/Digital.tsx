@@ -1,20 +1,30 @@
 import { useState } from 'react';
 import { useDigital, DIGITAL_STATUS, PLATFORMS } from '@/hooks/useDigital';
-import { IdeaCard, IdeaEditor } from '@/components/digital';
+import { IdeaCard, IdeaEditor, KanbanBoard, MediaLibrary, MetricsChart, BatchVariationDialog } from '@/components/digital';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, ArrowLeft, Search, Filter } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Plus, ArrowLeft, Search, LayoutGrid, Columns3, Image, BarChart3, Link2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { supabase } from '@/integrations/supabase/client';
+import { useEffect } from 'react';
+
+interface Node {
+  id: string;
+  title: string;
+  color: string;
+}
 
 export default function Digital() {
   const {
+    ideas,
     filteredIdeas,
     loading,
     searchQuery,
@@ -30,24 +40,43 @@ export default function Digital() {
     createVariation,
     updateVariation,
     deleteVariation,
+    duplicateVariation,
+    batchCreateVariations,
     toggleVariationChecklist,
+    allVariationsWithTitle,
   } = useDigital();
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedIdea, setSelectedIdea] = useState<string | null>(null);
-  const [newIdea, setNewIdea] = useState({ title: '', objective: '' });
+  const [newIdea, setNewIdea] = useState({ title: '', objective: '', node_id: '' });
+  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [activeTab, setActiveTab] = useState<'ideias' | 'midia' | 'metricas'>('ideias');
+  const [kanbanMode, setKanbanMode] = useState<'ideas' | 'variations'>('ideas');
+  const [nodes, setNodes] = useState<Node[]>([]);
   const isMobile = useIsMobile();
 
+  // Fetch nodes for linking
+  useEffect(() => {
+    const fetchNodes = async () => {
+      const { data } = await supabase.from('nodes').select('id, title, color').order('title');
+      if (data) setNodes(data);
+    };
+    fetchNodes();
+  }, []);
+
   const handleCreateIdea = async () => {
-    const idea = await createIdea(newIdea);
+    const idea = await createIdea({
+      ...newIdea,
+      node_id: newIdea.node_id || null,
+    });
     if (idea) {
       setShowCreateDialog(false);
-      setNewIdea({ title: '', objective: '' });
+      setNewIdea({ title: '', objective: '', node_id: '' });
       setSelectedIdea(idea.id);
     }
   };
 
-  const selectedIdeaData = filteredIdeas.find(i => i.id === selectedIdea);
+  const selectedIdeaData = ideas.find(i => i.id === selectedIdea);
 
   if (loading) {
     return (
@@ -75,18 +104,63 @@ export default function Digital() {
             <h1 className="text-lg font-bold truncate">Digital</h1>
           </div>
 
-          <Button
-            onClick={() => setShowCreateDialog(true)}
-            size={isMobile ? 'icon' : 'default'}
-            className="h-10 shrink-0"
-          >
-            <Plus className="h-5 w-5" />
-            {!isMobile && <span className="ml-2">Nova Ideia</span>}
-          </Button>
+          <div className="flex items-center gap-2">
+            {activeTab === 'ideias' && !selectedIdea && (
+              <>
+                <Button
+                  variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                  size="icon"
+                  className="h-9 w-9"
+                  onClick={() => setViewMode('list')}
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
+                  size="icon"
+                  className="h-9 w-9"
+                  onClick={() => setViewMode('kanban')}
+                >
+                  <Columns3 className="h-4 w-4" />
+                </Button>
+              </>
+            )}
+            
+            <Button
+              onClick={() => setShowCreateDialog(true)}
+              size={isMobile ? 'icon' : 'default'}
+              className="h-10 shrink-0"
+            >
+              <Plus className="h-5 w-5" />
+              {!isMobile && <span className="ml-2">Nova Ideia</span>}
+            </Button>
+          </div>
         </div>
 
-        {/* Search & Filters */}
+        {/* Tabs */}
         {!selectedIdea && (
+          <div className="px-4 pb-2">
+            <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+              <TabsList className="grid w-full grid-cols-3 h-9">
+                <TabsTrigger value="ideias" className="text-xs">
+                  <LayoutGrid className="h-3.5 w-3.5 mr-1" />
+                  Ideias
+                </TabsTrigger>
+                <TabsTrigger value="midia" className="text-xs">
+                  <Image className="h-3.5 w-3.5 mr-1" />
+                  Mídia
+                </TabsTrigger>
+                <TabsTrigger value="metricas" className="text-xs">
+                  <BarChart3 className="h-3.5 w-3.5 mr-1" />
+                  Métricas
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        )}
+
+        {/* Search & Filters - only on ideas tab */}
+        {!selectedIdea && activeTab === 'ideias' && (
           <div className="px-4 pb-3 space-y-2">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -132,6 +206,18 @@ export default function Digital() {
                   ))}
                 </SelectContent>
               </Select>
+
+              {viewMode === 'kanban' && (
+                <Select value={kanbanMode} onValueChange={(v) => setKanbanMode(v as any)}>
+                  <SelectTrigger className="h-8 w-auto min-w-[100px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ideas">Por Ideia</SelectItem>
+                    <SelectItem value="variations">Por Variação</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             {/* Stats */}
@@ -154,7 +240,7 @@ export default function Digital() {
         )}
       </header>
 
-      <main className="px-4 py-4 pb-24 space-y-3">
+      <main className="px-4 py-4 pb-24">
         {selectedIdeaData ? (
           <IdeaEditor
             idea={selectedIdeaData}
@@ -164,28 +250,45 @@ export default function Digital() {
             onCreateVariation={createVariation}
             onUpdateVariation={updateVariation}
             onDeleteVariation={deleteVariation}
+            onDuplicateVariation={duplicateVariation}
+            onBatchCreateVariations={batchCreateVariations}
             onToggleChecklist={toggleVariationChecklist}
+            nodes={nodes}
           />
+        ) : activeTab === 'ideias' ? (
+          viewMode === 'kanban' ? (
+            <KanbanBoard
+              ideas={filteredIdeas}
+              onUpdateIdea={updateIdea}
+              onUpdateVariation={updateVariation}
+              onSelectIdea={setSelectedIdea}
+              viewMode={kanbanMode}
+            />
+          ) : (
+            <div className="space-y-3">
+              {filteredIdeas.length === 0 ? (
+                <Card className="p-8 text-center">
+                  <p className="text-muted-foreground">Nenhuma ideia encontrada.</p>
+                  <Button className="mt-4" onClick={() => setShowCreateDialog(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Criar Primeira Ideia
+                  </Button>
+                </Card>
+              ) : (
+                filteredIdeas.map((idea) => (
+                  <IdeaCard
+                    key={idea.id}
+                    idea={idea}
+                    onClick={() => setSelectedIdea(idea.id)}
+                  />
+                ))
+              )}
+            </div>
+          )
+        ) : activeTab === 'midia' ? (
+          <MediaLibrary mode="browse" />
         ) : (
-          <>
-            {filteredIdeas.length === 0 ? (
-              <Card className="p-8 text-center">
-                <p className="text-muted-foreground">Nenhuma ideia encontrada.</p>
-                <Button className="mt-4" onClick={() => setShowCreateDialog(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Criar Primeira Ideia
-                </Button>
-              </Card>
-            ) : (
-              filteredIdeas.map((idea) => (
-                <IdeaCard
-                  key={idea.id}
-                  idea={idea}
-                  onClick={() => setSelectedIdea(idea.id)}
-                />
-              ))
-            )}
-          </>
+          <MetricsChart variations={allVariationsWithTitle} />
         )}
       </main>
 
@@ -214,6 +317,28 @@ export default function Digital() {
               placeholder="Qual o objetivo?"
               className="h-12"
             />
+          </div>
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Link2 className="h-4 w-4" />
+              Vincular a Nó (opcional)
+            </Label>
+            <Select value={newIdea.node_id} onValueChange={(v) => setNewIdea({ ...newIdea, node_id: v })}>
+              <SelectTrigger className="h-12">
+                <SelectValue placeholder="Selecione um nó..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Nenhum</SelectItem>
+                {nodes.map(node => (
+                  <SelectItem key={node.id} value={node.id}>
+                    <div className="flex items-center gap-2">
+                      <div className={cn('w-2 h-2 rounded-full', `bg-node-${node.color}`)} />
+                      {node.title}
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="flex gap-3 pt-2">
             <Button variant="outline" className="flex-1 h-12" onClick={() => setShowCreateDialog(false)}>
