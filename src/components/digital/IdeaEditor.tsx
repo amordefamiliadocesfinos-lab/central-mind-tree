@@ -14,6 +14,7 @@ import { ArrowLeft, Plus, Trash2, Settings, Calendar, Image, Copy, Layers, Link2
 import { useIsMobile } from '@/hooks/use-mobile';
 import { VariationEditor } from './VariationEditor';
 import { BatchVariationDialog } from './BatchVariationDialog';
+import { ScheduleCalendar } from './ScheduleCalendar';
 
 interface Node {
   id: string;
@@ -430,41 +431,10 @@ export function IdeaEditor({
 
         {/* Calendar Tab */}
         <TabsContent value="calendar" className="space-y-4 mt-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Variações Agendadas</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {variations.filter(v => v.scheduled_date).length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Nenhuma variação agendada ainda.
-                </p>
-              ) : (
-                variations
-                  .filter(v => v.scheduled_date)
-                  .sort((a, b) => (a.scheduled_date || '').localeCompare(b.scheduled_date || ''))
-                  .map(v => {
-                    const platformConfig = PLATFORMS[v.platform];
-                    return (
-                      <div
-                        key={v.id}
-                        className="flex items-center justify-between p-2 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted"
-                        onClick={() => setSelectedVariation(v)}
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">{platformConfig?.icon}</span>
-                          <span className="text-sm">{platformConfig?.label}</span>
-                        </div>
-                        <div className="text-sm text-muted-foreground tabular-nums">
-                          {v.scheduled_date?.slice(5).replace('-', '/')}
-                          {v.scheduled_time && ` ${v.scheduled_time.slice(0, 5)}`}
-                        </div>
-                      </div>
-                    );
-                  })
-              )}
-            </CardContent>
-          </Card>
+          <ScheduleCalendar
+            variations={variations}
+            onSelectVariation={setSelectedVariation}
+          />
         </TabsContent>
       </Tabs>
 

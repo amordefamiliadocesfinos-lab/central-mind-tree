@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { DigitalVariation, DIGITAL_STATUS, PLATFORMS } from '@/hooks/useDigital';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -9,9 +10,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
+import { MediaLibrary } from './MediaLibrary';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, Trash2, Calendar, BarChart3, CheckSquare, FileText, X, Plus } from 'lucide-react';
+import { ArrowLeft, Trash2, Calendar, BarChart3, CheckSquare, FileText, X, Plus, Copy, ImagePlus } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { toast } from 'sonner';
 
 interface VariationEditorProps {
   variation: DigitalVariation;
@@ -31,12 +35,27 @@ export function VariationEditor({
   onToggleChecklist,
 }: VariationEditorProps) {
   const isMobile = useIsMobile();
+  const [showMediaLibrary, setShowMediaLibrary] = useState(false);
   const platformConfig = PLATFORMS[variation.platform];
   const statusConfig = DIGITAL_STATUS[variation.status];
 
   const checklistProgress = variation.checklist?.length
     ? (variation.checklist.filter(c => c.done).length / variation.checklist.length) * 100
     : 0;
+
+  const handleCopyCaption = () => {
+    const parts: string[] = [];
+    if (variation.caption) parts.push(variation.caption);
+    if (variation.hashtags) parts.push('\n\n' + variation.hashtags);
+    
+    if (parts.length === 0) {
+      toast.error('Nenhum conteúdo para copiar');
+      return;
+    }
+    
+    navigator.clipboard.writeText(parts.join(''));
+    toast.success('Legenda copiada!');
+  };
 
   const handleMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -81,6 +100,17 @@ export function VariationEditor({
         </Button>
 
         <div className="flex items-center gap-2">
+          {/* Copy caption button */}
+          <Button
+            variant="outline"
+            size="icon"
+            className="h-9 w-9"
+            onClick={handleCopyCaption}
+            title="Copiar legenda e hashtags"
+          >
+            <Copy className="h-4 w-4" />
+          </Button>
+
           <Select
             value={variation.status}
             onValueChange={(value) => onUpdate(variation.id, { status: value as keyof typeof DIGITAL_STATUS })}
@@ -181,7 +211,18 @@ export function VariationEditor({
 
               {/* Media */}
               <div className="space-y-2">
-                <Label>Mídia</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Mídia</Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => setShowMediaLibrary(true)}
+                  >
+                    <ImagePlus className="h-3.5 w-3.5 mr-1" />
+                    Da Biblioteca
+                  </Button>
+                </div>
                 <div className="flex gap-2 flex-wrap">
                   {variation.media_urls?.map((url, i) => (
                     <div key={i} className="relative">
@@ -371,6 +412,27 @@ export function VariationEditor({
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Media Library Dialog */}
+      <ResponsiveDialog
+        open={showMediaLibrary}
+        onOpenChange={setShowMediaLibrary}
+        title="Selecionar da Biblioteca"
+      >
+        <div className="max-h-[60vh] overflow-auto">
+          <MediaLibrary
+            variationId={variation.id}
+            mode="select"
+            onSelect={(url) => {
+              onUpdate(variation.id, {
+                media_urls: [...(variation.media_urls || []), url],
+              });
+              setShowMediaLibrary(false);
+              toast.success('Mídia adicionada!');
+            }}
+          />
+        </div>
+      </ResponsiveDialog>
     </div>
   );
 }
