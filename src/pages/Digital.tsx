@@ -323,12 +323,15 @@ export default function Digital() {
               <Link2 className="h-4 w-4" />
               Vincular a Nó (opcional)
             </Label>
-            <Select value={newIdea.node_id} onValueChange={(v) => setNewIdea({ ...newIdea, node_id: v })}>
+            <Select 
+              value={newIdea.node_id || '__none__'} 
+              onValueChange={(v) => setNewIdea({ ...newIdea, node_id: v === '__none__' ? '' : v })}
+            >
               <SelectTrigger className="h-12">
                 <SelectValue placeholder="Selecione um nó..." />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhum</SelectItem>
+                <SelectItem value="__none__">Nenhum</SelectItem>
                 {nodes.map(node => (
                   <SelectItem key={node.id} value={node.id}>
                     <div className="flex items-center gap-2">
