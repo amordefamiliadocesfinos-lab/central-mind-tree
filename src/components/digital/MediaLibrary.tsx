@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,9 +55,9 @@ export function MediaLibrary({ ideaId, variationId, onSelect, mode = 'browse' }:
     setLoading(false);
   };
 
-  useState(() => {
+  useEffect(() => {
     fetchMedia();
-  });
+  }, [ideaId, variationId]);
 
   const handleUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;

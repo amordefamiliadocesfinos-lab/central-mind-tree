@@ -5,3 +5,4 @@ export { MediaLibrary } from './MediaLibrary';
 export { KanbanBoard } from './KanbanBoard';
 export { BatchVariationDialog } from './BatchVariationDialog';
 export { MetricsChart } from './MetricsChart';
+export { ScheduleCalendar } from './ScheduleCalendar';
