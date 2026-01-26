@@ -227,14 +227,14 @@ export function IdeaEditor({
                     Vinculado a Nó
                   </Label>
                   <Select
-                    value={idea.node_id || ''}
-                    onValueChange={(v) => onUpdate(idea.id, { node_id: v || null })}
+                    value={idea.node_id || '__none__'}
+                    onValueChange={(v) => onUpdate(idea.id, { node_id: v === '__none__' ? null : v })}
                   >
                     <SelectTrigger className="h-11">
                       <SelectValue placeholder="Nenhum nó vinculado" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Nenhum</SelectItem>
+                      <SelectItem value="__none__">Nenhum</SelectItem>
                       {nodes.map(node => (
                         <SelectItem key={node.id} value={node.id}>
                           <div className="flex items-center gap-2">
