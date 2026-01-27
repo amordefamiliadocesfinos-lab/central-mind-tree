@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { useProductionOrders, ProductionOrder, ProductionEntry, PRODUCTION_ORDER_STATUS } from '@/hooks/useProductionOrders';
 import { useProcesses, Process } from '@/hooks/useProcesses';
 import { useOrders, Product } from '@/hooks/useOrders';
+import { useInventoryMovements } from '@/hooks/useInventoryMovements';
 import { supabase } from '@/integrations/supabase/client';
 import { ResponsiveDialog, FullScreenDialog } from '@/components/ui/responsive-dialog';
 import { Button } from '@/components/ui/button';
@@ -16,14 +17,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { 
   Plus, Factory, Package, Users, CheckCircle2, 
-  ChevronRight, Clock, Trash2, Play, Check
+  ChevronRight, Clock, Trash2, Play, Check, Pencil, AlertTriangle, PackagePlus
 } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { BOMLine } from '@/hooks/useBOM';
 
 interface ProductionOrdersTabProps {
   products: Product[];
+}
+
+interface ShortageItem extends BOMLine {
+  adjustQuantity: number;
 }
 
 export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
@@ -37,13 +43,22 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
     deleteEntry,
     calculateConsolidation,
     completeOrder,
+    checkBOMShortages,
     getPaymentSummary,
   } = useProductionOrders();
   const { processes, activeProcesses } = useProcesses();
+  const { createMovement } = useInventoryMovements();
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<ProductionOrder | null>(null);
   const [showEntryForm, setShowEntryForm] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedOrderNumber, setEditedOrderNumber] = useState('');
+  
+  // Stock adjustment state
+  const [showShortageDialog, setShowShortageDialog] = useState(false);
+  const [shortageItems, setShortageItems] = useState<ShortageItem[]>([]);
+  const [pendingCompleteOrderId, setPendingCompleteOrderId] = useState<string | null>(null);
 
   // Create form state
   const [newOrder, setNewOrder] = useState({
@@ -142,8 +157,59 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
   };
 
   const handleCompleteOrder = async (order: ProductionOrder) => {
-    if (confirm('Concluir esta ordem de produção? Isso irá baixar os insumos e dar entrada no produto acabado.')) {
-      await completeOrder(order.id);
+    const result = await completeOrder(order.id);
+    
+    if (!result.success && result.shortages && result.shortages.length > 0) {
+      // Show shortage dialog with adjustment options
+      setShortageItems(result.shortages.map(s => ({
+        ...s,
+        adjustQuantity: s.shortage,
+      })));
+      setPendingCompleteOrderId(order.id);
+      setShowShortageDialog(true);
+      return;
+    }
+    
+    // Successfully completed
+    if (result.success) {
+      setSelectedOrder(null);
+    }
+  };
+
+  const handleAdjustStockAndComplete = async () => {
+    if (!pendingCompleteOrderId) return;
+
+    // Create stock adjustments for each shortage item
+    for (const item of shortageItems) {
+      if (item.adjustQuantity > 0) {
+        await createMovement(
+          item.component_id,
+          'in',
+          item.adjustQuantity,
+          `Ajuste para concluir OP - Estoque insuficiente`,
+          'production_order',
+          pendingCompleteOrderId
+        );
+      }
+    }
+
+    // Now complete the order with shortage check skipped
+    const result = await completeOrder(pendingCompleteOrderId, true);
+    
+    if (result.success) {
+      setShowShortageDialog(false);
+      setShortageItems([]);
+      setPendingCompleteOrderId(null);
+      setSelectedOrder(null);
+    }
+  };
+
+  const handleSaveOrderName = async () => {
+    if (!selectedOrder || !editedOrderNumber.trim()) return;
+    
+    const success = await updateOrder(selectedOrder.id, { order_number: editedOrderNumber.trim() });
+    if (success) {
+      setIsEditingName(false);
     }
   };
 
@@ -364,14 +430,51 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
       {/* Order Details Dialog */}
       <FullScreenDialog 
         open={!!selectedOrder} 
-        onOpenChange={(open) => !open && setSelectedOrder(null)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedOrder(null);
+            setIsEditingName(false);
+          }
+        }}
         title={selectedOrder?.order_number}
       >
         {selectedOrder && (
           <div className="p-4">
+            {/* Editable Order Name */}
             <div className="flex items-center gap-2 mb-4">
+              {isEditingName ? (
+                <div className="flex items-center gap-2 flex-1">
+                  <Input
+                    value={editedOrderNumber}
+                    onChange={(e) => setEditedOrderNumber(e.target.value)}
+                    className="h-8 font-medium"
+                    placeholder="Nome da OP"
+                    autoFocus
+                  />
+                  <Button size="sm" onClick={handleSaveOrderName}>
+                    <Check className="h-4 w-4" />
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setIsEditingName(false)}>
+                    Cancelar
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold">{selectedOrder.order_number}</span>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    onClick={() => {
+                      setEditedOrderNumber(selectedOrder.order_number || '');
+                      setIsEditingName(true);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
               <Badge className={cn(
-                "text-xs text-white",
+                "text-xs text-white ml-auto",
                 PRODUCTION_ORDER_STATUS[selectedOrder.status as keyof typeof PRODUCTION_ORDER_STATUS]?.color
               )}>
                 {PRODUCTION_ORDER_STATUS[selectedOrder.status as keyof typeof PRODUCTION_ORDER_STATUS]?.label}
@@ -691,6 +794,114 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
           >
             Registrar Lançamento
           </Button>
+        </div>
+      </ResponsiveDialog>
+
+      {/* Stock Shortage Dialog */}
+      <ResponsiveDialog 
+        open={showShortageDialog} 
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowShortageDialog(false);
+            setShortageItems([]);
+            setPendingCompleteOrderId(null);
+          }
+        }}
+        title="Estoque Insuficiente"
+      >
+        <div className="space-y-4 p-4 sm:p-0">
+          <div className="flex items-center gap-2 text-amber-600 mb-4">
+            <AlertTriangle className="h-5 w-5" />
+            <span className="font-medium">Materiais em falta para concluir esta OP</span>
+          </div>
+
+          <p className="text-sm text-muted-foreground">
+            Ajuste as quantidades abaixo para dar entrada no estoque antes de concluir a ordem.
+          </p>
+
+          <div className="space-y-3 max-h-64 overflow-y-auto">
+            {shortageItems.map((item, index) => (
+              <Card key={item.component_id}>
+                <CardContent className="p-3">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <p className="font-medium">{item.component_name}</p>
+                      <p className="text-xs text-muted-foreground">{item.component_sku}</p>
+                    </div>
+                    <Badge variant="destructive" className="text-xs">
+                      Falta: {item.shortage} {item.unit}
+                    </Badge>
+                  </div>
+                  <div className="grid grid-cols-3 gap-2 text-sm mb-2">
+                    <div>
+                      <span className="text-muted-foreground">Necessário:</span>
+                      <span className="ml-1 font-medium">{item.qty_needed}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Estoque:</span>
+                      <span className="ml-1 font-medium">{item.stock_available}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Falta:</span>
+                      <span className="ml-1 font-medium text-red-500">{item.shortage}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label className="text-xs whitespace-nowrap">Qtd. a adicionar:</Label>
+                    <Input
+                      type="number"
+                      className="h-8"
+                      value={item.adjustQuantity}
+                      onChange={(e) => {
+                        const newItems = [...shortageItems];
+                        newItems[index] = {
+                          ...item,
+                          adjustQuantity: parseFloat(e.target.value) || 0,
+                        };
+                        setShortageItems(newItems);
+                      }}
+                      min={0}
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const newItems = [...shortageItems];
+                        newItems[index] = {
+                          ...item,
+                          adjustQuantity: item.shortage,
+                        };
+                        setShortageItems(newItems);
+                      }}
+                    >
+                      = Falta
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <div className="flex gap-2 pt-4">
+            <Button 
+              variant="outline" 
+              className="flex-1"
+              onClick={() => {
+                setShowShortageDialog(false);
+                setShortageItems([]);
+                setPendingCompleteOrderId(null);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              className="flex-1 bg-green-600 hover:bg-green-700"
+              onClick={handleAdjustStockAndComplete}
+            >
+              <PackagePlus className="h-4 w-4 mr-2" />
+              Ajustar e Concluir OP
+            </Button>
+          </div>
         </div>
       </ResponsiveDialog>
     </div>
