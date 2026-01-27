@@ -60,6 +60,7 @@ export function OrderEditDialog({
   useEffect(() => {
     if (order) {
       setFormData({
+        order_number: order.order_number,
         customer_name: order.customer_name,
         customer_contact: order.customer_contact,
         channel: order.channel,
@@ -130,6 +131,17 @@ export function OrderEditDialog({
       title={`Editar Pedido #${order.order_number || order.id.slice(0, 8)}`}
     >
         <div className="space-y-4 p-4">
+          {/* Editable Order Number */}
+          <div>
+            <Label>Número do Pedido</Label>
+            <Input
+              className="h-12 font-medium"
+              value={formData.order_number || ''}
+              onChange={(e) => setFormData({ ...formData, order_number: e.target.value })}
+              placeholder="Ex: PED-001"
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Cliente</Label>
