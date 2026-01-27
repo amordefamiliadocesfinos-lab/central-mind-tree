@@ -1,20 +1,19 @@
-import { useState } from 'react';
-import { useDigital, DIGITAL_STATUS, PLATFORMS } from '@/hooks/useDigital';
-import { IdeaCard, IdeaEditor, KanbanBoard, MediaLibrary, MetricsChart, BatchVariationDialog } from '@/components/digital';
+import { useState, useEffect } from 'react';
+import { useDigital, DIGITAL_STATUS } from '@/hooks/useDigital';
+import { IdeaCard, IdeaEditor, KanbanBoard, MediaLibrary, MetricsChart, BatchVariationDialog, PlatformsManager } from '@/components/digital';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, ArrowLeft, Search, LayoutGrid, Columns3, Image, BarChart3, Link2 } from 'lucide-react';
+import { Plus, ArrowLeft, Search, LayoutGrid, Columns3, Image, BarChart3, Link2, Settings2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { useEffect } from 'react';
 
 interface Node {
   id: string;
@@ -44,13 +43,18 @@ export default function Digital() {
     batchCreateVariations,
     toggleVariationChecklist,
     allVariationsWithTitle,
+    // Dynamic platforms
+    activePlatforms,
+    groupedPlatforms,
+    GROUP_LABELS,
+    GROUP_ICONS,
   } = useDigital();
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedIdea, setSelectedIdea] = useState<string | null>(null);
   const [newIdea, setNewIdea] = useState({ title: '', objective: '', node_id: '' });
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
-  const [activeTab, setActiveTab] = useState<'ideias' | 'midia' | 'metricas'>('ideias');
+  const [activeTab, setActiveTab] = useState<'ideias' | 'midia' | 'metricas' | 'plataformas'>('ideias');
   const [kanbanMode, setKanbanMode] = useState<'ideas' | 'variations'>('ideas');
   const [nodes, setNodes] = useState<Node[]>([]);
   const isMobile = useIsMobile();
@@ -141,7 +145,7 @@ export default function Digital() {
         {!selectedIdea && (
           <div className="px-4 pb-2">
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-              <TabsList className="grid w-full grid-cols-3 h-9">
+              <TabsList className="grid w-full grid-cols-4 h-9">
                 <TabsTrigger value="ideias" className="text-xs">
                   <LayoutGrid className="h-3.5 w-3.5 mr-1" />
                   Ideias
@@ -153,6 +157,10 @@ export default function Digital() {
                 <TabsTrigger value="metricas" className="text-xs">
                   <BarChart3 className="h-3.5 w-3.5 mr-1" />
                   Métricas
+                </TabsTrigger>
+                <TabsTrigger value="plataformas" className="text-xs">
+                  <Settings2 className="h-3.5 w-3.5 mr-1" />
+                  Canais
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -196,13 +204,15 @@ export default function Digital() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todas</SelectItem>
-                  {Object.entries(PLATFORMS).map(([key, config]) => (
-                    <SelectItem key={key} value={key}>
-                      <div className="flex items-center gap-2">
-                        <span>{config.icon}</span>
-                        {config.label}
-                      </div>
-                    </SelectItem>
+                  {Object.entries(groupedPlatforms || {}).map(([group, platforms]) => (
+                    platforms.map(platform => (
+                      <SelectItem key={platform.id} value={platform.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{platform.icon}</span>
+                          {platform.name}
+                        </div>
+                      </SelectItem>
+                    ))
                   ))}
                 </SelectContent>
               </Select>
@@ -254,6 +264,7 @@ export default function Digital() {
             onBatchCreateVariations={batchCreateVariations}
             onToggleChecklist={toggleVariationChecklist}
             nodes={nodes}
+            platforms={activePlatforms}
           />
         ) : activeTab === 'ideias' ? (
           viewMode === 'kanban' ? (
@@ -280,6 +291,7 @@ export default function Digital() {
                     key={idea.id}
                     idea={idea}
                     onClick={() => setSelectedIdea(idea.id)}
+                    platforms={activePlatforms}
                   />
                 ))
               )}
@@ -287,8 +299,10 @@ export default function Digital() {
           )
         ) : activeTab === 'midia' ? (
           <MediaLibrary mode="browse" />
+        ) : activeTab === 'metricas' ? (
+          <MetricsChart variations={allVariationsWithTitle} platforms={activePlatforms} />
         ) : (
-          <MetricsChart variations={allVariationsWithTitle} />
+          <PlatformsManager />
         )}
       </main>
 

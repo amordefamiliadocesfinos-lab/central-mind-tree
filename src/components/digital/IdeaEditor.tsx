@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { DigitalIdea, DigitalVariation, DIGITAL_STATUS, PLATFORMS } from '@/hooks/useDigital';
+import { DigitalIdea, DigitalVariation, DIGITAL_STATUS } from '@/hooks/useDigital';
+import { Platform } from '@/hooks/usePlatforms';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -27,13 +28,14 @@ interface IdeaEditorProps {
   onBack: () => void;
   onUpdate: (id: string, updates: Partial<DigitalIdea>) => void;
   onDelete: (id: string) => void;
-  onCreateVariation: (ideaId: string, platform: keyof typeof PLATFORMS) => Promise<DigitalVariation | null>;
+  onCreateVariation: (ideaId: string, platformId: string) => Promise<DigitalVariation | null>;
   onUpdateVariation: (id: string, updates: Partial<DigitalVariation>) => void;
   onDeleteVariation: (id: string) => void;
-  onDuplicateVariation?: (variationId: string, targetPlatform?: keyof typeof PLATFORMS) => Promise<DigitalVariation | null>;
-  onBatchCreateVariations?: (ideaId: string, platforms: (keyof typeof PLATFORMS)[]) => Promise<(DigitalVariation | null)[]>;
+  onDuplicateVariation?: (variationId: string, targetPlatformId?: string) => Promise<DigitalVariation | null>;
+  onBatchCreateVariations?: (ideaId: string, platformIds: string[]) => Promise<(DigitalVariation | null)[]>;
   onToggleChecklist: (variationId: string, itemId: string) => void;
   nodes?: Node[];
+  platforms?: Platform[];
 }
 
 export function IdeaEditor({
@@ -48,6 +50,7 @@ export function IdeaEditor({
   onBatchCreateVariations,
   onToggleChecklist,
   nodes = [],
+  platforms = [],
 }: IdeaEditorProps) {
   const isMobile = useIsMobile();
   const [selectedVariation, setSelectedVariation] = useState<DigitalVariation | null>(null);
@@ -55,31 +58,34 @@ export function IdeaEditor({
   const [showBatchDialog, setShowBatchDialog] = useState(false);
   const [duplicatingVariation, setDuplicatingVariation] = useState<string | null>(null);
 
+  // Helper to get platform config
+  const getPlatform = (platformId: string) => platforms.find(p => p.id === platformId);
+
   const statusConfig = DIGITAL_STATUS[idea.status];
   const variations = idea.variations || [];
   const completedVariations = variations.filter(v => v.status === 'concluido').length;
   const progress = variations.length > 0 ? (completedVariations / variations.length) * 100 : 0;
 
   // Platforms not yet added
-  const availablePlatforms = Object.entries(PLATFORMS).filter(
-    ([key]) => !variations.some(v => v.platform === key)
+  const availablePlatforms = platforms.filter(
+    p => p.is_active && !variations.some(v => v.platform === p.id)
   );
-  const existingPlatforms = variations.map(v => v.platform);
+  const existingPlatformIds = variations.map(v => v.platform);
 
-  const handleAddPlatform = async (platform: keyof typeof PLATFORMS) => {
-    await onCreateVariation(idea.id, platform);
+  const handleAddPlatform = async (platformId: string) => {
+    await onCreateVariation(idea.id, platformId);
     setShowAddPlatform(false);
   };
 
-  const handleBatchCreate = async (platforms: string[]) => {
+  const handleBatchCreate = async (platformIds: string[]) => {
     if (onBatchCreateVariations) {
-      await onBatchCreateVariations(idea.id, platforms as (keyof typeof PLATFORMS)[]);
+      await onBatchCreateVariations(idea.id, platformIds);
     }
   };
 
-  const handleDuplicate = async (variationId: string, targetPlatform?: keyof typeof PLATFORMS) => {
+  const handleDuplicate = async (variationId: string, targetPlatformId?: string) => {
     if (onDuplicateVariation) {
-      await onDuplicateVariation(variationId, targetPlatform);
+      await onDuplicateVariation(variationId, targetPlatformId);
       setDuplicatingVariation(null);
     }
   };
@@ -262,15 +268,15 @@ export function IdeaEditor({
                     <CardTitle className="text-sm">Selecione a Plataforma</CardTitle>
                   </CardHeader>
                   <CardContent className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {availablePlatforms.map(([key, platform]) => (
+                    {availablePlatforms.map((platform) => (
                       <Button
-                        key={key}
+                        key={platform.id}
                         variant="outline"
                         className="h-auto py-3 flex-col gap-1"
-                        onClick={() => handleAddPlatform(key as keyof typeof PLATFORMS)}
+                        onClick={() => handleAddPlatform(platform.id)}
                       >
                         <span className="text-xl">{platform.icon}</span>
-                        <span className="text-xs">{platform.label}</span>
+                        <span className="text-xs">{platform.name}</span>
                       </Button>
                     ))}
                     <Button
@@ -320,7 +326,7 @@ export function IdeaEditor({
           ) : (
             <div className="space-y-2">
               {variations.map((variation) => {
-                const platformConfig = PLATFORMS[variation.platform];
+                const platformConfig = getPlatform(variation.platform);
                 const variationStatusConfig = DIGITAL_STATUS[variation.status];
                 const checklistProgress = variation.checklist?.length
                   ? (variation.checklist.filter(c => c.done).length / variation.checklist.length) * 100
@@ -341,11 +347,11 @@ export function IdeaEditor({
                           className="flex items-center gap-3 min-w-0 flex-1"
                           onClick={() => setSelectedVariation(variation)}
                         >
-                          <span className="text-2xl">{platformConfig?.icon}</span>
+                          <span className="text-2xl">{platformConfig?.icon || '📱'}</span>
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="font-medium truncate">
-                                {platformConfig?.label}
+                                {platformConfig?.name || 'Plataforma'}
                               </span>
                               <Badge
                                 variant="secondary"
@@ -401,18 +407,18 @@ export function IdeaEditor({
                                   >
                                     Duplicar mesma plataforma
                                   </Button>
-                                  {availablePlatforms.slice(0, 3).map(([key, config]) => (
+                                  {availablePlatforms.slice(0, 3).map((platform) => (
                                     <Button
-                                      key={key}
+                                      key={platform.id}
                                       variant="ghost"
                                       size="sm"
                                       className="w-full justify-start text-xs"
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        handleDuplicate(variation.id, key as keyof typeof PLATFORMS);
+                                        handleDuplicate(variation.id, platform.id);
                                       }}
                                     >
-                                      {config.icon} {config.label}
+                                      {platform.icon} {platform.name}
                                     </Button>
                                   ))}
                                 </Card>
@@ -443,7 +449,8 @@ export function IdeaEditor({
         open={showBatchDialog}
         onOpenChange={setShowBatchDialog}
         onConfirm={handleBatchCreate}
-        existingPlatforms={existingPlatforms}
+        existingPlatforms={existingPlatformIds}
+        platforms={platforms}
       />
     </div>
   );
