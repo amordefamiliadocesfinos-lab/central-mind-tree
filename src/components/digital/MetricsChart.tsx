@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import { DigitalVariation } from '@/hooks/useDigital';
+import { Platform } from '@/hooks/usePlatforms';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { format, parseISO } from 'date-fns';
@@ -8,9 +9,10 @@ import { TrendingUp, Eye, MousePointer, Users } from 'lucide-react';
 
 interface MetricsChartProps {
   variations: (DigitalVariation & { ideaTitle: string })[];
+  platforms?: Platform[];
 }
 
-export function MetricsChart({ variations }: MetricsChartProps) {
+export function MetricsChart({ variations, platforms = [] }: MetricsChartProps) {
   // Filter variations with metrics and scheduled dates
   const variationsWithMetrics = useMemo(() => {
     return variations

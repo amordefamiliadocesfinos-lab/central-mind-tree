@@ -593,6 +593,51 @@ export type Database = {
           },
         ]
       }
+      digital_platforms: {
+        Row: {
+          aspect_ratio: string | null
+          checklist_template: Json | null
+          created_at: string
+          duration: string | null
+          fields: string[] | null
+          group_type: string
+          icon: string
+          id: string
+          is_active: boolean
+          name: string
+          order_index: number
+          updated_at: string
+        }
+        Insert: {
+          aspect_ratio?: string | null
+          checklist_template?: Json | null
+          created_at?: string
+          duration?: string | null
+          fields?: string[] | null
+          group_type?: string
+          icon?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          order_index?: number
+          updated_at?: string
+        }
+        Update: {
+          aspect_ratio?: string | null
+          checklist_template?: Json | null
+          created_at?: string
+          duration?: string | null
+          fields?: string[] | null
+          group_type?: string
+          icon?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          order_index?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       digital_templates: {
         Row: {
           checklist_template: Json | null

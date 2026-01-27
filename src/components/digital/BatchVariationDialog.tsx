@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { PLATFORMS } from '@/hooks/useDigital';
+import { useState, useMemo } from 'react';
+import { Platform, GROUP_LABELS } from '@/hooks/usePlatforms';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -10,28 +10,41 @@ import { cn } from '@/lib/utils';
 interface BatchVariationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: (platforms: string[]) => void;
+  onConfirm: (platformIds: string[]) => void;
   existingPlatforms?: string[];
+  platforms?: Platform[];
 }
 
-const PLATFORM_GROUPS = {
-  instagram: { label: 'Instagram', platforms: ['instagram_feed', 'instagram_reels', 'instagram_stories'] },
-  youtube: { label: 'YouTube', platforms: ['youtube_long', 'youtube_shorts'] },
-  tiktok: { label: 'TikTok', platforms: ['tiktok'] },
-  facebook: { label: 'Facebook', platforms: ['facebook_post', 'facebook_video', 'facebook_carousel'] },
-};
-
-export function BatchVariationDialog({ open, onOpenChange, onConfirm, existingPlatforms = [] }: BatchVariationDialogProps) {
+export function BatchVariationDialog({ 
+  open, 
+  onOpenChange, 
+  onConfirm, 
+  existingPlatforms = [],
+  platforms = [],
+}: BatchVariationDialogProps) {
   const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([]);
 
-  const togglePlatform = (platform: string) => {
+  // Group platforms by group_type
+  const groupedPlatforms = useMemo(() => {
+    return platforms.reduce((acc, p) => {
+      const group = p.group_type || 'other';
+      if (!acc[group]) acc[group] = [];
+      acc[group].push(p);
+      return acc;
+    }, {} as Record<string, Platform[]>);
+  }, [platforms]);
+
+  const togglePlatform = (platformId: string) => {
     setSelectedPlatforms(prev =>
-      prev.includes(platform) ? prev.filter(p => p !== platform) : [...prev, platform]
+      prev.includes(platformId) ? prev.filter(p => p !== platformId) : [...prev, platformId]
     );
   };
 
-  const toggleGroup = (group: keyof typeof PLATFORM_GROUPS) => {
-    const groupPlatforms = PLATFORM_GROUPS[group].platforms.filter(p => !existingPlatforms.includes(p));
+  const toggleGroup = (groupKey: string) => {
+    const groupPlatforms = (groupedPlatforms[groupKey] || [])
+      .filter(p => p.is_active && !existingPlatforms.includes(p.id))
+      .map(p => p.id);
+    
     const allSelected = groupPlatforms.every(p => selectedPlatforms.includes(p));
     
     if (allSelected) {
@@ -47,6 +60,8 @@ export function BatchVariationDialog({ open, onOpenChange, onConfirm, existingPl
     onOpenChange(false);
   };
 
+  const groupOrder = ['social', 'ecommerce', 'marketplace', 'other'];
+
   return (
     <ResponsiveDialog
       open={open}
@@ -58,12 +73,16 @@ export function BatchVariationDialog({ open, onOpenChange, onConfirm, existingPl
           Selecione as plataformas para criar variações automaticamente:
         </p>
 
-        {Object.entries(PLATFORM_GROUPS).map(([groupKey, group]) => {
-          const availablePlatforms = group.platforms.filter(p => !existingPlatforms.includes(p));
+        {groupOrder.map(groupKey => {
+          const groupPlatforms = groupedPlatforms[groupKey] || [];
+          const availablePlatforms = groupPlatforms.filter(
+            p => p.is_active && !existingPlatforms.includes(p.id)
+          );
+          
           if (availablePlatforms.length === 0) return null;
 
-          const allSelected = availablePlatforms.every(p => selectedPlatforms.includes(p));
-          const someSelected = availablePlatforms.some(p => selectedPlatforms.includes(p));
+          const allSelected = availablePlatforms.every(p => selectedPlatforms.includes(p.id));
+          const someSelected = availablePlatforms.some(p => selectedPlatforms.includes(p.id));
 
           return (
             <div key={groupKey} className="space-y-3">
@@ -76,41 +95,41 @@ export function BatchVariationDialog({ open, onOpenChange, onConfirm, existingPl
                       (el as any).indeterminate = someSelected && !allSelected;
                     }
                   }}
-                  onCheckedChange={() => toggleGroup(groupKey as keyof typeof PLATFORM_GROUPS)}
+                  onCheckedChange={() => toggleGroup(groupKey)}
                 />
                 <Label htmlFor={groupKey} className="font-medium cursor-pointer">
-                  {group.label}
+                  {GROUP_LABELS[groupKey] || groupKey}
                 </Label>
                 {someSelected && (
                   <Badge variant="secondary" className="text-xs">
-                    {availablePlatforms.filter(p => selectedPlatforms.includes(p)).length}/{availablePlatforms.length}
+                    {availablePlatforms.filter(p => selectedPlatforms.includes(p.id)).length}/{availablePlatforms.length}
                   </Badge>
                 )}
               </div>
 
               <div className="grid grid-cols-2 gap-2 pl-6">
-                {group.platforms.map(platform => {
-                  const config = PLATFORMS[platform];
-                  const exists = existingPlatforms.includes(platform);
-                  const isSelected = selectedPlatforms.includes(platform);
+                {groupPlatforms.map(platform => {
+                  const exists = existingPlatforms.includes(platform.id);
+                  const isSelected = selectedPlatforms.includes(platform.id);
+                  const isDisabled = exists || !platform.is_active;
 
                   return (
                     <div
-                      key={platform}
+                      key={platform.id}
                       className={cn(
                         'flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-all',
-                        exists ? 'opacity-50 cursor-not-allowed bg-muted' :
+                        isDisabled ? 'opacity-50 cursor-not-allowed bg-muted' :
                         isSelected ? 'border-primary bg-primary/5' : 'hover:bg-muted'
                       )}
-                      onClick={() => !exists && togglePlatform(platform)}
+                      onClick={() => !isDisabled && togglePlatform(platform.id)}
                     >
                       <Checkbox
                         checked={isSelected}
-                        disabled={exists}
-                        onCheckedChange={() => togglePlatform(platform)}
+                        disabled={isDisabled}
+                        onCheckedChange={() => togglePlatform(platform.id)}
                       />
-                      <span className="text-lg">{config?.icon}</span>
-                      <span className="text-sm flex-1 truncate">{config?.label}</span>
+                      <span className="text-lg">{platform.icon}</span>
+                      <span className="text-sm flex-1 truncate">{platform.name}</span>
                       {exists && (
                         <Badge variant="outline" className="text-xs">
                           Existe
@@ -123,6 +142,12 @@ export function BatchVariationDialog({ open, onOpenChange, onConfirm, existingPl
             </div>
           );
         })}
+
+        {platforms.length === 0 && (
+          <p className="text-center text-muted-foreground py-4">
+            Nenhuma plataforma configurada.
+          </p>
+        )}
 
         <div className="flex gap-3 pt-4">
           <Button variant="outline" className="flex-1" onClick={() => onOpenChange(false)}>

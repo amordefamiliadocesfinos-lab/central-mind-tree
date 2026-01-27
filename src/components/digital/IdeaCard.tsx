@@ -1,4 +1,5 @@
-import { DigitalIdea, DIGITAL_STATUS, PLATFORMS } from '@/hooks/useDigital';
+import { DigitalIdea, DIGITAL_STATUS } from '@/hooks/useDigital';
+import { Platform } from '@/hooks/usePlatforms';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -8,20 +9,19 @@ import { Calendar, ChevronRight } from 'lucide-react';
 interface IdeaCardProps {
   idea: DigitalIdea;
   onClick: () => void;
+  platforms?: Platform[];
 }
 
-export function IdeaCard({ idea, onClick }: IdeaCardProps) {
+export function IdeaCard({ idea, onClick, platforms = [] }: IdeaCardProps) {
   const statusConfig = DIGITAL_STATUS[idea.status];
   const variations = idea.variations || [];
+  
+  // Helper to get platform config
+  const getPlatform = (platformId: string) => platforms.find(p => p.id === platformId);
   
   // Calculate progress
   const completedVariations = variations.filter(v => v.status === 'concluido').length;
   const progress = variations.length > 0 ? (completedVariations / variations.length) * 100 : 0;
-
-  // Group variations by platform group
-  const platformGroups = new Set(
-    variations.map(v => PLATFORMS[v.platform]?.group).filter(Boolean)
-  );
 
   // Get next scheduled variation
   const nextScheduled = variations
@@ -61,18 +61,21 @@ export function IdeaCard({ idea, onClick }: IdeaCardProps) {
             {variations.length > 0 && (
               <div className="flex items-center gap-2 flex-wrap">
                 <div className="flex gap-1">
-                  {variations.map(v => (
-                    <span
-                      key={v.id}
-                      className={cn(
-                        'text-base',
-                        v.status === 'concluido' ? 'opacity-50' : ''
-                      )}
-                      title={`${PLATFORMS[v.platform]?.label} - ${DIGITAL_STATUS[v.status]?.label}`}
-                    >
-                      {PLATFORMS[v.platform]?.icon}
-                    </span>
-                  ))}
+                  {variations.map(v => {
+                    const platform = getPlatform(v.platform);
+                    return (
+                      <span
+                        key={v.id}
+                        className={cn(
+                          'text-base',
+                          v.status === 'concluido' ? 'opacity-50' : ''
+                        )}
+                        title={`${platform?.name || 'Plataforma'} - ${DIGITAL_STATUS[v.status]?.label}`}
+                      >
+                        {platform?.icon || '📱'}
+                      </span>
+                    );
+                  })}
                 </div>
                 
                 {/* Progress */}

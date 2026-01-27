@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { usePlatforms, Platform } from './usePlatforms';
 
 // Status hierarchy matching tasks system
 export const DIGITAL_STATUS = {
@@ -10,7 +11,8 @@ export const DIGITAL_STATUS = {
   concluido: { label: 'Concluído', color: 'bg-green-500', priority: 4 },
 };
 
-interface PlatformConfig {
+// Legacy PLATFORMS object for backwards compatibility - will be replaced by dynamic platforms
+export const PLATFORMS: Record<string, {
   label: string;
   icon: string;
   group: string;
@@ -18,126 +20,7 @@ interface PlatformConfig {
   duration?: string;
   fields: string[];
   checklist: { id: string; text: string }[];
-}
-
-export const PLATFORMS: Record<string, PlatformConfig> = {
-  instagram_feed: {
-    label: 'Instagram Feed',
-    icon: '📷',
-    group: 'instagram',
-    aspectRatio: '1:1 / 4:5',
-    fields: ['caption', 'hashtags', 'cta', 'cover_url'],
-    checklist: [
-      { id: 'img-size', text: 'Imagem 1080x1080 ou 1080x1350?' },
-      { id: 'caption', text: 'Legenda otimizada?' },
-      { id: 'hashtags', text: 'Hashtags relevantes (max 30)?' },
-      { id: 'cta', text: 'CTA incluído?' },
-    ],
-  },
-  instagram_reels: {
-    label: 'Instagram Reels',
-    icon: '🎬',
-    group: 'instagram',
-    aspectRatio: '9:16',
-    duration: '15-90s',
-    fields: ['caption', 'hashtags', 'cta', 'cover_url', 'music'],
-    checklist: [
-      { id: 'vertical', text: 'Vídeo vertical 9:16?' },
-      { id: 'duration', text: 'Duração entre 15-90s?' },
-      { id: 'cover', text: 'Capa personalizada?' },
-      { id: 'music', text: 'Música adicionada?' },
-    ],
-  },
-  instagram_stories: {
-    label: 'Instagram Stories',
-    icon: '📱',
-    group: 'instagram',
-    aspectRatio: '9:16',
-    duration: '15s',
-    fields: ['caption', 'cta', 'link'],
-    checklist: [
-      { id: 'vertical', text: 'Formato vertical 9:16?' },
-      { id: 'cta', text: 'Sticker de CTA?' },
-      { id: 'link', text: 'Link adicionado?' },
-    ],
-  },
-  youtube_long: {
-    label: 'YouTube Long',
-    icon: '📺',
-    group: 'youtube',
-    aspectRatio: '16:9',
-    fields: ['title', 'description', 'tags', 'thumbnail_url', 'cta', 'chapters', 'playlist'],
-    checklist: [
-      { id: 'thumb', text: 'Thumbnail atrativa (1280x720)?' },
-      { id: 'title', text: 'Título otimizado (max 60 chars)?' },
-      { id: 'desc', text: 'Descrição com links e capítulos?' },
-      { id: 'tags', text: 'Tags relevantes?' },
-      { id: 'cta', text: 'CTA no final?' },
-      { id: 'end-screen', text: 'End screen configurado?' },
-    ],
-  },
-  youtube_shorts: {
-    label: 'YouTube Shorts',
-    icon: '⚡',
-    group: 'youtube',
-    aspectRatio: '9:16',
-    duration: '60s max',
-    fields: ['title', 'description', 'tags', 'cta'],
-    checklist: [
-      { id: 'vertical', text: 'Vídeo vertical 9:16?' },
-      { id: 'duration', text: 'Máximo 60 segundos?' },
-      { id: 'hook', text: 'Hook nos primeiros 3s?' },
-      { id: 'title', text: 'Título com #shorts?' },
-    ],
-  },
-  tiktok: {
-    label: 'TikTok',
-    icon: '🎵',
-    group: 'tiktok',
-    aspectRatio: '9:16',
-    fields: ['caption', 'hashtags', 'music', 'cta', 'cover_url'],
-    checklist: [
-      { id: 'vertical', text: 'Vídeo vertical 9:16?' },
-      { id: 'hook', text: 'Hook nos primeiros 2s?' },
-      { id: 'music', text: 'Música viral adicionada?' },
-      { id: 'hashtags', text: 'Hashtags virais?' },
-      { id: 'cta', text: 'CTA no final?' },
-    ],
-  },
-  facebook_post: {
-    label: 'Facebook Post',
-    icon: '📘',
-    group: 'facebook',
-    fields: ['caption', 'link', 'cta'],
-    checklist: [
-      { id: 'text', text: 'Texto envolvente?' },
-      { id: 'link', text: 'Link preview ok?' },
-      { id: 'cta', text: 'CTA claro?' },
-    ],
-  },
-  facebook_video: {
-    label: 'Facebook Vídeo',
-    icon: '🎥',
-    group: 'facebook',
-    aspectRatio: '16:9 / 9:16',
-    fields: ['title', 'description', 'cta'],
-    checklist: [
-      { id: 'thumb', text: 'Thumbnail atrativa?' },
-      { id: 'captions', text: 'Legendas automáticas?' },
-      { id: 'cta', text: 'CTA no vídeo?' },
-    ],
-  },
-  facebook_carousel: {
-    label: 'Facebook Carrossel',
-    icon: '🎠',
-    group: 'facebook',
-    fields: ['caption', 'link', 'cta'],
-    checklist: [
-      { id: 'cards', text: 'Mínimo 2 cards?' },
-      { id: 'cta', text: 'CTA por card?' },
-    ],
-  },
-};
+}> = {};
 
 export interface DigitalIdea {
   id: string;
@@ -197,6 +80,21 @@ export function useDigital() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [platformFilter, setPlatformFilter] = useState<string>('all');
+  
+  // Use dynamic platforms
+  const { 
+    platforms, 
+    activePlatforms, 
+    platformsMap, 
+    loading: platformsLoading,
+    createPlatform,
+    updatePlatform: updatePlatformFn,
+    deletePlatform,
+    toggleActive,
+    groupedPlatforms,
+    GROUP_LABELS,
+    GROUP_ICONS,
+  } = usePlatforms();
 
   const fetchIdeas = useCallback(async () => {
     const { data, error } = await supabase
@@ -281,21 +179,22 @@ export function useDigital() {
     fetchIdeas();
   }, [fetchIdeas]);
 
-  // Variations
-  const createVariation = useCallback(async (ideaId: string, platform: keyof typeof PLATFORMS) => {
-    const platformConfig = PLATFORMS[platform];
-    const defaultChecklist = platformConfig.checklist.map(item => ({
+  // Variations - now uses dynamic platforms
+  const createVariation = useCallback(async (ideaId: string, platformId: string) => {
+    // Find platform config from dynamic platforms
+    const platform = activePlatforms.find(p => p.id === platformId);
+    const defaultChecklist = platform?.checklist_template.map(item => ({
       ...item,
       done: false,
-    }));
+    })) || [];
 
     const { data, error } = await supabase
       .from('digital_variations')
       .insert({
         idea_id: ideaId,
-        platform,
+        platform: platformId,
         status: 'pendente',
-        aspect_ratio: platformConfig.aspectRatio || null,
+        aspect_ratio: platform?.aspect_ratio || null,
         checklist: defaultChecklist,
         media_urls: [],
       })
@@ -307,10 +206,10 @@ export function useDigital() {
       return null;
     }
 
-    toast.success(`Variação ${platformConfig.label} criada!`);
+    toast.success(`Variação ${platform?.name || 'Nova'} criada!`);
     fetchIdeas();
     return data as DigitalVariation;
-  }, [fetchIdeas]);
+  }, [fetchIdeas, activePlatforms]);
 
   const updateVariation = useCallback(async (id: string, updates: Partial<DigitalVariation>) => {
     const { error } = await supabase
@@ -341,33 +240,33 @@ export function useDigital() {
     fetchIdeas();
   }, [fetchIdeas]);
 
-  // Duplicate variation
-  const duplicateVariation = useCallback(async (variationId: string, targetPlatform?: keyof typeof PLATFORMS) => {
+  // Duplicate variation - now uses dynamic platforms
+  const duplicateVariation = useCallback(async (variationId: string, targetPlatformId?: string) => {
     const idea = ideas.find(i => i.variations?.some(v => v.id === variationId));
     const variation = idea?.variations?.find(v => v.id === variationId);
     if (!variation) return null;
 
-    const platform = targetPlatform || variation.platform;
-    const platformConfig = PLATFORMS[platform];
-    const defaultChecklist = platformConfig.checklist.map(item => ({
+    const platformId = targetPlatformId || variation.platform;
+    const platform = activePlatforms.find(p => p.id === platformId);
+    const defaultChecklist = platform?.checklist_template.map(item => ({
       ...item,
       done: false,
-    }));
+    })) || [];
 
     const { data, error } = await supabase
       .from('digital_variations')
       .insert({
         idea_id: variation.idea_id,
-        platform,
+        platform: platformId,
         status: 'pendente',
         title: variation.title,
         description: variation.description,
         caption: variation.caption,
         hashtags: variation.hashtags,
         cta: variation.cta,
-        aspect_ratio: platformConfig.aspectRatio || variation.aspect_ratio,
+        aspect_ratio: platform?.aspect_ratio || variation.aspect_ratio,
         checklist: defaultChecklist,
-        media_urls: targetPlatform ? [] : variation.media_urls,
+        media_urls: targetPlatformId ? [] : variation.media_urls,
       })
       .select()
       .single();
@@ -377,15 +276,15 @@ export function useDigital() {
       return null;
     }
 
-    toast.success(`Variação duplicada para ${platformConfig.label}!`);
+    toast.success(`Variação duplicada para ${platform?.name || 'Nova'}!`);
     fetchIdeas();
     return data as DigitalVariation;
-  }, [fetchIdeas, ideas]);
+  }, [fetchIdeas, ideas, activePlatforms]);
 
-  // Batch create variations
-  const batchCreateVariations = useCallback(async (ideaId: string, platforms: (keyof typeof PLATFORMS)[]) => {
+  // Batch create variations - now uses dynamic platforms
+  const batchCreateVariations = useCallback(async (ideaId: string, platformIds: string[]) => {
     const results = await Promise.all(
-      platforms.map(platform => createVariation(ideaId, platform))
+      platformIds.map(platformId => createVariation(ideaId, platformId))
     );
     return results.filter(Boolean);
   }, [createVariation]);
@@ -489,7 +388,7 @@ export function useDigital() {
   return {
     ideas,
     filteredIdeas,
-    loading,
+    loading: loading || platformsLoading,
     searchQuery,
     setSearchQuery,
     statusFilter,
@@ -511,5 +410,16 @@ export function useDigital() {
     refetch: fetchIdeas,
     DIGITAL_STATUS,
     PLATFORMS,
+    // Dynamic platforms
+    platforms,
+    activePlatforms,
+    platformsMap,
+    groupedPlatforms,
+    createPlatform,
+    updatePlatform: updatePlatformFn,
+    deletePlatform,
+    togglePlatformActive: toggleActive,
+    GROUP_LABELS,
+    GROUP_ICONS,
   };
 }
