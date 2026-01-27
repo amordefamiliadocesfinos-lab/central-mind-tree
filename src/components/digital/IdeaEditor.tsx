@@ -99,6 +99,7 @@ export function IdeaEditor({
         onUpdate={onUpdateVariation}
         onDelete={onDeleteVariation}
         onToggleChecklist={onToggleChecklist}
+        platforms={platforms}
       />
     );
   }

@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { DigitalVariation, DIGITAL_STATUS, PLATFORMS } from '@/hooks/useDigital';
+import { DigitalVariation, DIGITAL_STATUS } from '@/hooks/useDigital';
+import { Platform } from '@/hooks/usePlatforms';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -24,6 +25,7 @@ interface VariationEditorProps {
   onUpdate: (id: string, updates: Partial<DigitalVariation>) => void;
   onDelete: (id: string) => void;
   onToggleChecklist: (variationId: string, itemId: string) => void;
+  platforms?: Platform[];
 }
 
 export function VariationEditor({
@@ -33,10 +35,13 @@ export function VariationEditor({
   onUpdate,
   onDelete,
   onToggleChecklist,
+  platforms = [],
 }: VariationEditorProps) {
   const isMobile = useIsMobile();
   const [showMediaLibrary, setShowMediaLibrary] = useState(false);
-  const platformConfig = PLATFORMS[variation.platform];
+  
+  // Find the platform from dynamic platforms list
+  const platformConfig = platforms.find(p => p.id === variation.platform);
   const statusConfig = DIGITAL_STATUS[variation.status];
 
   const checklistProgress = variation.checklist?.length
@@ -145,16 +150,16 @@ export function VariationEditor({
       <Card className="bg-muted/50">
         <CardContent className="p-3">
           <div className="flex items-center gap-3">
-            <span className="text-3xl">{platformConfig?.icon}</span>
+            <span className="text-3xl">{platformConfig?.icon || '📱'}</span>
             <div>
-              <h2 className="font-semibold">{platformConfig?.label}</h2>
+              <h2 className="font-semibold">{platformConfig?.name || 'Plataforma'}</h2>
               <p className="text-sm text-muted-foreground">{ideaTitle}</p>
             </div>
           </div>
-          {'aspectRatio' in platformConfig && platformConfig.aspectRatio && (
+          {platformConfig?.aspect_ratio && (
             <div className="mt-2 flex gap-2 text-xs text-muted-foreground">
-              <Badge variant="outline">{platformConfig.aspectRatio}</Badge>
-              {'duration' in platformConfig && platformConfig.duration && (
+              <Badge variant="outline">{platformConfig.aspect_ratio}</Badge>
+              {platformConfig?.duration && (
                 <Badge variant="outline">{platformConfig.duration}</Badge>
               )}
             </div>
@@ -183,7 +188,7 @@ export function VariationEditor({
           <Card>
             <CardContent className="p-4 space-y-4">
               {/* Dynamic fields based on platform */}
-              {platformConfig?.fields.map((field) => {
+              {(platformConfig?.fields || ['caption', 'cta']).map((field) => {
                 const value = (variation as any)[field] || '';
                 const isTextarea = ['description', 'caption', 'chapters'].includes(field);
 
@@ -322,7 +327,7 @@ export function VariationEditor({
                 <div className="space-y-2">
                   <Label>Aspecto</Label>
                   <Input
-                    value={variation.aspect_ratio || ('aspectRatio' in platformConfig ? platformConfig.aspectRatio : '') || ''}
+                    value={variation.aspect_ratio || platformConfig?.aspect_ratio || ''}
                     onChange={(e) => onUpdate(variation.id, { aspect_ratio: e.target.value })}
                     placeholder="Ex: 16:9, 9:16, 1:1"
                     className="h-11"
