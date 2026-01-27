@@ -1000,6 +1000,7 @@ export type Database = {
         Row: {
           account_id: string | null
           category_id: string | null
+          competence_date: string | null
           conciliated_at: string | null
           contact_id: string | null
           created_at: string
@@ -1008,9 +1009,16 @@ export type Database = {
           due_date: string
           id: string
           is_conciliated: boolean
+          issue_date: string | null
           notes: string | null
           order_id: string | null
+          original_due_date: string | null
+          parent_entry_id: string | null
           payment_date: string | null
+          recurrence_day: number | null
+          recurrence_end_date: string | null
+          recurrence_type: string | null
+          recurrence_use_business_days: boolean | null
           type: string
           updated_at: string
           value: number
@@ -1019,6 +1027,7 @@ export type Database = {
         Insert: {
           account_id?: string | null
           category_id?: string | null
+          competence_date?: string | null
           conciliated_at?: string | null
           contact_id?: string | null
           created_at?: string
@@ -1027,9 +1036,16 @@ export type Database = {
           due_date: string
           id?: string
           is_conciliated?: boolean
+          issue_date?: string | null
           notes?: string | null
           order_id?: string | null
+          original_due_date?: string | null
+          parent_entry_id?: string | null
           payment_date?: string | null
+          recurrence_day?: number | null
+          recurrence_end_date?: string | null
+          recurrence_type?: string | null
+          recurrence_use_business_days?: boolean | null
           type: string
           updated_at?: string
           value: number
@@ -1038,6 +1054,7 @@ export type Database = {
         Update: {
           account_id?: string | null
           category_id?: string | null
+          competence_date?: string | null
           conciliated_at?: string | null
           contact_id?: string | null
           created_at?: string
@@ -1046,9 +1063,16 @@ export type Database = {
           due_date?: string
           id?: string
           is_conciliated?: boolean
+          issue_date?: string | null
           notes?: string | null
           order_id?: string | null
+          original_due_date?: string | null
+          parent_entry_id?: string | null
           payment_date?: string | null
+          recurrence_day?: number | null
+          recurrence_end_date?: string | null
+          recurrence_type?: string | null
+          recurrence_use_business_days?: boolean | null
           type?: string
           updated_at?: string
           value?: number
@@ -1081,6 +1105,13 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entries_parent_entry_id_fkey"
+            columns: ["parent_entry_id"]
+            isOneToOne: false
+            referencedRelation: "financial_entries"
             referencedColumns: ["id"]
           },
         ]
