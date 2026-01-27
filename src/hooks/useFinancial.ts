@@ -43,6 +43,15 @@ export interface FinancialEntry {
   category?: FinancialCategory;
   account?: FinancialAccount;
   contact?: { id: string; name: string };
+  // Recurrence fields
+  recurrence_type?: string;
+  recurrence_day?: number;
+  recurrence_end_date?: string;
+  recurrence_use_business_days?: boolean;
+  parent_entry_id?: string;
+  original_due_date?: string;
+  issue_date?: string;
+  competence_date?: string;
 }
 
 export interface FinancialMovement {
@@ -187,7 +196,7 @@ export function useFinancial() {
     setLoading(false);
   }, [filters]);
 
-  const createEntry = async (entry: Omit<FinancialEntry, 'id' | 'value_paid' | 'is_conciliated' | 'created_at' | 'updated_at'>) => {
+  const createEntry = async (entry: Omit<FinancialEntry, 'id' | 'value_paid' | 'is_conciliated' | 'created_at' | 'updated_at'> & { saveAndPay?: boolean }) => {
     const { data, error } = await supabase
       .from('financial_entries')
       .insert({
@@ -202,6 +211,13 @@ export function useFinancial() {
         order_id: entry.order_id,
         document_number: entry.document_number,
         notes: entry.notes,
+        recurrence_type: entry.recurrence_type,
+        recurrence_day: entry.recurrence_day,
+        recurrence_end_date: entry.recurrence_end_date,
+        recurrence_use_business_days: entry.recurrence_use_business_days,
+        issue_date: entry.issue_date,
+        competence_date: entry.competence_date,
+        original_due_date: entry.due_date,
       })
       .select()
       .single();
@@ -209,6 +225,11 @@ export function useFinancial() {
     if (error) {
       console.error('Error creating entry:', error);
       throw error;
+    }
+
+    // If saveAndPay is true, register a full payment
+    if (entry.saveAndPay && data) {
+      await registerPayment(data.id, entry.value, entry.account_id);
     }
 
     fetchEntries();
