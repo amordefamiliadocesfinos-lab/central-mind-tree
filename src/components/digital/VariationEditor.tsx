@@ -13,10 +13,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { MediaLibrary } from './MediaLibrary';
+import { Calendar as CalendarComponent } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, Trash2, Calendar, BarChart3, CheckSquare, FileText, X, Plus, Copy, ImagePlus } from 'lucide-react';
+import { ArrowLeft, Trash2, Calendar, BarChart3, CheckSquare, FileText, X, Plus, Copy, ImagePlus, CalendarIcon, Clock } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
+import { format, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 interface VariationEditorProps {
   variation: DigitalVariation;
@@ -305,21 +309,76 @@ export function VariationEditor({
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Data</Label>
-                  <Input
-                    type="date"
-                    value={variation.scheduled_date || ''}
-                    onChange={(e) => onUpdate(variation.id, { scheduled_date: e.target.value })}
-                    className="h-12"
-                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full h-12 justify-start text-left font-normal",
+                          !variation.scheduled_date && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {variation.scheduled_date 
+                          ? format(parseISO(variation.scheduled_date), "dd/MM/yyyy", { locale: ptBR })
+                          : "dd/mm/aaaa"
+                        }
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0 z-50" align="start">
+                      <CalendarComponent
+                        mode="single"
+                        selected={variation.scheduled_date ? parseISO(variation.scheduled_date) : undefined}
+                        onSelect={(date) => onUpdate(variation.id, { 
+                          scheduled_date: date ? format(date, 'yyyy-MM-dd') : null 
+                        })}
+                        initialFocus
+                        locale={ptBR}
+                        className="pointer-events-auto"
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div className="space-y-2">
                   <Label>Horário</Label>
-                  <Input
-                    type="time"
-                    value={variation.scheduled_time?.slice(0, 5) || ''}
-                    onChange={(e) => onUpdate(variation.id, { scheduled_time: e.target.value })}
-                    className="h-12"
-                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full h-12 justify-start text-left font-normal",
+                          !variation.scheduled_time && "text-muted-foreground"
+                        )}
+                      >
+                        <Clock className="mr-2 h-4 w-4" />
+                        {variation.scheduled_time?.slice(0, 5) || "--:--"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-4 z-50" align="start">
+                      <div className="space-y-3">
+                        <Label className="text-sm font-medium">Selecione o horário</Label>
+                        <Input
+                          type="time"
+                          value={variation.scheduled_time?.slice(0, 5) || ''}
+                          onChange={(e) => onUpdate(variation.id, { scheduled_time: e.target.value })}
+                          className="h-12 pointer-events-auto"
+                        />
+                        <div className="grid grid-cols-4 gap-2">
+                          {['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'].map((time) => (
+                            <Button
+                              key={time}
+                              variant={variation.scheduled_time?.slice(0, 5) === time ? "default" : "outline"}
+                              size="sm"
+                              className="text-xs pointer-events-auto"
+                              onClick={() => onUpdate(variation.id, { scheduled_time: time })}
+                            >
+                              {time}
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
 
