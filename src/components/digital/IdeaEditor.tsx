@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DigitalIdea, DigitalVariation, DIGITAL_STATUS } from '@/hooks/useDigital';
 import { Platform } from '@/hooks/usePlatforms';
 import { Button } from '@/components/ui/button';
@@ -57,6 +57,20 @@ export function IdeaEditor({
   const [showAddPlatform, setShowAddPlatform] = useState(false);
   const [showBatchDialog, setShowBatchDialog] = useState(false);
   const [duplicatingVariation, setDuplicatingVariation] = useState<string | null>(null);
+
+  // Keep selected variation in sync after background refetches (e.g. after saving schedule)
+  useEffect(() => {
+    if (!selectedVariation) return;
+    const latest = (idea.variations || []).find(v => v.id === selectedVariation.id);
+    if (!latest) {
+      setSelectedVariation(null);
+      return;
+    }
+    // Avoid unnecessary state updates
+    if (latest.updated_at !== selectedVariation.updated_at) {
+      setSelectedVariation(latest);
+    }
+  }, [idea.variations, selectedVariation?.id, selectedVariation?.updated_at]);
 
   // Helper to get platform config
   const getPlatform = (platformId: string) => platforms.find(p => p.id === platformId);
