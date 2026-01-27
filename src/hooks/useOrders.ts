@@ -398,6 +398,7 @@ export function useOrders() {
     const { error: orderError } = await supabase
       .from('orders')
       .update({
+        order_number: updates.order_number,
         customer_name: updates.customer_name,
         customer_contact: updates.customer_contact,
         channel: updates.channel,
