@@ -340,7 +340,7 @@ export function FinancialEntryForm({
             <TabsContent value="ocorrencia" className="space-y-4 mt-4">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">
-                  <Label>Ocorrência</Label>
+                  <Label>Tipo de Recorrência</Label>
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
@@ -353,13 +353,13 @@ export function FinancialEntryForm({
                   </TooltipProvider>
                 </div>
                 <Select 
-                  value={form.recurrence_type} 
-                  onValueChange={(v) => setForm({ ...form, recurrence_type: v })}
+                  value={form.recurrence_type || 'none'} 
+                  onValueChange={(v) => setForm({ ...form, recurrence_type: v === 'none' ? '' : v })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecionar tipo de recorrência..." />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="pointer-events-auto">
                     <SelectItem value="none">Sem recorrência</SelectItem>
                     {RECURRENCE_TYPES.map((rec) => (
                       <SelectItem key={rec.value} value={rec.value}>
@@ -413,6 +413,7 @@ export function FinancialEntryForm({
                       <Popover>
                         <PopoverTrigger asChild>
                           <Button
+                            type="button"
                             variant="outline"
                             className={cn(
                               "w-full justify-start text-left font-normal",
@@ -425,7 +426,7 @@ export function FinancialEntryForm({
                               : "Selecionar"}
                           </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
+                        <PopoverContent className="w-auto p-0 pointer-events-auto" align="start">
                           <Calendar
                             mode="single"
                             selected={form.recurrence_end_date ? parseISO(form.recurrence_end_date) : undefined}
@@ -438,9 +439,9 @@ export function FinancialEntryForm({
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                     <div className="flex items-center gap-2">
-                      <Label htmlFor="business-days">Considerar dias úteis</Label>
+                      <Label htmlFor="business-days" className="cursor-pointer">Considerar dias úteis</Label>
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -494,9 +495,12 @@ export function FinancialEntryForm({
               )}
 
               {(!form.recurrence_type || form.recurrence_type === 'none') && (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Configurações de recorrência...
-                </p>
+                <div className="text-center py-6 text-muted-foreground">
+                  <RefreshCw className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">
+                    Selecione um tipo de recorrência acima para configurar lançamentos automáticos
+                  </p>
+                </div>
               )}
             </TabsContent>
 
