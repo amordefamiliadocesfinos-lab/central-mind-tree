@@ -395,6 +395,10 @@ export function useOrders() {
       return acc + (item.quantity || 0) * (item.unit_price || 0);
     }, 0) || updates.total_value;
 
+    // Get current order to check if order_number changed
+    const currentOrder = orders.find(o => o.id === orderId);
+    const orderNumberChanged = updates.order_number && currentOrder?.order_number !== updates.order_number;
+
     const { error: orderError } = await supabase
       .from('orders')
       .update({
@@ -413,6 +417,19 @@ export function useOrders() {
     if (orderError) {
       toast.error('Erro ao atualizar pedido');
       return;
+    }
+
+    // Sync production orders names when order_number changes
+    if (orderNumberChanged && updates.order_number) {
+      const newOPName = `OP-${updates.order_number}`;
+      const { error: opError } = await supabase
+        .from('production_orders')
+        .update({ order_number: newOPName, updated_at: new Date().toISOString() })
+        .eq('source_order_id', orderId);
+
+      if (opError) {
+        console.error('Error updating production orders names:', opError);
+      }
     }
 
     // Update items if provided
