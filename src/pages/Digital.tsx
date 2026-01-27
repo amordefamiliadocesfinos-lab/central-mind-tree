@@ -1,13 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useDigital, DIGITAL_STATUS } from '@/hooks/useDigital';
 import { IdeaCard, IdeaEditor, KanbanBoard, MediaLibrary, MetricsChart, BatchVariationDialog, PlatformsManager } from '@/components/digital';
+import { TrendsPanel } from '@/components/digital/TrendsPanel';
+import { InteractionsPanel } from '@/components/digital/InteractionsPanel';
+import { KnowledgeBasePanel } from '@/components/digital/KnowledgeBasePanel';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, ArrowLeft, Search, LayoutGrid, Columns3, Image, BarChart3, Link2, Settings2 } from 'lucide-react';
+import { Plus, ArrowLeft, Search, LayoutGrid, Columns3, Image, BarChart3, Link2, Settings2, TrendingUp, MessageCircle, Book } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
@@ -54,7 +57,7 @@ export default function Digital() {
   const [selectedIdea, setSelectedIdea] = useState<string | null>(null);
   const [newIdea, setNewIdea] = useState({ title: '', objective: '', node_id: '' });
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
-  const [activeTab, setActiveTab] = useState<'ideias' | 'midia' | 'metricas' | 'plataformas'>('ideias');
+  const [activeTab, setActiveTab] = useState<'ideias' | 'midia' | 'metricas' | 'plataformas' | 'tendencias' | 'engajamento' | 'faq'>('ideias');
   const [kanbanMode, setKanbanMode] = useState<'ideas' | 'variations'>('ideas');
   const [nodes, setNodes] = useState<Node[]>([]);
   const isMobile = useIsMobile();
@@ -145,22 +148,34 @@ export default function Digital() {
         {!selectedIdea && (
           <div className="px-4 pb-2">
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-              <TabsList className="grid w-full grid-cols-4 h-9">
-                <TabsTrigger value="ideias" className="text-xs">
-                  <LayoutGrid className="h-3.5 w-3.5 mr-1" />
-                  Ideias
+              <TabsList className="grid w-full grid-cols-7 h-9">
+                <TabsTrigger value="ideias" className="text-xs px-1">
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline ml-1">Ideias</span>
                 </TabsTrigger>
-                <TabsTrigger value="midia" className="text-xs">
-                  <Image className="h-3.5 w-3.5 mr-1" />
-                  Mídia
+                <TabsTrigger value="tendencias" className="text-xs px-1">
+                  <TrendingUp className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline ml-1">Tendências</span>
                 </TabsTrigger>
-                <TabsTrigger value="metricas" className="text-xs">
-                  <BarChart3 className="h-3.5 w-3.5 mr-1" />
-                  Métricas
+                <TabsTrigger value="engajamento" className="text-xs px-1">
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline ml-1">Engajar</span>
                 </TabsTrigger>
-                <TabsTrigger value="plataformas" className="text-xs">
-                  <Settings2 className="h-3.5 w-3.5 mr-1" />
-                  Canais
+                <TabsTrigger value="faq" className="text-xs px-1">
+                  <Book className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline ml-1">FAQ</span>
+                </TabsTrigger>
+                <TabsTrigger value="midia" className="text-xs px-1">
+                  <Image className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline ml-1">Mídia</span>
+                </TabsTrigger>
+                <TabsTrigger value="metricas" className="text-xs px-1">
+                  <BarChart3 className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline ml-1">Métricas</span>
+                </TabsTrigger>
+                <TabsTrigger value="plataformas" className="text-xs px-1">
+                  <Settings2 className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline ml-1">Canais</span>
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -297,6 +312,12 @@ export default function Digital() {
               )}
             </div>
           )
+        ) : activeTab === 'tendencias' ? (
+          <TrendsPanel />
+        ) : activeTab === 'engajamento' ? (
+          <InteractionsPanel />
+        ) : activeTab === 'faq' ? (
+          <KnowledgeBasePanel />
         ) : activeTab === 'midia' ? (
           <MediaLibrary mode="browse" />
         ) : activeTab === 'metricas' ? (

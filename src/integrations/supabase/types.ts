@@ -542,6 +542,119 @@ export type Database = {
           },
         ]
       }
+      digital_interactions: {
+        Row: {
+          actual_response: string | null
+          ai_suggested_response: string | null
+          contact_handle: string | null
+          contact_name: string | null
+          content: string
+          created_at: string
+          funnel_stage: string
+          id: string
+          interaction_type: string
+          platform_id: string | null
+          responded_at: string | null
+          status: string
+          updated_at: string
+          variation_id: string | null
+        }
+        Insert: {
+          actual_response?: string | null
+          ai_suggested_response?: string | null
+          contact_handle?: string | null
+          contact_name?: string | null
+          content: string
+          created_at?: string
+          funnel_stage?: string
+          id?: string
+          interaction_type?: string
+          platform_id?: string | null
+          responded_at?: string | null
+          status?: string
+          updated_at?: string
+          variation_id?: string | null
+        }
+        Update: {
+          actual_response?: string | null
+          ai_suggested_response?: string | null
+          contact_handle?: string | null
+          contact_name?: string | null
+          content?: string
+          created_at?: string
+          funnel_stage?: string
+          id?: string
+          interaction_type?: string
+          platform_id?: string | null
+          responded_at?: string | null
+          status?: string
+          updated_at?: string
+          variation_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "digital_interactions_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "digital_platforms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "digital_interactions_variation_id_fkey"
+            columns: ["variation_id"]
+            isOneToOne: false
+            referencedRelation: "digital_variations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      digital_knowledge_base: {
+        Row: {
+          answer: string
+          category: string
+          created_at: string
+          id: string
+          is_active: boolean
+          keywords: string[] | null
+          platform_id: string | null
+          question: string
+          updated_at: string
+          usage_count: number
+        }
+        Insert: {
+          answer: string
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          keywords?: string[] | null
+          platform_id?: string | null
+          question: string
+          updated_at?: string
+          usage_count?: number
+        }
+        Update: {
+          answer?: string
+          category?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          keywords?: string[] | null
+          platform_id?: string | null
+          question?: string
+          updated_at?: string
+          usage_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "digital_knowledge_base_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "digital_platforms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       digital_media: {
         Row: {
           created_at: string
@@ -662,6 +775,39 @@ export type Database = {
           id?: string
           name?: string
           platform?: string
+        }
+        Relationships: []
+      }
+      digital_trends: {
+        Row: {
+          created_at: string
+          id: string
+          insights: string | null
+          niche: string | null
+          query: string
+          results: Json | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          insights?: string | null
+          niche?: string | null
+          query: string
+          results?: Json | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          insights?: string | null
+          niche?: string | null
+          query?: string
+          results?: Json | null
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }

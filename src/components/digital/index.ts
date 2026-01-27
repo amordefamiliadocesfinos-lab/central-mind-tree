@@ -7,3 +7,6 @@ export { BatchVariationDialog } from './BatchVariationDialog';
 export { MetricsChart } from './MetricsChart';
 export { ScheduleCalendar } from './ScheduleCalendar';
 export { PlatformsManager } from './PlatformsManager';
+export { TrendsPanel } from './TrendsPanel';
+export { InteractionsPanel } from './InteractionsPanel';
+export { KnowledgeBasePanel } from './KnowledgeBasePanel';
