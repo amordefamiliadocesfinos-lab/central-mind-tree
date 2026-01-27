@@ -259,25 +259,36 @@ export function useProductionOrders() {
     return true;
   }, [fetchOrders]);
 
-  // Complete production order (consume BOM, add finished product to stock)
-  const completeOrder = useCallback(async (orderId: string) => {
+  // Check BOM shortages for an order
+  const checkBOMShortages = useCallback(async (orderId: string) => {
     const order = orders.find(o => o.id === orderId);
-    if (!order || !order.product_id) return false;
+    if (!order || !order.product_id) return [];
+
+    const consolidatedQty = calculateConsolidation(order);
+    if (consolidatedQty <= 0) return [];
+
+    const bomLines = await calculateBOM(order.product_id, consolidatedQty);
+    return bomLines.filter(line => line.shortage > 0);
+  }, [orders, calculateConsolidation, calculateBOM]);
+
+  // Complete production order (consume BOM, add finished product to stock)
+  const completeOrder = useCallback(async (orderId: string, skipShortageCheck = false) => {
+    const order = orders.find(o => o.id === orderId);
+    if (!order || !order.product_id) return { success: false, shortages: [] };
 
     const consolidatedQty = calculateConsolidation(order);
     if (consolidatedQty <= 0) {
       toast.error('Nenhuma quantidade consolidada para concluir');
-      return false;
+      return { success: false, shortages: [] };
     }
 
-    // Get BOM and consume materials
+    // Get BOM and check for shortages
     const bomLines = await calculateBOM(order.product_id, consolidatedQty);
+    const shortages = bomLines.filter(line => line.shortage > 0);
     
-    for (const line of bomLines) {
-      if (line.shortage > 0) {
-        toast.error(`Estoque insuficiente de ${line.component_name}`);
-        return false;
-      }
+    if (!skipShortageCheck && shortages.length > 0) {
+      // Return shortages so UI can handle them
+      return { success: false, shortages };
     }
 
     // Create inventory movements for BOM consumption
@@ -355,7 +366,7 @@ export function useProductionOrders() {
 
     toast.success(`OP concluída! ${consolidatedQty} unidades produzidas`);
     fetchOrders();
-    return true;
+    return { success: true, shortages: [] };
   }, [orders, calculateConsolidation, calculateBOM, fetchOrders]);
 
   // Get payment summary by employee
@@ -397,6 +408,7 @@ export function useProductionOrders() {
     deleteEntry,
     calculateConsolidation,
     completeOrder,
+    checkBOMShortages,
     getPaymentSummary,
   };
 }

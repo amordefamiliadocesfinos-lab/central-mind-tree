@@ -296,7 +296,8 @@ export function useOrders() {
           .select('process_id')
           .eq('product_id', item.product_id);
 
-        const orderNumber = `OP-${Date.now().toString(36).toUpperCase()}-${item.product_id.slice(0, 4)}`;
+        // OP name follows the sales order number with OP- prefix
+        const orderNumber = `OP-${newOrder.order_number}`;
 
         // Create production order with source_order_id link
         const { data: prodOrder, error: prodError } = await supabase
