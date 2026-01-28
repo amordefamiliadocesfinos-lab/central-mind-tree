@@ -265,67 +265,72 @@ export default function Digital() {
         )}
       </header>
 
-      <main className="px-4 py-4 pb-24">
-        {selectedIdeaData ? (
-          <IdeaEditor
-            idea={selectedIdeaData}
-            onBack={() => setSelectedIdea(null)}
-            onUpdate={updateIdea}
-            onDelete={deleteIdea}
-            onCreateVariation={createVariation}
-            onUpdateVariation={updateVariation}
-            onDeleteVariation={deleteVariation}
-            onDuplicateVariation={duplicateVariation}
-            onBatchCreateVariations={batchCreateVariations}
-            onToggleChecklist={toggleVariationChecklist}
-            nodes={nodes}
-            platforms={activePlatforms}
-          />
-        ) : activeTab === 'ideias' ? (
-          viewMode === 'kanban' ? (
-            <KanbanBoard
-              ideas={filteredIdeas}
-              onUpdateIdea={updateIdea}
-              onUpdateVariation={updateVariation}
-              onSelectIdea={setSelectedIdea}
-              viewMode={kanbanMode}
-            />
-          ) : (
-            <div className="space-y-3">
-              {filteredIdeas.length === 0 ? (
-                <Card className="p-8 text-center">
-                  <p className="text-muted-foreground">Nenhuma ideia encontrada.</p>
-                  <Button className="mt-4" onClick={() => setShowCreateDialog(true)}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Criar Primeira Ideia
-                  </Button>
-                </Card>
-              ) : (
-                filteredIdeas.map((idea) => (
-                  <IdeaCard
-                    key={idea.id}
-                    idea={idea}
-                    onClick={() => setSelectedIdea(idea.id)}
-                    platforms={activePlatforms}
-                  />
-                ))
-              )}
-            </div>
-          )
-        ) : activeTab === 'tendencias' ? (
-          <TrendsPanel />
-        ) : activeTab === 'engajamento' ? (
-          <InteractionsPanel />
-        ) : activeTab === 'faq' ? (
-          <KnowledgeBasePanel />
-        ) : activeTab === 'midia' ? (
+      {/* Media Tab - Full Height */}
+      {!selectedIdeaData && activeTab === 'midia' ? (
+        <div className="flex-1 pb-20">
           <MediaLibrary mode="browse" />
-        ) : activeTab === 'metricas' ? (
-          <MetricsChart variations={allVariationsWithTitle} platforms={activePlatforms} />
-        ) : (
-          <PlatformsManager />
-        )}
-      </main>
+        </div>
+      ) : (
+        <main className="px-4 py-4 pb-24">
+          {selectedIdeaData ? (
+            <IdeaEditor
+              idea={selectedIdeaData}
+              onBack={() => setSelectedIdea(null)}
+              onUpdate={updateIdea}
+              onDelete={deleteIdea}
+              onCreateVariation={createVariation}
+              onUpdateVariation={updateVariation}
+              onDeleteVariation={deleteVariation}
+              onDuplicateVariation={duplicateVariation}
+              onBatchCreateVariations={batchCreateVariations}
+              onToggleChecklist={toggleVariationChecklist}
+              nodes={nodes}
+              platforms={activePlatforms}
+            />
+          ) : activeTab === 'ideias' ? (
+            viewMode === 'kanban' ? (
+              <KanbanBoard
+                ideas={filteredIdeas}
+                onUpdateIdea={updateIdea}
+                onUpdateVariation={updateVariation}
+                onSelectIdea={setSelectedIdea}
+                viewMode={kanbanMode}
+              />
+            ) : (
+              <div className="space-y-3">
+                {filteredIdeas.length === 0 ? (
+                  <Card className="p-8 text-center">
+                    <p className="text-muted-foreground">Nenhuma ideia encontrada.</p>
+                    <Button className="mt-4" onClick={() => setShowCreateDialog(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Criar Primeira Ideia
+                    </Button>
+                  </Card>
+                ) : (
+                  filteredIdeas.map((idea) => (
+                    <IdeaCard
+                      key={idea.id}
+                      idea={idea}
+                      onClick={() => setSelectedIdea(idea.id)}
+                      platforms={activePlatforms}
+                    />
+                  ))
+                )}
+              </div>
+            )
+          ) : activeTab === 'tendencias' ? (
+            <TrendsPanel />
+          ) : activeTab === 'engajamento' ? (
+            <InteractionsPanel />
+          ) : activeTab === 'faq' ? (
+            <KnowledgeBasePanel />
+          ) : activeTab === 'metricas' ? (
+            <MetricsChart variations={allVariationsWithTitle} platforms={activePlatforms} />
+          ) : (
+            <PlatformsManager />
+          )}
+        </main>
+      )}
 
       {/* Create Dialog */}
       <ResponsiveDialog
