@@ -263,10 +263,11 @@ export function IdeaEditor({
     return (
       <VariationEditor
         variation={selectedVariation}
-        ideaTitle={idea.title}
+        idea={idea}
         ideaMediaUrls={idea.media_urls || []}
         onBack={() => setSelectedVariation(null)}
         onUpdate={onUpdateVariation}
+        onUpdateIdea={onUpdate}
         onDelete={onDeleteVariation}
         onToggleChecklist={onToggleChecklist}
         platforms={platforms}
