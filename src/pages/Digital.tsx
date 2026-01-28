@@ -330,6 +330,7 @@ export default function Digital() {
                 if (idea) setSelectedIdea(idea.id);
               }}
               platforms={activePlatforms}
+              ideas={ideas.map(i => ({ id: i.id, title: i.title }))}
             />
           ) : activeTab === 'tendencias' ? (
             <TrendsPanel />
