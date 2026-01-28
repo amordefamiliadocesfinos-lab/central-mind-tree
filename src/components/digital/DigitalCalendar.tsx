@@ -12,9 +12,53 @@ interface DigitalCalendarProps {
   variations: DigitalVariation[];
   onSelectVariation: (variation: DigitalVariation) => void;
   platforms: Array<{ id: string; name: string; icon: string }>;
+  ideas?: Array<{ id: string; title: string }>;
 }
 
-export function DigitalCalendar({ variations, onSelectVariation, platforms }: DigitalCalendarProps) {
+// Gera sigla legível a partir do nome da plataforma
+function getPlatformAbbreviation(name: string): string {
+  const abbreviations: Record<string, string> = {
+    'instagram': 'IG',
+    'instagram feed': 'IG',
+    'instagram stories': 'IGS',
+    'instagram reels': 'IGR',
+    'facebook': 'FB',
+    'facebook feed': 'FB',
+    'facebook stories': 'FBS',
+    'tiktok': 'TT',
+    'youtube': 'YT',
+    'youtube shorts': 'YTS',
+    'twitter': 'TW',
+    'x': 'X',
+    'linkedin': 'LI',
+    'pinterest': 'PIN',
+    'whatsapp': 'WA',
+    'telegram': 'TG',
+    'olx': 'OLX',
+    'mercado livre': 'ML',
+    'shopee': 'SHP',
+    'amazon': 'AMZ',
+    'nuvemshop': 'NUV',
+    'magalu': 'MAG',
+    'americanas': 'AME',
+    'etsy': 'ETSY',
+    'aliexpress': 'ALI',
+  };
+  
+  const lowerName = name.toLowerCase();
+  if (abbreviations[lowerName]) {
+    return abbreviations[lowerName];
+  }
+  
+  // Gera sigla automática: primeiras 3 letras ou iniciais de palavras
+  const words = name.split(/\s+/);
+  if (words.length > 1) {
+    return words.map(w => w[0]).join('').toUpperCase().slice(0, 3);
+  }
+  return name.slice(0, 3).toUpperCase();
+}
+
+export function DigitalCalendar({ variations, onSelectVariation, platforms, ideas = [] }: DigitalCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const scheduledVariations = useMemo(() => {
@@ -37,6 +81,11 @@ export function DigitalCalendar({ variations, onSelectVariation, platforms }: Di
 
   const getPlatformInfo = (platformId: string) => {
     return platforms.find(p => p.id === platformId) || { id: platformId, name: platformId, icon: '📱' };
+  };
+
+  const getIdeaTitle = (ideaId: string) => {
+    const idea = ideas.find(i => i.id === ideaId);
+    return idea?.title || 'Conteúdo';
   };
 
   const weekDays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
@@ -122,12 +171,17 @@ export function DigitalCalendar({ variations, onSelectVariation, platforms }: Di
                 {dayVariations.slice(0, 3).map(v => {
                   const platform = getPlatformInfo(v.platform);
                   const status = DIGITAL_STATUS[v.status] || DIGITAL_STATUS.pendente;
+                  const abbr = getPlatformAbbreviation(platform.name);
+                  const time = v.scheduled_time?.slice(0, 5) || '';
+                  const ideaTitle = getIdeaTitle(v.idea_id);
+                  const displayTitle = v.title || ideaTitle;
+                  
                   return (
                     <div
                       key={v.id}
                       className={cn(
-                        'text-[10px] px-1 py-0.5 rounded truncate cursor-pointer',
-                        'hover:opacity-80 transition-opacity flex items-center gap-1',
+                        'text-[10px] px-1 py-0.5 rounded cursor-pointer',
+                        'hover:opacity-80 transition-opacity',
                         status.color,
                         'text-white'
                       )}
@@ -135,10 +189,15 @@ export function DigitalCalendar({ variations, onSelectVariation, platforms }: Di
                         e.stopPropagation();
                         onSelectVariation(v);
                       }}
-                      title={`${platform.name} - ${v.scheduled_time?.slice(0, 5) || ''}`}
+                      title={`${platform.name} - ${time} - ${displayTitle}`}
                     >
-                      <span>{platform.icon}</span>
-                      <span className="truncate hidden sm:inline">{v.scheduled_time?.slice(0, 5)}</span>
+                      <div className="flex items-center gap-1">
+                        <span className="font-bold shrink-0">{abbr}</span>
+                        <span className="shrink-0">{time}</span>
+                      </div>
+                      <div className="truncate text-[9px] opacity-90 hidden sm:block">
+                        {displayTitle}
+                      </div>
                     </div>
                   );
                 })}
@@ -176,6 +235,10 @@ export function DigitalCalendar({ variations, onSelectVariation, platforms }: Di
               {upcomingByDate.map(v => {
                 const platform = getPlatformInfo(v.platform);
                 const status = DIGITAL_STATUS[v.status] || DIGITAL_STATUS.pendente;
+                const abbr = getPlatformAbbreviation(platform.name);
+                const ideaTitle = getIdeaTitle(v.idea_id);
+                const displayTitle = v.title || ideaTitle;
+                
                 return (
                   <div
                     key={v.id}
@@ -184,11 +247,12 @@ export function DigitalCalendar({ variations, onSelectVariation, platforms }: Di
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="text-lg shrink-0">{platform.icon}</span>
-                      <div className="min-w-0">
-                        <span className="text-sm font-medium block truncate">{platform.name}</span>
-                        {v.title && (
-                          <span className="text-xs text-muted-foreground block truncate">{v.title}</span>
-                        )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold bg-muted px-1.5 py-0.5 rounded shrink-0">{abbr}</span>
+                          <span className="text-sm font-medium truncate">{displayTitle}</span>
+                        </div>
+                        <span className="text-xs text-muted-foreground block truncate">{platform.name}</span>
                       </div>
                       <Badge
                         variant="secondary"
