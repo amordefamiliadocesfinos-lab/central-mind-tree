@@ -11,11 +11,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, Plus, Trash2, Settings, Calendar, Image, Copy, Layers, Link2 } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Settings, Calendar, Image, Copy, Layers, Link2, X, ImagePlus, Eye, EyeOff } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { VariationEditor } from './VariationEditor';
 import { BatchVariationDialog } from './BatchVariationDialog';
 import { ScheduleCalendar } from './ScheduleCalendar';
+import { MediaLibrary } from './MediaLibrary';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface Node {
   id: string;
@@ -57,6 +62,10 @@ export function IdeaEditor({
   const [showAddPlatform, setShowAddPlatform] = useState(false);
   const [showBatchDialog, setShowBatchDialog] = useState(false);
   const [duplicatingVariation, setDuplicatingVariation] = useState<string | null>(null);
+  const [showMediaLibrary, setShowMediaLibrary] = useState(false);
+  const [showDistributeDialog, setShowDistributeDialog] = useState(false);
+  const [selectedMediaForDistribute, setSelectedMediaForDistribute] = useState<string | null>(null);
+  const [distributeSelections, setDistributeSelections] = useState<Record<string, boolean>>({});
 
   // Keep selected variation in sync after background refetches (e.g. after saving schedule)
   useEffect(() => {
@@ -104,11 +113,94 @@ export function IdeaEditor({
     }
   };
 
+  // Handle media upload for idea
+  const handleIdeaMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    // Upload to Supabase storage
+    const uploadedUrls: string[] = [];
+    for (const file of Array.from(files)) {
+      const ext = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const filePath = `ideas/${idea.id}/${fileName}`;
+      
+      const { error } = await supabase.storage
+        .from('media')
+        .upload(filePath, file);
+      
+      if (error) {
+        console.error('Upload error:', error);
+        toast.error(`Erro ao fazer upload: ${file.name}`);
+        continue;
+      }
+      
+      const { data: urlData } = supabase.storage
+        .from('media')
+        .getPublicUrl(filePath);
+      
+      uploadedUrls.push(urlData.publicUrl);
+    }
+
+    if (uploadedUrls.length > 0) {
+      onUpdate(idea.id, {
+        media_urls: [...(idea.media_urls || []), ...uploadedUrls],
+      });
+      toast.success(`${uploadedUrls.length} mídia(s) adicionada(s)!`);
+    }
+  };
+
+  const handleRemoveIdeaMedia = (url: string) => {
+    onUpdate(idea.id, {
+      media_urls: (idea.media_urls || []).filter(m => m !== url),
+    });
+  };
+
+  // Open distribute dialog for a specific media
+  const openDistributeDialog = (mediaUrl: string) => {
+    setSelectedMediaForDistribute(mediaUrl);
+    // Initialize selections - checked if not hidden
+    const selections: Record<string, boolean> = {};
+    variations.forEach(v => {
+      const hidden = v.hidden_inherited_media || [];
+      selections[v.id] = !hidden.includes(mediaUrl);
+    });
+    setDistributeSelections(selections);
+    setShowDistributeDialog(true);
+  };
+
+  const handleDistributeSave = async () => {
+    if (!selectedMediaForDistribute) return;
+
+    // Update each variation's hidden_inherited_media
+    for (const variation of variations) {
+      const hidden = [...(variation.hidden_inherited_media || [])];
+      const shouldBeVisible = distributeSelections[variation.id];
+      const isCurrentlyHidden = hidden.includes(selectedMediaForDistribute);
+
+      if (shouldBeVisible && isCurrentlyHidden) {
+        // Remove from hidden
+        const index = hidden.indexOf(selectedMediaForDistribute);
+        hidden.splice(index, 1);
+        onUpdateVariation(variation.id, { hidden_inherited_media: hidden });
+      } else if (!shouldBeVisible && !isCurrentlyHidden) {
+        // Add to hidden
+        hidden.push(selectedMediaForDistribute);
+        onUpdateVariation(variation.id, { hidden_inherited_media: hidden });
+      }
+    }
+
+    toast.success('Disponibilidade atualizada!');
+    setShowDistributeDialog(false);
+    setSelectedMediaForDistribute(null);
+  };
+
   if (selectedVariation) {
     return (
       <VariationEditor
         variation={selectedVariation}
         ideaTitle={idea.title}
+        ideaMediaUrls={idea.media_urls || []}
         onBack={() => setSelectedVariation(null)}
         onUpdate={onUpdateVariation}
         onDelete={onDeleteVariation}
@@ -267,6 +359,84 @@ export function IdeaEditor({
                     </SelectContent>
                   </Select>
                 </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Structural Media Section */}
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Image className="h-4 w-4" />
+                  Mídias Estruturais
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => setShowMediaLibrary(true)}
+                >
+                  <ImagePlus className="h-3.5 w-3.5 mr-1" />
+                  Da Biblioteca
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Mídias da ideia são herdadas automaticamente pelas variações
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex gap-2 flex-wrap">
+                {idea.media_urls?.map((url, i) => (
+                  <div key={i} className="relative group">
+                    <img
+                      src={url}
+                      alt=""
+                      className="h-20 w-20 object-cover rounded border"
+                    />
+                    <Badge 
+                      variant="secondary" 
+                      className="absolute -top-2 -left-2 text-[10px] px-1.5 py-0 bg-purple-500 text-white"
+                    >
+                      Estrutural
+                    </Badge>
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 rounded">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-white hover:bg-white/20"
+                        onClick={() => openDistributeDialog(url)}
+                        title="Disponibilizar em..."
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-white hover:bg-destructive/80"
+                        onClick={() => handleRemoveIdeaMedia(url)}
+                        title="Remover"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                <label className="h-20 w-20 border-2 border-dashed rounded flex items-center justify-center cursor-pointer hover:bg-muted touch-manipulation active:scale-95">
+                  <Plus className="h-6 w-6 text-muted-foreground" />
+                  <input
+                    type="file"
+                    accept="image/*,video/*"
+                    multiple
+                    className="hidden"
+                    onChange={handleIdeaMediaUpload}
+                  />
+                </label>
+              </div>
+              {(idea.media_urls?.length || 0) > 0 && (
+                <p className="text-xs text-muted-foreground">
+                  {idea.media_urls?.length} mídia(s) • Clique em 👁 para gerenciar disponibilidade nas variações
+                </p>
               )}
             </CardContent>
           </Card>
@@ -467,6 +637,94 @@ export function IdeaEditor({
         existingPlatforms={existingPlatformIds}
         platforms={platforms}
       />
+
+      {/* Media Library Dialog */}
+      <ResponsiveDialog
+        open={showMediaLibrary}
+        onOpenChange={setShowMediaLibrary}
+        title="Biblioteca de Mídia"
+      >
+        <MediaLibrary
+          mode="select"
+          onSelect={(url) => {
+            onUpdate(idea.id, {
+              media_urls: [...(idea.media_urls || []), url],
+            });
+            setShowMediaLibrary(false);
+            toast.success('Mídia adicionada!');
+          }}
+        />
+      </ResponsiveDialog>
+
+      {/* Distribute Media Dialog */}
+      <ResponsiveDialog
+        open={showDistributeDialog}
+        onOpenChange={setShowDistributeDialog}
+        title="Disponibilizar Mídia"
+        description="Selecione em quais variações esta mídia deve aparecer"
+      >
+        <div className="space-y-4 py-4">
+          {selectedMediaForDistribute && (
+            <div className="flex justify-center mb-4">
+              <img
+                src={selectedMediaForDistribute}
+                alt=""
+                className="h-24 w-24 object-cover rounded border"
+              />
+            </div>
+          )}
+          
+          {variations.length === 0 ? (
+            <p className="text-center text-muted-foreground text-sm">
+              Nenhuma variação criada ainda. Crie variações para gerenciar a disponibilidade.
+            </p>
+          ) : (
+            <div className="space-y-2 max-h-[300px] overflow-y-auto">
+              {variations.map((variation) => {
+                const platform = platforms.find(p => p.id === variation.platform);
+                return (
+                  <div
+                    key={variation.id}
+                    className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer"
+                    onClick={() => setDistributeSelections(prev => ({
+                      ...prev,
+                      [variation.id]: !prev[variation.id]
+                    }))}
+                  >
+                    <Checkbox
+                      checked={distributeSelections[variation.id] ?? true}
+                      onCheckedChange={(checked) => 
+                        setDistributeSelections(prev => ({
+                          ...prev,
+                          [variation.id]: !!checked
+                        }))
+                      }
+                    />
+                    <span className="text-xl">{platform?.icon || '📱'}</span>
+                    <div className="flex-1">
+                      <span className="text-sm font-medium">{platform?.name || 'Plataforma'}</span>
+                    </div>
+                    {distributeSelections[variation.id] ? (
+                      <Eye className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <EyeOff className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-4 border-t">
+            <Button variant="outline" onClick={() => setShowDistributeDialog(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleDistributeSave}>
+              Salvar
+            </Button>
+          </div>
+        </div>
+      </ResponsiveDialog>
     </div>
   );
 }

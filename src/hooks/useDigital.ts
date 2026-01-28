@@ -38,6 +38,12 @@ export interface DigitalIdea {
   variations?: DigitalVariation[];
 }
 
+export interface MediaTransform {
+  preset?: string;
+  aspect?: string;
+  cover?: string;
+}
+
 export interface DigitalVariation {
   id: string;
   idea_id: string;
@@ -72,6 +78,11 @@ export interface DigitalVariation {
   order_index: number;
   created_at: string;
   updated_at: string;
+  // Media inheritance fields
+  hidden_inherited_media: string[];
+  extra_media_ids: string[];
+  media_transforms: Record<string, MediaTransform>;
+  media_mode: 'inherit' | 'custom';
 }
 
 export function useDigital() {
@@ -120,7 +131,7 @@ export function useDigital() {
       return a.order_index - b.order_index;
     });
 
-    setIdeas(sorted as DigitalIdea[]);
+    setIdeas(sorted as unknown as DigitalIdea[]);
     setLoading(false);
   }, []);
 
@@ -208,13 +219,13 @@ export function useDigital() {
 
     toast.success(`Variação ${platform?.name || 'Nova'} criada!`);
     fetchIdeas();
-    return data as DigitalVariation;
+    return data as unknown as DigitalVariation;
   }, [fetchIdeas, activePlatforms]);
 
   const updateVariation = useCallback(async (id: string, updates: Partial<DigitalVariation>) => {
     const { error } = await supabase
       .from('digital_variations')
-      .update(updates)
+      .update(updates as any)
       .eq('id', id);
 
     if (error) {
@@ -278,7 +289,7 @@ export function useDigital() {
 
     toast.success(`Variação duplicada para ${platform?.name || 'Nova'}!`);
     fetchIdeas();
-    return data as DigitalVariation;
+    return data as unknown as DigitalVariation;
   }, [fetchIdeas, ideas, activePlatforms]);
 
   // Batch create variations - now uses dynamic platforms
@@ -385,6 +396,90 @@ export function useDigital() {
     );
   }, [ideas]);
 
+  // Get effective media for a variation (with inheritance logic)
+  const getVariationMedia = useCallback((idea: DigitalIdea, variation: DigitalVariation): string[] => {
+    // If mode is custom, only use extra_media_ids
+    if (variation.media_mode === 'custom') {
+      return variation.extra_media_ids || [];
+    }
+    
+    // Inherit from idea: (idea.media_urls - hidden_inherited_media) + extra_media_ids
+    const ideaMedia = idea.media_urls || [];
+    const hiddenMedia = variation.hidden_inherited_media || [];
+    const extraMedia = variation.extra_media_ids || [];
+    
+    const inheritedMedia = ideaMedia.filter(url => !hiddenMedia.includes(url));
+    
+    // Combine inherited + extra (unique)
+    const combined = [...new Set([...inheritedMedia, ...extraMedia])];
+    return combined;
+  }, []);
+
+  // Update variation inherited media visibility
+  const toggleInheritedMedia = useCallback(async (variationId: string, mediaUrl: string, hide: boolean) => {
+    const idea = ideas.find(i => i.variations?.some(v => v.id === variationId));
+    const variation = idea?.variations?.find(v => v.id === variationId);
+    if (!variation) return;
+
+    const hiddenMedia = [...(variation.hidden_inherited_media || [])];
+    
+    if (hide) {
+      if (!hiddenMedia.includes(mediaUrl)) {
+        hiddenMedia.push(mediaUrl);
+      }
+    } else {
+      const index = hiddenMedia.indexOf(mediaUrl);
+      if (index > -1) {
+        hiddenMedia.splice(index, 1);
+      }
+    }
+
+    await updateVariation(variationId, { hidden_inherited_media: hiddenMedia });
+  }, [ideas, updateVariation]);
+
+  // Add extra media to variation
+  const addExtraMedia = useCallback(async (variationId: string, mediaUrl: string) => {
+    const idea = ideas.find(i => i.variations?.some(v => v.id === variationId));
+    const variation = idea?.variations?.find(v => v.id === variationId);
+    if (!variation) return;
+
+    const extraMedia = [...(variation.extra_media_ids || [])];
+    if (!extraMedia.includes(mediaUrl)) {
+      extraMedia.push(mediaUrl);
+      await updateVariation(variationId, { extra_media_ids: extraMedia });
+    }
+  }, [ideas, updateVariation]);
+
+  // Remove extra media from variation
+  const removeExtraMedia = useCallback(async (variationId: string, mediaUrl: string) => {
+    const idea = ideas.find(i => i.variations?.some(v => v.id === variationId));
+    const variation = idea?.variations?.find(v => v.id === variationId);
+    if (!variation) return;
+
+    const extraMedia = (variation.extra_media_ids || []).filter(url => url !== mediaUrl);
+    await updateVariation(variationId, { extra_media_ids: extraMedia });
+  }, [ideas, updateVariation]);
+
+  // Toggle variation media mode
+  const toggleVariationMediaMode = useCallback(async (variationId: string, mode: 'inherit' | 'custom') => {
+    await updateVariation(variationId, { media_mode: mode });
+  }, [updateVariation]);
+
+  // Update media transform for a specific media in a variation
+  const updateMediaTransform = useCallback(async (
+    variationId: string, 
+    mediaUrl: string, 
+    transform: MediaTransform
+  ) => {
+    const idea = ideas.find(i => i.variations?.some(v => v.id === variationId));
+    const variation = idea?.variations?.find(v => v.id === variationId);
+    if (!variation) return;
+
+    const transforms = { ...(variation.media_transforms || {}) };
+    transforms[mediaUrl] = { ...transforms[mediaUrl], ...transform };
+    await updateVariation(variationId, { media_transforms: transforms });
+  }, [ideas, updateVariation]);
+
   return {
     ideas,
     filteredIdeas,
@@ -421,5 +516,12 @@ export function useDigital() {
     togglePlatformActive: toggleActive,
     GROUP_LABELS,
     GROUP_ICONS,
+    // Media inheritance functions
+    getVariationMedia,
+    toggleInheritedMedia,
+    addExtraMedia,
+    removeExtraMedia,
+    toggleVariationMediaMode,
+    updateMediaTransform,
   };
 }
