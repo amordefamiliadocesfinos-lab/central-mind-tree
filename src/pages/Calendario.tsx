@@ -42,6 +42,17 @@ interface Node {
   color: string;
 }
 
+interface DigitalVariation {
+  id: string;
+  title: string | null;
+  platform: string;
+  scheduled_date: string | null;
+  scheduled_time: string | null;
+  status: string;
+  idea_id: string;
+  idea_title?: string;
+}
+
 const MONTHS = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
   "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
@@ -60,9 +71,11 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const MEETING_COLOR = "#0EA5E9";
+const DIGITAL_COLOR = "#EC4899"; // Pink for digital content
 
 const Calendario = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [digitalVariations, setDigitalVariations] = useState<DigitalVariation[]>([]);
   const [nodes, setNodes] = useState<Node[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -113,24 +126,35 @@ const Calendario = () => {
   }, []);
 
   const loadData = async () => {
-    const [tasksRes, nodesRes] = await Promise.all([
+    const [tasksRes, nodesRes, digitalRes] = await Promise.all([
       supabase
         .from("tasks")
         .select("id, title, scheduled_date, status, node_id")
         .not("scheduled_date", "is", null),
       supabase.from("nodes").select("id, title, color"),
+      supabase
+        .from("digital_variations")
+        .select("id, title, platform, scheduled_date, scheduled_time, status, idea_id, digital_ideas!inner(title)")
+        .not("scheduled_date", "is", null),
     ]);
 
     if (tasksRes.data) setTasks(tasksRes.data);
     if (nodesRes.data) setNodes(nodesRes.data);
+    if (digitalRes.data) {
+      setDigitalVariations(digitalRes.data.map(v => ({
+        ...v,
+        idea_title: (v as any).digital_ideas?.title,
+      })));
+    }
     setLoading(false);
   };
 
   const handleDayClick = (dateKey: string) => {
     const dayTasks = tasksByDate[dateKey] || [];
     const dayMeetings = meetingsByDate[dateKey] || [];
+    const dayDigital = digitalByDate[dateKey] || [];
     
-    if (dayTasks.length > 0 || dayMeetings.length > 0) {
+    if (dayTasks.length > 0 || dayMeetings.length > 0 || dayDigital.length > 0) {
       setDayTasksModalDate(dateKey);
       setDayTasksModalOpen(true);
     } else {
@@ -243,6 +267,19 @@ const Calendario = () => {
     });
     return map;
   }, [meetings]);
+
+  const digitalByDate = useMemo(() => {
+    const map: Record<string, DigitalVariation[]> = {};
+    digitalVariations.forEach((v) => {
+      if (v.scheduled_date) {
+        if (!map[v.scheduled_date]) {
+          map[v.scheduled_date] = [];
+        }
+        map[v.scheduled_date].push(v);
+      }
+    });
+    return map;
+  }, [digitalVariations]);
 
   // Seasonal occurrences by date for quick lookup
   const seasonalOccurrences = useMemo(() => {
@@ -422,6 +459,13 @@ const Calendario = () => {
                 />
                 <span className="text-muted-foreground">Reunião</span>
               </div>
+              <div className="flex items-center gap-1.5 shrink-0 text-sm">
+                <div
+                  className="w-2.5 h-2.5 rounded-full"
+                  style={{ backgroundColor: DIGITAL_COLOR }}
+                />
+                <span className="text-muted-foreground">Digital</span>
+              </div>
             </div>
           )}
           <div className="flex items-center gap-2 shrink-0">
@@ -465,9 +509,11 @@ const Calendario = () => {
                     const dateKey = formatDateKey(selectedYear, monthIndex, day);
                     const dayTasks = tasksByDate[dateKey] || [];
                     const dayMeetings = meetingsByDate[dateKey] || [];
+                    const dayDigital = digitalByDate[dateKey] || [];
                     const daySeasonal = seasonalByDate[dateKey] || [];
                     const hasScheduledTasks = dayTasks.length > 0;
                     const hasMeetings = dayMeetings.length > 0;
+                    const hasDigital = dayDigital.length > 0;
                     const hasSeasonal = daySeasonal.length > 0;
                     const todayHighlight = isToday(dateKey);
                     
@@ -542,15 +588,17 @@ const Calendario = () => {
                       );
                     }
                     
-                    // Modo normal: mostra tarefas e reuniões
-                    const hasContent = hasScheduledTasks || hasMeetings;
-                    const totalItems = dayTasks.length + dayMeetings.length;
+                    // Modo normal: mostra tarefas, reuniões e digital
+                    const hasContent = hasScheduledTasks || hasMeetings || hasDigital;
+                    const totalItems = dayTasks.length + dayMeetings.length + dayDigital.length;
 
-                    const dominantColor = hasMeetings 
-                      ? MEETING_COLOR 
-                      : hasScheduledTasks
-                        ? STATUS_COLORS[dayTasks[0].status] || "#6B7280"
-                        : undefined;
+                    const dominantColor = hasDigital
+                      ? DIGITAL_COLOR
+                      : hasMeetings 
+                        ? MEETING_COLOR 
+                        : hasScheduledTasks
+                          ? STATUS_COLORS[dayTasks[0].status] || "#6B7280"
+                          : undefined;
 
                     return (
                       <button
@@ -593,6 +641,7 @@ const Calendario = () => {
           <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
             <p>{tasks.filter((t) => t.scheduled_date?.startsWith(String(selectedYear))).length} tarefa(s)</p>
             <p>{meetings.filter((m) => m.meeting_date?.startsWith(String(selectedYear))).length} reunião(ões)</p>
+            <p>{digitalVariations.filter((d) => d.scheduled_date?.startsWith(String(selectedYear))).length} conteúdo(s) digital(is)</p>
           </div>
         </div>
 
@@ -846,6 +895,7 @@ const Calendario = () => {
         date={dayTasksModalDate}
         tasks={tasksByDate[dayTasksModalDate] || []}
         meetings={meetingsByDate[dayTasksModalDate] || []}
+        digitalVariations={digitalByDate[dayTasksModalDate] || []}
         nodesMap={nodesMap}
         onTaskUpdated={loadData}
         onCreateTask={() => {

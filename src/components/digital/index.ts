@@ -6,6 +6,7 @@ export { KanbanBoard } from './KanbanBoard';
 export { BatchVariationDialog } from './BatchVariationDialog';
 export { MetricsChart } from './MetricsChart';
 export { ScheduleCalendar } from './ScheduleCalendar';
+export { DigitalCalendar } from './DigitalCalendar';
 export { PlatformsManager } from './PlatformsManager';
 export { TrendsPanel } from './TrendsPanel';
 export { InteractionsPanel } from './InteractionsPanel';

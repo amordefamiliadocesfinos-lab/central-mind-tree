@@ -1,22 +1,24 @@
-import { useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 
 interface CalendarEvent {
   date: string;
-  type: 'task' | 'post' | 'order' | 'block';
+  type: 'task' | 'post' | 'order' | 'block' | 'digital';
   entityId: string;
   title: string;
   status?: string;
+  platform?: string;
+  time?: string;
 }
 
-// This hook auto-syncs dates from tasks, posts, orders, and routine blocks
+// This hook auto-syncs dates from tasks, posts, orders, routine blocks and digital variations
 // to provide a unified calendar view
 export function useCalendarService() {
   const fetchAllEvents = useCallback(async (year: number): Promise<CalendarEvent[]> => {
     const startDate = `${year}-01-01`;
     const endDate = `${year}-12-31`;
     
-    const [tasksRes, postsRes, ordersRes, blocksRes] = await Promise.all([
+    const [tasksRes, postsRes, ordersRes, blocksRes, digitalRes] = await Promise.all([
       // Tasks with scheduled_date or due_date
       supabase
         .from('tasks')
@@ -44,6 +46,13 @@ export function useCalendarService() {
         .select('id, title, date, status')
         .gte('date', startDate)
         .lte('date', endDate),
+      
+      // Digital variations with scheduled_date
+      supabase
+        .from('digital_variations')
+        .select('id, title, platform, scheduled_date, scheduled_time, status, idea_id, digital_ideas!inner(title)')
+        .gte('scheduled_date', startDate)
+        .lte('scheduled_date', endDate),
     ]);
 
     const events: CalendarEvent[] = [];
@@ -115,11 +124,29 @@ export function useCalendarService() {
       }
     }
 
+    // Process digital variations
+    if (digitalRes.data) {
+      for (const variation of digitalRes.data) {
+        if (variation.scheduled_date) {
+          const ideaTitle = (variation as any).digital_ideas?.title || 'Conteúdo';
+          events.push({
+            date: variation.scheduled_date,
+            type: 'digital',
+            entityId: variation.id,
+            title: variation.title || ideaTitle,
+            status: variation.status,
+            platform: variation.platform,
+            time: variation.scheduled_time || undefined,
+          });
+        }
+      }
+    }
+
     return events;
   }, []);
 
   const getEventsForDate = useCallback(async (date: string): Promise<CalendarEvent[]> => {
-    const [tasksRes, postsRes, ordersRes, blocksRes] = await Promise.all([
+    const [tasksRes, postsRes, ordersRes, blocksRes, digitalRes] = await Promise.all([
       supabase
         .from('tasks')
         .select('id, title, scheduled_date, due_date, status')
@@ -139,6 +166,11 @@ export function useCalendarService() {
         .from('routine_blocks')
         .select('id, title, date, status')
         .eq('date', date),
+      
+      supabase
+        .from('digital_variations')
+        .select('id, title, platform, scheduled_date, scheduled_time, status, idea_id, digital_ideas!inner(title)')
+        .eq('scheduled_date', date),
     ]);
 
     const events: CalendarEvent[] = [];
@@ -198,6 +230,21 @@ export function useCalendarService() {
           entityId: block.id,
           title: block.title,
           status: block.status,
+        });
+      }
+    }
+
+    if (digitalRes.data) {
+      for (const variation of digitalRes.data) {
+        const ideaTitle = (variation as any).digital_ideas?.title || 'Conteúdo';
+        events.push({
+          date,
+          type: 'digital',
+          entityId: variation.id,
+          title: variation.title || ideaTitle,
+          status: variation.status,
+          platform: variation.platform,
+          time: variation.scheduled_time || undefined,
         });
       }
     }

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ExternalLink, Edit, Play, PlayCircle, Users, Clock, MapPin, Plus, X } from "lucide-react";
+import { ExternalLink, Edit, Play, PlayCircle, Users, Clock, MapPin, Plus, X, Smartphone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
@@ -23,12 +23,24 @@ interface Node {
   color: string;
 }
 
+interface DigitalVariation {
+  id: string;
+  title: string | null;
+  platform: string;
+  scheduled_date: string | null;
+  scheduled_time: string | null;
+  status: string;
+  idea_id: string;
+  idea_title?: string;
+}
+
 interface DayTasksModalProps {
   isOpen: boolean;
   onClose: () => void;
   date: string;
   tasks: Task[];
   meetings?: Meeting[];
+  digitalVariations?: DigitalVariation[];
   nodesMap: Record<string, Node>;
   onTaskUpdated: () => void;
   onCreateTask?: () => void;
@@ -56,12 +68,20 @@ const meetingStatusColors: Record<string, string> = {
   cancelada: "bg-gray-400",
 };
 
+const digitalStatusColors: Record<string, string> = {
+  estrutural: "bg-purple-500",
+  andamento: "bg-red-500",
+  pendente: "bg-yellow-500",
+  concluído: "bg-green-500",
+};
+
 export function DayTasksModal({ 
   isOpen, 
   onClose, 
   date, 
   tasks, 
   meetings = [],
+  digitalVariations = [],
   nodesMap, 
   onTaskUpdated,
   onCreateTask,
@@ -122,7 +142,12 @@ export function DayTasksModal({
   const formatTime = (time: string) => time.slice(0, 5);
 
   const pendingCount = tasks.filter(t => t.status !== "andamento" && t.status !== "concluído").length;
-  const totalItems = tasks.length + meetings.length;
+  const totalItems = tasks.length + meetings.length + digitalVariations.length;
+
+  const handleOpenDigital = () => {
+    onClose();
+    navigate('/digital');
+  };
 
   return (
     <ResponsiveDialog
@@ -250,6 +275,51 @@ export function DayTasksModal({
                 Iniciar todas do dia ({pendingCount})
               </Button>
             )}
+          </div>
+        )}
+
+        {/* Digital Content Section */}
+        {digitalVariations.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium flex items-center gap-2 text-muted-foreground px-1">
+              <Smartphone className="h-4 w-4" />
+              Conteúdo Digital ({digitalVariations.length})
+            </h4>
+            {digitalVariations.map((variation) => (
+              <div
+                key={variation.id}
+                onClick={handleOpenDigital}
+                className={cn(
+                  "flex items-center justify-between p-4 rounded-xl border bg-card",
+                  "hover:bg-accent/50 transition-colors cursor-pointer",
+                  "touch-manipulation active:scale-[0.98]"
+                )}
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${digitalStatusColors[variation.status] || "bg-pink-500"}`} />
+                    <span className="font-medium truncate text-base">{variation.title || variation.idea_title || 'Conteúdo'}</span>
+                  </div>
+                  <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                    <span>{variation.platform}</span>
+                    {variation.scheduled_time && (
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3.5 w-3.5" />
+                        {variation.scheduled_time.slice(0, 5)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-10 w-10 shrink-0 ml-2"
+                  title="Abrir digital"
+                >
+                  <ExternalLink className="h-5 w-5" />
+                </Button>
+              </div>
+            ))}
           </div>
         )}
 
