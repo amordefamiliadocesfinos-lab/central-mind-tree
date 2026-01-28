@@ -661,6 +661,7 @@ export type Database = {
           file_size: number | null
           file_type: string | null
           filename: string | null
+          folder_id: string | null
           id: string
           idea_id: string | null
           tags: string[] | null
@@ -672,6 +673,7 @@ export type Database = {
           file_size?: number | null
           file_type?: string | null
           filename?: string | null
+          folder_id?: string | null
           id?: string
           idea_id?: string | null
           tags?: string[] | null
@@ -683,6 +685,7 @@ export type Database = {
           file_size?: number | null
           file_type?: string | null
           filename?: string | null
+          folder_id?: string | null
           id?: string
           idea_id?: string | null
           tags?: string[] | null
@@ -690,6 +693,13 @@ export type Database = {
           variation_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "digital_media_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "digital_media_folders"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "digital_media_idea_id_fkey"
             columns: ["idea_id"]
@@ -705,6 +715,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      digital_media_folders: {
+        Row: {
+          color: string | null
+          created_at: string
+          id: string
+          name: string
+          order_index: number | null
+        }
+        Insert: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          order_index?: number | null
+        }
+        Update: {
+          color?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          order_index?: number | null
+        }
+        Relationships: []
       }
       digital_platforms: {
         Row: {
