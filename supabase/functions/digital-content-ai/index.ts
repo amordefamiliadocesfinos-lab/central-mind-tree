@@ -8,10 +8,13 @@ const corsHeaders = {
 interface GenerateRequest {
   title: string;
   field: 'objective' | 'target_audience' | 'key_message' | 'kpi' | 'all' | 
-         'description' | 'caption' | 'cta' | 'hashtags' | 'checklist_suggestion';
+         'description' | 'caption' | 'cta' | 'hashtags' | 'checklist_suggestion' |
+         'custom_field' | 'all_variation_fields';
   platform?: string;
   platformType?: string; // social, ecommerce, marketplace
   existingData?: Record<string, string>;
+  customFieldLabel?: string; // Label for custom field generation
+  customFields?: { id: string; label: string; type: string }[]; // All custom fields for bulk generation
 }
 
 serve(async (req) => {
@@ -25,7 +28,7 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const { title, field, platform, platformType, existingData } = await req.json() as GenerateRequest;
+    const { title, field, platform, platformType, existingData, customFieldLabel, customFields } = await req.json() as GenerateRequest;
 
     if (!title) {
       return new Response(
@@ -83,6 +86,51 @@ Exemplos de bons itens:
 - CTA incluído?
 
 Retorne APENAS os itens, um por linha, sem numeração ou bullets.`;
+    } else if (field === 'custom_field' && customFieldLabel) {
+      const typeContext = platformType === 'marketplace' 
+        ? 'marketplace de vendas'
+        : platformType === 'ecommerce'
+        ? 'loja virtual e e-commerce'
+        : 'rede social';
+      
+      const existingContext = existingData ? Object.entries(existingData)
+        .filter(([k, v]) => v)
+        .map(([k, v]) => `${k}: ${v}`)
+        .join('\n') : '';
+
+      userPrompt = `Com base no título: "${title}" (plataforma: ${platform || 'geral'}, tipo: ${typeContext})
+${existingContext ? `\nContexto existente:\n${existingContext}\n` : ''}
+Gere um conteúdo profissional e persuasivo para o campo "${customFieldLabel}".
+
+Se for um campo de título: seja conciso e chamativo (máx 80 caracteres)
+Se for descrição/legenda: seja detalhado e persuasivo (2-4 frases)
+Se for CTA: seja curto e impactante (máx 30 caracteres)
+Se for hashtags: gere 10-15 hashtags relevantes
+
+Retorne APENAS o texto, sem explicações ou prefixos.`;
+    } else if (field === 'all_variation_fields' && customFields && customFields.length > 0) {
+      const typeContext = platformType === 'marketplace' 
+        ? 'marketplace de vendas'
+        : platformType === 'ecommerce'
+        ? 'loja virtual e e-commerce'
+        : 'rede social';
+      
+      const fieldsList = customFields.map(f => `"${f.id}": "${f.label} - ${f.type === 'textarea' ? 'texto longo' : 'texto curto'}"`).join(',\n  ');
+      
+      userPrompt = `Com base no título: "${title}" (plataforma: ${platform || 'geral'}, tipo: ${typeContext})
+
+Gere conteúdo profissional e persuasivo para TODOS os seguintes campos em formato JSON:
+{
+  ${fieldsList}
+}
+
+Para cada campo:
+- Se for título: seja conciso e chamativo
+- Se for descrição/legenda: seja detalhado e persuasivo
+- Se for CTA: seja curto e impactante
+- Se for hashtags: gere hashtags relevantes
+
+Retorne APENAS o JSON válido, sem markdown ou explicações.`;
     } else {
       const fieldDescriptions: Record<string, string> = {
         objective: 'o objetivo deste conteúdo/anúncio (1-2 frases explicando o propósito)',
@@ -102,7 +150,7 @@ Retorne APENAS os itens, um por linha, sem numeração ou bullets.`;
 
       userPrompt = `Com base no título: "${title}"${platform ? ` (plataforma: ${platform})` : ''}
 ${existingContext ? `\nContexto existente:\n${existingContext}\n` : ''}
-Gere ${fieldDescriptions[field] || field}
+Gere ${fieldDescriptions[field] || `conteúdo para o campo ${field}`}
 
 Retorne APENAS o texto, sem explicações ou prefixos.`;
     }
@@ -146,9 +194,9 @@ Retorne APENAS o texto, sem explicações ou prefixos.`;
     const data = await response.json();
     const generatedText = data.choices?.[0]?.message?.content?.trim() || '';
 
-    // Parse JSON if field is 'all'
+    // Parse JSON if field is 'all' or 'all_variation_fields'
     let result: any;
-    if (field === 'all') {
+    if (field === 'all' || field === 'all_variation_fields') {
       try {
         const cleanedJson = generatedText.replace(/```json\n?|\n?```/g, '').trim();
         result = JSON.parse(cleanedJson);
