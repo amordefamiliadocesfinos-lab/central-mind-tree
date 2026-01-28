@@ -822,11 +822,15 @@ export type Database = {
           cta: string | null
           description: string | null
           duration_seconds: number | null
+          extra_media_ids: Json | null
           hashtags: string | null
+          hidden_inherited_media: Json | null
           id: string
           idea_id: string
           is_template: boolean | null
           link: string | null
+          media_mode: string | null
+          media_transforms: Json | null
           media_urls: Json | null
           metric_clicks: number | null
           metric_ctr: number | null
@@ -857,11 +861,15 @@ export type Database = {
           cta?: string | null
           description?: string | null
           duration_seconds?: number | null
+          extra_media_ids?: Json | null
           hashtags?: string | null
+          hidden_inherited_media?: Json | null
           id?: string
           idea_id: string
           is_template?: boolean | null
           link?: string | null
+          media_mode?: string | null
+          media_transforms?: Json | null
           media_urls?: Json | null
           metric_clicks?: number | null
           metric_ctr?: number | null
@@ -892,11 +900,15 @@ export type Database = {
           cta?: string | null
           description?: string | null
           duration_seconds?: number | null
+          extra_media_ids?: Json | null
           hashtags?: string | null
+          hidden_inherited_media?: Json | null
           id?: string
           idea_id?: string
           is_template?: boolean | null
           link?: string | null
+          media_mode?: string | null
+          media_transforms?: Json | null
           media_urls?: Json | null
           metric_clicks?: number | null
           metric_ctr?: number | null

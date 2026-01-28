@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { DigitalVariation, DIGITAL_STATUS } from '@/hooks/useDigital';
+import { DigitalVariation, DigitalIdea, DIGITAL_STATUS } from '@/hooks/useDigital';
 import { Platform } from '@/hooks/usePlatforms';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,16 +15,19 @@ import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { MediaLibrary } from './MediaLibrary';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, Trash2, Calendar, BarChart3, CheckSquare, FileText, X, Plus, Copy, ImagePlus, CalendarIcon, Clock } from 'lucide-react';
+import { ArrowLeft, Trash2, Calendar, BarChart3, CheckSquare, FileText, X, Plus, Copy, ImagePlus, CalendarIcon, Clock, Eye, EyeOff, Link2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { supabase } from '@/integrations/supabase/client';
 
 interface VariationEditorProps {
   variation: DigitalVariation;
   ideaTitle: string;
+  ideaMediaUrls?: string[]; // Media from parent idea
   onBack: () => void;
   onUpdate: (id: string, updates: Partial<DigitalVariation>) => void;
   onDelete: (id: string) => void;
@@ -35,6 +38,7 @@ interface VariationEditorProps {
 export function VariationEditor({
   variation,
   ideaTitle,
+  ideaMediaUrls = [],
   onBack,
   onUpdate,
   onDelete,
@@ -66,20 +70,79 @@ export function VariationEditor({
     toast.success('Legenda copiada!');
   };
 
-  const handleMediaUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Media inheritance logic
+  const hiddenInherited = variation.hidden_inherited_media || [];
+  const extraMedia = variation.extra_media_ids || [];
+  const mediaMode = variation.media_mode || 'inherit';
+  
+  // Get inherited media (from idea, minus hidden)
+  const inheritedMedia = mediaMode === 'inherit' 
+    ? ideaMediaUrls.filter(url => !hiddenInherited.includes(url))
+    : [];
+  
+  // Effective media = inherited + extra
+  const effectiveMedia = [...inheritedMedia, ...extraMedia];
+
+  const handleMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
 
-    const newUrls = Array.from(files).map(f => URL.createObjectURL(f));
+    // Upload to storage and add to extra_media_ids
+    const uploadedUrls: string[] = [];
+    for (const file of Array.from(files)) {
+      const ext = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const filePath = `variations/${variation.id}/${fileName}`;
+      
+      const { error } = await supabase.storage
+        .from('media')
+        .upload(filePath, file);
+      
+      if (error) {
+        console.error('Upload error:', error);
+        toast.error(`Erro ao fazer upload: ${file.name}`);
+        continue;
+      }
+      
+      const { data: urlData } = supabase.storage
+        .from('media')
+        .getPublicUrl(filePath);
+      
+      uploadedUrls.push(urlData.publicUrl);
+    }
+
+    if (uploadedUrls.length > 0) {
+      onUpdate(variation.id, {
+        extra_media_ids: [...extraMedia, ...uploadedUrls],
+      });
+      toast.success(`${uploadedUrls.length} mídia(s) adicionada(s)!`);
+    }
+  };
+
+  const handleRemoveExtraMedia = (url: string) => {
     onUpdate(variation.id, {
-      media_urls: [...(variation.media_urls || []), ...newUrls],
+      extra_media_ids: extraMedia.filter(m => m !== url),
     });
   };
 
-  const handleRemoveMedia = (url: string) => {
-    URL.revokeObjectURL(url);
+  const handleToggleInheritedVisibility = (url: string) => {
+    const isHidden = hiddenInherited.includes(url);
+    if (isHidden) {
+      // Show it
+      onUpdate(variation.id, {
+        hidden_inherited_media: hiddenInherited.filter(u => u !== url),
+      });
+    } else {
+      // Hide it
+      onUpdate(variation.id, {
+        hidden_inherited_media: [...hiddenInherited, url],
+      });
+    }
+  };
+
+  const handleToggleMediaMode = (inherit: boolean) => {
     onUpdate(variation.id, {
-      media_urls: (variation.media_urls || []).filter(m => m !== url),
+      media_mode: inherit ? 'inherit' : 'custom',
     });
   };
 
@@ -218,46 +281,99 @@ export function VariationEditor({
                 );
               })}
 
-              {/* Media */}
-              <div className="space-y-2">
+              {/* Media with Inheritance */}
+              <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <Label>Mídia</Label>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={() => setShowMediaLibrary(true)}
-                  >
-                    <ImagePlus className="h-3.5 w-3.5 mr-1" />
-                    Da Biblioteca
-                  </Button>
-                </div>
-                <div className="flex gap-2 flex-wrap">
-                  {variation.media_urls?.map((url, i) => (
-                    <div key={i} className="relative">
-                      <img
-                        src={url}
-                        alt=""
-                        className="h-20 w-20 object-cover rounded"
-                      />
-                      <button
-                        className="absolute -top-1 -right-1 bg-destructive text-white rounded-full p-1"
-                        onClick={() => handleRemoveMedia(url)}
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </div>
-                  ))}
-                  <label className="h-20 w-20 border-2 border-dashed rounded flex items-center justify-center cursor-pointer hover:bg-muted touch-manipulation active:scale-95">
-                    <Plus className="h-6 w-6 text-muted-foreground" />
-                    <input
-                      type="file"
-                      accept="image/*,video/*"
-                      multiple
-                      className="hidden"
-                      onChange={handleMediaUpload}
+                  <Label className="flex items-center gap-2">
+                    <Link2 className="h-4 w-4" />
+                    Mídia
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Herdar da Ideia</span>
+                    <Switch
+                      checked={mediaMode === 'inherit'}
+                      onCheckedChange={(checked) => handleToggleMediaMode(checked)}
                     />
-                  </label>
+                  </div>
+                </div>
+
+                {/* Inherited Media (from Idea) */}
+                {mediaMode === 'inherit' && ideaMediaUrls.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Herdadas da Ideia</Label>
+                    <div className="flex gap-2 flex-wrap">
+                      {ideaMediaUrls.map((url, i) => {
+                        const isHidden = hiddenInherited.includes(url);
+                        return (
+                          <div key={i} className={cn("relative group", isHidden && "opacity-40")}>
+                            <img
+                              src={url}
+                              alt=""
+                              className="h-16 w-16 object-cover rounded border"
+                            />
+                            <Badge 
+                              variant="secondary" 
+                              className="absolute -top-2 -left-2 text-[9px] px-1 py-0 bg-purple-500 text-white"
+                            >
+                              Estrutural
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="absolute -top-1 -right-1 h-5 w-5 bg-background border shadow-sm"
+                              onClick={() => handleToggleInheritedVisibility(url)}
+                              title={isHidden ? "Exibir" : "Ocultar"}
+                            >
+                              {isHidden ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Specific Media (variation only) */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs text-muted-foreground">Específicas desta Variação</Label>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs"
+                      onClick={() => setShowMediaLibrary(true)}
+                    >
+                      <ImagePlus className="h-3 w-3 mr-1" />
+                      Biblioteca
+                    </Button>
+                  </div>
+                  <div className="flex gap-2 flex-wrap">
+                    {extraMedia.map((url, i) => (
+                      <div key={i} className="relative group">
+                        <img
+                          src={url}
+                          alt=""
+                          className="h-16 w-16 object-cover rounded border"
+                        />
+                        <button
+                          className="absolute -top-1 -right-1 bg-destructive text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                          onClick={() => handleRemoveExtraMedia(url)}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                    <label className="h-16 w-16 border-2 border-dashed rounded flex items-center justify-center cursor-pointer hover:bg-muted touch-manipulation active:scale-95">
+                      <Plus className="h-5 w-5 text-muted-foreground" />
+                      <input
+                        type="file"
+                        accept="image/*,video/*"
+                        multiple
+                        className="hidden"
+                        onChange={handleMediaUpload}
+                      />
+                    </label>
+                  </div>
                 </div>
               </div>
             </CardContent>
