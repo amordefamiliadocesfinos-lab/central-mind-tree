@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useDigital, DIGITAL_STATUS } from '@/hooks/useDigital';
-import { IdeaCard, IdeaEditor, KanbanBoard, MediaLibrary, MetricsChart, BatchVariationDialog, PlatformsManager } from '@/components/digital';
+import { IdeaCard, IdeaEditor, KanbanBoard, MediaLibrary, MetricsChart, BatchVariationDialog, PlatformsManager, DigitalCalendar } from '@/components/digital';
 import { TrendsPanel } from '@/components/digital/TrendsPanel';
 import { InteractionsPanel } from '@/components/digital/InteractionsPanel';
 import { KnowledgeBasePanel } from '@/components/digital/KnowledgeBasePanel';
@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, ArrowLeft, Search, LayoutGrid, Columns3, Image, BarChart3, Link2, Settings2, TrendingUp, MessageCircle, Book } from 'lucide-react';
+import { Plus, ArrowLeft, Search, LayoutGrid, Columns3, Image, BarChart3, Link2, Settings2, TrendingUp, MessageCircle, Book, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
@@ -57,7 +57,7 @@ export default function Digital() {
   const [selectedIdea, setSelectedIdea] = useState<string | null>(null);
   const [newIdea, setNewIdea] = useState({ title: '', objective: '', node_id: '' });
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
-  const [activeTab, setActiveTab] = useState<'ideias' | 'midia' | 'metricas' | 'plataformas' | 'tendencias' | 'engajamento' | 'faq'>('ideias');
+  const [activeTab, setActiveTab] = useState<'ideias' | 'calendario' | 'midia' | 'metricas' | 'plataformas' | 'tendencias' | 'engajamento' | 'faq'>('ideias');
   const [kanbanMode, setKanbanMode] = useState<'ideas' | 'variations'>('ideas');
   const [nodes, setNodes] = useState<Node[]>([]);
   const isMobile = useIsMobile();
@@ -148,10 +148,14 @@ export default function Digital() {
         {!selectedIdea && (
           <div className="px-4 pb-2">
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-              <TabsList className="grid w-full grid-cols-7 h-9">
+              <TabsList className="grid w-full grid-cols-8 h-9">
                 <TabsTrigger value="ideias" className="text-xs px-1">
                   <LayoutGrid className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline ml-1">Ideias</span>
+                </TabsTrigger>
+                <TabsTrigger value="calendario" className="text-xs px-1">
+                  <Calendar className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline ml-1">Calendário</span>
                 </TabsTrigger>
                 <TabsTrigger value="tendencias" className="text-xs px-1">
                   <TrendingUp className="h-3.5 w-3.5" />
@@ -318,6 +322,15 @@ export default function Digital() {
                 )}
               </div>
             )
+          ) : activeTab === 'calendario' ? (
+            <DigitalCalendar 
+              variations={allVariationsWithTitle} 
+              onSelectVariation={(v) => {
+                const idea = ideas.find(i => i.id === v.idea_id);
+                if (idea) setSelectedIdea(idea.id);
+              }}
+              platforms={activePlatforms}
+            />
           ) : activeTab === 'tendencias' ? (
             <TrendsPanel />
           ) : activeTab === 'engajamento' ? (
