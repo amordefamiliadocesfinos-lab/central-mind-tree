@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { DigitalVariation, DIGITAL_STATUS, PLATFORMS } from '@/hooks/useDigital';
+import { DigitalVariation, DIGITAL_STATUS } from '@/hooks/useDigital';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,9 +11,53 @@ import { ptBR } from 'date-fns/locale';
 interface ScheduleCalendarProps {
   variations: DigitalVariation[];
   onSelectVariation: (variation: DigitalVariation) => void;
+  platforms?: Array<{ id: string; name: string; icon: string }>;
 }
 
-export function ScheduleCalendar({ variations, onSelectVariation }: ScheduleCalendarProps) {
+// Gera sigla legível a partir do nome da plataforma
+function getPlatformAbbreviation(name: string): string {
+  const abbreviations: Record<string, string> = {
+    'instagram': 'IG',
+    'instagram feed': 'IG',
+    'instagram stories': 'IGS',
+    'instagram reels': 'IGR',
+    'facebook': 'FB',
+    'facebook feed': 'FB',
+    'facebook stories': 'FBS',
+    'tiktok': 'TT',
+    'youtube': 'YT',
+    'youtube shorts': 'YTS',
+    'twitter': 'TW',
+    'x': 'X',
+    'linkedin': 'LI',
+    'pinterest': 'PIN',
+    'whatsapp': 'WA',
+    'telegram': 'TG',
+    'olx': 'OLX',
+    'mercado livre': 'ML',
+    'shopee': 'SHP',
+    'amazon': 'AMZ',
+    'nuvemshop': 'NUV',
+    'magalu': 'MAG',
+    'americanas': 'AME',
+    'etsy': 'ETSY',
+    'aliexpress': 'ALI',
+  };
+  
+  const lowerName = name.toLowerCase();
+  if (abbreviations[lowerName]) {
+    return abbreviations[lowerName];
+  }
+  
+  // Gera sigla automática: primeiras 3 letras ou iniciais de palavras
+  const words = name.split(/\s+/);
+  if (words.length > 1) {
+    return words.map(w => w[0]).join('').toUpperCase().slice(0, 3);
+  }
+  return name.slice(0, 3).toUpperCase();
+}
+
+export function ScheduleCalendar({ variations, onSelectVariation, platforms = [] }: ScheduleCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const scheduledVariations = useMemo(() => {
@@ -34,7 +78,26 @@ export function ScheduleCalendar({ variations, onSelectVariation }: ScheduleCale
     });
   };
 
+  const getPlatformInfo = (platformId: string) => {
+    return platforms.find(p => p.id === platformId) || { id: platformId, name: platformId, icon: '📱' };
+  };
+
   const weekDays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
+
+  // Sort upcoming by date and time
+  const upcomingVariations = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    return scheduledVariations
+      .filter(v => v.scheduled_date && parseISO(v.scheduled_date) >= today)
+      .sort((a, b) => {
+        const dateCompare = (a.scheduled_date || '').localeCompare(b.scheduled_date || '');
+        if (dateCompare !== 0) return dateCompare;
+        return (a.scheduled_time || '').localeCompare(b.scheduled_time || '');
+      })
+      .slice(0, 5);
+  }, [scheduledVariations]);
 
   return (
     <div className="space-y-4">
@@ -94,26 +157,32 @@ export function ScheduleCalendar({ variations, onSelectVariation }: ScheduleCale
               </div>
               <div className="space-y-0.5">
                 {dayVariations.slice(0, 2).map(v => {
-                  const platform = PLATFORMS[v.platform];
-                  const status = DIGITAL_STATUS[v.status];
+                  const platform = getPlatformInfo(v.platform);
+                  const status = DIGITAL_STATUS[v.status] || DIGITAL_STATUS.pendente;
+                  const abbr = getPlatformAbbreviation(platform.name);
+                  const time = v.scheduled_time?.slice(0, 5) || '';
+                  
                   return (
                     <div
                       key={v.id}
                       className={cn(
-                        'text-xs px-1 py-0.5 rounded truncate cursor-pointer',
+                        'text-[10px] px-1 py-0.5 rounded cursor-pointer',
                         'hover:opacity-80 transition-opacity',
                         status.color,
                         'text-white'
                       )}
                       onClick={() => onSelectVariation(v)}
-                      title={`${platform?.label} - ${v.scheduled_time?.slice(0, 5) || ''}`}
+                      title={`${platform.name} - ${time}`}
                     >
-                      {platform?.icon}
+                      <div className="flex items-center gap-1">
+                        <span className="font-bold shrink-0">{abbr}</span>
+                        <span className="shrink-0">{time}</span>
+                      </div>
                     </div>
                   );
                 })}
                 {dayVariations.length > 2 && (
-                  <div className="text-xs text-muted-foreground text-center">
+                  <div className="text-[10px] text-muted-foreground text-center">
                     +{dayVariations.length - 2}
                   </div>
                 )}
@@ -127,41 +196,46 @@ export function ScheduleCalendar({ variations, onSelectVariation }: ScheduleCale
       <Card>
         <CardContent className="p-3">
           <h4 className="text-sm font-medium mb-2">Próximos Agendamentos</h4>
-          {scheduledVariations.length === 0 ? (
+          {upcomingVariations.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-2">
               Nenhum agendamento
             </p>
           ) : (
             <div className="space-y-2 max-h-40 overflow-auto">
-              {scheduledVariations
-                .sort((a, b) => (a.scheduled_date || '').localeCompare(b.scheduled_date || ''))
-                .slice(0, 5)
-                .map(v => {
-                  const platform = PLATFORMS[v.platform];
-                  const status = DIGITAL_STATUS[v.status];
-                  return (
-                    <div
-                      key={v.id}
-                      className="flex items-center justify-between p-2 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted"
-                      onClick={() => onSelectVariation(v)}
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg">{platform?.icon}</span>
-                        <span className="text-sm">{platform?.label}</span>
-                        <Badge
-                          variant="secondary"
-                          className={cn('text-xs', status.color, 'text-white')}
-                        >
-                          {status.label}
-                        </Badge>
+              {upcomingVariations.map(v => {
+                const platform = getPlatformInfo(v.platform);
+                const status = DIGITAL_STATUS[v.status] || DIGITAL_STATUS.pendente;
+                const abbr = getPlatformAbbreviation(platform.name);
+                const displayTitle = v.title || platform.name;
+                
+                return (
+                  <div
+                    key={v.id}
+                    className="flex items-center justify-between p-2 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted transition-colors"
+                    onClick={() => onSelectVariation(v)}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="text-lg shrink-0">{platform.icon}</span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold bg-muted px-1.5 py-0.5 rounded shrink-0">{abbr}</span>
+                          <span className="text-sm font-medium truncate">{displayTitle}</span>
+                        </div>
                       </div>
-                      <div className="text-sm text-muted-foreground tabular-nums">
-                        {v.scheduled_date && format(parseISO(v.scheduled_date), 'dd/MM')}
-                        {v.scheduled_time && ` ${v.scheduled_time.slice(0, 5)}`}
-                      </div>
+                      <Badge
+                        variant="secondary"
+                        className={cn('text-xs shrink-0', status.color, 'text-white')}
+                      >
+                        {status.label}
+                      </Badge>
                     </div>
-                  );
-                })}
+                    <div className="text-sm text-muted-foreground tabular-nums shrink-0 ml-2">
+                      {v.scheduled_date && format(parseISO(v.scheduled_date), 'dd/MM')}
+                      {v.scheduled_time && ` ${v.scheduled_time.slice(0, 5)}`}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </CardContent>
