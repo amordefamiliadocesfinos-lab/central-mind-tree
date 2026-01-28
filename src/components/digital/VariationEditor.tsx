@@ -24,7 +24,7 @@ import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
-type AIFieldType = 'title' | 'description' | 'caption' | 'cta' | 'hashtags';
+type AIFieldType = 'title' | 'description' | 'caption' | 'cta' | 'hashtags' | 'custom_field';
 
 interface VariationEditorProps {
   variation: DigitalVariation;
@@ -165,15 +165,19 @@ export function VariationEditor({
   };
 
   // AI generation for variation fields
-  const generateFieldWithAI = async (field: AIFieldType) => {
-    setAiLoading(prev => ({ ...prev, [field]: true }));
+  const generateFieldWithAI = async (fieldId: string, fieldLabel?: string) => {
+    setAiLoading(prev => ({ ...prev, [fieldId]: true }));
     try {
+      const standardFields = ['title', 'description', 'caption', 'cta', 'hashtags'];
+      const isCustomField = !standardFields.includes(fieldId);
+      
       const { data, error } = await supabase.functions.invoke('digital-content-ai', {
         body: {
           title: idea.title,
-          field,
+          field: isCustomField ? 'custom_field' : fieldId,
           platform: platformConfig?.name,
           platformType: platformConfig?.group_type,
+          customFieldLabel: isCustomField ? fieldLabel : undefined,
           existingData: {
             title: variation.title,
             description: variation.description,
@@ -191,19 +195,64 @@ export function VariationEditor({
         return;
       }
 
-      if (data?.[field]) {
-        onUpdate(variation.id, { [field]: data[field] });
-        toast.success(`${fieldLabels[field] || field} gerado com IA!`);
+      const resultKey = isCustomField ? 'custom_field' : fieldId;
+      if (data?.[resultKey]) {
+        onUpdate(variation.id, { [fieldId]: data[resultKey] });
+        toast.success(`${fieldLabel || fieldId} gerado com IA!`);
       }
     } catch (err) {
       console.error('AI generation error:', err);
       toast.error('Erro ao gerar conteúdo com IA');
     } finally {
-      setAiLoading(prev => ({ ...prev, [field]: false }));
+      setAiLoading(prev => ({ ...prev, [fieldId]: false }));
     }
   };
 
-  const aiSupportedFields = ['title', 'description', 'caption', 'cta', 'hashtags'];
+  // Generate all custom fields at once
+  const generateAllFieldsWithAI = async () => {
+    const customFields = platformConfig?.custom_fields || [];
+    if (customFields.length === 0) {
+      toast.error('Nenhum campo definido para gerar');
+      return;
+    }
+
+    setAiLoading(prev => ({ ...prev, all: true }));
+    try {
+      const { data, error } = await supabase.functions.invoke('digital-content-ai', {
+        body: {
+          title: idea.title,
+          field: 'all_variation_fields',
+          platform: platformConfig?.name,
+          platformType: platformConfig?.group_type,
+          customFields: customFields.map(f => ({ id: f.id, label: f.label, type: f.type })),
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      // Update all fields that were generated
+      const updates: Record<string, string> = {};
+      for (const field of customFields) {
+        if (data[field.id]) {
+          updates[field.id] = data[field.id];
+        }
+      }
+
+      if (Object.keys(updates).length > 0) {
+        onUpdate(variation.id, updates);
+        toast.success(`${Object.keys(updates).length} campos gerados com IA!`);
+      }
+    } catch (err) {
+      console.error('AI generation error:', err);
+      toast.error('Erro ao gerar conteúdo com IA');
+    } finally {
+      setAiLoading(prev => ({ ...prev, all: false }));
+    }
+  };
 
   return (
     <div className="space-y-4">
@@ -319,36 +368,50 @@ export function VariationEditor({
       {/* Main Content */}
       <Card>
         <CardHeader className="py-3">
-          <CardTitle className="text-sm">✏️ Conteúdo</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm">✏️ Conteúdo</CardTitle>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={generateAllFieldsWithAI}
+              disabled={aiLoading.all}
+            >
+              {aiLoading.all ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />
+              ) : (
+                <Sparkles className="h-3.5 w-3.5 mr-1" />
+              )}
+              Gerar Tudo com IA
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="pt-0 space-y-4">
           {/* Dynamic fields based on platform custom_fields */}
           {(platformConfig?.custom_fields || [{ id: 'caption', label: 'Legenda', type: 'textarea' as const }, { id: 'cta', label: 'Call to Action', type: 'input' as const }]).map((field) => {
             const value = (variation as any)[field.id] || '';
             const isTextarea = field.type === 'textarea';
-            const canGenerateWithAI = aiSupportedFields.includes(field.id);
 
             return (
               <div key={field.id} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label>{field.label}</Label>
-                  {canGenerateWithAI && (
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 px-2 text-xs text-primary hover:text-primary"
-                      onClick={() => generateFieldWithAI(field.id as AIFieldType)}
-                      disabled={aiLoading[field.id]}
-                    >
-                      {aiLoading[field.id] ? (
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      ) : (
-                        <Sparkles className="h-3.5 w-3.5" />
-                      )}
-                      <span className="ml-1">Gerar</span>
-                    </Button>
-                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs text-primary hover:text-primary"
+                    onClick={() => generateFieldWithAI(field.id, field.label)}
+                    disabled={aiLoading[field.id]}
+                  >
+                    {aiLoading[field.id] ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5" />
+                    )}
+                    <span className="ml-1">Gerar</span>
+                  </Button>
                 </div>
                 {isTextarea ? (
                   <Textarea
