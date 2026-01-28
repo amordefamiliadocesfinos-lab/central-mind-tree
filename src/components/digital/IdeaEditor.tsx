@@ -777,6 +777,7 @@ export function IdeaEditor({
           <ScheduleCalendar
             variations={variations}
             onSelectVariation={setSelectedVariation}
+            platforms={platforms}
           />
         </TabsContent>
       </Tabs>
