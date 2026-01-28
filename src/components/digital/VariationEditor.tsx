@@ -322,26 +322,26 @@ export function VariationEditor({
           <CardTitle className="text-sm">✏️ Conteúdo</CardTitle>
         </CardHeader>
         <CardContent className="pt-0 space-y-4">
-          {/* Dynamic fields based on platform */}
-          {(platformConfig?.fields || ['caption', 'cta']).map((field) => {
-            const value = (variation as any)[field] || '';
-            const isTextarea = ['description', 'caption', 'chapters'].includes(field);
-            const canGenerateWithAI = aiSupportedFields.includes(field);
+          {/* Dynamic fields based on platform custom_fields */}
+          {(platformConfig?.custom_fields || [{ id: 'caption', label: 'Legenda', type: 'textarea' as const }, { id: 'cta', label: 'Call to Action', type: 'input' as const }]).map((field) => {
+            const value = (variation as any)[field.id] || '';
+            const isTextarea = field.type === 'textarea';
+            const canGenerateWithAI = aiSupportedFields.includes(field.id);
 
             return (
-              <div key={field} className="space-y-2">
+              <div key={field.id} className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label>{fieldLabels[field] || field}</Label>
+                  <Label>{field.label}</Label>
                   {canGenerateWithAI && (
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
                       className="h-7 px-2 text-xs text-primary hover:text-primary"
-                      onClick={() => generateFieldWithAI(field as AIFieldType)}
-                      disabled={aiLoading[field]}
+                      onClick={() => generateFieldWithAI(field.id as AIFieldType)}
+                      disabled={aiLoading[field.id]}
                     >
-                      {aiLoading[field] ? (
+                      {aiLoading[field.id] ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
                       ) : (
                         <Sparkles className="h-3.5 w-3.5" />
@@ -353,15 +353,15 @@ export function VariationEditor({
                 {isTextarea ? (
                   <Textarea
                     value={value}
-                    onChange={(e) => onUpdate(variation.id, { [field]: e.target.value })}
-                    placeholder={fieldLabels[field] || field}
+                    onChange={(e) => onUpdate(variation.id, { [field.id]: e.target.value })}
+                    placeholder={field.label}
                     rows={3}
                   />
                 ) : (
                   <Input
                     value={value}
-                    onChange={(e) => onUpdate(variation.id, { [field]: e.target.value })}
-                    placeholder={fieldLabels[field] || field}
+                    onChange={(e) => onUpdate(variation.id, { [field.id]: e.target.value })}
+                    placeholder={field.label}
                     className="h-11"
                   />
                 )}
