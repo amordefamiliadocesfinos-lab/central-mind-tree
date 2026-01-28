@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, Plus, Trash2, Settings, Calendar, Image, Copy, Layers, Link2, X, ImagePlus, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Settings, Calendar, Image, Copy, Layers, Link2, X, ImagePlus, Eye, EyeOff, Sparkles, Loader2, Wand2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { VariationEditor } from './VariationEditor';
 import { BatchVariationDialog } from './BatchVariationDialog';
@@ -21,6 +21,8 @@ import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+
+type AIFieldType = 'objective' | 'target_audience' | 'key_message' | 'kpi' | 'all';
 
 interface Node {
   id: string;
@@ -66,6 +68,68 @@ export function IdeaEditor({
   const [showDistributeDialog, setShowDistributeDialog] = useState(false);
   const [selectedMediaForDistribute, setSelectedMediaForDistribute] = useState<string | null>(null);
   const [distributeSelections, setDistributeSelections] = useState<Record<string, boolean>>({});
+  const [aiLoading, setAiLoading] = useState<Record<AIFieldType, boolean>>({
+    objective: false,
+    target_audience: false,
+    key_message: false,
+    kpi: false,
+    all: false,
+  });
+
+  // AI Generation function
+  const generateWithAI = async (field: AIFieldType) => {
+    if (!idea.title.trim()) {
+      toast.error('Preencha o título primeiro para gerar com IA');
+      return;
+    }
+
+    setAiLoading(prev => ({ ...prev, [field]: true }));
+
+    try {
+      const response = await supabase.functions.invoke('digital-content-ai', {
+        body: {
+          title: idea.title,
+          field,
+          existingData: {
+            objective: idea.objective,
+            target_audience: idea.target_audience,
+            key_message: idea.key_message,
+            kpi: idea.kpi,
+          },
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || 'Erro ao gerar conteúdo');
+      }
+
+      const data = response.data;
+
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      if (field === 'all') {
+        // Update all fields
+        onUpdate(idea.id, {
+          objective: data.objective || idea.objective,
+          target_audience: data.target_audience || idea.target_audience,
+          key_message: data.key_message || idea.key_message,
+          kpi: data.kpi || idea.kpi,
+        });
+        toast.success('Todos os campos gerados com IA!');
+      } else {
+        // Update single field
+        onUpdate(idea.id, { [field]: data[field] });
+        toast.success('Campo gerado com IA!');
+      }
+    } catch (error) {
+      console.error('AI generation error:', error);
+      toast.error(error instanceof Error ? error.message : 'Erro ao gerar conteúdo');
+    } finally {
+      setAiLoading(prev => ({ ...prev, [field]: false }));
+    }
+  };
 
   // Keep selected variation in sync after background refetches (e.g. after saving schedule)
   useEffect(() => {
@@ -282,18 +346,57 @@ export function IdeaEditor({
         {/* Idea Tab */}
         <TabsContent value="idea" className="space-y-4 mt-4">
           <Card>
-            <CardContent className="p-4 space-y-4">
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm">Informações da Ideia</CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => generateWithAI('all')}
+                  disabled={aiLoading.all || !idea.title.trim()}
+                  className="gap-2"
+                >
+                  {aiLoading.all ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Wand2 className="h-4 w-4" />
+                  )}
+                  Gerar Tudo com IA
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4 pt-2 space-y-4">
               <div className="space-y-2">
                 <Label>Título da Ideia</Label>
                 <Input
                   value={idea.title}
                   onChange={(e) => onUpdate(idea.id, { title: e.target.value })}
                   className="h-12 text-lg font-medium"
+                  placeholder="Ex: IPHONE 14 ORIGINAL 128 GB PERFEITO SEM DEFEITOS"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Escreva o título e clique nos botões ✨ para gerar os campos com IA
+                </p>
               </div>
 
               <div className="space-y-2">
-                <Label>Objetivo</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Objetivo</Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => generateWithAI('objective')}
+                    disabled={aiLoading.objective || !idea.title.trim()}
+                    className="h-7 px-2 gap-1"
+                  >
+                    {aiLoading.objective ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5" />
+                    )}
+                    <span className="text-xs">Gerar</span>
+                  </Button>
+                </div>
                 <Textarea
                   value={idea.objective || ''}
                   onChange={(e) => onUpdate(idea.id, { objective: e.target.value })}
@@ -303,7 +406,23 @@ export function IdeaEditor({
               </div>
 
               <div className="space-y-2">
-                <Label>Público-Alvo</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Público-Alvo</Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => generateWithAI('target_audience')}
+                    disabled={aiLoading.target_audience || !idea.title.trim()}
+                    className="h-7 px-2 gap-1"
+                  >
+                    {aiLoading.target_audience ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5" />
+                    )}
+                    <span className="text-xs">Gerar</span>
+                  </Button>
+                </div>
                 <Input
                   value={idea.target_audience || ''}
                   onChange={(e) => onUpdate(idea.id, { target_audience: e.target.value })}
@@ -313,7 +432,23 @@ export function IdeaEditor({
               </div>
 
               <div className="space-y-2">
-                <Label>Mensagem Principal</Label>
+                <div className="flex items-center justify-between">
+                  <Label>Mensagem Principal</Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => generateWithAI('key_message')}
+                    disabled={aiLoading.key_message || !idea.title.trim()}
+                    className="h-7 px-2 gap-1"
+                  >
+                    {aiLoading.key_message ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5" />
+                    )}
+                    <span className="text-xs">Gerar</span>
+                  </Button>
+                </div>
                 <Textarea
                   value={idea.key_message || ''}
                   onChange={(e) => onUpdate(idea.id, { key_message: e.target.value })}
@@ -323,7 +458,23 @@ export function IdeaEditor({
               </div>
 
               <div className="space-y-2">
-                <Label>KPI / Meta</Label>
+                <div className="flex items-center justify-between">
+                  <Label>KPI / Meta</Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => generateWithAI('kpi')}
+                    disabled={aiLoading.kpi || !idea.title.trim()}
+                    className="h-7 px-2 gap-1"
+                  >
+                    {aiLoading.kpi ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5" />
+                    )}
+                    <span className="text-xs">Gerar</span>
+                  </Button>
+                </div>
                 <Input
                   value={idea.kpi || ''}
                   onChange={(e) => onUpdate(idea.id, { kpi: e.target.value })}
