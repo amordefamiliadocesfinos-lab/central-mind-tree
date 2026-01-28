@@ -11,8 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-import { Plus, Edit2, Trash2, ChevronDown, ChevronUp, Settings2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, ChevronDown, ChevronUp, Settings2, Sparkles, Loader2 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 const EMOJI_OPTIONS = ['📱', '📷', '🎬', '📺', '⚡', '🎵', '📘', '🎥', '🎠', '🛒', '🟡', '🧡', '🟢', '🔵', '🟣', '📦', '🏪', '💼', '🌐', '📧'];
 
@@ -51,12 +53,49 @@ export function PlatformsManager() {
   const [editingPlatform, setEditingPlatform] = useState<Platform | null>(null);
   const [formData, setFormData] = useState<PlatformFormData>(initialFormData);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
     social: true,
     ecommerce: true,
     marketplace: true,
     other: true,
   });
+
+  // AI checklist suggestion
+  const generateChecklistWithAI = async () => {
+    if (!formData.name.trim()) {
+      toast.error('Preencha o nome da plataforma primeiro');
+      return;
+    }
+    
+    setAiLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('digital-content-ai', {
+        body: {
+          title: formData.name,
+          field: 'checklist_suggestion',
+          platform: formData.name,
+          platformType: formData.group_type,
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      if (data?.checklist) {
+        setFormData(prev => ({ ...prev, checklist_items: data.checklist }));
+        toast.success('Checklist sugerido pela IA!');
+      }
+    } catch (err) {
+      console.error('AI generation error:', err);
+      toast.error('Erro ao gerar checklist com IA');
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const handleOpenCreate = () => {
     setEditingPlatform(null);
@@ -338,7 +377,24 @@ export function PlatformsManager() {
 
           {/* Checklist Template */}
           <div className="space-y-2">
-            <Label>Checklist Padrão (um item por linha)</Label>
+            <div className="flex items-center justify-between">
+              <Label>Checklist Padrão (um item por linha)</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs text-primary hover:text-primary"
+                onClick={generateChecklistWithAI}
+                disabled={aiLoading || !formData.name.trim()}
+              >
+                {aiLoading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5" />
+                )}
+                <span className="ml-1">Sugerir com IA</span>
+              </Button>
+            </div>
             <Textarea
               value={formData.checklist_items}
               onChange={(e) => setFormData({ ...formData, checklist_items: e.target.value })}

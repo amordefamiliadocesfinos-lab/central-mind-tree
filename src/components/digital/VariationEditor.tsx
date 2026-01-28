@@ -17,12 +17,14 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, Trash2, Calendar, BarChart3, CheckSquare, FileText, X, Plus, Copy, ImagePlus, CalendarIcon, Clock, Eye, EyeOff, Link2 } from 'lucide-react';
+import { ArrowLeft, Trash2, Calendar, BarChart3, CheckSquare, FileText, X, Plus, Copy, ImagePlus, CalendarIcon, Clock, Eye, EyeOff, Link2, Sparkles, Loader2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
+
+type AIFieldType = 'title' | 'description' | 'caption' | 'cta' | 'hashtags';
 
 interface VariationEditorProps {
   variation: DigitalVariation;
@@ -47,6 +49,7 @@ export function VariationEditor({
 }: VariationEditorProps) {
   const isMobile = useIsMobile();
   const [showMediaLibrary, setShowMediaLibrary] = useState(false);
+  const [aiLoading, setAiLoading] = useState<Record<string, boolean>>({});
   
   // Find the platform from dynamic platforms list
   const platformConfig = platforms.find(p => p.id === variation.platform);
@@ -162,6 +165,45 @@ export function VariationEditor({
     thumbnail_url: 'URL da Thumbnail',
   };
 
+  // AI generation for variation fields
+  const generateFieldWithAI = async (field: AIFieldType) => {
+    setAiLoading(prev => ({ ...prev, [field]: true }));
+    try {
+      const { data, error } = await supabase.functions.invoke('digital-content-ai', {
+        body: {
+          title: ideaTitle,
+          field,
+          platform: platformConfig?.name,
+          existingData: {
+            title: variation.title,
+            description: variation.description,
+            caption: variation.caption,
+            cta: variation.cta,
+          },
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      if (data?.[field]) {
+        onUpdate(variation.id, { [field]: data[field] });
+        toast.success(`${fieldLabels[field] || field} gerado com IA!`);
+      }
+    } catch (err) {
+      console.error('AI generation error:', err);
+      toast.error('Erro ao gerar conteúdo com IA');
+    } finally {
+      setAiLoading(prev => ({ ...prev, [field]: false }));
+    }
+  };
+
+  // AI-supported fields
+  const aiSupportedFields = ['title', 'description', 'caption', 'cta', 'hashtags'];
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -258,10 +300,30 @@ export function VariationEditor({
               {(platformConfig?.fields || ['caption', 'cta']).map((field) => {
                 const value = (variation as any)[field] || '';
                 const isTextarea = ['description', 'caption', 'chapters'].includes(field);
+                const canGenerateWithAI = aiSupportedFields.includes(field);
 
                 return (
                   <div key={field} className="space-y-2">
-                    <Label>{fieldLabels[field] || field}</Label>
+                    <div className="flex items-center justify-between">
+                      <Label>{fieldLabels[field] || field}</Label>
+                      {canGenerateWithAI && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-xs text-primary hover:text-primary"
+                          onClick={() => generateFieldWithAI(field as AIFieldType)}
+                          disabled={aiLoading[field]}
+                        >
+                          {aiLoading[field] ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Sparkles className="h-3.5 w-3.5" />
+                          )}
+                          <span className="ml-1">Gerar</span>
+                        </Button>
+                      )}
+                    </div>
                     {isTextarea ? (
                       <Textarea
                         value={value}
