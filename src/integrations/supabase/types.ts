@@ -745,6 +745,7 @@ export type Database = {
           aspect_ratio: string | null
           checklist_template: Json | null
           created_at: string
+          custom_fields: Json | null
           duration: string | null
           fields: string[] | null
           group_type: string
@@ -759,6 +760,7 @@ export type Database = {
           aspect_ratio?: string | null
           checklist_template?: Json | null
           created_at?: string
+          custom_fields?: Json | null
           duration?: string | null
           fields?: string[] | null
           group_type?: string
@@ -773,6 +775,7 @@ export type Database = {
           aspect_ratio?: string | null
           checklist_template?: Json | null
           created_at?: string
+          custom_fields?: Json | null
           duration?: string | null
           fields?: string[] | null
           group_type?: string

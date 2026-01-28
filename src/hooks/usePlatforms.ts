@@ -2,6 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+export interface CustomField {
+  id: string;
+  label: string;
+  type: 'input' | 'textarea';
+}
+
 export interface Platform {
   id: string;
   name: string;
@@ -9,7 +15,8 @@ export interface Platform {
   group_type: 'social' | 'ecommerce' | 'marketplace' | 'other';
   aspect_ratio: string | null;
   duration: string | null;
-  fields: string[];
+  fields: string[]; // Legacy - kept for backwards compatibility
+  custom_fields: CustomField[];
   checklist_template: { id: string; text: string }[];
   is_active: boolean;
   order_index: number;
@@ -48,12 +55,15 @@ export function usePlatforms() {
       return;
     }
 
-    // Parse checklist_template from Json to proper array
+    // Parse checklist_template and custom_fields from Json to proper arrays
     const parsedData = (data || []).map(p => ({
       ...p,
       fields: p.fields || [],
+      custom_fields: Array.isArray(p.custom_fields) 
+        ? (p.custom_fields as unknown as CustomField[])
+        : [],
       checklist_template: Array.isArray(p.checklist_template) 
-        ? p.checklist_template as { id: string; text: string }[]
+        ? (p.checklist_template as unknown as { id: string; text: string }[])
         : [],
     })) as Platform[];
 
@@ -71,6 +81,10 @@ export function usePlatforms() {
         aspect_ratio: platform.aspect_ratio,
         duration: platform.duration,
         fields: platform.fields || ['caption', 'cta'],
+        custom_fields: platform.custom_fields || [
+          { id: 'caption', label: 'Legenda', type: 'textarea' },
+          { id: 'cta', label: 'Call to Action', type: 'input' },
+        ],
         checklist_template: platform.checklist_template || [],
         is_active: true,
         order_index: platforms.length,
@@ -85,13 +99,22 @@ export function usePlatforms() {
 
     toast.success('Plataforma criada!');
     fetchPlatforms();
-    return data as Platform;
+    return data as unknown as Platform;
   }, [fetchPlatforms, platforms.length]);
 
   const updatePlatform = useCallback(async (id: string, updates: Partial<Platform>) => {
+    // Convert custom_fields to JSON-compatible format
+    const dbUpdates: Record<string, unknown> = { ...updates };
+    if (updates.custom_fields) {
+      dbUpdates.custom_fields = JSON.parse(JSON.stringify(updates.custom_fields));
+    }
+    if (updates.checklist_template) {
+      dbUpdates.checklist_template = JSON.parse(JSON.stringify(updates.checklist_template));
+    }
+    
     const { error } = await supabase
       .from('digital_platforms')
-      .update(updates)
+      .update(dbUpdates)
       .eq('id', id);
 
     if (error) {
@@ -155,6 +178,7 @@ export function usePlatforms() {
       aspectRatio: p.aspect_ratio,
       duration: p.duration,
       fields: p.fields,
+      customFields: p.custom_fields,
       checklist: p.checklist_template,
     };
     return acc;
@@ -165,6 +189,7 @@ export function usePlatforms() {
     aspectRatio?: string | null;
     duration?: string | null;
     fields: string[];
+    customFields: CustomField[];
     checklist: { id: string; text: string }[];
   }>);
 
