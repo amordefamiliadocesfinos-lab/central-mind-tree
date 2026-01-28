@@ -7,14 +7,11 @@ const corsHeaders = {
 
 interface GenerateRequest {
   title: string;
-  field: 'objective' | 'target_audience' | 'key_message' | 'kpi' | 'all';
-  platform?: string; // Optional platform context (e.g., "OLX", "Instagram")
-  existingData?: {
-    objective?: string;
-    target_audience?: string;
-    key_message?: string;
-    kpi?: string;
-  };
+  field: 'objective' | 'target_audience' | 'key_message' | 'kpi' | 'all' | 
+         'description' | 'caption' | 'cta' | 'hashtags' | 'checklist_suggestion';
+  platform?: string;
+  platformType?: string; // social, ecommerce, marketplace
+  existingData?: Record<string, string>;
 }
 
 serve(async (req) => {
@@ -28,7 +25,7 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const { title, field, platform, existingData } = await req.json() as GenerateRequest;
+    const { title, field, platform, platformType, existingData } = await req.json() as GenerateRequest;
 
     if (!title) {
       return new Response(
@@ -48,6 +45,7 @@ Regras:
 - Mantenha respostas curtas mas impactantes
 - Use emojis quando apropriado para plataformas sociais
 - Para marketplaces, foque em vendas e confiança
+- Para e-commerce, foque em descrições de produto e benefícios
 
 Formato de resposta: Retorne APENAS o texto solicitado, sem explicações ou prefixos.`;
 
@@ -65,12 +63,36 @@ Gere todos os campos em formato JSON:
 }
 
 Retorne APENAS o JSON válido, sem markdown ou explicações.`;
+    } else if (field === 'checklist_suggestion') {
+      const typeContext = platformType === 'marketplace' 
+        ? 'marketplace de vendas (OLX, Mercado Livre, Shopee, etc.)'
+        : platformType === 'ecommerce'
+        ? 'loja virtual e e-commerce (Nuvemshop, etc.)'
+        : 'rede social';
+      
+      userPrompt = `Crie um checklist de produção para a plataforma "${platform || title}" que é um ${typeContext}.
+
+O checklist deve conter entre 4-8 itens essenciais que um criador/vendedor deve verificar antes de publicar.
+
+Cada item deve ser uma pergunta curta ou verificação (máximo 50 caracteres).
+
+Exemplos de bons itens:
+- Fotos em alta resolução?
+- Título com palavras-chave?
+- Preço competitivo verificado?
+- CTA incluído?
+
+Retorne APENAS os itens, um por linha, sem numeração ou bullets.`;
     } else {
       const fieldDescriptions: Record<string, string> = {
         objective: 'o objetivo deste conteúdo/anúncio (1-2 frases explicando o propósito)',
         target_audience: 'o público-alvo específico que vai se interessar (seja específico)',
         key_message: 'a mensagem principal persuasiva para atrair o público (2-3 frases impactantes)',
         kpi: 'uma meta mensurável e realista para este conteúdo (ex: views, cliques, vendas)',
+        description: 'uma descrição atrativa e detalhada do conteúdo/produto (2-4 frases que vendam)',
+        caption: 'uma legenda envolvente para o post (use emojis se for rede social, seja persuasivo)',
+        cta: 'um call-to-action curto e impactante (ex: Compre agora!, Saiba mais, Link na bio)',
+        hashtags: 'hashtags relevantes e populares separadas por espaço (10-15 hashtags)',
       };
 
       const existingContext = existingData ? Object.entries(existingData)
@@ -80,7 +102,7 @@ Retorne APENAS o JSON válido, sem markdown ou explicações.`;
 
       userPrompt = `Com base no título: "${title}"${platform ? ` (plataforma: ${platform})` : ''}
 ${existingContext ? `\nContexto existente:\n${existingContext}\n` : ''}
-Gere ${fieldDescriptions[field]}
+Gere ${fieldDescriptions[field] || field}
 
 Retorne APENAS o texto, sem explicações ou prefixos.`;
     }
@@ -128,13 +150,14 @@ Retorne APENAS o texto, sem explicações ou prefixos.`;
     let result: any;
     if (field === 'all') {
       try {
-        // Clean up potential markdown code blocks
         const cleanedJson = generatedText.replace(/```json\n?|\n?```/g, '').trim();
         result = JSON.parse(cleanedJson);
       } catch {
         console.error("Failed to parse AI JSON response:", generatedText);
         result = { error: "Falha ao processar resposta da IA" };
       }
+    } else if (field === 'checklist_suggestion') {
+      result = { checklist: generatedText };
     } else {
       result = { [field]: generatedText };
     }
