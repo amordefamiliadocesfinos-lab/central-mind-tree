@@ -83,6 +83,8 @@ export interface DigitalVariation {
   extra_media_ids: string[];
   media_transforms: Record<string, MediaTransform>;
   media_mode: 'inherit' | 'custom';
+  // Dynamic custom field values
+  custom_field_values: Record<string, string>;
 }
 
 export function useDigital() {

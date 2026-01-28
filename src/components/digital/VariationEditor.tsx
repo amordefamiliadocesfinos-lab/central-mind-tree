@@ -171,6 +171,8 @@ export function VariationEditor({
       const standardFields = ['title', 'description', 'caption', 'cta', 'hashtags'];
       const isCustomField = !standardFields.includes(fieldId);
       
+      const customFieldValues = variation.custom_field_values || {};
+      
       const { data, error } = await supabase.functions.invoke('digital-content-ai', {
         body: {
           title: idea.title,
@@ -185,6 +187,7 @@ export function VariationEditor({
             cta: variation.cta,
             objective: idea.objective,
             target_audience: idea.target_audience,
+            ...customFieldValues,
           },
         },
       });
@@ -197,7 +200,14 @@ export function VariationEditor({
 
       const resultKey = isCustomField ? 'custom_field' : fieldId;
       if (data?.[resultKey]) {
-        onUpdate(variation.id, { [fieldId]: data[resultKey] });
+        if (isCustomField) {
+          // Update custom_field_values JSONB
+          const newCustomValues = { ...customFieldValues, [fieldId]: data[resultKey] };
+          onUpdate(variation.id, { custom_field_values: newCustomValues });
+        } else {
+          // Standard field
+          onUpdate(variation.id, { [fieldId]: data[resultKey] });
+        }
         toast.success(`${fieldLabel || fieldId} gerado com IA!`);
       }
     } catch (err) {
@@ -234,17 +244,21 @@ export function VariationEditor({
         return;
       }
 
-      // Update all fields that were generated
-      const updates: Record<string, string> = {};
+      // Update all fields that were generated - store in custom_field_values
+      const customFieldValues = variation.custom_field_values || {};
+      const newCustomValues = { ...customFieldValues };
+      let count = 0;
+      
       for (const field of customFields) {
         if (data[field.id]) {
-          updates[field.id] = data[field.id];
+          newCustomValues[field.id] = data[field.id];
+          count++;
         }
       }
 
-      if (Object.keys(updates).length > 0) {
-        onUpdate(variation.id, updates);
-        toast.success(`${Object.keys(updates).length} campos gerados com IA!`);
+      if (count > 0) {
+        onUpdate(variation.id, { custom_field_values: newCustomValues });
+        toast.success(`${count} campos gerados com IA!`);
       }
     } catch (err) {
       console.error('AI generation error:', err);
@@ -390,8 +404,23 @@ export function VariationEditor({
         <CardContent className="pt-0 space-y-4">
           {/* Dynamic fields based on platform custom_fields */}
           {(platformConfig?.custom_fields || [{ id: 'caption', label: 'Legenda', type: 'textarea' as const }, { id: 'cta', label: 'Call to Action', type: 'input' as const }]).map((field) => {
-            const value = (variation as any)[field.id] || '';
+            // Get value from custom_field_values JSONB for custom fields, or from variation for standard fields
+            const standardFields = ['title', 'description', 'caption', 'cta', 'hashtags'];
+            const isStandardField = standardFields.includes(field.id);
+            const customFieldValues = variation.custom_field_values || {};
+            const value = isStandardField 
+              ? (variation as any)[field.id] || ''
+              : customFieldValues[field.id] || '';
             const isTextarea = field.type === 'textarea';
+
+            const handleFieldChange = (newValue: string) => {
+              if (isStandardField) {
+                onUpdate(variation.id, { [field.id]: newValue });
+              } else {
+                const newCustomValues = { ...customFieldValues, [field.id]: newValue };
+                onUpdate(variation.id, { custom_field_values: newCustomValues });
+              }
+            };
 
             return (
               <div key={field.id} className="space-y-2">
@@ -416,14 +445,14 @@ export function VariationEditor({
                 {isTextarea ? (
                   <Textarea
                     value={value}
-                    onChange={(e) => onUpdate(variation.id, { [field.id]: e.target.value })}
+                    onChange={(e) => handleFieldChange(e.target.value)}
                     placeholder={field.label}
                     rows={3}
                   />
                 ) : (
                   <Input
                     value={value}
-                    onChange={(e) => onUpdate(variation.id, { [field.id]: e.target.value })}
+                    onChange={(e) => handleFieldChange(e.target.value)}
                     placeholder={field.label}
                     className="h-11"
                   />

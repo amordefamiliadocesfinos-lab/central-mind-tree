@@ -857,6 +857,7 @@ export type Database = {
           cover_url: string | null
           created_at: string
           cta: string | null
+          custom_field_values: Json | null
           description: string | null
           duration_seconds: number | null
           extra_media_ids: Json | null
@@ -896,6 +897,7 @@ export type Database = {
           cover_url?: string | null
           created_at?: string
           cta?: string | null
+          custom_field_values?: Json | null
           description?: string | null
           duration_seconds?: number | null
           extra_media_ids?: Json | null
@@ -935,6 +937,7 @@ export type Database = {
           cover_url?: string | null
           created_at?: string
           cta?: string | null
+          custom_field_values?: Json | null
           description?: string | null
           duration_seconds?: number | null
           extra_media_ids?: Json | null
