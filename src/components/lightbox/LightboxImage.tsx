@@ -33,7 +33,9 @@ export function LightboxImage({ src, onTransformChange }: LightboxImageProps) {
   }, [onTransformChange]);
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
+    // Only prevent default and zoom when lightbox is active (scale > 1 or intentional zoom)
     e.preventDefault();
+    e.stopPropagation();
     const delta = e.deltaY > 0 ? 0.9 : 1.1;
     updateTransform({ scale: Math.max(0.1, Math.min(10, transform.scale * delta)) });
   }, [transform.scale, updateTransform]);
