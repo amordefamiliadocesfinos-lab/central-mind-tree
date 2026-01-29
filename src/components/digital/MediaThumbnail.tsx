@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { X, Eye, EyeOff, ZoomIn, Play } from 'lucide-react';
-import { LightboxProvider, LightboxRoot, useLightbox, LightboxItem } from '@/components/lightbox';
+import { useLightbox, LightboxItem } from '@/components/lightbox';
 
 interface MediaThumbnailProps {
   url: string;
@@ -247,12 +247,7 @@ function MediaGalleryInner({
 }
 
 export function MediaGallery(props: MediaGalleryProps) {
-  const handleDelete = props.onDelete;
-
-  return (
-    <LightboxProvider onDeleteAttachment={handleDelete}>
-      <MediaGalleryInner {...props} />
-      <LightboxRoot />
-    </LightboxProvider>
-  );
+  // Uses the global LightboxProvider from App.tsx
+  // LightboxRoot is rendered globally, so no need to include it here
+  return <MediaGalleryInner {...props} />;
 }
