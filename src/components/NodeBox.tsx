@@ -21,9 +21,11 @@ interface NodeBoxProps {
   children?: React.ReactNode;
   onNodeChange: () => void;
   onDialogOpenChange?: (open: boolean) => void;
+  /** Sinal externo para recomputar badges/contagens sem depender da identidade de funções (evita loop de re-render/requests). */
+  refreshKey?: number;
 }
 
-export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: NodeBoxProps) {
+export function NodeBox({ node, children, onNodeChange, onDialogOpenChange, refreshKey }: NodeBoxProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(node.title);
   const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
@@ -51,16 +53,15 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
         
         if (!mounted) return;
 
-        // Combinar as três verificações em uma única chamada
-        const [childrenResult, tasksResult, allTasks] = await Promise.all([
+        // Evitar HEAD requests (podem falhar e quebrar o Promise.all) e reduzir queries.
+        // - children: só precisamos saber se existe pelo menos 1 filho
+        // - tasks: já buscamos status/progress e conseguimos inferir se há tarefas
+        const [childrenResult, allTasks] = await Promise.all([
           supabase
             .from("nodes")
-            .select("*", { count: "exact", head: true })
-            .eq("parent_id", node.id),
-          supabase
-            .from("tasks")
-            .select("*", { count: "exact", head: true })
-            .eq("node_id", node.id),
+            .select("id")
+            .eq("parent_id", node.id)
+            .limit(1),
           supabase
             .from("tasks")
             .select("status, progress")
@@ -68,8 +69,8 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
         ]);
 
         if (mounted) {
-          setHasChildren((childrenResult.count || 0) > 0);
-          setHasTasks((tasksResult.count || 0) > 0);
+          setHasChildren((childrenResult.data?.length || 0) > 0);
+          setHasTasks((allTasks.data?.length || 0) > 0);
           
           // Contar tarefas por status e calcular progresso médio
           const counts = {
@@ -102,7 +103,7 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange }: No
 
     checkData();
     return () => { mounted = false; };
-  }, [node.id, onNodeChange]);
+  }, [node.id, refreshKey]);
 
   const colorMap = {
     roxo: { bg: "bg-node-roxo", text: "text-node-roxo-foreground" },
