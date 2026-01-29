@@ -17,6 +17,7 @@ import { VariationEditor } from './VariationEditor';
 import { BatchVariationDialog } from './BatchVariationDialog';
 import { ScheduleCalendar } from './ScheduleCalendar';
 import { MediaLibrary } from './MediaLibrary';
+import { MediaGallery } from './MediaThumbnail';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { supabase } from '@/integrations/supabase/client';
@@ -538,42 +539,22 @@ export function IdeaEditor({
               </p>
             </CardHeader>
             <CardContent className="space-y-3">
+              {/* Media Gallery with Lightbox */}
+              {(idea.media_urls?.length || 0) > 0 && (
+                <MediaGallery
+                  media={idea.media_urls || []}
+                  size="lg"
+                  label="Estrutural"
+                  labelColor="bg-purple-500"
+                  showRemove
+                  showDistribute
+                  onDelete={handleRemoveIdeaMedia}
+                  onDistribute={openDistributeDialog}
+                />
+              )}
+
+              {/* Upload buttons */}
               <div className="flex gap-2 flex-wrap">
-                {idea.media_urls?.map((url, i) => (
-                  <div key={i} className="relative group">
-                    <img
-                      src={url}
-                      alt=""
-                      className="h-20 w-20 object-cover rounded border"
-                    />
-                    <Badge 
-                      variant="secondary" 
-                      className="absolute -top-2 -left-2 text-[10px] px-1.5 py-0 bg-purple-500 text-white"
-                    >
-                      Estrutural
-                    </Badge>
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 rounded">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-white hover:bg-white/20"
-                        onClick={() => openDistributeDialog(url)}
-                        title="Disponibilizar em..."
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-white hover:bg-destructive/80"
-                        onClick={() => handleRemoveIdeaMedia(url)}
-                        title="Remover"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
                 <label className="h-20 w-20 border-2 border-dashed rounded flex items-center justify-center cursor-pointer hover:bg-muted touch-manipulation active:scale-95">
                   <Plus className="h-6 w-6 text-muted-foreground" />
                   <input
@@ -585,9 +566,10 @@ export function IdeaEditor({
                   />
                 </label>
               </div>
+
               {(idea.media_urls?.length || 0) > 0 && (
                 <p className="text-xs text-muted-foreground">
-                  {idea.media_urls?.length} mídia(s) • Clique em 👁 para gerenciar disponibilidade nas variações
+                  {idea.media_urls?.length} mídia(s) • Clique para ampliar com zoom
                 </p>
               )}
             </CardContent>

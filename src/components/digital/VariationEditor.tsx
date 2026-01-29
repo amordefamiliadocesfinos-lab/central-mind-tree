@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Progress } from '@/components/ui/progress';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { MediaLibrary } from './MediaLibrary';
+import { MediaGallery } from './MediaThumbnail';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
@@ -479,54 +480,27 @@ export function VariationEditor({
 
             {/* Inherited Media (from Idea) */}
             {mediaMode === 'inherit' && ideaMediaUrls.length > 0 && (
-              <div className="flex gap-2 flex-wrap">
-                {ideaMediaUrls.map((url, i) => {
-                  const isHidden = hiddenInherited.includes(url);
-                  return (
-                    <div key={i} className={cn("relative group", isHidden && "opacity-40")}>
-                      <img
-                        src={url}
-                        alt=""
-                        className="h-14 w-14 object-cover rounded border"
-                      />
-                      <Badge 
-                        variant="secondary" 
-                        className="absolute -top-2 -left-2 text-[8px] px-1 py-0 bg-purple-500 text-white"
-                      >
-                        Ideia
-                      </Badge>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute -top-1 -right-1 h-5 w-5 bg-background border shadow-sm"
-                        onClick={() => handleToggleInheritedVisibility(url)}
-                        title={isHidden ? "Exibir" : "Ocultar"}
-                      >
-                        {isHidden ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                      </Button>
-                    </div>
-                  );
-                })}
-              </div>
+              <MediaGallery
+                media={ideaMediaUrls}
+                size="md"
+                label="Ideia"
+                labelColor="bg-purple-500"
+                showVisibilityToggle
+                hiddenMedia={hiddenInherited}
+                onToggleVisibility={handleToggleInheritedVisibility}
+              />
             )}
 
             {/* Specific Media (variation only) */}
-            <div className="flex gap-2 flex-wrap">
-              {extraMedia.map((url, i) => (
-                <div key={i} className="relative group">
-                  <img
-                    src={url}
-                    alt=""
-                    className="h-14 w-14 object-cover rounded border"
-                  />
-                  <button
-                    className="absolute -top-1 -right-1 bg-destructive text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => handleRemoveExtraMedia(url)}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
+            <div className="flex gap-2 flex-wrap items-start">
+              {extraMedia.length > 0 && (
+                <MediaGallery
+                  media={extraMedia}
+                  size="md"
+                  showRemove
+                  onDelete={handleRemoveExtraMedia}
+                />
+              )}
               <label className="h-14 w-14 border-2 border-dashed rounded flex items-center justify-center cursor-pointer hover:bg-muted touch-manipulation active:scale-95">
                 <Plus className="h-5 w-5 text-muted-foreground" />
                 <input
