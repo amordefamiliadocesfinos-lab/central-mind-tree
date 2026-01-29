@@ -13,7 +13,15 @@ import { useToast } from "@/hooks/use-toast";
 import { useLinesMode } from "@/contexts/LinesModeContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Crosshair } from "lucide-react";
+import { RefreshCw, Crosshair, Network } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu";
 
 interface Node {
   id: string;
@@ -449,6 +457,49 @@ const Index = () => {
 
       {/* Ação rápida para forçar refetch e recentralizar (útil quando o layout muda por updates/realtime) */}
       <div className="fixed right-3 bottom-20 z-40 flex flex-col gap-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              variant={linesMode !== "off" ? "default" : "secondary"}
+              size="icon"
+              className="rounded-full shadow"
+              disabled={isDialogOpen}
+              aria-label="Modo de visualização"
+              title="Modo CEO"
+            >
+              <Network className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuLabel>Visualização</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem 
+              onClick={() => setLinesMode("off")}
+              className={linesMode === "off" ? "bg-accent" : ""}
+            >
+              Padrão
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => setLinesMode("resumo")}
+              className={linesMode === "resumo" ? "bg-accent" : ""}
+            >
+              Linhas (Resumo)
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => setLinesMode("detalhe")}
+              className={linesMode === "detalhe" ? "bg-accent" : ""}
+            >
+              Linhas (Detalhe)
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => setLinesMode("ceo")}
+              className={linesMode === "ceo" ? "bg-accent" : ""}
+            >
+              Modo CEO
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         <Button
           type="button"
           variant="secondary"

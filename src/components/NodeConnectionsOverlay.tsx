@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { LinesMode } from "@/contexts/LinesModeContext";
 
 interface Node {
   id: string;
@@ -15,8 +16,6 @@ interface Task {
   dependency_id: string | null;
   status: "estrutural" | "andamento" | "pendente" | "concluído";
 }
-
-type LinesMode = "off" | "resumo" | "detalhe" | "ceo";
 
 interface NodeConnectionsOverlayProps {
   linesMode: LinesMode;

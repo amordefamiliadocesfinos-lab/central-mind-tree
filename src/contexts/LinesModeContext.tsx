@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, ReactNode } from "react";
 
-type LinesMode = "off" | "resumo" | "detalhe" | "ceo";
+export type LinesMode = "off" | "resumo" | "detalhe" | "ceo";
 
 interface LinesModeContextType {
   linesMode: LinesMode;
