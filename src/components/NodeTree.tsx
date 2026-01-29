@@ -15,9 +15,11 @@ interface NodeTreeProps {
   parentId: string | null;
   onNodeChange: () => void;
   onDialogOpenChange?: (open: boolean) => void;
+  /** Sinal externo para forçar refetch (ex: botão Atualizar). */
+  refreshKey?: number;
 }
 
-export function NodeTree({ parentId, onNodeChange, onDialogOpenChange }: NodeTreeProps) {
+export function NodeTree({ parentId, onNodeChange, onDialogOpenChange, refreshKey }: NodeTreeProps) {
   const [nodes, setNodes] = useState<Node[]>([]);
   const { toast } = useToast();
 
@@ -64,7 +66,7 @@ export function NodeTree({ parentId, onNodeChange, onDialogOpenChange }: NodeTre
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [parentId]);
+  }, [parentId, refreshKey]);
 
   const handleNodeChange = () => {
     fetchChildren();
@@ -81,11 +83,13 @@ export function NodeTree({ parentId, onNodeChange, onDialogOpenChange }: NodeTre
           node={node} 
           onNodeChange={handleNodeChange}
           onDialogOpenChange={onDialogOpenChange}
+          refreshKey={refreshKey}
         >
           <NodeTree 
             parentId={node.id} 
             onNodeChange={onNodeChange}
             onDialogOpenChange={onDialogOpenChange}
+            refreshKey={refreshKey}
           />
         </NodeBox>
       ))}

@@ -12,6 +12,8 @@ import { CEOLegend } from "@/components/CEOLegend";
 import { useToast } from "@/hooks/use-toast";
 import { useLinesMode } from "@/contexts/LinesModeContext";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Button } from "@/components/ui/button";
+import { RefreshCw, Crosshair } from "lucide-react";
 
 interface Node {
   id: string;
@@ -251,6 +253,12 @@ const Index = () => {
     setRefreshKey((prev) => prev + 1);
   };
 
+  const handleRefreshAndCenter = () => {
+    setRefreshKey((prev) => prev + 1);
+    // Aguarda um pouco para o DOM renderizar os nós antes de calcular o bounding box
+    setTimeout(() => centerAndEmphasizeTree(), 400);
+  };
+
   // Função para centralizar em um nó específico
   const centerOnNode = (nodeId: string) => {
     const container = containerRef.current;
@@ -427,15 +435,46 @@ const Index = () => {
             node={rootNode} 
             onNodeChange={handleNodeChange}
             onDialogOpenChange={setIsDialogOpen}
+            refreshKey={refreshKey}
           >
             <NodeTree 
               parentId={rootNode.id} 
               onNodeChange={handleNodeChange}
               onDialogOpenChange={setIsDialogOpen}
+              refreshKey={refreshKey}
             />
           </NodeBox>
         </div>
       </div>
+
+      {/* Ação rápida para forçar refetch e recentralizar (útil quando o layout muda por updates/realtime) */}
+      <div className="fixed right-3 bottom-20 z-40 flex flex-col gap-2">
+        <Button
+          type="button"
+          variant="secondary"
+          size="icon"
+          className="rounded-full shadow"
+          onClick={handleRefreshAndCenter}
+          disabled={isDialogOpen}
+          aria-label="Atualizar e centralizar árvore"
+          title="Atualizar e centralizar"
+        >
+          <RefreshCw className="h-4 w-4" />
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          size="icon"
+          className="rounded-full shadow"
+          onClick={centerAndEmphasizeTree}
+          disabled={isDialogOpen}
+          aria-label="Centralizar árvore"
+          title="Centralizar"
+        >
+          <Crosshair className="h-4 w-4" />
+        </Button>
+      </div>
+
       {tasksDialogState && (
         <TasksDialog
           open={tasksDialogState.open}
