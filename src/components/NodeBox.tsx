@@ -331,8 +331,12 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange, refr
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-6 w-6 md:h-8 md:w-8 hover:bg-background/20 hidden md:flex"
-                  onClick={() => setIsMoveDialogOpen(true)}
+                  className="h-6 w-6 md:h-8 md:w-8 hover:bg-background/20"
+                  onClick={() => {
+                    setIsMoveDialogOpen(true);
+                    onDialogOpenChange?.(true);
+                  }}
+                  title="Mover nó"
                 >
                   <Move className="h-3 w-3 md:h-4 md:w-4" />
                 </Button>
