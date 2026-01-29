@@ -11,3 +11,4 @@ export { PlatformsManager } from './PlatformsManager';
 export { TrendsPanel } from './TrendsPanel';
 export { InteractionsPanel } from './InteractionsPanel';
 export { KnowledgeBasePanel } from './KnowledgeBasePanel';
+export { MediaGallery, MediaThumbnail } from './MediaThumbnail';
