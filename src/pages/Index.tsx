@@ -9,11 +9,12 @@ import { ReplanningBanner } from "@/components/ReplanningBanner";
 import { DueDateBanner } from "@/components/DueDateBanner";
 import { FollowUpBanner } from "@/components/FollowUpBanner";
 import { CEOLegend } from "@/components/CEOLegend";
+import { HorizontalOrgChart } from "@/components/HorizontalOrgChart";
 import { useToast } from "@/hooks/use-toast";
 import { useLinesMode } from "@/contexts/LinesModeContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Crosshair, Network } from "lucide-react";
+import { RefreshCw, Crosshair, Network, GitBranch } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,6 +52,7 @@ const Index = () => {
   const contentRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const [showHorizontalOrgChart, setShowHorizontalOrgChart] = useState(false);
   
   // Touch handling for mobile
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
@@ -457,6 +459,20 @@ const Index = () => {
 
       {/* Ação rápida para forçar refetch e recentralizar (útil quando o layout muda por updates/realtime) */}
       <div className="fixed right-3 bottom-20 z-40 flex flex-col gap-2">
+        {/* Botão Organograma Horizontal */}
+        <Button
+          type="button"
+          variant="secondary"
+          size="icon"
+          className="rounded-full shadow"
+          onClick={() => setShowHorizontalOrgChart(true)}
+          disabled={isDialogOpen}
+          aria-label="Organograma Horizontal"
+          title="Vista Horizontal"
+        >
+          <GitBranch className="h-4 w-4" />
+        </Button>
+        
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
@@ -543,6 +559,17 @@ const Index = () => {
       <ReplanningBanner />
       <DueDateBanner />
       <FollowUpBanner />
+
+      {/* Organograma Horizontal Overlay */}
+      {showHorizontalOrgChart && (
+        <HorizontalOrgChart
+          onClose={() => setShowHorizontalOrgChart(false)}
+          onNodeClick={(nodeId) => {
+            setShowHorizontalOrgChart(false);
+            setTimeout(() => centerOnNode(nodeId), 100);
+          }}
+        />
+      )}
     </>
   );
 };
