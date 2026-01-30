@@ -1168,12 +1168,15 @@ export function PricingManagerV2() {
               </div>
               <div>
                 <Label>Loja (opcional)</Label>
-                <Select value={paramForm.store_id} onValueChange={(v) => setParamForm({ ...paramForm, store_id: v })}>
+                <Select 
+                  value={paramForm.store_id || "__none__"} 
+                  onValueChange={(v) => setParamForm({ ...paramForm, store_id: v === "__none__" ? "" : v })}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Geral" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Geral (todas lojas)</SelectItem>
+                    <SelectItem value="__none__">Geral (todas lojas)</SelectItem>
                     {paramFormStores.map(s => (
                       <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                     ))}
