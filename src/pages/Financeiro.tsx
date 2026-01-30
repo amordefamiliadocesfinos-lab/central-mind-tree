@@ -10,7 +10,7 @@ import {
   AccountsManager,
   CategoriesManager,
   ContactsManager,
-  PricingManager,
+  PricingManagerV2,
 } from '@/components/financial';
 import { useFinancial, EntryStatus } from '@/hooks/useFinancial';
 import { Users, DollarSign } from 'lucide-react';
@@ -217,7 +217,7 @@ export default function Financeiro() {
           </TabsContent>
 
           <TabsContent value="valores">
-            <PricingManager />
+            <PricingManagerV2 />
           </TabsContent>
         </Tabs>
       </div>

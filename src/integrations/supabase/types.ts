@@ -1739,6 +1739,104 @@ export type Database = {
         }
         Relationships: []
       }
+      price_fee_fields: {
+        Row: {
+          created_at: string
+          field_type: string
+          id: string
+          is_active: boolean
+          name: string
+          order_index: number
+        }
+        Insert: {
+          created_at?: string
+          field_type?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          order_index?: number
+        }
+        Update: {
+          created_at?: string
+          field_type?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          order_index?: number
+        }
+        Relationships: []
+      }
+      price_param_fees: {
+        Row: {
+          created_at: string
+          fee_field_id: string
+          id: string
+          param_id: string
+          value: number
+        }
+        Insert: {
+          created_at?: string
+          fee_field_id: string
+          id?: string
+          param_id: string
+          value?: number
+        }
+        Update: {
+          created_at?: string
+          fee_field_id?: string
+          id?: string
+          param_id?: string
+          value?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_param_fees_fee_field_id_fkey"
+            columns: ["fee_field_id"]
+            isOneToOne: false
+            referencedRelation: "price_fee_fields"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_param_fees_param_id_fkey"
+            columns: ["param_id"]
+            isOneToOne: false
+            referencedRelation: "price_params"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_param_history: {
+        Row: {
+          changed_at: string
+          id: string
+          notes: string | null
+          param_id: string
+          snapshot: Json
+        }
+        Insert: {
+          changed_at?: string
+          id?: string
+          notes?: string | null
+          param_id: string
+          snapshot: Json
+        }
+        Update: {
+          changed_at?: string
+          id?: string
+          notes?: string | null
+          param_id?: string
+          snapshot?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_param_history_param_id_fkey"
+            columns: ["param_id"]
+            isOneToOne: false
+            referencedRelation: "price_params"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       price_params: {
         Row: {
           channel_id: string
@@ -1751,6 +1849,7 @@ export type Database = {
           payment_fee_pct: number
           platform_fee_pct: number
           shipping_cost: number
+          store_id: string | null
           target_margin_pct: number
           updated_at: string
         }
@@ -1765,6 +1864,7 @@ export type Database = {
           payment_fee_pct?: number
           platform_fee_pct?: number
           shipping_cost?: number
+          store_id?: string | null
           target_margin_pct?: number
           updated_at?: string
         }
@@ -1779,12 +1879,125 @@ export type Database = {
           payment_fee_pct?: number
           platform_fee_pct?: number
           shipping_cost?: number
+          store_id?: string | null
           target_margin_pct?: number
           updated_at?: string
         }
         Relationships: [
           {
             foreignKeyName: "price_params_channel_id_fkey"
+            columns: ["channel_id"]
+            isOneToOne: false
+            referencedRelation: "price_channels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "price_params_store_id_fkey"
+            columns: ["store_id"]
+            isOneToOne: false
+            referencedRelation: "price_stores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_simulation_items: {
+        Row: {
+          created_at: string
+          id: string
+          order_index: number
+          pack_cost: number
+          pack_qty: number
+          product_name: string
+          simulation_id: string
+          unit_price: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_index?: number
+          pack_cost?: number
+          pack_qty?: number
+          product_name: string
+          simulation_id: string
+          unit_price?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_index?: number
+          pack_cost?: number
+          pack_qty?: number
+          product_name?: string
+          simulation_id?: string
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_simulation_items_simulation_id_fkey"
+            columns: ["simulation_id"]
+            isOneToOne: false
+            referencedRelation: "price_simulations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_simulations: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          param_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name?: string
+          param_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          param_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_simulations_param_id_fkey"
+            columns: ["param_id"]
+            isOneToOne: false
+            referencedRelation: "price_params"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      price_stores: {
+        Row: {
+          channel_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          channel_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          channel_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "price_stores_channel_id_fkey"
             columns: ["channel_id"]
             isOneToOne: false
             referencedRelation: "price_channels"
