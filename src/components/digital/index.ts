@@ -2,6 +2,7 @@ export { IdeaCard } from './IdeaCard';
 export { IdeaEditor } from './IdeaEditor';
 export { VariationEditor } from './VariationEditor';
 export { MediaLibrary } from './MediaLibrary';
+export { MediaEditor } from './MediaEditor';
 export { KanbanBoard } from './KanbanBoard';
 export { BatchVariationDialog } from './BatchVariationDialog';
 export { MetricsChart } from './MetricsChart';

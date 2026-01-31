@@ -13,12 +13,14 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Upload, Image, Video, File, Trash2, Plus, Search, Tag, X, Check, MoreVertical, FolderInput, Folder } from 'lucide-react';
+import { Upload, Image, Video, File, Trash2, Plus, Search, Tag, X, Check, MoreVertical, FolderInput, Folder, Wand2, Download, Sparkles, CheckCircle, AlertCircle, XCircle, Clock } from 'lucide-react';
 import { useMediaFolders, MediaFolder } from '@/hooks/useMediaFolders';
 import { MediaFolderSidebar } from './MediaFolderSidebar';
+import { MediaEditor } from './MediaEditor';
 
 interface MediaItem {
   id: string;
@@ -31,6 +33,10 @@ interface MediaItem {
   variation_id: string | null;
   folder_id: string | null;
   created_at: string;
+  quality_status?: string;
+  version?: number;
+  ai_enhanced?: boolean;
+  parent_media_id?: string | null;
 }
 
 interface MediaLibraryProps {
@@ -50,6 +56,8 @@ export function MediaLibrary({ ideaId, variationId, onSelect, mode = 'browse' }:
   const [editingItem, setEditingItem] = useState<string | null>(null);
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [folderCounts, setFolderCounts] = useState<Record<string, number>>({});
+  const [editingMedia, setEditingMedia] = useState<MediaItem | null>(null);
+  const [qualityFilter, setQualityFilter] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -184,6 +192,11 @@ export function MediaLibrary({ ideaId, variationId, onSelect, mode = 'browse' }:
       if (item.folder_id !== selectedFolderId) return false;
     }
     
+    // Filter by quality status
+    if (qualityFilter) {
+      if (item.quality_status !== qualityFilter) return false;
+    }
+    
     // Filter by search
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -202,6 +215,19 @@ export function MediaLibrary({ ideaId, variationId, onSelect, mode = 'browse' }:
     
     return true;
   });
+
+  const getQualityBadge = (status: string | undefined) => {
+    switch (status) {
+      case 'approved':
+        return { icon: <CheckCircle className="h-3 w-3" />, color: 'bg-green-500', label: 'Aprovada' };
+      case 'review':
+        return { icon: <AlertCircle className="h-3 w-3" />, color: 'bg-yellow-500', label: 'Revisar' };
+      case 'low':
+        return { icon: <XCircle className="h-3 w-3" />, color: 'bg-red-500', label: 'Baixa' };
+      default:
+        return { icon: <Clock className="h-3 w-3" />, color: 'bg-gray-400', label: 'Pendente' };
+    }
+  };
 
   const getFileIcon = (type: string | null) => {
     if (type?.startsWith('image')) return <Image className="h-5 w-5" />;
@@ -254,6 +280,50 @@ export function MediaLibrary({ ideaId, variationId, onSelect, mode = 'browse' }:
             className="hidden"
             onChange={(e) => handleUpload(e.target.files)}
           />
+        </div>
+
+        {/* Quality Filter */}
+        <div className="px-4 py-2 border-b flex gap-2 flex-wrap items-center">
+          <span className="text-xs text-muted-foreground mr-2">Qualidade:</span>
+          <Badge
+            variant={qualityFilter === null ? 'default' : 'secondary'}
+            className="cursor-pointer"
+            onClick={() => setQualityFilter(null)}
+          >
+            Todas
+          </Badge>
+          <Badge
+            variant={qualityFilter === 'approved' ? 'default' : 'outline'}
+            className="cursor-pointer gap-1"
+            onClick={() => setQualityFilter(qualityFilter === 'approved' ? null : 'approved')}
+          >
+            <div className="h-2 w-2 rounded-full bg-green-500" />
+            Aprovadas
+          </Badge>
+          <Badge
+            variant={qualityFilter === 'review' ? 'default' : 'outline'}
+            className="cursor-pointer gap-1"
+            onClick={() => setQualityFilter(qualityFilter === 'review' ? null : 'review')}
+          >
+            <div className="h-2 w-2 rounded-full bg-yellow-500" />
+            Revisar
+          </Badge>
+          <Badge
+            variant={qualityFilter === 'low' ? 'default' : 'outline'}
+            className="cursor-pointer gap-1"
+            onClick={() => setQualityFilter(qualityFilter === 'low' ? null : 'low')}
+          >
+            <div className="h-2 w-2 rounded-full bg-red-500" />
+            Baixa
+          </Badge>
+          <Badge
+            variant={qualityFilter === 'pending' ? 'default' : 'outline'}
+            className="cursor-pointer gap-1"
+            onClick={() => setQualityFilter(qualityFilter === 'pending' ? null : 'pending')}
+          >
+            <div className="h-2 w-2 rounded-full bg-gray-400" />
+            Pendentes
+          </Badge>
         </div>
 
         {/* Tags Filter */}
@@ -327,12 +397,34 @@ export function MediaLibrary({ ideaId, variationId, onSelect, mode = 'browse' }:
                       </div>
                     )}
 
+                    {/* Quality Badge */}
+                    {item.quality_status && (
+                      <div className="absolute top-2 left-2">
+                        <div className={cn(
+                          "h-5 w-5 rounded-full flex items-center justify-center text-white",
+                          getQualityBadge(item.quality_status).color
+                        )}>
+                          {getQualityBadge(item.quality_status).icon}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* AI Enhanced Badge */}
+                    {item.ai_enhanced && (
+                      <Badge className="absolute top-2 left-8 h-5 px-1 text-[10px] bg-purple-500">
+                        <Sparkles className="h-2.5 w-2.5" />
+                      </Badge>
+                    )}
+
                     {/* Overlay */}
                     <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-2">
                       <div className="text-white text-xs truncate flex-1">
                         {item.filename}
                         {item.file_size && (
                           <span className="ml-1 opacity-70">{formatFileSize(item.file_size)}</span>
+                        )}
+                        {item.version && item.version > 1 && (
+                          <span className="ml-1 opacity-70">v{item.version}</span>
                         )}
                       </div>
                     </div>
@@ -392,6 +484,33 @@ export function MediaLibrary({ ideaId, variationId, onSelect, mode = 'browse' }:
                                 ))}
                               </DropdownMenuSubContent>
                             </DropdownMenuSub>
+
+                            <DropdownMenuSeparator />
+
+                            {/* Edit with AI */}
+                            {item.file_type?.startsWith('image') && (
+                              <DropdownMenuItem onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingMedia(item);
+                              }}>
+                                <Wand2 className="h-4 w-4 mr-2 text-purple-500" />
+                                Editar com IA
+                              </DropdownMenuItem>
+                            )}
+
+                            {/* Download */}
+                            <DropdownMenuItem onClick={(e) => {
+                              e.stopPropagation();
+                              const a = document.createElement('a');
+                              a.href = item.url;
+                              a.download = item.filename || 'download';
+                              a.click();
+                            }}>
+                              <Download className="h-4 w-4 mr-2" />
+                              Baixar
+                            </DropdownMenuItem>
+
+                            <DropdownMenuSeparator />
 
                             <DropdownMenuItem 
                               onClick={(e) => {
@@ -476,6 +595,19 @@ export function MediaLibrary({ ideaId, variationId, onSelect, mode = 'browse' }:
           )}
         </div>
       </div>
+
+      {/* Media Editor Dialog */}
+      {editingMedia && (
+        <MediaEditor
+          open={!!editingMedia}
+          onOpenChange={(open) => !open && setEditingMedia(null)}
+          media={editingMedia}
+          onUpdate={() => {
+            fetchMedia();
+            setEditingMedia(null);
+          }}
+        />
+      )}
     </div>
   );
 }
