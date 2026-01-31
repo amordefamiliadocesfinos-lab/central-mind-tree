@@ -173,15 +173,27 @@ export function MediaEditor({ open, onOpenChange, media, onUpdate }: MediaEditor
     }
   };
 
-  // Download original
-  const handleDownload = () => {
-    const a = document.createElement('a');
-    a.href = media.url;
-    a.download = media.filename || 'download';
-    a.click();
+  // Download original - using fetch + blob to force real download
+  const handleDownload = async () => {
+    try {
+      const response = await fetch(media.url);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = media.filename || 'download';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+      toast.success('Download iniciado!');
+    } catch (error) {
+      console.error('Download error:', error);
+      toast.error('Erro ao baixar arquivo');
+    }
   };
 
-  // Replace with uploaded file
+  // Replace with uploaded file - updates the CURRENT media record
   const handleReplace = async (file: File) => {
     setUploading(true);
     try {
@@ -198,21 +210,22 @@ export function MediaEditor({ open, onOpenChange, media, onUpdate }: MediaEditor
       const { data: urlData } = supabase.storage.from('media').getPublicUrl(filePath);
       const newVersion = (media.version || 1) + 1;
 
-      // Create new version with uploaded file
-      const { error: dbError } = await supabase.from('digital_media').insert({
-        url: urlData.publicUrl,
-        filename: file.name,
-        file_type: file.type,
-        file_size: file.size,
-        parent_media_id: media.parent_media_id || media.id,
-        version: newVersion,
-        quality_status: 'pending',
-        original_url: media.url,
-      });
+      // Update the CURRENT media record with the new image
+      const { error: dbError } = await supabase.from('digital_media')
+        .update({
+          url: urlData.publicUrl,
+          filename: file.name,
+          file_type: file.type,
+          file_size: file.size,
+          version: newVersion,
+          quality_status: 'pending',
+          original_url: media.url, // Keep reference to old URL
+        })
+        .eq('id', media.id);
 
       if (dbError) throw dbError;
 
-      toast.success('Nova versão enviada!');
+      toast.success('Imagem substituída com sucesso!');
       onUpdate();
       onOpenChange(false);
     } catch (error) {

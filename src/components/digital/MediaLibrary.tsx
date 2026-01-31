@@ -499,12 +499,23 @@ export function MediaLibrary({ ideaId, variationId, onSelect, mode = 'browse' }:
                             )}
 
                             {/* Download */}
-                            <DropdownMenuItem onClick={(e) => {
+                            <DropdownMenuItem onClick={async (e) => {
                               e.stopPropagation();
-                              const a = document.createElement('a');
-                              a.href = item.url;
-                              a.download = item.filename || 'download';
-                              a.click();
+                              try {
+                                const response = await fetch(item.url);
+                                const blob = await response.blob();
+                                const blobUrl = URL.createObjectURL(blob);
+                                const a = document.createElement('a');
+                                a.href = blobUrl;
+                                a.download = item.filename || 'download';
+                                document.body.appendChild(a);
+                                a.click();
+                                document.body.removeChild(a);
+                                URL.revokeObjectURL(blobUrl);
+                                toast.success('Download iniciado!');
+                              } catch (error) {
+                                toast.error('Erro ao baixar arquivo');
+                              }
                             }}>
                               <Download className="h-4 w-4 mr-2" />
                               Baixar
