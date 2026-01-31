@@ -657,40 +657,58 @@ export type Database = {
       }
       digital_media: {
         Row: {
+          ai_enhanced: boolean | null
           created_at: string
+          enhancement_type: string | null
           file_size: number | null
           file_type: string | null
           filename: string | null
           folder_id: string | null
           id: string
           idea_id: string | null
+          original_url: string | null
+          parent_media_id: string | null
+          quality_status: string | null
           tags: string[] | null
           url: string
           variation_id: string | null
+          version: number | null
         }
         Insert: {
+          ai_enhanced?: boolean | null
           created_at?: string
+          enhancement_type?: string | null
           file_size?: number | null
           file_type?: string | null
           filename?: string | null
           folder_id?: string | null
           id?: string
           idea_id?: string | null
+          original_url?: string | null
+          parent_media_id?: string | null
+          quality_status?: string | null
           tags?: string[] | null
           url: string
           variation_id?: string | null
+          version?: number | null
         }
         Update: {
+          ai_enhanced?: boolean | null
           created_at?: string
+          enhancement_type?: string | null
           file_size?: number | null
           file_type?: string | null
           filename?: string | null
           folder_id?: string | null
           id?: string
           idea_id?: string | null
+          original_url?: string | null
+          parent_media_id?: string | null
+          quality_status?: string | null
           tags?: string[] | null
           url?: string
           variation_id?: string | null
+          version?: number | null
         }
         Relationships: [
           {
@@ -705,6 +723,13 @@ export type Database = {
             columns: ["idea_id"]
             isOneToOne: false
             referencedRelation: "digital_ideas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "digital_media_parent_media_id_fkey"
+            columns: ["parent_media_id"]
+            isOneToOne: false
+            referencedRelation: "digital_media"
             referencedColumns: ["id"]
           },
           {
