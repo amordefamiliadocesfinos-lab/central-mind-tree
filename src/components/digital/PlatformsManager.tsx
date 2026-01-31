@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { usePlatforms, Platform, GROUP_LABELS, GROUP_ICONS, CustomField } from '@/hooks/usePlatforms';
+import { usePlatforms, Platform, CustomField } from '@/hooks/usePlatforms';
+import { usePlatformGroups, PlatformGroup } from '@/hooks/usePlatformGroups';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -11,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-import { Plus, Edit2, Trash2, ChevronDown, ChevronUp, Settings2, Sparkles, Loader2, GripVertical, Type, AlignLeft } from 'lucide-react';
+import { Plus, Edit2, Trash2, ChevronDown, ChevronUp, Settings2, Sparkles, Loader2, GripVertical, Type, AlignLeft, ChevronRight, Copy, FolderPlus } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -21,11 +22,17 @@ const EMOJI_OPTIONS = ['📱', '📷', '🎬', '📺', '⚡', '🎵', '📘', '�
 interface PlatformFormData {
   name: string;
   icon: string;
-  group_type: 'social' | 'ecommerce' | 'marketplace' | 'other';
+  group_id: string;
+  parent_id: string;
   aspect_ratio: string;
   duration: string;
   custom_fields: CustomField[];
   checklist_items: string;
+}
+
+interface GroupFormData {
+  name: string;
+  icon: string;
 }
 
 const DEFAULT_FIELDS: CustomField[] = [
@@ -33,20 +40,11 @@ const DEFAULT_FIELDS: CustomField[] = [
   { id: 'cta', label: 'Call to Action', type: 'input' },
 ];
 
-const initialFormData: PlatformFormData = {
-  name: '',
-  icon: '📱',
-  group_type: 'social',
-  aspect_ratio: '',
-  duration: '',
-  custom_fields: [...DEFAULT_FIELDS],
-  checklist_items: '',
-};
-
 export function PlatformsManager() {
   const { 
     platforms, 
     groupedPlatforms, 
+    getChildren,
     loading, 
     createPlatform, 
     updatePlatform, 
@@ -54,17 +52,35 @@ export function PlatformsManager() {
     toggleActive 
   } = usePlatforms();
 
+  const {
+    groups,
+    groupsMap,
+    loading: groupsLoading,
+    createGroup,
+    updateGroup,
+    deleteGroup,
+  } = usePlatformGroups();
+
   const [showDialog, setShowDialog] = useState(false);
+  const [showGroupDialog, setShowGroupDialog] = useState(false);
   const [editingPlatform, setEditingPlatform] = useState<Platform | null>(null);
-  const [formData, setFormData] = useState<PlatformFormData>(initialFormData);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
-    social: true,
-    ecommerce: true,
-    marketplace: true,
-    other: true,
+  const [editingGroup, setEditingGroup] = useState<PlatformGroup | null>(null);
+  const [formData, setFormData] = useState<PlatformFormData>({
+    name: '',
+    icon: '📱',
+    group_id: '',
+    parent_id: '',
+    aspect_ratio: '',
+    duration: '',
+    custom_fields: [...DEFAULT_FIELDS],
+    checklist_items: '',
   });
+  const [groupFormData, setGroupFormData] = useState<GroupFormData>({ name: '', icon: '📦' });
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deleteGroupConfirm, setDeleteGroupConfirm] = useState<string | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const [expandedPlatforms, setExpandedPlatforms] = useState<Record<string, boolean>>({});
 
   // AI checklist suggestion
   const generateChecklistWithAI = async () => {
@@ -80,7 +96,7 @@ export function PlatformsManager() {
           title: formData.name,
           field: 'checklist_suggestion',
           platform: formData.name,
-          platformType: formData.group_type,
+          platformType: groupsMap[formData.group_id]?.name || 'social',
         },
       });
 
@@ -102,9 +118,18 @@ export function PlatformsManager() {
     }
   };
 
-  const handleOpenCreate = () => {
+  const handleOpenCreate = (parentId?: string, groupId?: string) => {
     setEditingPlatform(null);
-    setFormData(initialFormData);
+    setFormData({
+      name: '',
+      icon: '📱',
+      group_id: groupId || groups[0]?.id || '',
+      parent_id: parentId || '',
+      aspect_ratio: '',
+      duration: '',
+      custom_fields: [...DEFAULT_FIELDS],
+      checklist_items: '',
+    });
     setShowDialog(true);
   };
 
@@ -113,13 +138,30 @@ export function PlatformsManager() {
     setFormData({
       name: platform.name,
       icon: platform.icon,
-      group_type: platform.group_type,
+      group_id: platform.group_id || '',
+      parent_id: platform.parent_id || '',
       aspect_ratio: platform.aspect_ratio || '',
       duration: platform.duration || '',
       custom_fields: platform.custom_fields.length > 0 ? platform.custom_fields : [...DEFAULT_FIELDS],
       checklist_items: platform.checklist_template.map(c => c.text).join('\n'),
     });
     setShowDialog(true);
+  };
+
+  const handleDuplicate = async (platform: Platform) => {
+    const newPlatform = await createPlatform({
+      name: `${platform.name} (cópia)`,
+      icon: platform.icon,
+      group_id: platform.group_id,
+      parent_id: platform.parent_id,
+      aspect_ratio: platform.aspect_ratio,
+      duration: platform.duration,
+      custom_fields: platform.custom_fields,
+      checklist_template: platform.checklist_template,
+    });
+    if (newPlatform) {
+      toast.success('Plataforma duplicada!');
+    }
   };
 
   const handleSave = async () => {
@@ -133,10 +175,19 @@ export function PlatformsManager() {
     // Convert custom_fields to fields array for backwards compatibility
     const fields = formData.custom_fields.map(f => f.id);
 
+    // Map group_id back to group_type for legacy compatibility
+    const group = groupsMap[formData.group_id];
+    const group_type: 'social' | 'ecommerce' | 'marketplace' | 'other' = 
+      group?.name === 'Redes Sociais' ? 'social' :
+      group?.name === 'E-commerce' ? 'ecommerce' :
+      group?.name === 'Marketplaces' ? 'marketplace' : 'other';
+
     const platformData = {
       name: formData.name,
       icon: formData.icon,
-      group_type: formData.group_type,
+      group_id: formData.group_id || null,
+      group_type,
+      parent_id: formData.parent_id || null,
       aspect_ratio: formData.aspect_ratio || null,
       duration: formData.duration || null,
       fields,
@@ -160,8 +211,41 @@ export function PlatformsManager() {
     }
   };
 
-  const toggleGroup = (group: string) => {
-    setExpandedGroups(prev => ({ ...prev, [group]: !prev[group] }));
+  // Group CRUD
+  const handleOpenGroupCreate = () => {
+    setEditingGroup(null);
+    setGroupFormData({ name: '', icon: '📦' });
+    setShowGroupDialog(true);
+  };
+
+  const handleOpenGroupEdit = (group: PlatformGroup) => {
+    setEditingGroup(group);
+    setGroupFormData({ name: group.name, icon: group.icon });
+    setShowGroupDialog(true);
+  };
+
+  const handleSaveGroup = async () => {
+    if (editingGroup) {
+      await updateGroup(editingGroup.id, groupFormData);
+    } else {
+      await createGroup(groupFormData);
+    }
+    setShowGroupDialog(false);
+  };
+
+  const handleDeleteGroup = async (id: string) => {
+    const success = await deleteGroup(id);
+    if (success) {
+      setDeleteGroupConfirm(null);
+    }
+  };
+
+  const toggleGroup = (groupId: string) => {
+    setExpandedGroups(prev => ({ ...prev, [groupId]: prev[groupId] === undefined ? false : !prev[groupId] }));
+  };
+
+  const togglePlatformExpand = (platformId: string) => {
+    setExpandedPlatforms(prev => ({ ...prev, [platformId]: !prev[platformId] }));
   };
 
   // Field CRUD operations
@@ -189,7 +273,105 @@ export function PlatformsManager() {
     }));
   };
 
-  if (loading) {
+  // Render platform row with children
+  const renderPlatform = (platform: Platform, depth: number = 0) => {
+    const children = getChildren(platform.id);
+    const hasChildren = children.length > 0;
+    const isExpanded = expandedPlatforms[platform.id] !== false;
+
+    return (
+      <div key={platform.id}>
+        <div
+          className={cn(
+            'flex items-center justify-between p-3 rounded-lg border',
+            !platform.is_active && 'opacity-50 bg-muted/30',
+            depth > 0 && 'ml-6 border-l-2 border-l-primary/30'
+          )}
+        >
+          <div className="flex items-center gap-3">
+            {hasChildren && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => togglePlatformExpand(platform.id)}
+              >
+                <ChevronRight className={cn(
+                  'h-4 w-4 transition-transform',
+                  isExpanded && 'rotate-90'
+                )} />
+              </Button>
+            )}
+            {!hasChildren && depth > 0 && <div className="w-6" />}
+            <span className="text-2xl">{platform.icon}</span>
+            <div>
+              <div className="font-medium">{platform.name}</div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                {platform.custom_fields.length > 0 && (
+                  <span>{platform.custom_fields.length} campos</span>
+                )}
+                {platform.aspect_ratio && (
+                  <span>• {platform.aspect_ratio}</span>
+                )}
+                {platform.checklist_template.length > 0 && (
+                  <span>• {platform.checklist_template.length} itens</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <Switch
+              checked={platform.is_active}
+              onCheckedChange={(checked) => toggleActive(platform.id, checked)}
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => handleOpenCreate(platform.id, platform.group_id || undefined)}
+              title="Adicionar sub-plataforma"
+            >
+              <Plus className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => handleDuplicate(platform)}
+              title="Duplicar"
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={() => handleOpenEdit(platform)}
+            >
+              <Edit2 className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-destructive"
+              onClick={() => setDeleteConfirm(platform.id)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {hasChildren && isExpanded && (
+          <div className="space-y-2 mt-2">
+            {children.map(child => renderPlatform(child, depth + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  if (loading || groupsLoading) {
     return (
       <div className="space-y-4">
         {[1, 2, 3].map(i => (
@@ -198,8 +380,6 @@ export function PlatformsManager() {
       </div>
     );
   }
-
-  const groupOrder = ['social', 'ecommerce', 'marketplace', 'other'];
 
   return (
     <div className="space-y-4">
@@ -211,97 +391,93 @@ export function PlatformsManager() {
             Gerenciar Plataformas
           </h2>
           <p className="text-sm text-muted-foreground">
-            {platforms.length} plataformas configuradas
+            {platforms.length} plataformas em {groups.length} grupos
           </p>
         </div>
-        <Button onClick={handleOpenCreate}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Plataforma
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleOpenGroupCreate}>
+            <FolderPlus className="h-4 w-4 mr-2" />
+            Novo Grupo
+          </Button>
+          <Button onClick={() => handleOpenCreate()}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Plataforma
+          </Button>
+        </div>
       </div>
 
       {/* Groups */}
-      {groupOrder.map(groupKey => {
-        const groupPlatforms = groupedPlatforms[groupKey] || [];
-        if (groupPlatforms.length === 0) return null;
+      {groups.map(group => {
+        const groupPlatforms = (groupedPlatforms[group.id] || []).filter(p => !p.parent_id);
+        const isExpanded = expandedGroups[group.id] !== false;
 
         return (
           <Collapsible
-            key={groupKey}
-            open={expandedGroups[groupKey]}
-            onOpenChange={() => toggleGroup(groupKey)}
+            key={group.id}
+            open={isExpanded}
+            onOpenChange={() => toggleGroup(group.id)}
           >
             <Card>
               <CollapsibleTrigger asChild>
                 <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors py-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <span className="text-lg">{GROUP_ICONS[groupKey]}</span>
-                      {GROUP_LABELS[groupKey]}
+                      <span className="text-lg">{group.icon}</span>
+                      {group.name}
                       <Badge variant="secondary" className="ml-2">
                         {groupPlatforms.length}
                       </Badge>
                     </CardTitle>
-                    {expandedGroups[groupKey] ? (
-                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    )}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenGroupEdit(group);
+                        }}
+                      >
+                        <Edit2 className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteGroupConfirm(group.id);
+                        }}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                      {isExpanded ? (
+                        <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
                   </div>
                 </CardHeader>
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <CardContent className="pt-0 space-y-2">
-                  {groupPlatforms.map(platform => (
-                    <div
-                      key={platform.id}
-                      className={cn(
-                        'flex items-center justify-between p-3 rounded-lg border',
-                        !platform.is_active && 'opacity-50 bg-muted/30'
-                      )}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-2xl">{platform.icon}</span>
-                        <div>
-                          <div className="font-medium">{platform.name}</div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            {platform.custom_fields.length > 0 && (
-                              <span>{platform.custom_fields.length} campos</span>
-                            )}
-                            {platform.aspect_ratio && (
-                              <span>• {platform.aspect_ratio}</span>
-                            )}
-                            {platform.checklist_template.length > 0 && (
-                              <span>• {platform.checklist_template.length} itens</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          checked={platform.is_active}
-                          onCheckedChange={(checked) => toggleActive(platform.id, checked)}
-                        />
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8"
-                          onClick={() => handleOpenEdit(platform)}
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-destructive"
-                          onClick={() => setDeleteConfirm(platform.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
+                  {groupPlatforms.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center py-4">
+                      Nenhuma plataforma neste grupo.
+                    </p>
+                  ) : (
+                    groupPlatforms.map(platform => renderPlatform(platform, 0))
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full mt-2"
+                    onClick={() => handleOpenCreate(undefined, group.id)}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Adicionar plataforma
+                  </Button>
                 </CardContent>
               </CollapsibleContent>
             </Card>
@@ -310,17 +486,17 @@ export function PlatformsManager() {
       })}
 
       {/* Empty State */}
-      {platforms.length === 0 && (
+      {groups.length === 0 && (
         <Card className="p-8 text-center">
-          <p className="text-muted-foreground">Nenhuma plataforma configurada.</p>
-          <Button className="mt-4" onClick={handleOpenCreate}>
-            <Plus className="h-4 w-4 mr-2" />
-            Criar Primeira Plataforma
+          <p className="text-muted-foreground">Nenhum grupo configurado.</p>
+          <Button className="mt-4" onClick={handleOpenGroupCreate}>
+            <FolderPlus className="h-4 w-4 mr-2" />
+            Criar Primeiro Grupo
           </Button>
         </Card>
       )}
 
-      {/* Create/Edit Dialog */}
+      {/* Platform Create/Edit Dialog */}
       <ResponsiveDialog
         open={showDialog}
         onOpenChange={setShowDialog}
@@ -364,27 +540,57 @@ export function PlatformsManager() {
             </div>
           </div>
 
-          {/* Group Type */}
+          {/* Group */}
           <div className="space-y-2">
-            <Label>Tipo/Grupo</Label>
+            <Label>Grupo</Label>
             <Select
-              value={formData.group_type}
-              onValueChange={(v) => setFormData({ ...formData, group_type: v as any })}
+              value={formData.group_id || '__none__'}
+              onValueChange={(v) => setFormData({ ...formData, group_id: v === '__none__' ? '' : v })}
             >
               <SelectTrigger className="h-12">
-                <SelectValue />
+                <SelectValue placeholder="Selecione um grupo" />
               </SelectTrigger>
               <SelectContent>
-                {Object.entries(GROUP_LABELS).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>
+                <SelectItem value="__none__">Sem grupo</SelectItem>
+                {groups.map(g => (
+                  <SelectItem key={g.id} value={g.id}>
                     <div className="flex items-center gap-2">
-                      <span>{GROUP_ICONS[key]}</span>
-                      {label}
+                      <span>{g.icon}</span>
+                      {g.name}
                     </div>
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Parent Platform (hierarchy) */}
+          <div className="space-y-2">
+            <Label>Plataforma Pai (opcional)</Label>
+            <Select
+              value={formData.parent_id || '__none__'}
+              onValueChange={(v) => setFormData({ ...formData, parent_id: v === '__none__' ? '' : v })}
+            >
+              <SelectTrigger className="h-12">
+                <SelectValue placeholder="Nenhuma (raiz)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">Nenhuma (raiz)</SelectItem>
+                {platforms
+                  .filter(p => p.id !== editingPlatform?.id)
+                  .map(p => (
+                    <SelectItem key={p.id} value={p.id}>
+                      <div className="flex items-center gap-2">
+                        <span>{p.icon}</span>
+                        {p.name}
+                      </div>
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Use para criar hierarquia. Ex: Instagram &gt; Instagram Feed, Instagram Reels
+            </p>
           </div>
 
           {/* Aspect Ratio and Duration */}
@@ -434,7 +640,6 @@ export function PlatformsManager() {
                     value={field.label}
                     onChange={(e) => updateField(index, { 
                       label: e.target.value,
-                      // Auto-generate id from label
                       id: e.target.value.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') || field.id
                     })}
                     placeholder="Nome do campo"
@@ -539,7 +744,69 @@ export function PlatformsManager() {
         </div>
       </ResponsiveDialog>
 
-      {/* Delete Confirmation */}
+      {/* Group Create/Edit Dialog */}
+      <ResponsiveDialog
+        open={showGroupDialog}
+        onOpenChange={setShowGroupDialog}
+        title={editingGroup ? 'Editar Grupo' : 'Novo Grupo'}
+      >
+        <div className="space-y-4">
+          <div className="flex gap-3">
+            <div className="space-y-2">
+              <Label>Ícone</Label>
+              <Select
+                value={groupFormData.icon}
+                onValueChange={(v) => setGroupFormData({ ...groupFormData, icon: v })}
+              >
+                <SelectTrigger className="w-16 h-12 text-xl">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <div className="grid grid-cols-5 gap-1 p-2">
+                    {EMOJI_OPTIONS.map(emoji => (
+                      <SelectItem
+                        key={emoji}
+                        value={emoji}
+                        className="text-xl justify-center p-2"
+                      >
+                        {emoji}
+                      </SelectItem>
+                    ))}
+                  </div>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex-1 space-y-2">
+              <Label>Nome do Grupo</Label>
+              <Input
+                value={groupFormData.name}
+                onChange={(e) => setGroupFormData({ ...groupFormData, name: e.target.value })}
+                placeholder="Ex: Redes Sociais"
+                className="h-12"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <Button 
+              variant="outline" 
+              className="flex-1 h-12" 
+              onClick={() => setShowGroupDialog(false)}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              className="flex-1 h-12" 
+              onClick={handleSaveGroup}
+              disabled={!groupFormData.name.trim()}
+            >
+              {editingGroup ? 'Salvar' : 'Criar'}
+            </Button>
+          </div>
+        </div>
+      </ResponsiveDialog>
+
+      {/* Delete Platform Confirmation */}
       <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -553,6 +820,28 @@ export function PlatformsManager() {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Group Confirmation */}
+      <AlertDialog open={!!deleteGroupConfirm} onOpenChange={() => setDeleteGroupConfirm(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Grupo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. O grupo será removido permanentemente.
+              Se existirem plataformas neste grupo, a exclusão não será permitida.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteGroupConfirm && handleDeleteGroup(deleteGroupConfirm)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Excluir
