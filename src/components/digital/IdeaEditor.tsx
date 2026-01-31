@@ -781,12 +781,12 @@ export function IdeaEditor({
       >
         <MediaLibrary
           mode="select"
-          onSelect={(url) => {
+          onSelectMultiple={(urls) => {
             onUpdate(idea.id, {
-              media_urls: [...(idea.media_urls || []), url],
+              media_urls: [...(idea.media_urls || []), ...urls],
             });
             setShowMediaLibrary(false);
-            toast.success('Mídia adicionada!');
+            toast.success(`${urls.length} mídia(s) adicionada(s)!`);
           }}
         />
       </ResponsiveDialog>
