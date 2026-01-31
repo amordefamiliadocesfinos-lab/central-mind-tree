@@ -43,10 +43,11 @@ interface MediaLibraryProps {
   ideaId?: string;
   variationId?: string;
   onSelect?: (url: string) => void;
+  onSelectMultiple?: (urls: string[]) => void;
   mode?: 'browse' | 'select';
 }
 
-export function MediaLibrary({ ideaId, variationId, onSelect, mode = 'browse' }: MediaLibraryProps) {
+export function MediaLibrary({ ideaId, variationId, onSelect, onSelectMultiple, mode = 'browse' }: MediaLibraryProps) {
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -58,6 +59,7 @@ export function MediaLibrary({ ideaId, variationId, onSelect, mode = 'browse' }:
   const [folderCounts, setFolderCounts] = useState<Record<string, number>>({});
   const [editingMedia, setEditingMedia] = useState<MediaItem | null>(null);
   const [qualityFilter, setQualityFilter] = useState<string | null>(null);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -101,6 +103,21 @@ export function MediaLibrary({ ideaId, variationId, onSelect, mode = 'browse' }:
   useEffect(() => {
     fetchMedia();
   }, [ideaId, variationId]);
+
+  // Handle Enter key to confirm multi-select
+  useEffect(() => {
+    if (mode !== 'select' || !onSelectMultiple) return;
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Enter' && selectedItems.size > 0) {
+        e.preventDefault();
+        onSelectMultiple(Array.from(selectedItems));
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mode, onSelectMultiple, selectedItems]);
 
   const handleUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -370,15 +387,44 @@ export function MediaLibrary({ ideaId, variationId, onSelect, mode = 'browse' }:
             </Card>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              {filteredMedia.map(item => (
+              {filteredMedia.map(item => {
+                const isSelected = selectedItems.has(item.url);
+                return (
                 <Card
                   key={item.id}
                   className={cn(
                     'group relative overflow-hidden cursor-pointer transition-all hover:ring-2 hover:ring-primary',
-                    mode === 'select' && 'active:scale-95'
+                    mode === 'select' && 'active:scale-95',
+                    mode === 'select' && isSelected && 'ring-2 ring-primary bg-primary/10'
                   )}
-                  onClick={() => mode === 'select' && onSelect?.(item.url)}
+                  onClick={() => {
+                    if (mode === 'select') {
+                      if (onSelectMultiple) {
+                        // Multi-select mode
+                        setSelectedItems(prev => {
+                          const newSet = new Set(prev);
+                          if (newSet.has(item.url)) {
+                            newSet.delete(item.url);
+                          } else {
+                            newSet.add(item.url);
+                          }
+                          return newSet;
+                        });
+                      } else if (onSelect) {
+                        // Single select mode (legacy)
+                        onSelect(item.url);
+                      }
+                    }
+                  }}
                 >
+                  {/* Selection checkbox indicator */}
+                  {mode === 'select' && onSelectMultiple && isSelected && (
+                    <div className="absolute top-2 right-2 z-10">
+                      <div className="h-6 w-6 rounded-full bg-primary flex items-center justify-center text-primary-foreground">
+                        <Check className="h-4 w-4" />
+                      </div>
+                    </div>
+                  )}
                   <div className="aspect-square relative">
                     {item.file_type?.startsWith('image') ? (
                       <img
@@ -601,10 +647,38 @@ export function MediaLibrary({ ideaId, variationId, onSelect, mode = 'browse' }:
                     </DialogContent>
                   </Dialog>
                 </Card>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
+
+        {/* Multi-select confirmation bar */}
+        {mode === 'select' && onSelectMultiple && selectedItems.size > 0 && (
+          <div className="sticky bottom-0 p-3 border-t bg-background flex items-center justify-between gap-3">
+            <span className="text-sm text-muted-foreground">
+              {selectedItems.size} mídia(s) selecionada(s)
+            </span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedItems(new Set())}
+              >
+                Limpar
+              </Button>
+              <Button
+                size="sm"
+                onClick={() => {
+                  onSelectMultiple(Array.from(selectedItems));
+                }}
+              >
+                <Check className="h-4 w-4 mr-2" />
+                Confirmar
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Media Editor Dialog */}
