@@ -13,6 +13,8 @@ export interface Platform {
   name: string;
   icon: string;
   group_type: 'social' | 'ecommerce' | 'marketplace' | 'other';
+  group_id: string | null;
+  parent_id: string | null;
   aspect_ratio: string | null;
   duration: string | null;
   fields: string[]; // Legacy - kept for backwards compatibility
@@ -24,6 +26,7 @@ export interface Platform {
   updated_at: string;
 }
 
+// Legacy - kept for backwards compatibility
 export const GROUP_LABELS: Record<string, string> = {
   social: 'Redes Sociais',
   ecommerce: 'E-commerce',
@@ -59,6 +62,8 @@ export function usePlatforms() {
     const parsedData = (data || []).map(p => ({
       ...p,
       fields: p.fields || [],
+      group_id: p.group_id || null,
+      parent_id: p.parent_id || null,
       custom_fields: Array.isArray(p.custom_fields) 
         ? (p.custom_fields as unknown as CustomField[])
         : [],
@@ -158,13 +163,20 @@ export function usePlatforms() {
     toast.success(isActive ? 'Plataforma ativada' : 'Plataforma desativada');
   }, [updatePlatform]);
 
-  // Group platforms by type
+  // Group platforms by group_id (new) or group_type (legacy fallback)
   const groupedPlatforms = platforms.reduce((acc, p) => {
-    const group = p.group_type || 'other';
+    const group = p.group_id || p.group_type || 'other';
     if (!acc[group]) acc[group] = [];
     acc[group].push(p);
     return acc;
   }, {} as Record<string, Platform[]>);
+
+  // Build parent-child hierarchy
+  const getChildren = (parentId: string | null): Platform[] => {
+    return platforms.filter(p => p.parent_id === parentId);
+  };
+
+  const rootPlatforms = platforms.filter(p => !p.parent_id);
 
   // Only active platforms for use in variations
   const activePlatforms = platforms.filter(p => p.is_active);
@@ -215,6 +227,8 @@ export function usePlatforms() {
     activePlatforms,
     groupedPlatforms,
     platformsMap,
+    rootPlatforms,
+    getChildren,
     loading,
     createPlatform,
     updatePlatform,

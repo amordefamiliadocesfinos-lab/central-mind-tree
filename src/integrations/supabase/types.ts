@@ -765,6 +765,33 @@ export type Database = {
         }
         Relationships: []
       }
+      digital_platform_groups: {
+        Row: {
+          created_at: string
+          icon: string
+          id: string
+          is_active: boolean
+          name: string
+          order_index: number
+        }
+        Insert: {
+          created_at?: string
+          icon?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          order_index?: number
+        }
+        Update: {
+          created_at?: string
+          icon?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          order_index?: number
+        }
+        Relationships: []
+      }
       digital_platforms: {
         Row: {
           aspect_ratio: string | null
@@ -773,12 +800,14 @@ export type Database = {
           custom_fields: Json | null
           duration: string | null
           fields: string[] | null
+          group_id: string | null
           group_type: string
           icon: string
           id: string
           is_active: boolean
           name: string
           order_index: number
+          parent_id: string | null
           updated_at: string
         }
         Insert: {
@@ -788,12 +817,14 @@ export type Database = {
           custom_fields?: Json | null
           duration?: string | null
           fields?: string[] | null
+          group_id?: string | null
           group_type?: string
           icon?: string
           id?: string
           is_active?: boolean
           name: string
           order_index?: number
+          parent_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -803,15 +834,32 @@ export type Database = {
           custom_fields?: Json | null
           duration?: string | null
           fields?: string[] | null
+          group_id?: string | null
           group_type?: string
           icon?: string
           id?: string
           is_active?: boolean
           name?: string
           order_index?: number
+          parent_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "digital_platforms_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "digital_platform_groups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "digital_platforms_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "digital_platforms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       digital_templates: {
         Row: {
