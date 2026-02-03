@@ -32,6 +32,7 @@ import { ProductionTab } from '@/components/operations/ProductionTab';
 import { OperationsCalendarTab } from '@/components/operations/OperationsCalendarTab';
 import { MRPTab } from '@/components/operations/MRPTab';
 import { ProductCostEditor } from '@/components/operations/ProductCostEditor';
+import { ContactAutocomplete } from '@/components/operations/ContactAutocomplete';
 import { 
   useAppStore, 
   PRODUCT_CATEGORIES, 
@@ -160,6 +161,7 @@ export default function Operacoes() {
 
   const [newOrder, setNewOrder] = useState({
     customer_name: '',
+    contact_id: null as string | null,
     channel: 'direto',
     due_date: '',
     items: [] as { product_id: string; quantity: number; unit_price: number; _unit_price_text?: string }[],
@@ -208,9 +210,13 @@ export default function Operacoes() {
   };
 
   const handleAddOrder = async () => {
-    await createOrder(newOrder as Partial<Order>, newOrder.items as Partial<OrderItem>[]);
+    const { items, ...orderData } = newOrder;
+    await createOrder(
+      { ...orderData, contact_id: newOrder.contact_id || undefined }, 
+      items as Partial<OrderItem>[]
+    );
     setShowOrderDialog(false);
-    setNewOrder({ customer_name: '', channel: 'direto', due_date: '', items: [] });
+    setNewOrder({ customer_name: '', contact_id: null, channel: 'direto', due_date: '', items: [] });
   };
 
   const addItemToOrder = () => {
@@ -368,10 +374,25 @@ export default function Operacoes() {
                   <div className="space-y-4">
                     <div>
                       <Label>Cliente</Label>
-                      <Input
-                        className="h-12"
+                      <ContactAutocomplete
                         value={newOrder.customer_name}
-                        onChange={(e) => setNewOrder({ ...newOrder, customer_name: e.target.value })}
+                        contactId={newOrder.contact_id}
+                        onSelect={(contact, manualName) => {
+                          if (contact) {
+                            setNewOrder({ 
+                              ...newOrder, 
+                              customer_name: contact.name,
+                              contact_id: contact.id,
+                            });
+                          } else {
+                            setNewOrder({ 
+                              ...newOrder, 
+                              customer_name: manualName || '',
+                              contact_id: null,
+                            });
+                          }
+                        }}
+                        placeholder="Digite o nome do cliente..."
                       />
                     </div>
                     <div>
