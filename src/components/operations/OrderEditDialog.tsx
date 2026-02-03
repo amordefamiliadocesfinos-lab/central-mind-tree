@@ -12,6 +12,7 @@ import { Plus, Trash2, Calendar, Factory, ExternalLink } from 'lucide-react';
 import { Order, OrderItem, Product } from '@/hooks/useOrders';
 import { formatCurrency } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { ContactAutocomplete } from './ContactAutocomplete';
 interface OrderEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -63,6 +64,7 @@ export function OrderEditDialog({
         order_number: order.order_number,
         customer_name: order.customer_name,
         customer_contact: order.customer_contact,
+        contact_id: order.contact_id,
         channel: order.channel,
         status: order.status,
         due_date: order.due_date,
@@ -145,10 +147,26 @@ export function OrderEditDialog({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Cliente</Label>
-              <Input
-                className="h-12"
+              <ContactAutocomplete
                 value={formData.customer_name || ''}
-                onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
+                contactId={formData.contact_id}
+                onSelect={(contact, manualName) => {
+                  if (contact) {
+                    setFormData({ 
+                      ...formData, 
+                      customer_name: contact.name,
+                      contact_id: contact.id,
+                      customer_contact: contact.phone || contact.whatsapp || formData.customer_contact,
+                    });
+                  } else {
+                    setFormData({ 
+                      ...formData, 
+                      customer_name: manualName || '',
+                      contact_id: undefined,
+                    });
+                  }
+                }}
+                placeholder="Digite o nome do cliente..."
               />
             </div>
             <div>

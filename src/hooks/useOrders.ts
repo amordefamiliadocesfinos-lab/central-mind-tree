@@ -45,6 +45,7 @@ export interface Order {
   order_number: string | null;
   customer_name: string | null;
   customer_contact: string | null;
+  contact_id: string | null;
   channel: string;
   status: string;
   total_value: number | null;
@@ -253,6 +254,7 @@ export function useOrders() {
         order_number: order.order_number || `PED-${Date.now()}`,
         customer_name: order.customer_name,
         customer_contact: order.customer_contact,
+        contact_id: order.contact_id || null,
         channel: order.channel || 'direto',
         status: 'pendente',
         total_value: total,
