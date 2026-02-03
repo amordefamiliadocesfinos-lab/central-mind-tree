@@ -7,7 +7,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { 
   Play, Pause, RotateCcw, Clock, Focus, Calendar, Timer, 
   ShoppingCart, FileText, Undo2, Redo2, Home, FileSpreadsheet,
-  Users, User, UsersRound, DollarSign, Brain
+  Users, User, UsersRound, DollarSign, Brain, LayoutDashboard
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -596,15 +596,31 @@ export function GlobalFooterBar() {
                 asChild
                 size="sm"
                 variant={isActive('/') ? 'secondary' : 'ghost'}
-                className={cn("h-8 w-8 md:w-auto md:px-3 p-0 md:p-2 text-xs", isActive('/') && "bg-secondary")}
+                className={cn("h-8 w-8 p-0", isActive('/') && "bg-secondary")}
               >
                 <Link to="/">
                   <Home className="h-4 w-4" />
-                  <span className="hidden md:inline ml-1">Início</span>
                 </Link>
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Alt+1</TooltipContent>
+            <TooltipContent>Árvore</TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                asChild
+                size="sm"
+                variant={isActive('/dashboard') ? 'secondary' : 'ghost'}
+                className={cn("h-8 w-8 md:w-auto md:px-3 p-0 md:p-2 text-xs", isActive('/dashboard') && "bg-secondary")}
+              >
+                <Link to="/dashboard">
+                  <LayoutDashboard className="h-4 w-4" />
+                  <span className="hidden md:inline ml-1">Dashboard</span>
+                </Link>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Dashboard</TooltipContent>
           </Tooltip>
 
           <Tooltip>
