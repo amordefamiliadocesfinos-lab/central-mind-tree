@@ -8,11 +8,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Calendar, Factory, ExternalLink } from 'lucide-react';
-import { Order, OrderItem, Product } from '@/hooks/useOrders';
+import { Plus, Trash2, Calendar, Factory, ExternalLink, Package } from 'lucide-react';
+import { Order, OrderItem, Product, OrderType } from '@/hooks/useOrders';
 import { formatCurrency } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { ContactAutocomplete } from './ContactAutocomplete';
+
+const ORDER_TYPE_LABELS: Record<OrderType, { label: string; icon: typeof Factory; className: string }> = {
+  stock: { label: 'Venda de Estoque', icon: Package, className: 'border-green-500 text-green-600' },
+  production: { label: 'Produção', icon: Factory, className: 'border-amber-500 text-amber-600' },
+};
 interface OrderEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -133,6 +138,26 @@ export function OrderEditDialog({
       title={`Editar Pedido #${order.order_number || order.id.slice(0, 8)}`}
     >
         <div className="space-y-4 p-4">
+          {/* Order Type Badge */}
+          {(() => {
+            const orderType = order.order_type || 'production';
+            const typeInfo = ORDER_TYPE_LABELS[orderType];
+            const Icon = typeInfo.icon;
+            return (
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50 border">
+                <Badge variant="outline" className={`gap-1 ${typeInfo.className}`}>
+                  <Icon className="h-3 w-3" />
+                  {typeInfo.label}
+                </Badge>
+                <span className="text-xs text-muted-foreground">
+                  {orderType === 'stock' 
+                    ? 'Consumiu do estoque acabado' 
+                    : 'Gerou ordens de produção'}
+                </span>
+              </div>
+            );
+          })()}
+
           {/* Editable Order Number */}
           <div>
             <Label>Número do Pedido</Label>

@@ -2,7 +2,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ChevronRight, Trash2 } from 'lucide-react';
+import { ChevronRight, Trash2, Package, Factory } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 
@@ -29,6 +29,7 @@ interface Order {
   order_date: string;
   due_date?: string | null;
   total_value?: number | null;
+  order_type?: 'stock' | 'production';
   items?: OrderItem[];
 }
 
@@ -43,6 +44,7 @@ interface OrderCardProps {
 
 export function OrderCard({ order, orderStatus, orderChannels, onStatusChange, onDelete, onClick }: OrderCardProps) {
   const statusInfo = orderStatus[order.status as keyof typeof orderStatus];
+  const isStockOrder = order.order_type === 'stock';
   
   return (
     <Card 
@@ -59,6 +61,17 @@ export function OrderCard({ order, orderStatus, orderChannels, onStatusChange, o
               <Badge className={cn('text-xs', statusInfo?.color)}>
                 {statusInfo?.label || order.status}
               </Badge>
+              {isStockOrder ? (
+                <Badge variant="outline" className="text-xs gap-1 border-green-500 text-green-600">
+                  <Package className="h-3 w-3" />
+                  Estoque
+                </Badge>
+              ) : (
+                <Badge variant="outline" className="text-xs gap-1 border-amber-500 text-amber-600">
+                  <Factory className="h-3 w-3" />
+                  Produção
+                </Badge>
+              )}
             </div>
             <p className="text-sm text-muted-foreground mt-1 truncate">
               {order.customer_name || 'Cliente não informado'}
