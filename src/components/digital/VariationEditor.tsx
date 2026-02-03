@@ -443,21 +443,16 @@ export function VariationEditor({
                     <span className="ml-1">Gerar</span>
                   </Button>
                 </div>
-                {isTextarea ? (
-                  <Textarea
-                    value={value}
-                    onChange={(e) => handleFieldChange(e.target.value)}
-                    placeholder={field.label}
-                    rows={3}
-                  />
-                ) : (
-                  <Input
-                    value={value}
-                    onChange={(e) => handleFieldChange(e.target.value)}
-                    placeholder={field.label}
-                    className="h-11"
-                  />
-                )}
+                <Textarea
+                  value={value}
+                  onChange={(e) => handleFieldChange(e.target.value)}
+                  placeholder={field.label}
+                  rows={isTextarea ? 3 : 1}
+                  className={cn(
+                    "resize-y",
+                    !isTextarea && "min-h-[44px]"
+                  )}
+                />
               </div>
             );
           })}
