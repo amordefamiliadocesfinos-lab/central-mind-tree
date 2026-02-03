@@ -13,6 +13,7 @@ import { AssistantPanel } from "@/components/assistant";
 import { SwipeNavigationWrapper } from "@/components/SwipeNavigationWrapper";
 import { AnimatePresence, motion, Variants } from "framer-motion";
 import Index from "./pages/Index";
+import Dashboard from "./pages/Dashboard";
 import TaskEdit from "./pages/TaskEdit";
 import Foco from "./pages/Foco";
 import Planejamento from "./pages/Planejamento";
@@ -68,6 +69,7 @@ function AnimatedRoutes() {
       >
         <Routes location={location}>
           <Route path="/" element={<Index />} />
+          <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/foco" element={<Foco />} />
           <Route path="/planejamento" element={<Planejamento />} />
           <Route path="/calendario" element={<Calendario />} />
