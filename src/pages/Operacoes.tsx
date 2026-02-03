@@ -38,6 +38,7 @@ import {
   PRODUCT_CATEGORIES, 
   ORDER_STATUS,
   ORDER_CHANNELS,
+  ORDER_TYPES,
   sortProductsByCategory,
   sortOrdersByStatus,
   Product as StoreProduct,
@@ -163,6 +164,7 @@ export default function Operacoes() {
     customer_name: '',
     contact_id: null as string | null,
     channel: 'direto',
+    order_type: 'production' as 'stock' | 'production',
     due_date: '',
     items: [] as { product_id: string; quantity: number; unit_price: number; _unit_price_text?: string }[],
   });
@@ -216,7 +218,7 @@ export default function Operacoes() {
       items as Partial<OrderItem>[]
     );
     setShowOrderDialog(false);
-    setNewOrder({ customer_name: '', contact_id: null, channel: 'direto', due_date: '', items: [] });
+    setNewOrder({ customer_name: '', contact_id: null, channel: 'direto', order_type: 'production', due_date: '', items: [] });
   };
 
   const addItemToOrder = () => {
@@ -394,6 +396,32 @@ export default function Operacoes() {
                         }}
                         placeholder="Digite o nome do cliente..."
                       />
+                    </div>
+                    <div>
+                      <Label>Tipo de Pedido</Label>
+                      <Select
+                        value={newOrder.order_type}
+                        onValueChange={(v: 'stock' | 'production') => setNewOrder({ ...newOrder, order_type: v })}
+                      >
+                        <SelectTrigger className="h-12">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(ORDER_TYPES).map(([key, { label, description }]) => (
+                            <SelectItem key={key} value={key}>
+                              <div className="flex flex-col">
+                                <span>{label}</span>
+                                <span className="text-xs text-muted-foreground">{description}</span>
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {newOrder.order_type === 'stock' && (
+                        <p className="text-xs text-amber-600 mt-1">
+                          ⚠️ Este pedido consumirá direto do estoque acabado
+                        </p>
+                      )}
                     </div>
                     <div>
                       <Label>Canal</Label>

@@ -40,6 +40,8 @@ export interface OrderItem {
   product?: Product;
 }
 
+export type OrderType = 'stock' | 'production';
+
 export interface Order {
   id: string;
   order_number: string | null;
@@ -52,6 +54,7 @@ export interface Order {
   order_date: string;
   due_date: string | null;
   notes: string | null;
+  order_type: OrderType;
   created_at: string;
   updated_at: string;
   items?: OrderItem[];
@@ -248,6 +251,8 @@ export function useOrders() {
       return acc + (item.quantity || 0) * (item.unit_price || 0);
     }, 0);
 
+    const orderType = order.order_type || 'production';
+
     const { data: newOrder, error: orderError } = await supabase
       .from('orders')
       .insert({
@@ -261,6 +266,7 @@ export function useOrders() {
         order_date: order.order_date || new Date().toISOString().split('T')[0],
         due_date: order.due_date,
         notes: order.notes,
+        order_type: orderType,
       })
       .select()
       .single();
@@ -288,52 +294,98 @@ export function useOrders() {
         console.error('Error adding items:', itemsError);
       }
 
-      // Auto-create production orders for each item
-      for (const item of items) {
-        if (!item.product_id) continue;
+      // Handle based on order type
+      if (orderType === 'stock') {
+        // STOCK SALE: Consume from finished goods inventory directly
+        for (const item of items) {
+          if (!item.product_id) continue;
 
-        // Get processes associated with this product
-        const { data: productProcesses } = await supabase
-          .from('product_processes')
-          .select('process_id')
-          .eq('product_id', item.product_id);
+          // Get current balance
+          const { data: inv } = await supabase
+            .from('inventory')
+            .select('quantity')
+            .eq('product_id', item.product_id)
+            .maybeSingle();
 
-        // OP name follows the sales order number with OP- prefix
-        const orderNumber = `OP-${newOrder.order_number}`;
+          const prevBalance = inv?.quantity || 0;
+          const newBalance = Math.max(0, prevBalance - (item.quantity || 1));
 
-        // Create production order with source_order_id link
-        const { data: prodOrder, error: prodError } = await supabase
-          .from('production_orders')
-          .insert({
-            order_number: orderNumber,
-            product_id: item.product_id,
-            target_quantity: item.quantity || 1,
-            status: 'aberto',
-            notes: `Gerado automaticamente do pedido ${newOrder.order_number}`,
-            source_order_id: newOrder.id,
-          } as any)
-          .select()
-          .single();
-
-        if (prodError) {
-          console.error('Error creating production order:', prodError);
-          continue;
-        }
-
-        // Add processes to production order if any exist
-        if (productProcesses && productProcesses.length > 0) {
+          // Create inventory movement
           await supabase
-            .from('production_order_processes')
-            .insert(productProcesses.map(p => ({
-              production_order_id: prodOrder.id,
-              process_id: p.process_id,
-              is_required: true,
-            })));
+            .from('inventory_movements')
+            .insert({
+              product_id: item.product_id,
+              quantity: -(item.quantity || 1),
+              previous_balance: prevBalance,
+              new_balance: newBalance,
+              movement_type: 'out',
+              reference_type: 'order',
+              reference_id: newOrder.id,
+              notes: `Venda ${newOrder.order_number}`,
+            });
+
+          // Update inventory balance
+          await supabase
+            .from('inventory')
+            .upsert({
+              product_id: item.product_id,
+              quantity: newBalance,
+              updated_at: new Date().toISOString(),
+            }, { onConflict: 'product_id' });
         }
+
+        toast.success('Pedido criado! Estoque atualizado.');
+      } else {
+        // PRODUCTION: Auto-create production orders for each item
+        for (const item of items) {
+          if (!item.product_id) continue;
+
+          // Get processes associated with this product
+          const { data: productProcesses } = await supabase
+            .from('product_processes')
+            .select('process_id')
+            .eq('product_id', item.product_id);
+
+          // OP name follows the sales order number with OP- prefix
+          const orderNumber = `OP-${newOrder.order_number}`;
+
+          // Create production order with source_order_id link
+          const { data: prodOrder, error: prodError } = await supabase
+            .from('production_orders')
+            .insert({
+              order_number: orderNumber,
+              product_id: item.product_id,
+              target_quantity: item.quantity || 1,
+              status: 'aberto',
+              notes: `Gerado automaticamente do pedido ${newOrder.order_number}`,
+              source_order_id: newOrder.id,
+            } as any)
+            .select()
+            .single();
+
+          if (prodError) {
+            console.error('Error creating production order:', prodError);
+            continue;
+          }
+
+          // Add processes to production order if any exist
+          if (productProcesses && productProcesses.length > 0) {
+            await supabase
+              .from('production_order_processes')
+              .insert(productProcesses.map(p => ({
+                production_order_id: prodOrder.id,
+                process_id: p.process_id,
+                is_required: true,
+              })));
+          }
+        }
+
+        toast.success('Pedido e ordens de produção criados!');
       }
+    } else {
+      toast.success('Pedido criado!');
     }
 
-    toast.success('Pedido e ordens de produção criados!');
     fetchOrders();
     return newOrder as Order;
   }, [fetchOrders]);

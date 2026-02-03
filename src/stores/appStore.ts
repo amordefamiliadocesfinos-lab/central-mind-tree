@@ -60,6 +60,13 @@ export interface OrderItem {
   product?: Product;
 }
 
+export type OrderType = 'stock' | 'production';
+
+export const ORDER_TYPES: Record<OrderType, { label: string; description: string }> = {
+  stock: { label: 'Venda de Estoque', description: 'Consome do estoque acabado, sem gerar produção' },
+  production: { label: 'Produção', description: 'Gera ordem de produção e consome matéria-prima' },
+};
+
 export interface Order {
   id: string;
   order_number: string | null;
@@ -71,6 +78,7 @@ export interface Order {
   order_date: string;
   due_date: string | null;
   notes: string | null;
+  order_type: OrderType;
   created_at: string;
   updated_at: string;
   items?: OrderItem[];
