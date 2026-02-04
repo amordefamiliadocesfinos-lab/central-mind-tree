@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { ArrowLeft, Plus, Trash2, Settings, Calendar, Image, Copy, Layers, Link2, X, ImagePlus, Eye, EyeOff, Sparkles, Loader2, Wand2 } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { VariationEditor } from './VariationEditor';
+import { HierarchicalPlatformSelector } from './HierarchicalPlatformSelector';
 import { BatchVariationDialog } from './BatchVariationDialog';
 import { ScheduleCalendar } from './ScheduleCalendar';
 import { MediaLibrary } from './MediaLibrary';
@@ -582,31 +583,12 @@ export function IdeaEditor({
           {availablePlatforms.length > 0 && (
             <div className="flex gap-2">
               {showAddPlatform ? (
-                <Card className="flex-1">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm">Selecione a Plataforma</CardTitle>
-                  </CardHeader>
-                  <CardContent className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {availablePlatforms.map((platform) => (
-                      <Button
-                        key={platform.id}
-                        variant="outline"
-                        className="h-auto py-3 flex-col gap-1"
-                        onClick={() => handleAddPlatform(platform.id)}
-                      >
-                        <span className="text-xl">{platform.icon}</span>
-                        <span className="text-xs">{platform.name}</span>
-                      </Button>
-                    ))}
-                    <Button
-                      variant="ghost"
-                      className="h-auto py-3"
-                      onClick={() => setShowAddPlatform(false)}
-                    >
-                      Cancelar
-                    </Button>
-                  </CardContent>
-                </Card>
+                <HierarchicalPlatformSelector
+                  platforms={platforms}
+                  excludedPlatformIds={existingPlatformIds}
+                  onSelect={handleAddPlatform}
+                  onCancel={() => setShowAddPlatform(false)}
+                />
               ) : (
                 <>
                   <Button
@@ -615,7 +597,7 @@ export function IdeaEditor({
                     onClick={() => setShowAddPlatform(true)}
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    Adicionar
+                    Adicionar Plataforma
                   </Button>
                   {onBatchCreateVariations && availablePlatforms.length > 1 && (
                     <Button
