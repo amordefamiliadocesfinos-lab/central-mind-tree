@@ -485,6 +485,49 @@ export function PlatformsManager() {
         );
       })}
 
+      {/* Platforms without group (orphaned) */}
+      {(() => {
+        const orphanedPlatforms = platforms.filter(p => !p.group_id && !p.parent_id);
+        if (orphanedPlatforms.length === 0) return null;
+        
+        const isExpanded = expandedGroups['__no_group__'] !== false;
+        
+        return (
+          <Collapsible
+            open={isExpanded}
+            onOpenChange={() => toggleGroup('__no_group__')}
+          >
+            <Card>
+              <CollapsibleTrigger asChild>
+                <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors py-3">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <span className="text-lg">📋</span>
+                      Sem Grupo
+                      <Badge variant="secondary" className="ml-2">
+                        {orphanedPlatforms.length}
+                      </Badge>
+                    </CardTitle>
+                    <div className="flex items-center gap-2">
+                      {isExpanded ? (
+                        <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
+                  </div>
+                </CardHeader>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent className="pt-0 space-y-2">
+                  {orphanedPlatforms.map(platform => renderPlatform(platform, 0))}
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+        );
+      })()}
+
       {/* Empty State */}
       {groups.length === 0 && (
         <Card className="p-8 text-center">
