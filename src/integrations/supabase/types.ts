@@ -500,6 +500,7 @@ export type Database = {
           node_id: string | null
           objective: string | null
           order_index: number | null
+          product_id: string | null
           status: string
           target_audience: string | null
           title: string
@@ -515,6 +516,7 @@ export type Database = {
           node_id?: string | null
           objective?: string | null
           order_index?: number | null
+          product_id?: string | null
           status?: string
           target_audience?: string | null
           title: string
@@ -530,6 +532,7 @@ export type Database = {
           node_id?: string | null
           objective?: string | null
           order_index?: number | null
+          product_id?: string | null
           status?: string
           target_audience?: string | null
           title?: string
@@ -541,6 +544,13 @@ export type Database = {
             columns: ["node_id"]
             isOneToOne: false
             referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "digital_ideas_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]

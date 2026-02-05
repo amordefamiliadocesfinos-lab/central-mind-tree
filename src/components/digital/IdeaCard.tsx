@@ -1,11 +1,12 @@
 import { DigitalIdea, DIGITAL_STATUS } from '@/hooks/useDigital';
 import { Platform } from '@/hooks/usePlatforms';
+import { ProductListItem } from '@/hooks/useProductsList';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { Calendar, ChevronRight, FileText, Megaphone, PackagePlus, Rocket, LinkIcon } from 'lucide-react';
+import { Calendar, ChevronRight, FileText, Megaphone, PackagePlus, Rocket, LinkIcon, Package } from 'lucide-react';
 
 export const IDEA_TYPES: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
   conteudo: { label: 'Conteúdo', icon: <FileText className="h-3 w-3" />, color: 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30' },
@@ -25,9 +26,10 @@ interface IdeaCardProps {
   onClick: () => void;
   platforms?: Platform[];
   nodes?: Node[];
+  products?: ProductListItem[];
 }
 
-export function IdeaCard({ idea, onClick, platforms = [], nodes = [] }: IdeaCardProps) {
+export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products = [] }: IdeaCardProps) {
   const statusConfig = DIGITAL_STATUS[idea.status];
   const variations = idea.variations || [];
   
@@ -42,6 +44,7 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [] }: IdeaCard
 
   const ideaType = IDEA_TYPES[idea.idea_type || 'conteudo'] || IDEA_TYPES.conteudo;
   const linkedNode = idea.node_id ? nodes.find(n => n.id === idea.node_id) : null;
+  const linkedProduct = idea.product_id ? products.find(p => p.id === idea.product_id) : null;
 
   // Group platform icons by unique platform (deduplicate)
   const uniquePlatforms = new Map<string, Platform>();
@@ -75,6 +78,12 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [] }: IdeaCard
             <Badge variant="outline" className="text-[10px] gap-1 font-normal text-muted-foreground">
               <LinkIcon className="h-2.5 w-2.5" />
               <span className="truncate max-w-[100px]">{linkedNode.title}</span>
+            </Badge>
+          )}
+          {linkedProduct && (
+            <Badge variant="outline" className="text-[10px] gap-1 font-normal text-muted-foreground border-emerald-500/30">
+              <Package className="h-2.5 w-2.5" />
+              <span className="truncate max-w-[100px]">{linkedProduct.name}</span>
             </Badge>
           )}
         </div>

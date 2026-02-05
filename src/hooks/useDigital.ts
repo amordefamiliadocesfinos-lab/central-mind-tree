@@ -35,6 +35,7 @@ export interface DigitalIdea {
   idea_type: IdeaType;
   order_index: number;
   node_id: string | null;
+  product_id: string | null;
   media_urls: string[];
   created_at: string;
   updated_at: string;
@@ -152,6 +153,7 @@ export function useDigital() {
         status: 'estrutural',
         idea_type: idea.idea_type || 'conteudo',
         node_id: idea.node_id,
+        product_id: idea.product_id || null,
         media_urls: idea.media_urls || [],
       })
       .select()

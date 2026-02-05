@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useDigital, DIGITAL_STATUS } from '@/hooks/useDigital';
+import { useProductsList } from '@/hooks/useProductsList';
 import { IdeaCard, IdeaEditor, KanbanBoard, MediaLibrary, MetricsChart, BatchVariationDialog, PlatformsManager, DigitalCalendar } from '@/components/digital';
 import { TrendsPanel } from '@/components/digital/TrendsPanel';
 import { InteractionsPanel } from '@/components/digital/InteractionsPanel';
 import { KnowledgeBasePanel } from '@/components/digital/KnowledgeBasePanel';
+import { ProductSelector } from '@/components/digital/ProductSelector';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -55,12 +57,13 @@ export default function Digital() {
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedIdea, setSelectedIdea] = useState<string | null>(null);
-  const [newIdea, setNewIdea] = useState({ title: '', objective: '', node_id: '', idea_type: 'conteudo' });
+  const [newIdea, setNewIdea] = useState({ title: '', objective: '', node_id: '', idea_type: 'conteudo', product_id: '' });
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [activeTab, setActiveTab] = useState<'ideias' | 'calendario' | 'midia' | 'metricas' | 'plataformas' | 'tendencias' | 'engajamento' | 'faq'>('ideias');
   const [kanbanMode, setKanbanMode] = useState<'ideas' | 'variations'>('ideas');
   const [nodes, setNodes] = useState<Node[]>([]);
   const isMobile = useIsMobile();
+  const { products } = useProductsList();
 
   // Fetch nodes for linking
   useEffect(() => {
@@ -75,11 +78,12 @@ export default function Digital() {
     const idea = await createIdea({
       ...newIdea,
       node_id: newIdea.node_id || null,
+      product_id: newIdea.product_id || null,
       idea_type: (newIdea.idea_type as any) || 'conteudo',
     });
     if (idea) {
       setShowCreateDialog(false);
-      setNewIdea({ title: '', objective: '', node_id: '', idea_type: 'conteudo' });
+      setNewIdea({ title: '', objective: '', node_id: '', idea_type: 'conteudo', product_id: '' });
       setSelectedIdea(idea.id);
     }
   };
@@ -319,6 +323,7 @@ export default function Digital() {
                       onClick={() => setSelectedIdea(idea.id)}
                       platforms={activePlatforms}
                       nodes={nodes}
+                      products={products}
                     />
                   ))
                 )}
@@ -416,6 +421,26 @@ export default function Digital() {
               </SelectContent>
             </Select>
           </div>
+          {/* Product linking */}
+          {products.length > 0 && (
+            <ProductSelector
+              products={products}
+              value={newIdea.product_id || null}
+              onChange={(productId) => {
+                const updates: Record<string, string> = { product_id: productId || '' };
+                // Auto-fill title from product
+                if (productId) {
+                  const product = products.find(p => p.id === productId);
+                  if (product) {
+                    if (!newIdea.title) updates.title = product.name;
+                    if (!newIdea.objective && product.description) updates.objective = product.description;
+                  }
+                }
+                setNewIdea(prev => ({ ...prev, ...updates }));
+              }}
+              label="Vincular Produto (opcional)"
+            />
+          )}
           <div className="flex gap-3 pt-2">
             <Button variant="outline" className="flex-1 h-12" onClick={() => setShowCreateDialog(false)}>
               Cancelar
