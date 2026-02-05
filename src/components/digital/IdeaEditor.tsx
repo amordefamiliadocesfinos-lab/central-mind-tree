@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { IDEA_TYPES } from './IdeaCard';
 import { DigitalIdea, DigitalVariation, DIGITAL_STATUS } from '@/hooks/useDigital';
 import { Platform } from '@/hooks/usePlatforms';
+import { useProductsList } from '@/hooks/useProductsList';
+import { ProductSelector } from './ProductSelector';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -63,6 +65,7 @@ export function IdeaEditor({
   platforms = [],
 }: IdeaEditorProps) {
   const isMobile = useIsMobile();
+  const { products } = useProductsList();
   const [selectedVariation, setSelectedVariation] = useState<DigitalVariation | null>(null);
   const [showAddPlatform, setShowAddPlatform] = useState(false);
   const [showBatchDialog, setShowBatchDialog] = useState(false);
@@ -509,6 +512,35 @@ export function IdeaEditor({
                   className="h-11"
                 />
               </div>
+
+              {/* Product linking */}
+              {products.length > 0 && (
+                <ProductSelector
+                  products={products}
+                  value={idea.product_id}
+                  onChange={(productId) => {
+                    const updates: Partial<DigitalIdea> = { product_id: productId };
+                    // Auto-fill title from product name if title is empty or matches default
+                    if (productId) {
+                      const product = products.find(p => p.id === productId);
+                      if (product) {
+                        if (!idea.title || idea.title === 'Nova Ideia') {
+                          updates.title = product.name;
+                        }
+                        if (!idea.objective && product.description) {
+                          updates.objective = product.description;
+                        }
+                        // Import product media if idea has no media
+                        if ((!idea.media_urls || idea.media_urls.length === 0) && product.media_urls?.length > 0) {
+                          updates.media_urls = product.media_urls;
+                        }
+                      }
+                    }
+                    onUpdate(idea.id, updates);
+                  }}
+                  label="Vincular Produto (opcional)"
+                />
+              )}
 
               {/* Node linking */}
               {nodes.length > 0 && (
