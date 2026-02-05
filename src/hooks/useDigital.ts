@@ -22,6 +22,8 @@ export const PLATFORMS: Record<string, {
   checklist: { id: string; text: string }[];
 }> = {};
 
+export type IdeaType = 'conteudo' | 'anuncio' | 'cadastro' | 'campanha';
+
 export interface DigitalIdea {
   id: string;
   title: string;
@@ -30,6 +32,7 @@ export interface DigitalIdea {
   key_message: string | null;
   kpi: string | null;
   status: keyof typeof DIGITAL_STATUS;
+  idea_type: IdeaType;
   order_index: number;
   node_id: string | null;
   media_urls: string[];
@@ -147,6 +150,7 @@ export function useDigital() {
         key_message: idea.key_message,
         kpi: idea.kpi,
         status: 'estrutural',
+        idea_type: idea.idea_type || 'conteudo',
         node_id: idea.node_id,
         media_urls: idea.media_urls || [],
       })

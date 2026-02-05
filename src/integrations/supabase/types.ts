@@ -493,6 +493,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          idea_type: string
           key_message: string | null
           kpi: string | null
           media_urls: Json | null
@@ -507,6 +508,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          idea_type?: string
           key_message?: string | null
           kpi?: string | null
           media_urls?: Json | null
@@ -521,6 +523,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          idea_type?: string
           key_message?: string | null
           kpi?: string | null
           media_urls?: Json | null

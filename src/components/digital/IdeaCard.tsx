@@ -3,30 +3,54 @@ import { Platform } from '@/hooks/usePlatforms';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { Calendar, ChevronRight } from 'lucide-react';
+import { Calendar, ChevronRight, FileText, Megaphone, PackagePlus, Rocket, LinkIcon } from 'lucide-react';
+
+export const IDEA_TYPES: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
+  conteudo: { label: 'Conteúdo', icon: <FileText className="h-3 w-3" />, color: 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30' },
+  anuncio: { label: 'Anúncio', icon: <Megaphone className="h-3 w-3" />, color: 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/30' },
+  cadastro: { label: 'Cadastro', icon: <PackagePlus className="h-3 w-3" />, color: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30' },
+  campanha: { label: 'Campanha', icon: <Rocket className="h-3 w-3" />, color: 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30' },
+};
+
+interface Node {
+  id: string;
+  title: string;
+  color: string;
+}
 
 interface IdeaCardProps {
   idea: DigitalIdea;
   onClick: () => void;
   platforms?: Platform[];
+  nodes?: Node[];
 }
 
-export function IdeaCard({ idea, onClick, platforms = [] }: IdeaCardProps) {
+export function IdeaCard({ idea, onClick, platforms = [], nodes = [] }: IdeaCardProps) {
   const statusConfig = DIGITAL_STATUS[idea.status];
   const variations = idea.variations || [];
   
-  // Helper to get platform config
   const getPlatform = (platformId: string) => platforms.find(p => p.id === platformId);
   
-  // Calculate progress
   const completedVariations = variations.filter(v => v.status === 'concluido').length;
   const progress = variations.length > 0 ? (completedVariations / variations.length) * 100 : 0;
 
-  // Get next scheduled variation
   const nextScheduled = variations
     .filter(v => v.scheduled_date)
     .sort((a, b) => (a.scheduled_date || '').localeCompare(b.scheduled_date || ''))[0];
+
+  const ideaType = IDEA_TYPES[idea.idea_type || 'conteudo'] || IDEA_TYPES.conteudo;
+  const linkedNode = idea.node_id ? nodes.find(n => n.id === idea.node_id) : null;
+
+  // Group platform icons by unique platform (deduplicate)
+  const uniquePlatforms = new Map<string, Platform>();
+  variations.forEach(v => {
+    const p = getPlatform(v.platform);
+    if (p && !uniquePlatforms.has(p.id)) {
+      uniquePlatforms.set(p.id, p);
+    }
+  });
 
   return (
     <Card
@@ -37,75 +61,80 @@ export function IdeaCard({ idea, onClick, platforms = [] }: IdeaCardProps) {
       )}
       onClick={onClick}
     >
-      <CardContent className="p-4">
-        <div className="flex justify-between items-start gap-3">
-          <div className="flex-1 min-w-0">
-            {/* Title and Status */}
-            <div className="flex items-center gap-2 flex-wrap mb-1">
-              <h3 className="font-medium truncate">{idea.title}</h3>
-              <Badge
-                className={cn('text-white text-xs shrink-0', statusConfig.color)}
-              >
-                {statusConfig.label}
-              </Badge>
-            </div>
+      <CardContent className="p-3 sm:p-4">
+        {/* Row 1: Type badge + Status badge */}
+        <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+          <Badge variant="outline" className={cn('text-[10px] gap-1 font-medium border', ideaType.color)}>
+            {ideaType.icon}
+            {ideaType.label}
+          </Badge>
+          <Badge className={cn('text-[10px] text-white shrink-0', statusConfig.color)}>
+            {statusConfig.label}
+          </Badge>
+          {linkedNode && (
+            <Badge variant="outline" className="text-[10px] gap-1 font-normal text-muted-foreground">
+              <LinkIcon className="h-2.5 w-2.5" />
+              <span className="truncate max-w-[100px]">{linkedNode.title}</span>
+            </Badge>
+          )}
+        </div>
 
-            {/* Objective */}
-            {idea.objective && (
-              <p className="text-sm text-muted-foreground line-clamp-1 mb-2">
-                {idea.objective}
-              </p>
+        {/* Row 2: Title */}
+        <h3 className="font-medium text-sm leading-snug line-clamp-2 mb-1.5">{idea.title}</h3>
+
+        {/* Row 3: Objective (condensed) */}
+        {idea.objective && (
+          <p className="text-xs text-muted-foreground line-clamp-1 mb-2">
+            {idea.objective}
+          </p>
+        )}
+
+        {/* Row 4: Platforms + Progress + Date */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            {/* Platform icons with tooltips */}
+            {uniquePlatforms.size > 0 && (
+              <div className="flex items-center gap-0.5">
+                {Array.from(uniquePlatforms.values()).slice(0, 6).map(p => (
+                  <Tooltip key={p.id}>
+                    <TooltipTrigger asChild>
+                      <span className="text-base leading-none cursor-default">{p.icon}</span>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="text-xs">
+                      {p.name}
+                    </TooltipContent>
+                  </Tooltip>
+                ))}
+                {uniquePlatforms.size > 6 && (
+                  <span className="text-[10px] text-muted-foreground font-medium ml-0.5">
+                    +{uniquePlatforms.size - 6}
+                  </span>
+                )}
+              </div>
             )}
 
-            {/* Platform Icons */}
+            {/* Progress bar */}
             {variations.length > 0 && (
-              <div className="flex items-center gap-2 flex-wrap">
-                <div className="flex gap-1">
-                  {variations.map(v => {
-                    const platform = getPlatform(v.platform);
-                    return (
-                      <span
-                        key={v.id}
-                        className={cn(
-                          'text-base',
-                          v.status === 'concluido' ? 'opacity-50' : ''
-                        )}
-                        title={`${platform?.name || 'Plataforma'} - ${DIGITAL_STATUS[v.status]?.label}`}
-                      >
-                        {platform?.icon || '📱'}
-                      </span>
-                    );
-                  })}
-                </div>
-                
-                {/* Progress */}
-                {variations.length > 1 && (
-                  <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                    <Progress value={progress} className="w-12 h-1.5" />
-                    <span className="tabular-nums">{Math.round(progress)}%</span>
-                  </div>
-                )}
+              <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                <Progress value={progress} className="w-10 h-1.5" />
+                <span className="tabular-nums whitespace-nowrap">
+                  {completedVariations}/{variations.length}
+                </span>
               </div>
             )}
           </div>
 
-          {/* Right side */}
-          <div className="flex flex-col items-end gap-1 shrink-0">
-            {/* Next scheduled */}
+          {/* Right: Date + Arrow */}
+          <div className="flex items-center gap-1.5 shrink-0">
             {nextScheduled && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
                 <Calendar className="h-3 w-3" />
                 <span className="tabular-nums">
                   {nextScheduled.scheduled_date?.slice(5).replace('-', '/')}
                 </span>
               </div>
             )}
-            
-            {/* Variations count */}
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <span>{variations.length} variação{variations.length !== 1 ? 'ões' : ''}</span>
-              <ChevronRight className="h-4 w-4" />
-            </div>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </div>
         </div>
       </CardContent>
