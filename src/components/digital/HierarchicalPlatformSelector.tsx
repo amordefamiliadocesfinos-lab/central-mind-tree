@@ -148,6 +148,13 @@ export function HierarchicalPlatformSelector({
     }
   };
 
+  // Helper function to check if a node has any available leaf descendants
+  const checkHasAvailableDescendants = (node: PlatformNode): boolean => {
+    if (!node.platform.is_active) return false;
+    if (node.isLeaf) return !excludedPlatformIds.includes(node.platform.id);
+    return node.children.some(child => checkHasAvailableDescendants(child));
+  };
+
   const renderPlatformNode = (node: PlatformNode, depth: number = 0): React.ReactNode => {
     const { platform, children, isLeaf } = node;
     const isExpanded = expandedNodes[platform.id] !== false; // Default to expanded
@@ -160,17 +167,8 @@ export function HierarchicalPlatformSelector({
     // If it's a leaf and excluded, skip it
     if (isLeaf && isExcluded) return null;
 
-    // Check if any descendant leaves are available
-    const hasAvailableDescendants = (): boolean => {
-      if (isLeaf) return !isExcluded;
-      return children.some(child => {
-        if (child.isLeaf) return !excludedPlatformIds.includes(child.platform.id);
-        return hasAvailableDescendants.call(child);
-      });
-    };
-
     // Skip branches with no available leaves
-    if (!isLeaf && !hasAvailableDescendants()) return null;
+    if (!isLeaf && !checkHasAvailableDescendants(node)) return null;
 
     if (isLeaf) {
       // Render selectable leaf
