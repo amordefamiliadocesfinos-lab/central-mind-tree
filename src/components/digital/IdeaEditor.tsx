@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { IDEA_TYPES } from './IdeaCard';
 import { DigitalIdea, DigitalVariation, DIGITAL_STATUS } from '@/hooks/useDigital';
 import { Platform } from '@/hooks/usePlatforms';
 import { Button } from '@/components/ui/button';
@@ -369,6 +370,29 @@ export function IdeaEditor({
               </div>
             </CardHeader>
             <CardContent className="p-4 pt-2 space-y-4">
+              {/* Idea Type Selector */}
+              <div className="space-y-2">
+                <Label>Tipo da Ideia</Label>
+                <Select
+                  value={idea.idea_type || 'conteudo'}
+                  onValueChange={(v) => onUpdate(idea.id, { idea_type: v as any })}
+                >
+                  <SelectTrigger className="h-11">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(IDEA_TYPES).map(([key, config]) => (
+                      <SelectItem key={key} value={key}>
+                        <div className="flex items-center gap-2">
+                          {config.icon}
+                          {config.label}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="space-y-2">
                 <Label>Título da Ideia</Label>
                 <Input

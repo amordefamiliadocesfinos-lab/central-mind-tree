@@ -55,7 +55,7 @@ export default function Digital() {
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedIdea, setSelectedIdea] = useState<string | null>(null);
-  const [newIdea, setNewIdea] = useState({ title: '', objective: '', node_id: '' });
+  const [newIdea, setNewIdea] = useState({ title: '', objective: '', node_id: '', idea_type: 'conteudo' });
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [activeTab, setActiveTab] = useState<'ideias' | 'calendario' | 'midia' | 'metricas' | 'plataformas' | 'tendencias' | 'engajamento' | 'faq'>('ideias');
   const [kanbanMode, setKanbanMode] = useState<'ideas' | 'variations'>('ideas');
@@ -75,10 +75,11 @@ export default function Digital() {
     const idea = await createIdea({
       ...newIdea,
       node_id: newIdea.node_id || null,
+      idea_type: (newIdea.idea_type as any) || 'conteudo',
     });
     if (idea) {
       setShowCreateDialog(false);
-      setNewIdea({ title: '', objective: '', node_id: '' });
+      setNewIdea({ title: '', objective: '', node_id: '', idea_type: 'conteudo' });
       setSelectedIdea(idea.id);
     }
   };
@@ -317,6 +318,7 @@ export default function Digital() {
                       idea={idea}
                       onClick={() => setSelectedIdea(idea.id)}
                       platforms={activePlatforms}
+                      nodes={nodes}
                     />
                   ))
                 )}
@@ -353,6 +355,23 @@ export default function Digital() {
         title="Nova Ideia"
       >
         <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>Tipo da Ideia</Label>
+            <Select
+              value={newIdea.idea_type}
+              onValueChange={(v) => setNewIdea({ ...newIdea, idea_type: v })}
+            >
+              <SelectTrigger className="h-12">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="conteudo">📄 Conteúdo</SelectItem>
+                <SelectItem value="anuncio">📢 Anúncio de Produto</SelectItem>
+                <SelectItem value="cadastro">📦 Cadastro de Produto</SelectItem>
+                <SelectItem value="campanha">🚀 Campanha</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="space-y-2">
             <Label>Título</Label>
             <Input
