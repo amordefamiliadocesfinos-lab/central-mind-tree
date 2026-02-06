@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-import { Plus, Edit2, Trash2, ChevronDown, ChevronUp, Settings2, Sparkles, Loader2, GripVertical, Type, AlignLeft, ChevronRight, Copy, FolderPlus } from 'lucide-react';
+import { Plus, Edit2, Trash2, ChevronDown, ChevronUp, Settings2, Sparkles, Loader2, GripVertical, Type, AlignLeft, ChevronRight, Copy, FolderPlus, Wand2, Check, RotateCcw } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -79,10 +79,87 @@ export function PlatformsManager() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleteGroupConfirm, setDeleteGroupConfirm] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiStructureLoading, setAiStructureLoading] = useState(false);
+  const [aiStructured, setAiStructured] = useState(false); // Whether AI has populated the form
+  const [aiSuggestions, setAiSuggestions] = useState<{
+    group_type?: string;
+    objective?: string;
+    suggested_children?: { name: string; icon: string; aspect_ratio?: string | null }[];
+  } | null>(null);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [expandedPlatforms, setExpandedPlatforms] = useState<Record<string, boolean>>({});
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // AI checklist suggestion
+  // AI: Generate full platform structure from name
+  const generatePlatformStructure = async () => {
+    if (!formData.name.trim()) {
+      toast.error('Informe o nome da plataforma');
+      return;
+    }
+    
+    setAiStructureLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('digital-content-ai', {
+        body: {
+          title: formData.name,
+          field: 'platform_structure',
+        },
+      });
+
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      // Map AI group_type to existing group
+      const groupTypeToGroupName: Record<string, string> = {
+        social: 'Redes Sociais',
+        marketplace: 'Marketplaces',
+        ecommerce: 'E-commerce',
+        mensageria: 'Mensageria',
+        site: 'Site/Página',
+        outro: 'Outros',
+      };
+
+      const suggestedGroupName = groupTypeToGroupName[data.group_type] || '';
+      const matchedGroup = groups.find(g => 
+        g.name.toLowerCase() === suggestedGroupName.toLowerCase()
+      );
+
+      // Populate form with AI suggestions
+      setFormData(prev => ({
+        ...prev,
+        icon: data.icon || prev.icon,
+        group_id: matchedGroup?.id || prev.group_id,
+        aspect_ratio: data.aspect_ratio || '',
+        duration: data.duration || '',
+        custom_fields: data.custom_fields?.map((f: any) => ({
+          id: f.id || f.label?.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') || `field_${Date.now()}`,
+          label: f.label || '',
+          type: f.type === 'textarea' ? 'textarea' : 'input',
+        })) || prev.custom_fields,
+        checklist_items: data.checklist?.join('\n') || prev.checklist_items,
+      }));
+
+      setAiSuggestions({
+        group_type: data.group_type,
+        objective: data.objective,
+        suggested_children: data.suggested_children || [],
+      });
+
+      setAiStructured(true);
+      setShowAdvanced(false);
+      toast.success('Estrutura gerada pela IA! Revise e confirme.');
+    } catch (err) {
+      console.error('AI structure error:', err);
+      toast.error('Erro ao gerar estrutura com IA');
+    } finally {
+      setAiStructureLoading(false);
+    }
+  };
+
+  // AI checklist suggestion (legacy, kept for edit mode)
   const generateChecklistWithAI = async () => {
     if (!formData.name.trim()) {
       toast.error('Preencha o nome da plataforma primeiro');
@@ -130,6 +207,9 @@ export function PlatformsManager() {
       custom_fields: [...DEFAULT_FIELDS],
       checklist_items: '',
     });
+    setAiStructured(false);
+    setAiSuggestions(null);
+    setShowAdvanced(false);
     setShowDialog(true);
   };
 
@@ -145,6 +225,9 @@ export function PlatformsManager() {
       custom_fields: platform.custom_fields.length > 0 ? platform.custom_fields : [...DEFAULT_FIELDS],
       checklist_items: platform.checklist_template.map(c => c.text).join('\n'),
     });
+    setAiStructured(false);
+    setAiSuggestions(null);
+    setShowAdvanced(true); // Show all fields in edit mode
     setShowDialog(true);
   };
 
@@ -198,9 +281,27 @@ export function PlatformsManager() {
     if (editingPlatform) {
       await updatePlatform(editingPlatform.id, platformData);
     } else {
-      await createPlatform(platformData);
+      const created = await createPlatform(platformData);
+
+      // Auto-create suggested children if AI suggested them
+      if (created && aiSuggestions?.suggested_children?.length) {
+        for (const child of aiSuggestions.suggested_children) {
+          await createPlatform({
+            name: child.name,
+            icon: child.icon || '📱',
+            group_id: formData.group_id || null,
+            parent_id: (created as any).id,
+            aspect_ratio: child.aspect_ratio || null,
+            custom_fields: formData.custom_fields, // inherit parent fields
+            checklist_template, // inherit parent checklist
+          });
+        }
+        toast.success(`${aiSuggestions.suggested_children.length} sub-formatos criados automaticamente!`);
+      }
     }
 
+    setAiStructured(false);
+    setAiSuggestions(null);
     setShowDialog(false);
   };
 
@@ -546,244 +647,393 @@ export function PlatformsManager() {
         title={editingPlatform ? 'Editar Plataforma' : 'Nova Plataforma'}
       >
         <div className="space-y-4 max-h-[70vh] overflow-y-auto">
-          {/* Icon and Name */}
-          <div className="flex gap-3">
-            <div className="space-y-2">
-              <Label>Ícone</Label>
-              <Select
-                value={formData.icon}
-                onValueChange={(v) => setFormData({ ...formData, icon: v })}
-              >
-                <SelectTrigger className="w-16 h-12 text-xl">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <div className="grid grid-cols-5 gap-1 p-2">
-                    {EMOJI_OPTIONS.map(emoji => (
-                      <SelectItem
-                        key={emoji}
-                        value={emoji}
-                        className="text-xl justify-center p-2"
-                      >
-                        {emoji}
-                      </SelectItem>
-                    ))}
-                  </div>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex-1 space-y-2">
-              <Label>Nome da Plataforma</Label>
-              <Input
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="Ex: Instagram Feed"
-                className="h-12"
-              />
-            </div>
-          </div>
-
-          {/* Group */}
-          <div className="space-y-2">
-            <Label>Grupo</Label>
-            <Select
-              value={formData.group_id || '__none__'}
-              onValueChange={(v) => setFormData({ ...formData, group_id: v === '__none__' ? '' : v })}
-            >
-              <SelectTrigger className="h-12">
-                <SelectValue placeholder="Selecione um grupo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">Sem grupo</SelectItem>
-                {groups.map(g => (
-                  <SelectItem key={g.id} value={g.id}>
-                    <div className="flex items-center gap-2">
-                      <span>{g.icon}</span>
-                      {g.name}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Parent Platform (hierarchy) */}
-          <div className="space-y-2">
-            <Label>Plataforma Pai (opcional)</Label>
-            <Select
-              value={formData.parent_id || '__none__'}
-              onValueChange={(v) => setFormData({ ...formData, parent_id: v === '__none__' ? '' : v })}
-            >
-              <SelectTrigger className="h-12">
-                <SelectValue placeholder="Nenhuma (raiz)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">Nenhuma (raiz)</SelectItem>
-                {platforms
-                  .filter(p => p.id !== editingPlatform?.id)
-                  .map(p => (
-                    <SelectItem key={p.id} value={p.id}>
-                      <div className="flex items-center gap-2">
-                        <span>{p.icon}</span>
-                        {p.name}
-                      </div>
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              Use para criar hierarquia. Ex: Instagram &gt; Instagram Feed, Instagram Reels
-            </p>
-          </div>
-
-          {/* Aspect Ratio and Duration */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>Proporção (opcional)</Label>
-              <Input
-                value={formData.aspect_ratio}
-                onChange={(e) => setFormData({ ...formData, aspect_ratio: e.target.value })}
-                placeholder="Ex: 9:16, 1:1"
-                className="h-11"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Duração (opcional)</Label>
-              <Input
-                value={formData.duration}
-                onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
-                placeholder="Ex: 15-60s"
-                className="h-11"
-              />
-            </div>
-          </div>
-
-          {/* Custom Fields Section */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">Campos Personalizados</Label>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-7 px-2 text-xs"
-                onClick={addField}
-              >
-                <Plus className="h-3.5 w-3.5 mr-1" />
-                Adicionar Campo
-              </Button>
-            </div>
-            
-            <div className="space-y-2">
-              {formData.custom_fields.map((field, index) => (
-                <div key={field.id} className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-                  <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
-                  
+          {/* Step 1: Name input + AI button (creation mode) */}
+          {!editingPlatform && !aiStructured && (
+            <>
+              <div className="space-y-3">
+                <div className="text-center space-y-2 py-2">
+                  <Wand2 className="h-8 w-8 mx-auto text-primary" />
+                  <p className="text-sm text-muted-foreground">
+                    Digite o nome da plataforma e a IA vai estruturar tudo automaticamente.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Nome da Plataforma</Label>
                   <Input
-                    value={field.label}
-                    onChange={(e) => updateField(index, { 
-                      label: e.target.value,
-                      id: e.target.value.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') || field.id
-                    })}
-                    placeholder="Nome do campo"
-                    className="h-9 flex-1"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Ex: Instagram, OLX, WhatsApp, Blog..."
+                    className="h-12 text-lg"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && formData.name.trim()) {
+                        generatePlatformStructure();
+                      }
+                    }}
                   />
-                  
+                </div>
+                <Button
+                  className="w-full h-12 gap-2"
+                  onClick={generatePlatformStructure}
+                  disabled={aiStructureLoading || !formData.name.trim()}
+                >
+                  {aiStructureLoading ? (
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                  ) : (
+                    <Wand2 className="h-5 w-5" />
+                  )}
+                  {aiStructureLoading ? 'Analisando...' : 'Estruturar com IA'}
+                </Button>
+              </div>
+              <div className="border-t pt-3">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-xs text-muted-foreground"
+                  onClick={() => { setShowAdvanced(true); setAiStructured(true); }}
+                >
+                  Criar manualmente sem IA →
+                </Button>
+              </div>
+            </>
+          )}
+
+          {/* Step 2: AI suggestions review OR Manual/Edit mode */}
+          {(aiStructured || editingPlatform) && (
+            <>
+              {/* AI Suggestions Summary (only for creation with AI) */}
+              {aiSuggestions && !editingPlatform && (
+                <Card className="bg-primary/5 border-primary/20">
+                  <CardContent className="p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-medium flex items-center gap-2">
+                        <Sparkles className="h-4 w-4 text-primary" />
+                        Sugestão da IA
+                      </h4>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs gap-1"
+                        onClick={() => {
+                          setAiStructured(false);
+                          setAiSuggestions(null);
+                        }}
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                        Refazer
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      {aiSuggestions.group_type && (
+                        <Badge variant="outline" className="capitalize">
+                          Tipo: {aiSuggestions.group_type}
+                        </Badge>
+                      )}
+                      {aiSuggestions.objective && (
+                        <Badge variant="outline" className="capitalize">
+                          Objetivo: {aiSuggestions.objective}
+                        </Badge>
+                      )}
+                      {formData.aspect_ratio && (
+                        <Badge variant="outline">
+                          {formData.aspect_ratio}
+                        </Badge>
+                      )}
+                      <Badge variant="outline">
+                        {formData.custom_fields.length} campos
+                      </Badge>
+                      {formData.checklist_items && (
+                        <Badge variant="outline">
+                          {formData.checklist_items.split('\n').filter(l => l.trim()).length} itens checklist
+                        </Badge>
+                      )}
+                    </div>
+                    {aiSuggestions.suggested_children && aiSuggestions.suggested_children.length > 0 && (
+                      <div className="text-xs text-muted-foreground">
+                        <span className="font-medium">Sub-formatos sugeridos: </span>
+                        {aiSuggestions.suggested_children.map((c, i) => (
+                          <span key={i}>
+                            {c.icon} {c.name}
+                            {i < aiSuggestions.suggested_children!.length - 1 ? ', ' : ''}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Icon and Name */}
+              <div className="flex gap-3">
+                <div className="space-y-2">
+                  <Label>Ícone</Label>
                   <Select
-                    value={field.type}
-                    onValueChange={(v) => updateField(index, { type: v as 'input' | 'textarea' })}
+                    value={formData.icon}
+                    onValueChange={(v) => setFormData({ ...formData, icon: v })}
                   >
-                    <SelectTrigger className="w-28 h-9">
+                    <SelectTrigger className="w-16 h-12 text-xl">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="input">
-                        <div className="flex items-center gap-2">
-                          <Type className="h-3.5 w-3.5" />
-                          Linha
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="textarea">
-                        <div className="flex items-center gap-2">
-                          <AlignLeft className="h-3.5 w-3.5" />
-                          Texto
-                        </div>
-                      </SelectItem>
+                      <div className="grid grid-cols-5 gap-1 p-2">
+                        {EMOJI_OPTIONS.map(emoji => (
+                          <SelectItem
+                            key={emoji}
+                            value={emoji}
+                            className="text-xl justify-center p-2"
+                          >
+                            {emoji}
+                          </SelectItem>
+                        ))}
+                      </div>
                     </SelectContent>
                   </Select>
-                  
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 text-destructive shrink-0"
-                    onClick={() => removeField(index)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
                 </div>
-              ))}
-              
-              {formData.custom_fields.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4 border-2 border-dashed rounded-lg">
-                  Nenhum campo definido. Clique em "Adicionar Campo" acima.
-                </p>
-              )}
-            </div>
-            
-            <p className="text-xs text-muted-foreground">
-              Defina os campos que aparecerão ao criar conteúdo para esta plataforma. Ex: Título, Descrição, Legenda...
-            </p>
-          </div>
+                <div className="flex-1 space-y-2">
+                  <Label>Nome da Plataforma</Label>
+                  <Input
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Ex: Instagram Feed"
+                    className="h-12"
+                  />
+                </div>
+              </div>
 
-          {/* Checklist Template */}
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label>Checklist Padrão (um item por linha)</Label>
+              {/* Group */}
+              <div className="space-y-2">
+                <Label>Grupo</Label>
+                <Select
+                  value={formData.group_id || '__none__'}
+                  onValueChange={(v) => setFormData({ ...formData, group_id: v === '__none__' ? '' : v })}
+                >
+                  <SelectTrigger className="h-12">
+                    <SelectValue placeholder="Selecione um grupo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Sem grupo</SelectItem>
+                    {groups.map(g => (
+                      <SelectItem key={g.id} value={g.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{g.icon}</span>
+                          {g.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Toggle advanced details */}
               <Button
-                type="button"
                 variant="ghost"
                 size="sm"
-                className="h-7 px-2 text-xs text-primary hover:text-primary"
-                onClick={generateChecklistWithAI}
-                disabled={aiLoading || !formData.name.trim()}
+                className="w-full text-xs text-muted-foreground"
+                onClick={() => setShowAdvanced(!showAdvanced)}
               >
-                {aiLoading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                {showAdvanced ? (
+                  <>
+                    <ChevronUp className="h-3.5 w-3.5 mr-1" />
+                    Ocultar detalhes
+                  </>
                 ) : (
-                  <Sparkles className="h-3.5 w-3.5" />
+                  <>
+                    <ChevronDown className="h-3.5 w-3.5 mr-1" />
+                    Editar campos, checklist e detalhes ({formData.custom_fields.length} campos, {formData.checklist_items.split('\n').filter(l => l.trim()).length} itens)
+                  </>
                 )}
-                <span className="ml-1">Sugerir com IA</span>
               </Button>
-            </div>
-            <Textarea
-              value={formData.checklist_items}
-              onChange={(e) => setFormData({ ...formData, checklist_items: e.target.value })}
-              placeholder="Imagem em alta resolução?&#10;Legenda otimizada?&#10;CTA incluído?"
-              rows={4}
-            />
-            <p className="text-xs text-muted-foreground">
-              Cada linha será um item do checklist nas variações desta plataforma.
-            </p>
-          </div>
 
-          {/* Actions */}
-          <div className="flex gap-3 pt-2 sticky bottom-0 bg-background">
-            <Button 
-              variant="outline" 
-              className="flex-1 h-12" 
-              onClick={() => setShowDialog(false)}
-            >
-              Cancelar
-            </Button>
-            <Button 
-              className="flex-1 h-12" 
-              onClick={handleSave}
-              disabled={!formData.name.trim()}
-            >
-              {editingPlatform ? 'Salvar' : 'Criar'}
-            </Button>
-          </div>
+              {showAdvanced && (
+                <>
+                  {/* Parent Platform (hierarchy) */}
+                  <div className="space-y-2">
+                    <Label>Plataforma Pai (opcional)</Label>
+                    <Select
+                      value={formData.parent_id || '__none__'}
+                      onValueChange={(v) => setFormData({ ...formData, parent_id: v === '__none__' ? '' : v })}
+                    >
+                      <SelectTrigger className="h-12">
+                        <SelectValue placeholder="Nenhuma (raiz)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">Nenhuma (raiz)</SelectItem>
+                        {platforms
+                          .filter(p => p.id !== editingPlatform?.id)
+                          .map(p => (
+                            <SelectItem key={p.id} value={p.id}>
+                              <div className="flex items-center gap-2">
+                                <span>{p.icon}</span>
+                                {p.name}
+                              </div>
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Use para criar hierarquia. Ex: Instagram &gt; Instagram Feed, Instagram Reels
+                    </p>
+                  </div>
+
+                  {/* Aspect Ratio and Duration */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label>Proporção (opcional)</Label>
+                      <Input
+                        value={formData.aspect_ratio}
+                        onChange={(e) => setFormData({ ...formData, aspect_ratio: e.target.value })}
+                        placeholder="Ex: 9:16, 1:1"
+                        className="h-11"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Duração (opcional)</Label>
+                      <Input
+                        value={formData.duration}
+                        onChange={(e) => setFormData({ ...formData, duration: e.target.value })}
+                        placeholder="Ex: 15-60s"
+                        className="h-11"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Custom Fields Section */}
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-sm font-medium">Campos Personalizados</Label>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={addField}
+                      >
+                        <Plus className="h-3.5 w-3.5 mr-1" />
+                        Adicionar Campo
+                      </Button>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      {formData.custom_fields.map((field, index) => (
+                        <div key={field.id} className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
+                          <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
+                          
+                          <Input
+                            value={field.label}
+                            onChange={(e) => updateField(index, { 
+                              label: e.target.value,
+                              id: e.target.value.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') || field.id
+                            })}
+                            placeholder="Nome do campo"
+                            className="h-9 flex-1"
+                          />
+                          
+                          <Select
+                            value={field.type}
+                            onValueChange={(v) => updateField(index, { type: v as 'input' | 'textarea' })}
+                          >
+                            <SelectTrigger className="w-28 h-9">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="input">
+                                <div className="flex items-center gap-2">
+                                  <Type className="h-3.5 w-3.5" />
+                                  Linha
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="textarea">
+                                <div className="flex items-center gap-2">
+                                  <AlignLeft className="h-3.5 w-3.5" />
+                                  Texto
+                                </div>
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                          
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive shrink-0"
+                            onClick={() => removeField(index)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      
+                      {formData.custom_fields.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4 border-2 border-dashed rounded-lg">
+                          Nenhum campo definido. Clique em "Adicionar Campo" acima.
+                        </p>
+                      )}
+                    </div>
+                    
+                    <p className="text-xs text-muted-foreground">
+                      Defina os campos que aparecerão ao criar conteúdo para esta plataforma.
+                    </p>
+                  </div>
+
+                  {/* Checklist Template */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label>Checklist Padrão (um item por linha)</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs text-primary hover:text-primary"
+                        onClick={generateChecklistWithAI}
+                        disabled={aiLoading || !formData.name.trim()}
+                      >
+                        {aiLoading ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Sparkles className="h-3.5 w-3.5" />
+                        )}
+                        <span className="ml-1">Sugerir com IA</span>
+                      </Button>
+                    </div>
+                    <Textarea
+                      value={formData.checklist_items}
+                      onChange={(e) => setFormData({ ...formData, checklist_items: e.target.value })}
+                      placeholder="Imagem em alta resolução?&#10;Legenda otimizada?&#10;CTA incluído?"
+                      rows={4}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Cada linha será um item do checklist nas variações desta plataforma.
+                    </p>
+                  </div>
+                </>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-2 sticky bottom-0 bg-background">
+                <Button 
+                  variant="outline" 
+                  className="flex-1 h-12" 
+                  onClick={() => setShowDialog(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  className="flex-1 h-12 gap-2" 
+                  onClick={handleSave}
+                  disabled={!formData.name.trim()}
+                >
+                  {!editingPlatform && aiSuggestions?.suggested_children?.length ? (
+                    <>
+                      <Check className="h-4 w-4" />
+                      Criar com {(aiSuggestions.suggested_children.length)} sub-formatos
+                    </>
+                  ) : (
+                    editingPlatform ? 'Salvar' : 'Criar Plataforma'
+                  )}
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       </ResponsiveDialog>
 
