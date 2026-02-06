@@ -9,7 +9,7 @@ interface GenerateRequest {
   title: string;
   field: 'objective' | 'target_audience' | 'key_message' | 'kpi' | 'all' | 
          'description' | 'caption' | 'cta' | 'hashtags' | 'checklist_suggestion' |
-         'custom_field' | 'all_variation_fields';
+         'custom_field' | 'all_variation_fields' | 'platform_structure';
   platform?: string;
   platformType?: string; // social, ecommerce, marketplace
   existingData?: Record<string, string>;
@@ -131,6 +131,39 @@ Para cada campo:
 - Se for hashtags: gere hashtags relevantes
 
 Retorne APENAS o JSON válido, sem markdown ou explicações.`;
+    } else if (field === 'platform_structure') {
+      userPrompt = `Analise o nome da plataforma/canal: "${title}"
+
+Com base APENAS nesse nome, determine a estrutura ideal para essa plataforma de publicação de conteúdo digital.
+
+Retorne um JSON com a seguinte estrutura:
+{
+  "icon": "emoji que melhor representa essa plataforma (1 emoji apenas)",
+  "group_type": "social | marketplace | ecommerce | mensageria | site | outro",
+  "objective": "vender | engajar | informar | relacionar",
+  "aspect_ratio": "proporção principal do conteúdo (ex: 1:1, 9:16, 16:9) ou null se não aplicável",
+  "duration": "duração típica do conteúdo (ex: 15-60s, 3-10min) ou null se não aplicável",
+  "custom_fields": [
+    {"id": "identificador_snake_case", "label": "Nome do Campo", "type": "input ou textarea"}
+  ],
+  "checklist": [
+    "Item de verificação antes de publicar (máx 50 caracteres cada)"
+  ],
+  "suggested_children": [
+    {"name": "Nome do formato/variação", "icon": "emoji", "aspect_ratio": "proporção ou null"}
+  ]
+}
+
+Regras importantes:
+- "custom_fields" deve ter 3-6 campos relevantes para a plataforma (título do post, descrição, legenda, hashtags, preço, link, etc.)
+- "checklist" deve ter 4-8 itens essenciais de verificação antes de publicar
+- "suggested_children" deve ter 0-5 sub-formatos comuns dessa plataforma (ex: para Instagram → Feed, Stories, Reels)
+- Se a plataforma for um marketplace (OLX, Mercado Livre, Shopee, etc.) foque em campos de venda
+- Se for rede social foque em engajamento e conteúdo visual
+- Se for site/blog foque em SEO e conteúdo escrito
+- Para mensageria (WhatsApp, Telegram) foque em comunicação direta
+
+Retorne APENAS o JSON válido, sem markdown ou explicações.`;
     } else {
       const fieldDescriptions: Record<string, string> = {
         objective: 'o objetivo deste conteúdo/anúncio (1-2 frases explicando o propósito)',
@@ -194,9 +227,9 @@ Retorne APENAS o texto, sem explicações ou prefixos.`;
     const data = await response.json();
     const generatedText = data.choices?.[0]?.message?.content?.trim() || '';
 
-    // Parse JSON if field is 'all' or 'all_variation_fields'
+    // Parse JSON if field is 'all', 'all_variation_fields', or 'platform_structure'
     let result: any;
-    if (field === 'all' || field === 'all_variation_fields') {
+    if (field === 'all' || field === 'all_variation_fields' || field === 'platform_structure') {
       try {
         const cleanedJson = generatedText.replace(/```json\n?|\n?```/g, '').trim();
         result = JSON.parse(cleanedJson);
