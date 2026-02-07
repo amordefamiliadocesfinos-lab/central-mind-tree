@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { ArrowLeft, Plus, Trash2, Settings, Calendar, Image, Copy, Layers, Link2, X, ImagePlus, Eye, EyeOff, Sparkles, Loader2, Wand2 } from 'lucide-react';
+import { AIVariationsGenerator } from './AIVariationsGenerator';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { VariationEditor } from './VariationEditor';
 import { HierarchicalPlatformSelector } from './HierarchicalPlatformSelector';
@@ -635,6 +636,14 @@ export function IdeaEditor({
 
         {/* Platforms Tab */}
         <TabsContent value="platforms" className="space-y-4 mt-4">
+          {/* AI Variations Generator */}
+          <AIVariationsGenerator
+            idea={idea}
+            platforms={platforms}
+            products={products}
+            onUpdateVariation={onUpdateVariation}
+          />
+
           {/* Add Platform Buttons */}
           {availablePlatforms.length > 0 && (
             <div className="flex gap-2">
