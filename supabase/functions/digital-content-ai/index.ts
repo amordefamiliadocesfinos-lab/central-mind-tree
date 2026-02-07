@@ -5,39 +5,145 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+interface CustomField {
+  id: string;
+  label: string;
+  type: string;
+}
+
+interface PlatformVariation {
+  variationId: string;
+  platformName: string;
+  platformType: string; // social, ecommerce, marketplace, mensageria, site, outro
+  platformObjective?: string;
+  aspectRatio?: string;
+  duration?: string;
+  customFields: CustomField[];
+}
+
 interface GenerateRequest {
   title: string;
   field: 'objective' | 'target_audience' | 'key_message' | 'kpi' | 'all' | 
          'description' | 'caption' | 'cta' | 'hashtags' | 'checklist_suggestion' |
-         'custom_field' | 'all_variation_fields' | 'platform_structure';
+         'custom_field' | 'all_variation_fields' | 'platform_structure' | 'generate_all_variations';
   platform?: string;
-  platformType?: string; // social, ecommerce, marketplace
+  platformType?: string;
   existingData?: Record<string, string>;
-  customFieldLabel?: string; // Label for custom field generation
-  customFields?: { id: string; label: string; type: string }[]; // All custom fields for bulk generation
+  customFieldLabel?: string;
+  customFields?: CustomField[];
+  // For generate_all_variations
+  ideaContext?: {
+    title: string;
+    ideaType: string;
+    objective?: string;
+    targetAudience?: string;
+    keyMessage?: string;
+    kpi?: string;
+    productName?: string;
+    productDescription?: string;
+  };
+  variations?: PlatformVariation[];
 }
 
-serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+// Build the persona prompt based on platform type
+function getPersonaForPlatformType(platformType: string): string {
+  switch (platformType) {
+    case 'social':
+      return 'Social Media Manager especialista em engajamento, tendências e linguagem nativa de redes sociais.';
+    case 'marketplace':
+      return 'Profissional de Anúncios e Vendas Online especialista em copywriting de alta conversão para marketplaces (OLX, Mercado Livre, Shopee).';
+    case 'ecommerce':
+      return 'Especialista em E-commerce com foco em descrições de produto otimizadas para SEO e conversão em lojas virtuais.';
+    case 'mensageria':
+      return 'Especialista em Comunicação Direta via mensageria (WhatsApp, Telegram), com linguagem pessoal, objetiva e focada em relacionamento.';
+    case 'site':
+      return 'Especialista em Conteúdo Web e SEO, com foco em textos otimizados para blogs, landing pages e sites institucionais.';
+    default:
+      return 'Especialista em Marketing Digital com conhecimento amplo em diversas plataformas e formatos de conteúdo.';
   }
+}
 
-  try {
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
-    }
+function getIdeaTypeLabel(ideaType: string): string {
+  switch (ideaType) {
+    case 'conteudo': return 'Conteúdo';
+    case 'anuncio': return 'Anúncio de Produto';
+    case 'cadastro': return 'Cadastro de Produto';
+    case 'campanha': return 'Campanha';
+    default: return 'Conteúdo';
+  }
+}
 
-    const { title, field, platform, platformType, existingData, customFieldLabel, customFields } = await req.json() as GenerateRequest;
+function buildVariationsPrompt(ideaContext: GenerateRequest['ideaContext'], variations: PlatformVariation[]): { system: string; user: string } {
+  if (!ideaContext) throw new Error('ideaContext is required');
 
-    if (!title) {
-      return new Response(
-        JSON.stringify({ error: "Title is required" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
+  const ideaTypeLabel = getIdeaTypeLabel(ideaContext.ideaType);
 
-    const systemPrompt = `Você é um especialista em marketing digital, analista de anúncios, editor de posts e criador de conteúdo para redes sociais e marketplaces.
+  // Group variations by platform type for persona context
+  const platformTypes = [...new Set(variations.map(v => v.platformType))];
+  const personaDescriptions = platformTypes.map(t => `- ${getPersonaForPlatformType(t)}`).join('\n');
+
+  const systemPrompt = `Você é uma equipe de especialistas em marketing digital que assume diferentes papéis dependendo da plataforma:
+
+${personaDescriptions}
+
+Sua missão é gerar variações de conteúdo específicas para cada plataforma, todas baseadas na mesma IDEIA central.
+
+REGRAS CRÍTICAS:
+1. NUNCA invente informações sobre o produto ou ideia - use APENAS o que foi fornecido
+2. Cada variação DEVE ser genuinamente diferente das outras - adapte tom, formato e abordagem para cada plataforma
+3. Respeite o tipo de conteúdo da plataforma (vídeo curto, post longo, anúncio, mensagem direta, etc.)
+4. Use a linguagem nativa de cada plataforma (hashtags para Instagram, bullet points para marketplaces, etc.)
+5. Mantenha a mensagem central coerente entre todas as variações
+6. Para campos de texto curto (input), seja conciso (máx 80 caracteres)
+7. Para campos de texto longo (textarea), seja detalhado e persuasivo (2-5 frases)
+8. Para hashtags, gere 10-15 hashtags relevantes separadas por espaço
+9. Para CTA, seja curto e impactante (máx 30 caracteres)
+
+Formato de resposta: APENAS JSON válido, sem markdown ou explicações.`;
+
+  const productContext = ideaContext.productName 
+    ? `\n\n🏷️ PRODUTO VINCULADO:
+- Nome: ${ideaContext.productName}
+${ideaContext.productDescription ? `- Descrição: ${ideaContext.productDescription}` : ''}`
+    : '';
+
+  const variationsSpec = variations.map((v, i) => {
+    const fieldsSpec = v.customFields.map(f => 
+      `    "${f.id}": "${f.label} (${f.type === 'textarea' ? 'texto longo, 2-5 frases' : 'texto curto, máx 80 chars'})"`
+    ).join(',\n');
+    
+    return `  "${v.variationId}": {
+    // Plataforma: ${v.platformName} (${v.platformType})
+    // Objetivo: ${v.platformObjective || 'engajar'}
+    // Formato: ${v.aspectRatio || 'livre'}${v.duration ? ` | Duração: ${v.duration}` : ''}
+${fieldsSpec}
+  }`;
+  }).join(',\n');
+
+  const userPrompt = `📋 IDEIA CENTRAL:
+- Tipo: ${ideaTypeLabel}
+- Título: "${ideaContext.title}"
+${ideaContext.objective ? `- Objetivo: ${ideaContext.objective}` : ''}
+${ideaContext.targetAudience ? `- Público-alvo: ${ideaContext.targetAudience}` : ''}
+${ideaContext.keyMessage ? `- Mensagem central: ${ideaContext.keyMessage}` : ''}
+${ideaContext.kpi ? `- Resultado esperado: ${ideaContext.kpi}` : ''}${productContext}
+
+🎯 GERE CONTEÚDO PARA CADA VARIAÇÃO:
+
+{
+${variationsSpec}
+}
+
+IMPORTANTE: Preencha TODOS os campos de TODAS as variações. Cada plataforma deve ter conteúdo genuinamente adaptado ao seu formato e público. Retorne APENAS o JSON.`;
+
+  return { system: systemPrompt, user: userPrompt };
+}
+
+// Build prompts for single-field and other existing modes
+function buildSingleFieldPrompt(req: GenerateRequest): { system: string; user: string } {
+  const { title, field, platform, platformType, existingData, customFieldLabel, customFields } = req;
+
+  const systemPrompt = `Você é um especialista em marketing digital, analista de anúncios, editor de posts e criador de conteúdo para redes sociais e marketplaces.
 
 Sua função é ajudar a criar conteúdo persuasivo e profissional baseado no título fornecido pelo usuário.
 
@@ -52,10 +158,10 @@ Regras:
 
 Formato de resposta: Retorne APENAS o texto solicitado, sem explicações ou prefixos.`;
 
-    let userPrompt = '';
-    
-    if (field === 'all') {
-      userPrompt = `Com base no título: "${title}"${platform ? ` (plataforma: ${platform})` : ''}
+  let userPrompt = '';
+
+  if (field === 'all') {
+    userPrompt = `Com base no título: "${title}"${platform ? ` (plataforma: ${platform})` : ''}
 
 Gere todos os campos em formato JSON:
 {
@@ -66,39 +172,33 @@ Gere todos os campos em formato JSON:
 }
 
 Retorne APENAS o JSON válido, sem markdown ou explicações.`;
-    } else if (field === 'checklist_suggestion') {
-      const typeContext = platformType === 'marketplace' 
-        ? 'marketplace de vendas (OLX, Mercado Livre, Shopee, etc.)'
-        : platformType === 'ecommerce'
-        ? 'loja virtual e e-commerce (Nuvemshop, etc.)'
-        : 'rede social';
-      
-      userPrompt = `Crie um checklist de produção para a plataforma "${platform || title}" que é um ${typeContext}.
+  } else if (field === 'checklist_suggestion') {
+    const typeContext = platformType === 'marketplace' 
+      ? 'marketplace de vendas (OLX, Mercado Livre, Shopee, etc.)'
+      : platformType === 'ecommerce'
+      ? 'loja virtual e e-commerce (Nuvemshop, etc.)'
+      : 'rede social';
+    
+    userPrompt = `Crie um checklist de produção para a plataforma "${platform || title}" que é um ${typeContext}.
 
 O checklist deve conter entre 4-8 itens essenciais que um criador/vendedor deve verificar antes de publicar.
 
 Cada item deve ser uma pergunta curta ou verificação (máximo 50 caracteres).
 
-Exemplos de bons itens:
-- Fotos em alta resolução?
-- Título com palavras-chave?
-- Preço competitivo verificado?
-- CTA incluído?
-
 Retorne APENAS os itens, um por linha, sem numeração ou bullets.`;
-    } else if (field === 'custom_field' && customFieldLabel) {
-      const typeContext = platformType === 'marketplace' 
-        ? 'marketplace de vendas'
-        : platformType === 'ecommerce'
-        ? 'loja virtual e e-commerce'
-        : 'rede social';
-      
-      const existingContext = existingData ? Object.entries(existingData)
-        .filter(([k, v]) => v)
-        .map(([k, v]) => `${k}: ${v}`)
-        .join('\n') : '';
+  } else if (field === 'custom_field' && customFieldLabel) {
+    const typeContext = platformType === 'marketplace' 
+      ? 'marketplace de vendas'
+      : platformType === 'ecommerce'
+      ? 'loja virtual e e-commerce'
+      : 'rede social';
+    
+    const existingContext = existingData ? Object.entries(existingData)
+      .filter(([, v]) => v)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join('\n') : '';
 
-      userPrompt = `Com base no título: "${title}" (plataforma: ${platform || 'geral'}, tipo: ${typeContext})
+    userPrompt = `Com base no título: "${title}" (plataforma: ${platform || 'geral'}, tipo: ${typeContext})
 ${existingContext ? `\nContexto existente:\n${existingContext}\n` : ''}
 Gere um conteúdo profissional e persuasivo para o campo "${customFieldLabel}".
 
@@ -108,16 +208,16 @@ Se for CTA: seja curto e impactante (máx 30 caracteres)
 Se for hashtags: gere 10-15 hashtags relevantes
 
 Retorne APENAS o texto, sem explicações ou prefixos.`;
-    } else if (field === 'all_variation_fields' && customFields && customFields.length > 0) {
-      const typeContext = platformType === 'marketplace' 
-        ? 'marketplace de vendas'
-        : platformType === 'ecommerce'
-        ? 'loja virtual e e-commerce'
-        : 'rede social';
-      
-      const fieldsList = customFields.map(f => `"${f.id}": "${f.label} - ${f.type === 'textarea' ? 'texto longo' : 'texto curto'}"`).join(',\n  ');
-      
-      userPrompt = `Com base no título: "${title}" (plataforma: ${platform || 'geral'}, tipo: ${typeContext})
+  } else if (field === 'all_variation_fields' && customFields && customFields.length > 0) {
+    const typeContext = platformType === 'marketplace' 
+      ? 'marketplace de vendas'
+      : platformType === 'ecommerce'
+      ? 'loja virtual e e-commerce'
+      : 'rede social';
+    
+    const fieldsList = customFields.map(f => `"${f.id}": "${f.label} - ${f.type === 'textarea' ? 'texto longo' : 'texto curto'}"`).join(',\n  ');
+    
+    userPrompt = `Com base no título: "${title}" (plataforma: ${platform || 'geral'}, tipo: ${typeContext})
 
 Gere conteúdo profissional e persuasivo para TODOS os seguintes campos em formato JSON:
 {
@@ -131,8 +231,8 @@ Para cada campo:
 - Se for hashtags: gere hashtags relevantes
 
 Retorne APENAS o JSON válido, sem markdown ou explicações.`;
-    } else if (field === 'platform_structure') {
-      userPrompt = `Analise o nome da plataforma/canal: "${title}"
+  } else if (field === 'platform_structure') {
+    userPrompt = `Analise o nome da plataforma/canal: "${title}"
 
 Com base APENAS nesse nome, determine a estrutura ideal para essa plataforma de publicação de conteúdo digital.
 
@@ -155,37 +255,81 @@ Retorne um JSON com a seguinte estrutura:
 }
 
 Regras importantes:
-- "custom_fields" deve ter 3-6 campos relevantes para a plataforma (título do post, descrição, legenda, hashtags, preço, link, etc.)
+- "custom_fields" deve ter 3-6 campos relevantes para a plataforma
 - "checklist" deve ter 4-8 itens essenciais de verificação antes de publicar
-- "suggested_children" deve ter 0-5 sub-formatos comuns dessa plataforma (ex: para Instagram → Feed, Stories, Reels)
-- Se a plataforma for um marketplace (OLX, Mercado Livre, Shopee, etc.) foque em campos de venda
+- "suggested_children" deve ter 0-5 sub-formatos comuns dessa plataforma
+- Se a plataforma for um marketplace foque em campos de venda
 - Se for rede social foque em engajamento e conteúdo visual
 - Se for site/blog foque em SEO e conteúdo escrito
-- Para mensageria (WhatsApp, Telegram) foque em comunicação direta
+- Para mensageria foque em comunicação direta
 
 Retorne APENAS o JSON válido, sem markdown ou explicações.`;
-    } else {
-      const fieldDescriptions: Record<string, string> = {
-        objective: 'o objetivo deste conteúdo/anúncio (1-2 frases explicando o propósito)',
-        target_audience: 'o público-alvo específico que vai se interessar (seja específico)',
-        key_message: 'a mensagem principal persuasiva para atrair o público (2-3 frases impactantes)',
-        kpi: 'uma meta mensurável e realista para este conteúdo (ex: views, cliques, vendas)',
-        description: 'uma descrição atrativa e detalhada do conteúdo/produto (2-4 frases que vendam)',
-        caption: 'uma legenda envolvente para o post (use emojis se for rede social, seja persuasivo)',
-        cta: 'um call-to-action curto e impactante (ex: Compre agora!, Saiba mais, Link na bio)',
-        hashtags: 'hashtags relevantes e populares separadas por espaço (10-15 hashtags)',
-      };
+  } else {
+    const fieldDescriptions: Record<string, string> = {
+      objective: 'o objetivo deste conteúdo/anúncio (1-2 frases explicando o propósito)',
+      target_audience: 'o público-alvo específico que vai se interessar (seja específico)',
+      key_message: 'a mensagem principal persuasiva para atrair o público (2-3 frases impactantes)',
+      kpi: 'uma meta mensurável e realista para este conteúdo (ex: views, cliques, vendas)',
+      description: 'uma descrição atrativa e detalhada do conteúdo/produto (2-4 frases que vendam)',
+      caption: 'uma legenda envolvente para o post (use emojis se for rede social, seja persuasivo)',
+      cta: 'um call-to-action curto e impactante (ex: Compre agora!, Saiba mais, Link na bio)',
+      hashtags: 'hashtags relevantes e populares separadas por espaço (10-15 hashtags)',
+    };
 
-      const existingContext = existingData ? Object.entries(existingData)
-        .filter(([k, v]) => v && k !== field)
-        .map(([k, v]) => `${k}: ${v}`)
-        .join('\n') : '';
+    const existingContext = existingData ? Object.entries(existingData)
+      .filter(([k, v]) => v && k !== field)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join('\n') : '';
 
-      userPrompt = `Com base no título: "${title}"${platform ? ` (plataforma: ${platform})` : ''}
+    userPrompt = `Com base no título: "${title}"${platform ? ` (plataforma: ${platform})` : ''}
 ${existingContext ? `\nContexto existente:\n${existingContext}\n` : ''}
 Gere ${fieldDescriptions[field] || `conteúdo para o campo ${field}`}
 
 Retorne APENAS o texto, sem explicações ou prefixos.`;
+  }
+
+  return { system: systemPrompt, user: userPrompt };
+}
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      throw new Error("LOVABLE_API_KEY is not configured");
+    }
+
+    const requestData = await req.json() as GenerateRequest;
+    const { title, field, ideaContext, variations } = requestData;
+
+    if (!title && !ideaContext?.title) {
+      return new Response(
+        JSON.stringify({ error: "Title is required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Build prompts based on field type
+    let systemPrompt: string;
+    let userPrompt: string;
+
+    if (field === 'generate_all_variations') {
+      if (!ideaContext || !variations || variations.length === 0) {
+        return new Response(
+          JSON.stringify({ error: "ideaContext and variations are required for generate_all_variations" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const prompts = buildVariationsPrompt(ideaContext, variations);
+      systemPrompt = prompts.system;
+      userPrompt = prompts.user;
+    } else {
+      const prompts = buildSingleFieldPrompt(requestData);
+      systemPrompt = prompts.system;
+      userPrompt = prompts.user;
     }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -227,9 +371,9 @@ Retorne APENAS o texto, sem explicações ou prefixos.`;
     const data = await response.json();
     const generatedText = data.choices?.[0]?.message?.content?.trim() || '';
 
-    // Parse JSON if field is 'all', 'all_variation_fields', or 'platform_structure'
-    let result: any;
-    if (field === 'all' || field === 'all_variation_fields' || field === 'platform_structure') {
+    // Parse response based on field type
+    let result: unknown;
+    if (field === 'generate_all_variations' || field === 'all' || field === 'all_variation_fields' || field === 'platform_structure') {
       try {
         const cleanedJson = generatedText.replace(/```json\n?|\n?```/g, '').trim();
         result = JSON.parse(cleanedJson);
