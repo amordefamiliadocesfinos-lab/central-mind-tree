@@ -140,6 +140,7 @@ export default function Operacoes() {
   // Dialog states (local)
   const [showProductDialog, setShowProductDialog] = useState(false);
   const [showOrderDialog, setShowOrderDialog] = useState(false);
+  const [showSaleDialog, setShowSaleDialog] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [movementProduct, setMovementProduct] = useState<{ id: string; name: string } | null>(null);
@@ -165,6 +166,14 @@ export default function Operacoes() {
     contact_id: null as string | null,
     channel: 'direto',
     order_type: 'production' as 'stock' | 'production',
+    due_date: '',
+    items: [] as { product_id: string; quantity: number; unit_price: number; _unit_price_text?: string }[],
+  });
+
+  const [newSale, setNewSale] = useState({
+    customer_name: '',
+    contact_id: null as string | null,
+    channel: 'direto',
     due_date: '',
     items: [] as { product_id: string; quantity: number; unit_price: number; _unit_price_text?: string }[],
   });
@@ -221,10 +230,27 @@ export default function Operacoes() {
     setNewOrder({ customer_name: '', contact_id: null, channel: 'direto', order_type: 'production', due_date: '', items: [] });
   };
 
+  const handleAddSale = async () => {
+    const { items, ...saleData } = newSale;
+    await createOrder(
+      { ...saleData, order_type: 'stock', contact_id: newSale.contact_id || undefined },
+      items as Partial<OrderItem>[]
+    );
+    setShowSaleDialog(false);
+    setNewSale({ customer_name: '', contact_id: null, channel: 'direto', due_date: '', items: [] });
+  };
+
   const addItemToOrder = () => {
     setNewOrder({
       ...newOrder,
       items: [...newOrder.items, { product_id: '', quantity: 1, unit_price: 0 }],
+    });
+  };
+
+  const addItemToSale = () => {
+    setNewSale({
+      ...newSale,
+      items: [...newSale.items, { product_id: '', quantity: 1, unit_price: 0 }],
     });
   };
 
@@ -242,9 +268,28 @@ export default function Operacoes() {
     setNewOrder({ ...newOrder, items });
   };
 
+  const updateSaleItem = (index: number, field: string, value: string | number) => {
+    const items = [...newSale.items];
+    (items[index] as Record<string, string | number>)[field] = value;
+    
+    if (field === 'product_id') {
+      const product = rawProducts.find(p => p.id === value);
+      if (product?.price) {
+        items[index].unit_price = product.price;
+      }
+    }
+    
+    setNewSale({ ...newSale, items });
+  };
+
   const removeOrderItem = (index: number) => {
     const items = newOrder.items.filter((_, i) => i !== index);
     setNewOrder({ ...newOrder, items });
+  };
+
+  const removeSaleItem = (index: number) => {
+    const items = newSale.items.filter((_, i) => i !== index);
+    setNewSale({ ...newSale, items });
   };
 
   const handleStatusChange = useCallback(async (order: Order, newStatus: string) => {
@@ -362,152 +407,294 @@ export default function Operacoes() {
             
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-semibold">Pedidos ({filteredOrders.length})</h2>
-              <Dialog open={showOrderDialog} onOpenChange={setShowOrderDialog}>
-                <DialogTrigger asChild>
-                  <Button size="lg" className="h-12 px-6">
-                    <Plus className="h-5 w-5 mr-2" />
-                    Novo
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-                  <DialogHeader>
-                    <DialogTitle>Novo Pedido</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Cliente</Label>
-                      <ContactAutocomplete
-                        value={newOrder.customer_name}
-                        contactId={newOrder.contact_id}
-                        onSelect={(contact, manualName) => {
-                          if (contact) {
-                            setNewOrder({ 
-                              ...newOrder, 
-                              customer_name: contact.name,
-                              contact_id: contact.id,
-                            });
-                          } else {
-                            setNewOrder({ 
-                              ...newOrder, 
-                              customer_name: manualName || '',
-                              contact_id: null,
-                            });
-                          }
-                        }}
-                        placeholder="Digite o nome do cliente..."
-                      />
-                    </div>
-                    <div>
-                      <Label>Tipo de Pedido</Label>
-                      <Select
-                        value={newOrder.order_type}
-                        onValueChange={(v: 'stock' | 'production') => setNewOrder({ ...newOrder, order_type: v })}
-                      >
-                        <SelectTrigger className="h-12">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(ORDER_TYPES).map(([key, { label, description }]) => (
-                            <SelectItem key={key} value={key}>
-                              <div className="flex flex-col">
-                                <span>{label}</span>
-                                <span className="text-xs text-muted-foreground">{description}</span>
-                              </div>
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {newOrder.order_type === 'stock' && (
-                        <p className="text-xs text-amber-600 mt-1">
-                          ⚠️ Este pedido consumirá direto do estoque acabado
-                        </p>
-                      )}
-                    </div>
-                    <div>
-                      <Label>Canal</Label>
-                      <Select
-                        value={newOrder.channel}
-                        onValueChange={(v) => setNewOrder({ ...newOrder, channel: v })}
-                      >
-                        <SelectTrigger className="h-12">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Object.entries(ORDER_CHANNELS).map(([key, label]) => (
-                            <SelectItem key={key} value={key}>{label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label>Prazo de Entrega</Label>
-                      <Input
-                        type="date"
-                        className="h-12"
-                        value={newOrder.due_date}
-                        onChange={(e) => setNewOrder({ ...newOrder, due_date: e.target.value })}
-                      />
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between items-center mb-2">
-                        <Label>Itens</Label>
-                        <Button size="sm" variant="outline" onClick={addItemToOrder}>
-                          <Plus className="h-3 w-3 mr-1" />
-                          Item
-                        </Button>
+              <div className="flex gap-2">
+                <Button 
+                  size="lg" 
+                  variant="outline"
+                  className="h-12 px-5 border-green-500 text-green-700 hover:bg-green-50"
+                  onClick={() => setShowSaleDialog(true)}
+                >
+                  <DollarSign className="h-5 w-5 mr-1" />
+                  Venda
+                </Button>
+                <Dialog open={showOrderDialog} onOpenChange={setShowOrderDialog}>
+                  <DialogTrigger asChild>
+                    <Button size="lg" className="h-12 px-6">
+                      <Plus className="h-5 w-5 mr-2" />
+                      Novo
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>Novo Pedido</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label>Cliente</Label>
+                        <ContactAutocomplete
+                          value={newOrder.customer_name}
+                          contactId={newOrder.contact_id}
+                          onSelect={(contact, manualName) => {
+                            if (contact) {
+                              setNewOrder({ 
+                                ...newOrder, 
+                                customer_name: contact.name,
+                                contact_id: contact.id,
+                              });
+                            } else {
+                              setNewOrder({ 
+                                ...newOrder, 
+                                customer_name: manualName || '',
+                                contact_id: null,
+                              });
+                            }
+                          }}
+                          placeholder="Digite o nome do cliente..."
+                        />
                       </div>
-                      {newOrder.items.map((item, i) => (
-                        <div key={i} className="flex gap-2 mb-2">
-                          <Select
-                            value={item.product_id}
-                            onValueChange={(v) => updateOrderItem(i, 'product_id', v)}
-                          >
-                            <SelectTrigger className="flex-1 h-10">
-                              <SelectValue placeholder="Produto" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {sortProductsByCategory(rawProducts).map((p) => (
-                                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <Input
-                            type="number"
-                            className="w-16 h-10"
-                            placeholder="Qtd"
-                            value={item.quantity}
-                            onChange={(e) => updateOrderItem(i, 'quantity', parseInt(e.target.value) || 1)}
-                          />
-                          <DecimalInput
-                            className="w-20 h-10"
-                            placeholder="R$"
-                            value={(item as any)._unit_price_text ?? String(item.unit_price ?? '')}
-                            onValueChange={(v) => {
-                              const items = [...newOrder.items];
-                              (items[i] as any)._unit_price_text = v;
-                              setNewOrder({ ...newOrder, items });
-                            }}
-                            onValueCommit={(parsed) => {
-                              updateOrderItem(i, 'unit_price', parsed?.number ?? 0);
-                            }}
-                            min={0}
-                            maxDecimals={10}
-                          />
-                          <Button size="icon" variant="ghost" className="h-10 w-10" onClick={() => removeOrderItem(i)}>
-                            <Trash2 className="h-4 w-4" />
+                      <div>
+                        <Label>Tipo de Pedido</Label>
+                        <Select
+                          value={newOrder.order_type}
+                          onValueChange={(v: 'stock' | 'production') => setNewOrder({ ...newOrder, order_type: v })}
+                        >
+                          <SelectTrigger className="h-12">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(ORDER_TYPES).map(([key, { label, description }]) => (
+                              <SelectItem key={key} value={key}>
+                                <div className="flex flex-col">
+                                  <span>{label}</span>
+                                  <span className="text-xs text-muted-foreground">{description}</span>
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {newOrder.order_type === 'stock' && (
+                          <p className="text-xs text-amber-600 mt-1">
+                            ⚠️ Este pedido consumirá direto do estoque acabado
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <Label>Canal</Label>
+                        <Select
+                          value={newOrder.channel}
+                          onValueChange={(v) => setNewOrder({ ...newOrder, channel: v })}
+                        >
+                          <SelectTrigger className="h-12">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(ORDER_CHANNELS).map(([key, label]) => (
+                              <SelectItem key={key} value={key}>{label}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Prazo de Entrega</Label>
+                        <Input
+                          type="date"
+                          className="h-12"
+                          value={newOrder.due_date}
+                          onChange={(e) => setNewOrder({ ...newOrder, due_date: e.target.value })}
+                        />
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between items-center mb-2">
+                          <Label>Itens</Label>
+                          <Button size="sm" variant="outline" onClick={addItemToOrder}>
+                            <Plus className="h-3 w-3 mr-1" />
+                            Item
                           </Button>
                         </div>
-                      ))}
-                    </div>
+                        {newOrder.items.map((item, i) => (
+                          <div key={i} className="flex gap-2 mb-2">
+                            <Select
+                              value={item.product_id}
+                              onValueChange={(v) => updateOrderItem(i, 'product_id', v)}
+                            >
+                              <SelectTrigger className="flex-1 h-10">
+                                <SelectValue placeholder="Produto" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {sortProductsByCategory(rawProducts).map((p) => (
+                                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <Input
+                              type="number"
+                              className="w-16 h-10"
+                              placeholder="Qtd"
+                              value={item.quantity}
+                              onChange={(e) => updateOrderItem(i, 'quantity', parseInt(e.target.value) || 1)}
+                            />
+                            <DecimalInput
+                              className="w-20 h-10"
+                              placeholder="R$"
+                              value={(item as any)._unit_price_text ?? String(item.unit_price ?? '')}
+                              onValueChange={(v) => {
+                                const items = [...newOrder.items];
+                                (items[i] as any)._unit_price_text = v;
+                                setNewOrder({ ...newOrder, items });
+                              }}
+                              onValueCommit={(parsed) => {
+                                updateOrderItem(i, 'unit_price', parsed?.number ?? 0);
+                              }}
+                              min={0}
+                              maxDecimals={10}
+                            />
+                            <Button size="icon" variant="ghost" className="h-10 w-10" onClick={() => removeOrderItem(i)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
 
-                    <Button onClick={handleAddOrder} className="w-full h-12 text-base">
-                      Criar Pedido
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                      <Button onClick={handleAddOrder} className="w-full h-12 text-base">
+                        Criar Pedido
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </div>
+
+            {/* Sale Dialog */}
+            <Dialog open={showSaleDialog} onOpenChange={setShowSaleDialog}>
+              <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <DollarSign className="h-5 w-5 text-green-600" />
+                    Nova Venda
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                    <p className="text-xs text-green-700">
+                      <strong>Venda de Estoque:</strong> Os itens serão consumidos diretamente do estoque acabado e o valor será registrado no Financeiro (A Receber).
+                    </p>
+                  </div>
+                  <div>
+                    <Label>Cliente</Label>
+                    <ContactAutocomplete
+                      value={newSale.customer_name}
+                      contactId={newSale.contact_id}
+                      onSelect={(contact, manualName) => {
+                        if (contact) {
+                          setNewSale({ 
+                            ...newSale, 
+                            customer_name: contact.name,
+                            contact_id: contact.id,
+                          });
+                        } else {
+                          setNewSale({ 
+                            ...newSale, 
+                            customer_name: manualName || '',
+                            contact_id: null,
+                          });
+                        }
+                      }}
+                      placeholder="Digite o nome do cliente..."
+                    />
+                  </div>
+                  <div>
+                    <Label>Canal</Label>
+                    <Select
+                      value={newSale.channel}
+                      onValueChange={(v) => setNewSale({ ...newSale, channel: v })}
+                    >
+                      <SelectTrigger className="h-12">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(ORDER_CHANNELS).map(([key, label]) => (
+                          <SelectItem key={key} value={key}>{label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Prazo de Entrega</Label>
+                    <Input
+                      type="date"
+                      className="h-12"
+                      value={newSale.due_date}
+                      onChange={(e) => setNewSale({ ...newSale, due_date: e.target.value })}
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <Label>Itens</Label>
+                      <Button size="sm" variant="outline" onClick={addItemToSale}>
+                        <Plus className="h-3 w-3 mr-1" />
+                        Item
+                      </Button>
+                    </div>
+                    {newSale.items.map((item, i) => (
+                      <div key={i} className="flex gap-2 mb-2">
+                        <Select
+                          value={item.product_id}
+                          onValueChange={(v) => updateSaleItem(i, 'product_id', v)}
+                        >
+                          <SelectTrigger className="flex-1 h-10">
+                            <SelectValue placeholder="Produto" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {sortProductsByCategory(rawProducts).map((p) => (
+                              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          type="number"
+                          className="w-16 h-10"
+                          placeholder="Qtd"
+                          value={item.quantity}
+                          onChange={(e) => updateSaleItem(i, 'quantity', parseInt(e.target.value) || 1)}
+                        />
+                        <DecimalInput
+                          className="w-20 h-10"
+                          placeholder="R$"
+                          value={(item as any)._unit_price_text ?? String(item.unit_price ?? '')}
+                          onValueChange={(v) => {
+                            const items = [...newSale.items];
+                            (items[i] as any)._unit_price_text = v;
+                            setNewSale({ ...newSale, items });
+                          }}
+                          onValueCommit={(parsed) => {
+                            updateSaleItem(i, 'unit_price', parsed?.number ?? 0);
+                          }}
+                          min={0}
+                          maxDecimals={10}
+                        />
+                        <Button size="icon" variant="ghost" className="h-10 w-10" onClick={() => removeSaleItem(i)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                    {newSale.items.length > 0 && (
+                      <div className="text-right text-sm font-medium mt-2">
+                        Total: R$ {newSale.items.reduce((acc, item) => acc + (item.quantity * item.unit_price), 0).toFixed(2)}
+                      </div>
+                    )}
+                  </div>
+
+                  <Button 
+                    onClick={handleAddSale} 
+                    className="w-full h-12 text-base bg-green-600 hover:bg-green-700"
+                  >
+                    Registrar Venda
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
 
             <div className="space-y-3">
               {filteredOrders.length === 0 ? (
