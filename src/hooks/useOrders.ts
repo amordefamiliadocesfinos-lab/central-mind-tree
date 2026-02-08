@@ -386,14 +386,34 @@ export function useOrders() {
       toast.success('Pedido criado!');
     }
 
+    // Auto-create financial entry (conta a receber) for every new order
+    if (newOrder && total > 0) {
+      const { error: finError } = await supabase
+        .from('financial_entries')
+        .insert({
+          type: 'receber',
+          description: `Pedido ${newOrder.order_number || newOrder.id.slice(0, 8)} - ${order.customer_name || 'Cliente'}`,
+          value: total,
+          due_date: order.due_date || new Date().toISOString().split('T')[0],
+          order_id: newOrder.id,
+          contact_id: order.contact_id || null,
+          notes: `Gerado automaticamente na criação do pedido`,
+        });
+
+      if (finError) {
+        console.error('Error creating financial entry:', finError);
+      } else {
+        toast.success('Conta a receber gerada no financeiro!');
+      }
+    }
+
     fetchOrders();
     return newOrder as Order;
   }, [fetchOrders]);
 
   const updateOrderStatus = useCallback(async (orderId: string, status: string) => {
-    // Get current order to check if status is changing to 'enviado'
     const currentOrder = orders.find(o => o.id === orderId);
-    const isChangingToEnviado = status === 'enviado' && currentOrder?.status !== 'enviado';
+    const isChangingToConcluido = status === 'concluido' && currentOrder?.status !== 'concluido';
 
     const { error } = await supabase
       .from('orders')
@@ -405,17 +425,17 @@ export function useOrders() {
       return;
     }
 
-    // Auto-create financial entry when status changes to 'enviado'
-    if (isChangingToEnviado && currentOrder) {
-      // Check if entry already exists for this order
+    // Ensure financial entry exists for this order (safety check)
+    if (currentOrder && (currentOrder.total_value || 0) > 0) {
       const { data: existingEntry } = await supabase
         .from('financial_entries')
-        .select('id')
+        .select('id, value, value_paid')
         .eq('order_id', orderId)
         .maybeSingle();
 
       if (!existingEntry) {
-        const { error: finError } = await supabase
+        // Create entry if it doesn't exist (e.g., legacy orders)
+        await supabase
           .from('financial_entries')
           .insert({
             type: 'receber',
@@ -423,14 +443,41 @@ export function useOrders() {
             value: currentOrder.total_value || 0,
             due_date: currentOrder.due_date || new Date().toISOString().split('T')[0],
             order_id: orderId,
-            notes: `Gerado automaticamente do pedido enviado`,
+            contact_id: currentOrder.contact_id || null,
+            notes: `Gerado automaticamente do pedido`,
           });
+      }
 
-        if (finError) {
-          console.error('Error creating financial entry:', finError);
-          toast.error('Erro ao criar conta a receber');
-        } else {
-          toast.success('Conta a receber gerada automaticamente!');
+      // Auto-register full payment when order is concluded
+      if (isChangingToConcluido) {
+        const { data: entry } = await supabase
+          .from('financial_entries')
+          .select('id, value, value_paid')
+          .eq('order_id', orderId)
+          .maybeSingle();
+
+        if (entry && entry.value_paid < entry.value) {
+          const remaining = entry.value - entry.value_paid;
+          const { error: movError } = await supabase
+            .from('financial_movements')
+            .insert({
+              entry_id: entry.id,
+              value: remaining,
+              movement_date: new Date().toISOString().split('T')[0],
+              notes: `Baixa automática - Pedido concluído`,
+            });
+
+          if (!movError) {
+            // Update payment_date
+            await supabase
+              .from('financial_entries')
+              .update({ payment_date: new Date().toISOString().split('T')[0] })
+              .eq('id', entry.id);
+
+            toast.success('Pagamento registrado automaticamente no financeiro!');
+          } else {
+            console.error('Error registering payment:', movError);
+          }
         }
       }
     }
@@ -505,9 +552,59 @@ export function useOrders() {
       }
     }
 
+    // Sync financial entry when order value or details change
+    const { data: existingFinEntry } = await supabase
+      .from('financial_entries')
+      .select('id, value_paid')
+      .eq('order_id', orderId)
+      .maybeSingle();
+
+    if (existingFinEntry && total !== undefined) {
+      // Only update if the entry hasn't been fully paid yet
+      if (existingFinEntry.value_paid < (total || 0)) {
+        await supabase
+          .from('financial_entries')
+          .update({
+            description: `Pedido ${updates.order_number || currentOrder?.order_number || orderId.slice(0, 8)} - ${updates.customer_name || currentOrder?.customer_name || 'Cliente'}`,
+            value: total,
+            due_date: updates.due_date || currentOrder?.due_date || new Date().toISOString().split('T')[0],
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existingFinEntry.id);
+      }
+    }
+
+    // Handle status change to concluido via updateOrder
+    if (updates.status === 'concluido' && currentOrder?.status !== 'concluido') {
+      const { data: entry } = await supabase
+        .from('financial_entries')
+        .select('id, value, value_paid')
+        .eq('order_id', orderId)
+        .maybeSingle();
+
+      if (entry && entry.value_paid < entry.value) {
+        const remaining = entry.value - entry.value_paid;
+        await supabase
+          .from('financial_movements')
+          .insert({
+            entry_id: entry.id,
+            value: remaining,
+            movement_date: new Date().toISOString().split('T')[0],
+            notes: `Baixa automática - Pedido concluído`,
+          });
+
+        await supabase
+          .from('financial_entries')
+          .update({ payment_date: new Date().toISOString().split('T')[0] })
+          .eq('id', entry.id);
+
+        toast.success('Pagamento registrado no financeiro!');
+      }
+    }
+
     toast.success('Pedido atualizado!');
     fetchOrders();
-  }, [fetchOrders]);
+  }, [fetchOrders, orders]);
 
   const updateOrderDueDate = useCallback(async (orderId: string, dueDate: string) => {
     const { error } = await supabase
