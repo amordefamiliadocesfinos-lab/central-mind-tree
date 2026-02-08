@@ -448,38 +448,8 @@ export function useOrders() {
           });
       }
 
-      // Auto-register full payment when order is concluded
-      if (isChangingToConcluido) {
-        const { data: entry } = await supabase
-          .from('financial_entries')
-          .select('id, value, value_paid')
-          .eq('order_id', orderId)
-          .maybeSingle();
-
-        if (entry && entry.value_paid < entry.value) {
-          const remaining = entry.value - entry.value_paid;
-          const { error: movError } = await supabase
-            .from('financial_movements')
-            .insert({
-              entry_id: entry.id,
-              value: remaining,
-              movement_date: new Date().toISOString().split('T')[0],
-              notes: `Baixa automática - Pedido concluído`,
-            });
-
-          if (!movError) {
-            // Update payment_date
-            await supabase
-              .from('financial_entries')
-              .update({ payment_date: new Date().toISOString().split('T')[0] })
-              .eq('id', entry.id);
-
-            toast.success('Pagamento registrado automaticamente no financeiro!');
-          } else {
-            console.error('Error registering payment:', movError);
-          }
-        }
-      }
+      // Entry exists or was just created — no auto-payment.
+      // User must go to Financeiro > A Receber to register payment manually.
     }
 
     toast.success('Status atualizado!');
@@ -574,33 +544,7 @@ export function useOrders() {
       }
     }
 
-    // Handle status change to concluido via updateOrder
-    if (updates.status === 'concluido' && currentOrder?.status !== 'concluido') {
-      const { data: entry } = await supabase
-        .from('financial_entries')
-        .select('id, value, value_paid')
-        .eq('order_id', orderId)
-        .maybeSingle();
-
-      if (entry && entry.value_paid < entry.value) {
-        const remaining = entry.value - entry.value_paid;
-        await supabase
-          .from('financial_movements')
-          .insert({
-            entry_id: entry.id,
-            value: remaining,
-            movement_date: new Date().toISOString().split('T')[0],
-            notes: `Baixa automática - Pedido concluído`,
-          });
-
-        await supabase
-          .from('financial_entries')
-          .update({ payment_date: new Date().toISOString().split('T')[0] })
-          .eq('id', entry.id);
-
-        toast.success('Pagamento registrado no financeiro!');
-      }
-    }
+    // No auto-payment on status change — user handles payment manually in Financeiro > A Receber
 
     toast.success('Pedido atualizado!');
     fetchOrders();
