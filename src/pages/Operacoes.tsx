@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
+import { useContacts } from '@/hooks/useContacts';
+import { ContactFormDialog } from '@/components/financial/ContactFormDialog';
 import { useOrders } from '@/hooks/useOrders';
 import { useMRP } from '@/hooks/useMRP';
 import { useStorageLocations } from '@/hooks/useStorageLocations';
@@ -147,6 +149,8 @@ export default function Operacoes() {
   const [historyProductId, setHistoryProductId] = useState<string | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
   const [showCostEditor, setShowCostEditor] = useState(false);
+  const [showNewContactFromSale, setShowNewContactFromSale] = useState(false);
+  const { createContact } = useContacts();
 
   const [newProduct, setNewProduct] = useState<Partial<Product>>({ 
     sku: '', 
@@ -581,7 +585,19 @@ export default function Operacoes() {
                     </p>
                   </div>
                   <div>
-                    <Label>Cliente</Label>
+                    <div className="flex items-center justify-between mb-1">
+                      <Label>Cliente</Label>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs text-green-700 hover:text-green-800 hover:bg-green-50"
+                        onClick={() => setShowNewContactFromSale(true)}
+                      >
+                        <Plus className="h-3.5 w-3.5 mr-1" />
+                        Novo Cliente
+                      </Button>
+                    </div>
                     <ContactAutocomplete
                       value={newSale.customer_name}
                       contactId={newSale.contact_id}
@@ -601,6 +617,21 @@ export default function Operacoes() {
                         }
                       }}
                       placeholder="Digite o nome do cliente..."
+                    />
+                    <ContactFormDialog
+                      open={showNewContactFromSale}
+                      onOpenChange={setShowNewContactFromSale}
+                      onSave={async (data) => {
+                        const newContact = await createContact({ ...data, type: 'cliente' });
+                        if (newContact) {
+                          setNewSale({
+                            ...newSale,
+                            customer_name: newContact.name,
+                            contact_id: newContact.id,
+                          });
+                          setShowNewContactFromSale(false);
+                        }
+                      }}
                     />
                   </div>
                   <div>
