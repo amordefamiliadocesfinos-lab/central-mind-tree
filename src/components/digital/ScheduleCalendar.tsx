@@ -61,7 +61,7 @@ export function ScheduleCalendar({ variations, onSelectVariation, platforms = []
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const scheduledVariations = useMemo(() => {
-    return variations.filter(v => v.scheduled_date);
+    return variations.filter(v => v.scheduled_date || (v.additional_dates && v.additional_dates.length > 0));
   }, [variations]);
 
   const monthStart = startOfMonth(currentMonth);
@@ -72,10 +72,25 @@ export function ScheduleCalendar({ variations, onSelectVariation, platforms = []
   const days = eachDayOfInterval({ start: calendarStart, end: calendarEnd });
 
   const getVariationsForDay = (day: Date) => {
-    return scheduledVariations.filter(v => {
-      if (!v.scheduled_date) return false;
-      return isSameDay(parseISO(v.scheduled_date), day);
+    const result: Array<DigitalVariation & { _displayTime?: string }> = [];
+    const seen = new Set<string>();
+    
+    scheduledVariations.forEach(v => {
+      if (v.scheduled_date && isSameDay(parseISO(v.scheduled_date), day)) {
+        if (!seen.has(v.id)) {
+          seen.add(v.id);
+          result.push({ ...v, _displayTime: v.scheduled_time?.slice(0, 5) || '' });
+        }
+      }
+      (v.additional_dates || []).forEach(ad => {
+        if (ad.date && isSameDay(parseISO(ad.date), day) && !seen.has(v.id + ad.date)) {
+          seen.add(v.id + ad.date);
+          result.push({ ...v, _displayTime: ad.time?.slice(0, 5) || '' });
+        }
+      });
     });
+    
+    return result;
   };
 
   const getPlatformInfo = (platformId: string) => {
@@ -160,7 +175,7 @@ export function ScheduleCalendar({ variations, onSelectVariation, platforms = []
                   const platform = getPlatformInfo(v.platform);
                   const status = DIGITAL_STATUS[v.status] || DIGITAL_STATUS.pendente;
                   const abbr = getPlatformAbbreviation(platform.name);
-                  const time = v.scheduled_time?.slice(0, 5) || '';
+                  const time = (v as any)._displayTime || v.scheduled_time?.slice(0, 5) || '';
                   
                   return (
                     <div
