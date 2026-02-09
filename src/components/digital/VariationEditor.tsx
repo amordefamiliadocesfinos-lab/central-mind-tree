@@ -17,7 +17,7 @@ import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, Trash2, Calendar, CheckSquare, X, Plus, Copy, ImagePlus, CalendarIcon, Clock, Eye, EyeOff, Link2, Sparkles, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, Trash2, Calendar, CheckSquare, X, Plus, Copy, ImagePlus, CalendarIcon, Clock, Eye, EyeOff, Link2, Sparkles, Loader2, ChevronDown, ChevronUp, Check } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from 'sonner';
 import { format, parseISO } from 'date-fns';
@@ -529,22 +529,28 @@ export function VariationEditor({
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-0 space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label className="text-xs">Data</Label>
+          {/* Primary date */}
+          <div className="space-y-2">
+            <Label className="text-xs font-medium">Datas de Postagem</Label>
+            <div className="flex items-center gap-2 p-2 rounded-lg border bg-muted/30">
+              <Checkbox
+                checked={variation.is_posted || false}
+                onCheckedChange={(checked) => onUpdate(variation.id, { is_posted: !!checked })}
+                className="data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+              />
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full h-10 justify-start text-left font-normal text-sm",
+                      "flex-1 h-9 justify-start text-left font-normal text-sm",
                       !variation.scheduled_date && "text-muted-foreground"
                     )}
                   >
                     <CalendarIcon className="mr-2 h-3.5 w-3.5" />
                     {variation.scheduled_date 
                       ? format(parseISO(variation.scheduled_date), "dd/MM/yy", { locale: ptBR })
-                      : "Selecionar"
+                      : "Selecionar data"
                     }
                   </Button>
                 </PopoverTrigger>
@@ -561,19 +567,16 @@ export function VariationEditor({
                   />
                 </PopoverContent>
               </Popover>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Horário</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className={cn(
-                      "w-full h-10 justify-start text-left font-normal text-sm",
+                      "w-20 h-9 justify-center text-sm font-normal",
                       !variation.scheduled_time && "text-muted-foreground"
                     )}
                   >
-                    <Clock className="mr-2 h-3.5 w-3.5" />
+                    <Clock className="mr-1 h-3 w-3" />
                     {variation.scheduled_time?.slice(0, 5) || "--:--"}
                   </Button>
                 </PopoverTrigger>
@@ -601,7 +604,114 @@ export function VariationEditor({
                   </div>
                 </PopoverContent>
               </Popover>
+              {variation.is_posted && (
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[10px] shrink-0">
+                  <Check className="h-3 w-3 mr-0.5" />
+                  Postado
+                </Badge>
+              )}
             </div>
+
+            {/* Additional dates */}
+            {(variation.additional_dates || []).map((entry, idx) => (
+              <div key={idx} className="flex items-center gap-2 p-2 rounded-lg border bg-muted/30">
+                <Checkbox
+                  checked={entry.posted}
+                  onCheckedChange={(checked) => {
+                    const dates = [...(variation.additional_dates || [])];
+                    dates[idx] = { ...dates[idx], posted: !!checked };
+                    onUpdate(variation.id, { additional_dates: dates });
+                  }}
+                  className="data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600"
+                />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className="flex-1 h-9 justify-start text-left font-normal text-sm"
+                    >
+                      <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+                      {entry.date 
+                        ? format(parseISO(entry.date), "dd/MM/yy", { locale: ptBR })
+                        : "Selecionar data"
+                      }
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0 z-50" align="start">
+                    <CalendarComponent
+                      mode="single"
+                      selected={entry.date ? parseISO(entry.date) : undefined}
+                      onSelect={(date) => {
+                        const dates = [...(variation.additional_dates || [])];
+                        dates[idx] = { ...dates[idx], date: date ? format(date, 'yyyy-MM-dd') : '' };
+                        onUpdate(variation.id, { additional_dates: dates });
+                      }}
+                      initialFocus
+                      locale={ptBR}
+                      className="pointer-events-auto"
+                    />
+                  </PopoverContent>
+                </Popover>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-20 h-9 justify-center text-sm font-normal",
+                        !entry.time && "text-muted-foreground"
+                      )}
+                    >
+                      <Clock className="mr-1 h-3 w-3" />
+                      {entry.time?.slice(0, 5) || "--:--"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-4 z-50" align="start">
+                    <div className="space-y-3">
+                      <Input
+                        type="time"
+                        value={entry.time?.slice(0, 5) || ''}
+                        onChange={(e) => {
+                          const dates = [...(variation.additional_dates || [])];
+                          dates[idx] = { ...dates[idx], time: e.target.value };
+                          onUpdate(variation.id, { additional_dates: dates });
+                        }}
+                        className="h-10 pointer-events-auto"
+                      />
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                {entry.posted && (
+                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-[10px] shrink-0">
+                    <Check className="h-3 w-3 mr-0.5" />
+                    Postado
+                  </Badge>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                  onClick={() => {
+                    const dates = (variation.additional_dates || []).filter((_, i) => i !== idx);
+                    onUpdate(variation.id, { additional_dates: dates });
+                  }}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ))}
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full h-8 text-xs border-dashed"
+              onClick={() => {
+                const dates = [...(variation.additional_dates || []), { date: '', time: '', posted: false }];
+                onUpdate(variation.id, { additional_dates: dates });
+              }}
+            >
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              Adicionar data de postagem
+            </Button>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

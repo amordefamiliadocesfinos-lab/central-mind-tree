@@ -936,6 +936,7 @@ export type Database = {
       }
       digital_variations: {
         Row: {
+          additional_dates: Json | null
           aspect_ratio: string | null
           caption: string | null
           chapters: string | null
@@ -951,6 +952,7 @@ export type Database = {
           hidden_inherited_media: Json | null
           id: string
           idea_id: string
+          is_posted: boolean
           is_template: boolean | null
           link: string | null
           media_mode: string | null
@@ -976,6 +978,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          additional_dates?: Json | null
           aspect_ratio?: string | null
           caption?: string | null
           chapters?: string | null
@@ -991,6 +994,7 @@ export type Database = {
           hidden_inherited_media?: Json | null
           id?: string
           idea_id: string
+          is_posted?: boolean
           is_template?: boolean | null
           link?: string | null
           media_mode?: string | null
@@ -1016,6 +1020,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          additional_dates?: Json | null
           aspect_ratio?: string | null
           caption?: string | null
           chapters?: string | null
@@ -1031,6 +1036,7 @@ export type Database = {
           hidden_inherited_media?: Json | null
           id?: string
           idea_id?: string
+          is_posted?: boolean
           is_template?: boolean | null
           link?: string | null
           media_mode?: string | null

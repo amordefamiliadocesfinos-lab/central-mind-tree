@@ -89,6 +89,9 @@ export interface DigitalVariation {
   media_mode: 'inherit' | 'custom';
   // Dynamic custom field values
   custom_field_values: Record<string, string>;
+  // Multi-date posting
+  is_posted: boolean;
+  additional_dates: { date: string; time: string; posted: boolean }[];
 }
 
 export function useDigital() {
@@ -370,9 +373,21 @@ export function useDigital() {
         if (v.scheduled_date === date) {
           variations.push({ ...v, ideaTitle: idea.title });
         }
+        // Also check additional_dates
+        (v.additional_dates || []).forEach(ad => {
+          if (ad.date === date) {
+            variations.push({ ...v, ideaTitle: idea.title });
+          }
+        });
       });
     });
-    return variations;
+    // Deduplicate by id
+    const seen = new Set<string>();
+    return variations.filter(v => {
+      if (seen.has(v.id)) return false;
+      seen.add(v.id);
+      return true;
+    });
   }, [ideas]);
 
   useEffect(() => {
