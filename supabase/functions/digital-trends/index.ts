@@ -81,6 +81,27 @@ Forneça uma resposta que:
 - Responda a dúvida ou comentário
 - Incentive o próximo passo no funil
 - Tenha no máximo 300 caracteres para DMs ou 150 para comentários`;
+    } else if (type === "service_response") {
+      systemPrompt = `Você é um assistente de atendimento ao cliente especializado.
+Analise o histórico da conversa e sugira a melhor resposta possível.
+Adapte o tom conforme a plataforma e o estágio do funil do cliente.
+Identifique a intenção do cliente (compra, dúvida, reclamação, suporte, etc.).
+Responda SEMPRE em português brasileiro.
+Responda em formato JSON: {"response": "sua resposta", "intent": "intenção detectada"}`;
+
+      const history = (query.conversation_history || [])
+        .map((m: any) => `${m.role}: ${m.content}`)
+        .join('\n');
+
+      userPrompt = `Histórico da conversa:
+${history}
+
+Plataforma: ${query.platform}
+Estágio no funil: ${query.funnel_stage}
+Nome do contato: ${query.contact_name}
+
+Sugira uma resposta profissional e empática para a última mensagem do cliente.
+A resposta deve ser natural, não robótica, e adequada à plataforma.`;
     }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -129,6 +150,14 @@ Forneça uma resposta que:
         result = JSON.parse(jsonStr.trim());
       } catch {
         result = { raw_response: content };
+      }
+    } else if (type === "service_response") {
+      try {
+        const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+        const jsonStr = jsonMatch ? jsonMatch[1] : content;
+        result = JSON.parse(jsonStr.trim());
+      } catch {
+        result = { response: content, intent: null };
       }
     } else {
       result = { response: content };

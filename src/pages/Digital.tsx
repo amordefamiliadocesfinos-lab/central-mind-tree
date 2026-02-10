@@ -4,6 +4,7 @@ import { useProductsList } from '@/hooks/useProductsList';
 import { IdeaCard, IdeaEditor, KanbanBoard, MediaLibrary, MetricsChart, BatchVariationDialog, PlatformsManager, DigitalCalendar } from '@/components/digital';
 import { TrendsPanel } from '@/components/digital/TrendsPanel';
 import { InteractionsPanel } from '@/components/digital/InteractionsPanel';
+import { ServicePanel } from '@/components/digital/ServicePanel';
 import { KnowledgeBasePanel } from '@/components/digital/KnowledgeBasePanel';
 import { ProductSelector } from '@/components/digital/ProductSelector';
 import { Button } from '@/components/ui/button';
@@ -12,7 +13,7 @@ import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, ArrowLeft, Search, LayoutGrid, Columns3, Image, BarChart3, Link2, Settings2, TrendingUp, MessageCircle, Book, Calendar } from 'lucide-react';
+import { Plus, ArrowLeft, Search, LayoutGrid, Columns3, Image, BarChart3, Link2, Settings2, TrendingUp, MessageCircle, Book, Calendar, Headset } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
@@ -59,7 +60,7 @@ export default function Digital() {
   const [selectedIdea, setSelectedIdea] = useState<string | null>(null);
   const [newIdea, setNewIdea] = useState({ title: '', objective: '', node_id: '', idea_type: 'conteudo', product_id: '' });
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
-  const [activeTab, setActiveTab] = useState<'ideias' | 'calendario' | 'midia' | 'metricas' | 'plataformas' | 'tendencias' | 'engajamento' | 'faq'>('ideias');
+  const [activeTab, setActiveTab] = useState<'ideias' | 'calendario' | 'midia' | 'metricas' | 'plataformas' | 'tendencias' | 'engajamento' | 'faq' | 'atendimento'>('ideias');
   const [kanbanMode, setKanbanMode] = useState<'ideas' | 'variations'>('ideas');
   const [nodes, setNodes] = useState<Node[]>([]);
   const isMobile = useIsMobile();
@@ -153,7 +154,7 @@ export default function Digital() {
         {!selectedIdea && (
           <div className="px-4 pb-2">
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-              <TabsList className="grid w-full grid-cols-8 h-9">
+              <TabsList className="grid w-full grid-cols-9 h-9">
                 <TabsTrigger value="ideias" className="text-xs px-1">
                   <LayoutGrid className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline ml-1">Ideias</span>
@@ -161,6 +162,10 @@ export default function Digital() {
                 <TabsTrigger value="calendario" className="text-xs px-1">
                   <Calendar className="h-3.5 w-3.5" />
                   <span className="hidden sm:inline ml-1">Calendário</span>
+                </TabsTrigger>
+                <TabsTrigger value="atendimento" className="text-xs px-1">
+                  <Headset className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline ml-1">Atendimento</span>
                 </TabsTrigger>
                 <TabsTrigger value="tendencias" className="text-xs px-1">
                   <TrendingUp className="h-3.5 w-3.5" />
@@ -341,6 +346,8 @@ export default function Digital() {
             />
           ) : activeTab === 'tendencias' ? (
             <TrendsPanel />
+          ) : activeTab === 'atendimento' ? (
+            <ServicePanel />
           ) : activeTab === 'engajamento' ? (
             <InteractionsPanel />
           ) : activeTab === 'faq' ? (
