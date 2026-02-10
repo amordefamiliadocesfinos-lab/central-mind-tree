@@ -2869,6 +2869,164 @@ export type Database = {
         }
         Relationships: []
       }
+      service_ai_logs: {
+        Row: {
+          ai_suggested_response: string | null
+          approved_response: string | null
+          conversation_id: string | null
+          conversation_result: string | null
+          created_at: string
+          id: string
+          intent_detected: string | null
+          interaction_type: string | null
+          message_id: string | null
+          platform_id: string | null
+        }
+        Insert: {
+          ai_suggested_response?: string | null
+          approved_response?: string | null
+          conversation_id?: string | null
+          conversation_result?: string | null
+          created_at?: string
+          id?: string
+          intent_detected?: string | null
+          interaction_type?: string | null
+          message_id?: string | null
+          platform_id?: string | null
+        }
+        Update: {
+          ai_suggested_response?: string | null
+          approved_response?: string | null
+          conversation_id?: string | null
+          conversation_result?: string | null
+          created_at?: string
+          id?: string
+          intent_detected?: string | null
+          interaction_type?: string | null
+          message_id?: string | null
+          platform_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_ai_logs_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "service_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_ai_logs_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "service_messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_ai_logs_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "digital_platforms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_conversations: {
+        Row: {
+          auto_reply_enabled: boolean
+          contact_avatar_url: string | null
+          contact_handle: string | null
+          contact_name: string | null
+          created_at: string
+          funnel_stage: string
+          id: string
+          last_message_at: string
+          last_message_preview: string | null
+          platform_id: string | null
+          status: string
+          unread_count: number
+          updated_at: string
+        }
+        Insert: {
+          auto_reply_enabled?: boolean
+          contact_avatar_url?: string | null
+          contact_handle?: string | null
+          contact_name?: string | null
+          created_at?: string
+          funnel_stage?: string
+          id?: string
+          last_message_at?: string
+          last_message_preview?: string | null
+          platform_id?: string | null
+          status?: string
+          unread_count?: number
+          updated_at?: string
+        }
+        Update: {
+          auto_reply_enabled?: boolean
+          contact_avatar_url?: string | null
+          contact_handle?: string | null
+          contact_name?: string | null
+          created_at?: string
+          funnel_stage?: string
+          id?: string
+          last_message_at?: string
+          last_message_preview?: string | null
+          platform_id?: string | null
+          status?: string
+          unread_count?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_conversations_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "digital_platforms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_messages: {
+        Row: {
+          ai_approved: boolean | null
+          content: string
+          conversation_id: string
+          created_at: string
+          id: string
+          intent_detected: string | null
+          is_ai_suggested: boolean
+          sender: string
+        }
+        Insert: {
+          ai_approved?: boolean | null
+          content: string
+          conversation_id: string
+          created_at?: string
+          id?: string
+          intent_detected?: string | null
+          is_ai_suggested?: boolean
+          sender?: string
+        }
+        Update: {
+          ai_approved?: boolean | null
+          content?: string
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          intent_detected?: string | null
+          is_ai_suggested?: boolean
+          sender?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "service_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sheet_cells: {
         Row: {
           cell_type: string
