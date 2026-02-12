@@ -2942,6 +2942,7 @@ export type Database = {
           last_message_at: string
           last_message_preview: string | null
           platform_id: string | null
+          sales_channels: Json | null
           status: string
           unread_count: number
           updated_at: string
@@ -2957,6 +2958,7 @@ export type Database = {
           last_message_at?: string
           last_message_preview?: string | null
           platform_id?: string | null
+          sales_channels?: Json | null
           status?: string
           unread_count?: number
           updated_at?: string
@@ -2972,6 +2974,7 @@ export type Database = {
           last_message_at?: string
           last_message_preview?: string | null
           platform_id?: string | null
+          sales_channels?: Json | null
           status?: string
           unread_count?: number
           updated_at?: string
