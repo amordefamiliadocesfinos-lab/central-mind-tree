@@ -15,7 +15,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { CalendarIcon, Loader2, Search, MessageCircle } from 'lucide-react';
+import { CalendarIcon, Loader2, Search, MessageCircle, Plus, X, ChevronRight } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { usePlatforms } from '@/hooks/usePlatforms';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Contact } from '@/hooks/useContacts';
@@ -63,6 +65,7 @@ export function ContactFormDialog({
 }: ContactFormDialogProps) {
   const [loading, setLoading] = useState(false);
   const [addressTab, setAddressTab] = useState('geral');
+  const { activePlatforms } = usePlatforms();
   
   const [form, setForm] = useState<Partial<Contact>>({
     name: '',
@@ -960,6 +963,64 @@ export function ContactFormDialog({
                 </div>
               </div>
             </div>
+          </section>
+
+          {/* Canais de Venda */}
+          <section>
+            <h3 className="text-lg font-semibold mb-4">Canais de Venda (Jornada)</h3>
+            <p className="text-xs text-muted-foreground mb-3">
+              Rastreie por quais canais/plataformas este cliente chegou até você. Ex: Google → Instagram → WhatsApp
+            </p>
+            
+            {(() => {
+              const channels: Array<{ platform_id: string; added_at: string }> = (form.sales_channels as any) || [];
+              const getPlatformInfo = (id: string) => activePlatforms.find(p => p.id === id);
+              
+              const addChannel = (platformId: string) => {
+                const updated = [...channels, { platform_id: platformId, added_at: new Date().toISOString() }];
+                updateField('sales_channels' as any, updated);
+              };
+              
+              const removeChannel = (index: number) => {
+                const updated = channels.filter((_, i) => i !== index);
+                updateField('sales_channels' as any, updated);
+              };
+
+              return (
+                <div className="space-y-3">
+                  {channels.length > 0 && (
+                    <div className="flex items-center gap-1 flex-wrap">
+                      {channels.map((ch, i) => {
+                        const p = getPlatformInfo(ch.platform_id);
+                        return (
+                          <div key={i} className="flex items-center">
+                            {i > 0 && <ChevronRight className="h-3 w-3 text-muted-foreground mx-0.5" />}
+                            <Badge variant="secondary" className="text-xs gap-1 pr-1">
+                              <span>{p?.icon || '📱'}</span>
+                              <span>{p?.name || 'Canal'}</span>
+                              <button onClick={() => removeChannel(i)} className="ml-0.5 hover:text-destructive">
+                                <X className="h-3 w-3" />
+                              </button>
+                            </Badge>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <Select value="__none__" onValueChange={(v) => { if (v !== '__none__') addChannel(v); }}>
+                    <SelectTrigger className="w-[220px]">
+                      <SelectValue placeholder="+ Adicionar canal..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">+ Adicionar canal...</SelectItem>
+                      {activePlatforms.map(p => (
+                        <SelectItem key={p.id} value={p.id}>{p.icon} {p.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              );
+            })()}
           </section>
 
           {/* Observações */}
