@@ -71,6 +71,9 @@ export interface Contact {
   payment_condition?: string;
   category?: string;
   
+  // Sales channels journey
+  sales_channels?: Array<{ platform_id: string; added_at: string }>;
+  
   // Other
   company_name?: string;
   notes?: string;
@@ -92,7 +95,7 @@ export function useContacts() {
         .order('name');
       
       if (error) throw error;
-      setContacts(data || []);
+      setContacts((data || []) as unknown as Contact[]);
     } catch (error: any) {
       console.error('Error fetching contacts:', error);
       toast.error('Erro ao carregar contatos');

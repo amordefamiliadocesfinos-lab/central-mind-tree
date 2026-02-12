@@ -348,6 +348,7 @@ export type Database = {
           photo_url: string | null
           profession: string | null
           rg: string | null
+          sales_channels: Json | null
           salesperson: string | null
           skype: string | null
           state: string | null
@@ -412,6 +413,7 @@ export type Database = {
           photo_url?: string | null
           profession?: string | null
           rg?: string | null
+          sales_channels?: Json | null
           salesperson?: string | null
           skype?: string | null
           state?: string | null
@@ -476,6 +478,7 @@ export type Database = {
           photo_url?: string | null
           profession?: string | null
           rg?: string | null
+          sales_channels?: Json | null
           salesperson?: string | null
           skype?: string | null
           state?: string | null
