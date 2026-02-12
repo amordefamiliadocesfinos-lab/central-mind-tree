@@ -2,6 +2,11 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+export interface SalesChannelEntry {
+  platform_id: string;
+  added_at: string;
+}
+
 export interface ServiceConversation {
   id: string;
   platform_id: string | null;
@@ -14,6 +19,7 @@ export interface ServiceConversation {
   last_message_preview: string | null;
   unread_count: number;
   auto_reply_enabled: boolean;
+  sales_channels: SalesChannelEntry[];
   created_at: string;
   updated_at: string;
 }
@@ -244,9 +250,13 @@ export function useServiceChat() {
   }, [messages, sendMessage, fetchMessages]);
 
   const updateConversation = useCallback(async (id: string, updates: Partial<ServiceConversation>) => {
+    const updatePayload: Record<string, any> = { ...updates };
+    if (updates.sales_channels) {
+      updatePayload.sales_channels = updates.sales_channels as any;
+    }
     const { error } = await supabase
       .from('service_conversations')
-      .update(updates)
+      .update(updatePayload)
       .eq('id', id);
 
     if (error) {

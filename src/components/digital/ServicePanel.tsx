@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useServiceChat, ServiceConversation, ServiceMessage } from '@/hooks/useServiceChat';
+import { useServiceChat, ServiceConversation, ServiceMessage, SalesChannelEntry } from '@/hooks/useServiceChat';
 import { usePlatforms } from '@/hooks/usePlatforms';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -119,6 +119,8 @@ export function ServicePanel() {
           onClose={() => updateConversation(activeConv.id, { status: 'closed' } as any)}
           onDelete={() => { deleteConversation(activeConv.id); setShowMobileChat(false); }}
           onToggleAuto={(v) => toggleAutoReply(activeConv.id, v)}
+          onUpdateConversation={updateConversation}
+          platforms={activePlatforms}
         />
         <ChatMessages
           messages={messages}
@@ -249,6 +251,8 @@ export function ServicePanel() {
                   onClose={() => updateConversation(activeConv.id, { status: 'closed' } as any)}
                   onDelete={() => deleteConversation(activeConv.id)}
                   onToggleAuto={(v) => toggleAutoReply(activeConv.id, v)}
+                  onUpdateConversation={updateConversation}
+                  platforms={activePlatforms}
                 />
                 <ChatMessages
                   messages={messages}
@@ -374,7 +378,7 @@ function ConversationList({ conversations, platforms, activeId, onSelect }: {
   );
 }
 
-function ChatHeader({ conversation, platform, onBack, onUpdateFunnel, onClose, onDelete, onToggleAuto }: {
+function ChatHeader({ conversation, platform, onBack, onUpdateFunnel, onClose, onDelete, onToggleAuto, onUpdateConversation, platforms }: {
   conversation: ServiceConversation;
   platform: any;
   onBack?: () => void;
@@ -382,59 +386,137 @@ function ChatHeader({ conversation, platform, onBack, onUpdateFunnel, onClose, o
   onClose: () => void;
   onDelete: () => void;
   onToggleAuto: (enabled: boolean) => void;
+  onUpdateConversation: (id: string, updates: Partial<ServiceConversation>) => void;
+  platforms: any[];
 }) {
+  const [showChannels, setShowChannels] = useState(false);
+  const salesChannels: SalesChannelEntry[] = (conversation.sales_channels as any) || [];
+
+  const addChannel = (platformId: string) => {
+    const updated = [...salesChannels, { platform_id: platformId, added_at: new Date().toISOString() }];
+    onUpdateConversation(conversation.id, { sales_channels: updated } as any);
+  };
+
+  const removeChannel = (index: number) => {
+    const updated = salesChannels.filter((_, i) => i !== index);
+    onUpdateConversation(conversation.id, { sales_channels: updated } as any);
+  };
+
+  const getPlatformInfo = (id: string) => platforms.find(p => p.id === id);
+
   return (
-    <div className="p-3 border-b bg-muted/30 flex items-center gap-3">
-      {onBack && (
-        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={onBack}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-      )}
-      <Avatar className="h-8 w-8 shrink-0">
-        <AvatarFallback className="text-xs">
-          {(conversation.contact_name || 'C').slice(0, 2).toUpperCase()}
-        </AvatarFallback>
-      </Avatar>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">
-          {conversation.contact_name || conversation.contact_handle || 'Cliente'}
-        </p>
-        <div className="flex items-center gap-1.5">
-          {platform && <span className="text-xs">{platform.icon} {platform.name}</span>}
-          {conversation.contact_handle && <span className="text-xs text-muted-foreground">{conversation.contact_handle}</span>}
+    <div className="border-b bg-muted/30">
+      <div className="p-3 flex items-center gap-3">
+        {onBack && (
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={onBack}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        )}
+        <Avatar className="h-8 w-8 shrink-0">
+          <AvatarFallback className="text-xs">
+            {(conversation.contact_name || 'C').slice(0, 2).toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium truncate">
+            {conversation.contact_name || conversation.contact_handle || 'Cliente'}
+          </p>
+          <div className="flex items-center gap-1.5">
+            {platform && <span className="text-xs">{platform.icon} {platform.name}</span>}
+            {conversation.contact_handle && <span className="text-xs text-muted-foreground">{conversation.contact_handle}</span>}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <Select value={conversation.funnel_stage} onValueChange={onUpdateFunnel}>
+            <SelectTrigger className="h-7 w-[110px] text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(FUNNEL_STAGES).map(([key, config]) => (
+                <SelectItem key={key} value={key}>{config.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <div className="flex items-center gap-1">
+            <Switch
+              checked={conversation.auto_reply_enabled}
+              onCheckedChange={onToggleAuto}
+              className="h-4 w-7"
+            />
+            <span className="text-[10px] text-muted-foreground">Auto</span>
+          </div>
+
+          {conversation.status === 'open' ? (
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose} title="Fechar conversa">
+              <Archive className="h-3.5 w-3.5" />
+            </Button>
+          ) : null}
+
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onDelete} title="Excluir">
+            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+          </Button>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 shrink-0">
-        <Select value={conversation.funnel_stage} onValueChange={onUpdateFunnel}>
-          <SelectTrigger className="h-7 w-[110px] text-xs">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {Object.entries(FUNNEL_STAGES).map(([key, config]) => (
-              <SelectItem key={key} value={key}>{config.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      {/* Sales Channels Journey */}
+      <div className="px-3 pb-2">
+        <button
+          onClick={() => setShowChannels(!showChannels)}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ChevronRight className={cn('h-3 w-3 transition-transform', showChannels && 'rotate-90')} />
+          <span>Jornada de Canais</span>
+          {salesChannels.length > 0 && (
+            <div className="flex items-center gap-0.5 ml-1">
+              {salesChannels.map((ch, i) => {
+                const p = getPlatformInfo(ch.platform_id);
+                return (
+                  <span key={i}>
+                    {i > 0 && <span className="text-muted-foreground mx-0.5">›</span>}
+                    <span>{p?.icon || '📱'}</span>
+                  </span>
+                );
+              })}
+            </div>
+          )}
+        </button>
 
-        <div className="flex items-center gap-1">
-          <Switch
-            checked={conversation.auto_reply_enabled}
-            onCheckedChange={onToggleAuto}
-            className="h-4 w-7"
-          />
-          <span className="text-[10px] text-muted-foreground">Auto</span>
-        </div>
-
-        {conversation.status === 'open' ? (
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onClose} title="Fechar conversa">
-            <Archive className="h-3.5 w-3.5" />
-          </Button>
-        ) : null}
-
-        <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onDelete} title="Excluir">
-          <Trash2 className="h-3.5 w-3.5 text-destructive" />
-        </Button>
+        {showChannels && (
+          <div className="mt-2 space-y-2">
+            {salesChannels.length > 0 && (
+              <div className="flex items-center gap-1 flex-wrap">
+                {salesChannels.map((ch, i) => {
+                  const p = getPlatformInfo(ch.platform_id);
+                  return (
+                    <div key={i} className="flex items-center">
+                      {i > 0 && <ChevronRight className="h-3 w-3 text-muted-foreground mx-0.5" />}
+                      <Badge variant="secondary" className="text-xs gap-1 pr-1">
+                        <span>{p?.icon || '📱'}</span>
+                        <span>{p?.name || 'Canal'}</span>
+                        <button onClick={() => removeChannel(i)} className="ml-0.5 hover:text-destructive">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            <Select value="__none__" onValueChange={(v) => { if (v !== '__none__') addChannel(v); }}>
+              <SelectTrigger className="h-7 w-[180px] text-xs">
+                <SelectValue placeholder="+ Adicionar canal..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">+ Adicionar canal...</SelectItem>
+                {platforms.map(p => (
+                  <SelectItem key={p.id} value={p.id}>{p.icon} {p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
     </div>
   );
