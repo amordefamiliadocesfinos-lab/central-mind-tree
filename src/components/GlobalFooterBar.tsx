@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -235,11 +235,11 @@ export function GlobalFooterBar() {
   };
 
   // Load timer state from DB and subscribe to realtime changes
+  const isLocalUpdate = useRef(false);
+
   useEffect(() => {
     loadTimerState();
 
-    // Subscribe to timer_state changes to sync across pages (Rotina/Foco/etc.)
-    // This table is expected to have a single row, so we can always apply the latest values.
     const channel = supabase
       .channel('timer-state-sync')
       .on(
@@ -250,6 +250,11 @@ export function GlobalFooterBar() {
           table: 'timer_state',
         },
         (payload) => {
+          // Skip if this was triggered by our own save
+          if (isLocalUpdate.current) {
+            isLocalUpdate.current = false;
+            return;
+          }
           const next = payload.new as { id: string; remaining_seconds: number; status: string };
           if (!next?.id) return;
           setStateId(next.id);
@@ -264,11 +269,14 @@ export function GlobalFooterBar() {
     };
   }, []);
 
-  // Timer countdown logic
+  // Timer countdown logic - use ref-based interval to avoid restart on every tick
+  const statusRef = useRef(status);
+  statusRef.current = status;
+
   useEffect(() => {
     let intervalId: number | null = null;
 
-    if (status === "running" && remainingSeconds > 0) {
+    if (status === "running") {
       intervalId = window.setInterval(() => {
         setRemainingSeconds((prev) => {
           const next = prev - 1;
@@ -284,14 +292,30 @@ export function GlobalFooterBar() {
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [status, remainingSeconds]);
+  }, [status]);
 
-  // Save timer state when it changes
+  // Save timer state periodically (every 5s) and on status change, not every tick
+  const remainingRef = useRef(remainingSeconds);
+  remainingRef.current = remainingSeconds;
+  const lastSavedRef = useRef(0);
+
   useEffect(() => {
-    if (stateId) {
+    if (!stateId) return;
+    // Always save immediately on status change
+    isLocalUpdate.current = true;
+    saveTimerState();
+  }, [status, stateId]);
+
+  useEffect(() => {
+    if (!stateId || status !== 'running') return;
+    
+    const saveInterval = window.setInterval(() => {
+      isLocalUpdate.current = true;
       saveTimerState();
-    }
-  }, [remainingSeconds, status, stateId]);
+    }, 5000);
+
+    return () => clearInterval(saveInterval);
+  }, [status, stateId]);
 
   // Keyboard shortcuts
   useEffect(() => {
