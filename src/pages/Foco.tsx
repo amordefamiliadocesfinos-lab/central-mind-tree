@@ -220,7 +220,7 @@ export default function Foco() {
   const [taskTotalTime, setTaskTotalTime] = useState<number>(0);
   
   // Time tracking hook
-  const { startTracking, stopTracking, getTaskTotalTime, formatDuration } = useTimeTracking();
+  const { startTracking, stopTracking, getTaskTotalTime, formatDuration, refreshActiveTimer, activeEntry } = useTimeTracking();
 
   const isRunning = session.startedAt !== null && session.pausedAt === null;
   const isPaused = session.startedAt !== null && session.pausedAt !== null;
@@ -231,8 +231,36 @@ export default function Foco() {
     return day === 1 || day === 5; // 1 = Segunda, 5 = Sexta
   };
 
+  // On mount: check for active time_entry and restore session from it
   useEffect(() => {
     fetchTasks();
+    
+    // Restore timer from active time_entry (survives tab close)
+    refreshActiveTimer().then((entry) => {
+      if (entry && entry.started_at) {
+        const startedAtMs = new Date(entry.started_at).getTime();
+        const elapsedMs = Date.now() - startedAtMs;
+        
+        // Restore active task
+        if (entry.task_id) {
+          setActiveTaskId(entry.task_id);
+          // Add to queue if not already there
+          setQueue(prev => {
+            if (!prev.includes(entry.task_id)) {
+              return [entry.task_id, ...prev];
+            }
+            return prev;
+          });
+        }
+        
+        // Restore session as running
+        setSession({
+          startedAt: Date.now(),
+          pausedAt: null,
+          elapsedMs: Math.max(0, elapsedMs),
+        });
+      }
+    });
     
     const channel = supabase
       .channel('foco-tasks')
