@@ -26,11 +26,40 @@ export function useTimeTracking() {
   const [loading, setLoading] = useState(false);
   const [activeEntry, setActiveEntry] = useState<TimeEntry | null>(null);
 
+  // Fetch active (unfinished) time entry on mount
+  const refreshActiveTimer = useCallback(async () => {
+    try {
+      const { data, error } = await supabase
+        .from('time_entries')
+        .select('*')
+        .is('ended_at', null)
+        .order('started_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching active timer:', error);
+        setActiveEntry(null);
+      } else {
+        setActiveEntry((data as TimeEntry) ?? null);
+      }
+      return (data as TimeEntry) ?? null;
+    } catch (error) {
+      console.error('Error fetching active timer:', error);
+      setActiveEntry(null);
+      return null;
+    }
+  }, []);
+
   // Start time tracking for a task
   const startTracking = useCallback(async (taskId: string, nodeId?: string, entryType: string = 'work') => {
     setLoading(true);
     try {
-      // First, stop any active entry for this task
+      // Stop any globally active entry (different task) before starting new one
+      if (activeEntry && activeEntry.task_id !== taskId) {
+        await stopTracking(activeEntry.task_id);
+      }
+      // Also stop any active entry for this specific task
       await stopTracking(taskId);
 
       const { data, error } = await supabase
@@ -258,5 +287,6 @@ export function useTimeTracking() {
     getTimeStats,
     getTaskTotalTime,
     formatDuration,
+    refreshActiveTimer,
   };
 }
