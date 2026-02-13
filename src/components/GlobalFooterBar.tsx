@@ -250,9 +250,9 @@ export function GlobalFooterBar() {
           table: 'timer_state',
         },
         (payload) => {
-          // Skip if this was triggered by our own save
-          if (isLocalUpdate.current) {
-            isLocalUpdate.current = false;
+          // Skip realtime events while timer is running or paused locally
+          // The local countdown is the source of truth during execution
+          if (statusRef.current === 'running' || statusRef.current === 'paused') {
             return;
           }
           const next = payload.new as { id: string; remaining_seconds: number; status: string };
@@ -301,8 +301,6 @@ export function GlobalFooterBar() {
 
   useEffect(() => {
     if (!stateId) return;
-    // Always save immediately on status change
-    isLocalUpdate.current = true;
     saveTimerState();
   }, [status, stateId]);
 
@@ -310,7 +308,6 @@ export function GlobalFooterBar() {
     if (!stateId || status !== 'running') return;
     
     const saveInterval = window.setInterval(() => {
-      isLocalUpdate.current = true;
       saveTimerState();
     }, 5000);
 
