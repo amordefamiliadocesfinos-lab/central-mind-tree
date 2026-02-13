@@ -374,8 +374,34 @@ export function GlobalFooterBar() {
 
     if (!error && data) {
       setStateId(data.id);
-      setRemainingSeconds(data.remaining_seconds);
-      setStatus(data.status as "stopped" | "running" | "paused");
+      const savedStatus = data.status as "stopped" | "running" | "paused";
+
+      if (savedStatus === "running" && data.last_update) {
+        // Recalculate remaining time based on elapsed time since last_update
+        const elapsedSinceLastSave = Math.floor(
+          (Date.now() - new Date(data.last_update).getTime()) / 1000
+        );
+        const adjusted = data.remaining_seconds - elapsedSinceLastSave;
+
+        if (adjusted <= 0) {
+          // Timer already expired while tab was closed
+          setRemainingSeconds(0);
+          setStatus("stopped");
+          // Persist the completed state
+          await supabase
+            .from("timer_state")
+            .update({ remaining_seconds: 0, status: "stopped", last_update: new Date().toISOString() })
+            .eq("id", data.id);
+          playAlertSound();
+          toast({ title: "Timer finalizado!" });
+        } else {
+          setRemainingSeconds(adjusted);
+          setStatus("running");
+        }
+      } else {
+        setRemainingSeconds(data.remaining_seconds);
+        setStatus(savedStatus);
+      }
     }
   };
 
