@@ -388,8 +388,8 @@ export function GlobalFooterBar() {
     await supabase
       .from("timer_state")
       .update({
-        remaining_seconds: remainingSeconds,
-        status: status,
+        remaining_seconds: remainingRef.current,
+        status: statusRef.current,
         last_update: new Date().toISOString(),
       })
       .eq("id", stateId);
