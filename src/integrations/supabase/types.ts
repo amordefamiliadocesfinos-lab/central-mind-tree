@@ -327,6 +327,7 @@ export type Database = {
           father_cpf: string | null
           father_name: string | null
           fax: string | null
+          funnel_status: string
           gender: string | null
           id: string
           is_active: boolean
@@ -392,6 +393,7 @@ export type Database = {
           father_cpf?: string | null
           father_name?: string | null
           fax?: string | null
+          funnel_status?: string
           gender?: string | null
           id?: string
           is_active?: boolean
@@ -457,6 +459,7 @@ export type Database = {
           father_cpf?: string | null
           father_name?: string | null
           fax?: string | null
+          funnel_status?: string
           gender?: string | null
           id?: string
           is_active?: boolean

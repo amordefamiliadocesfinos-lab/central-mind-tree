@@ -7,7 +7,8 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { 
   Play, Pause, RotateCcw, Clock, Focus, Calendar, Timer, 
   ShoppingCart, FileText, Undo2, Redo2, Home, FileSpreadsheet,
-  Users, User, UsersRound, DollarSign, Brain, LayoutDashboard
+  Users, User, UsersRound, DollarSign, Brain, LayoutDashboard,
+  UserPlus,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -773,6 +774,17 @@ export function GlobalFooterBar() {
           >
             <Link to="/minha-area">
               <User className="h-4 w-4" />
+            </Link>
+          </Button>
+
+          <Button
+            asChild
+            size="sm"
+            variant={isActive('/contatos') ? 'secondary' : 'ghost'}
+            className={cn("h-8 w-8 p-0", isActive('/contatos') && "bg-secondary")}
+          >
+            <Link to="/contatos">
+              <UserPlus className="h-4 w-4" />
             </Link>
           </Button>
 
