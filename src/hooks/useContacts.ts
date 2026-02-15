@@ -75,7 +75,11 @@ export interface Contact {
   sales_channels?: Array<{ platform_id: string; added_at: string }>;
   
   // Funnel
-  funnel_status: string; // 'novo_lead' | 'orcamento_enviado' | 'em_negociacao' | 'cliente' | 'pos_venda' | 'perdido'
+  funnel_status: string;
+  temperatura_lead?: string; // 'frio' | 'morno' | 'quente'
+  valor_estimado?: number;
+  ultimo_contato?: string;
+  origem_lead?: string;
   
   // Other
   company_name?: string;
@@ -179,6 +183,10 @@ export function useContacts() {
           company_name: cleanValue(contact.company_name),
           notes: cleanValue(contact.notes),
           funnel_status: contact.funnel_status || 'novo_lead',
+          temperatura_lead: contact.temperatura_lead || 'morno',
+          valor_estimado: cleanNumber(contact.valor_estimado),
+          ultimo_contato: cleanValue(contact.ultimo_contato),
+          origem_lead: cleanValue(contact.origem_lead),
           is_active: contact.is_active ?? true,
         })
         .select()

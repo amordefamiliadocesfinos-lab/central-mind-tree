@@ -343,6 +343,7 @@ export type Database = {
           next_visit: string | null
           nfe_email: string | null
           notes: string | null
+          origem_lead: string | null
           payment_condition: string | null
           person_type: string | null
           phone: string | null
@@ -355,8 +356,11 @@ export type Database = {
           state: string | null
           state_registration: string | null
           taxpayer_type: string | null
+          temperatura_lead: string | null
           type: string
+          ultimo_contato: string | null
           updated_at: string
+          valor_estimado: number | null
           website: string | null
           whatsapp: string | null
           zip_code: string | null
@@ -409,6 +413,7 @@ export type Database = {
           next_visit?: string | null
           nfe_email?: string | null
           notes?: string | null
+          origem_lead?: string | null
           payment_condition?: string | null
           person_type?: string | null
           phone?: string | null
@@ -421,8 +426,11 @@ export type Database = {
           state?: string | null
           state_registration?: string | null
           taxpayer_type?: string | null
+          temperatura_lead?: string | null
           type?: string
+          ultimo_contato?: string | null
           updated_at?: string
+          valor_estimado?: number | null
           website?: string | null
           whatsapp?: string | null
           zip_code?: string | null
@@ -475,6 +483,7 @@ export type Database = {
           next_visit?: string | null
           nfe_email?: string | null
           notes?: string | null
+          origem_lead?: string | null
           payment_condition?: string | null
           person_type?: string | null
           phone?: string | null
@@ -487,8 +496,11 @@ export type Database = {
           state?: string | null
           state_registration?: string | null
           taxpayer_type?: string | null
+          temperatura_lead?: string | null
           type?: string
+          ultimo_contato?: string | null
           updated_at?: string
+          valor_estimado?: number | null
           website?: string | null
           whatsapp?: string | null
           zip_code?: string | null

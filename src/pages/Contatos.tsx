@@ -3,7 +3,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Select,
   SelectContent,
@@ -48,11 +47,20 @@ import {
   List,
   ArrowRight,
   UserPlus,
+  Users,
+  FileText,
+  Handshake,
+  DollarSign,
+  Flame,
+  Snowflake,
+  Sun,
+  Clock,
 } from 'lucide-react';
 import { useContacts, Contact } from '@/hooks/useContacts';
 import { ContactFormDialog } from '@/components/financial/ContactFormDialog';
 import { ContactOrderHistory } from '@/components/financial/ContactOrderHistory';
 import { cn } from '@/lib/utils';
+import { differenceInDays, parseISO } from 'date-fns';
 
 const FUNNEL_STAGES = [
   { key: 'novo_lead', label: 'Novo Lead', color: 'bg-blue-500', textColor: 'text-blue-700', bgLight: 'bg-blue-50 border-blue-200' },
@@ -63,14 +71,36 @@ const FUNNEL_STAGES = [
   { key: 'perdido', label: 'Perdido', color: 'bg-red-500', textColor: 'text-red-700', bgLight: 'bg-red-50 border-red-200' },
 ];
 
+const TEMP_CONFIG = {
+  frio: { label: 'Frio', icon: Snowflake, className: 'bg-sky-100 text-sky-700 border-sky-300' },
+  morno: { label: 'Morno', icon: Sun, className: 'bg-amber-100 text-amber-700 border-amber-300' },
+  quente: { label: 'Quente', icon: Flame, className: 'bg-red-100 text-red-700 border-red-300' },
+};
+
 function getStage(key: string) {
   return FUNNEL_STAGES.find(s => s.key === key) || FUNNEL_STAGES[0];
+}
+
+function getUltimoContatoAlert(dateStr?: string | null) {
+  if (!dateStr) return null;
+  try {
+    const days = differenceInDays(new Date(), parseISO(dateStr));
+    if (days > 7) return { label: `${days}d`, className: 'text-red-600 bg-red-50' };
+    if (days > 3) return { label: `${days}d`, className: 'text-amber-600 bg-amber-50' };
+    return { label: `${days}d`, className: 'text-muted-foreground' };
+  } catch { return null; }
+}
+
+function formatCurrencyShort(v?: number | null) {
+  if (!v) return null;
+  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
 export default function Contatos() {
   const { contacts, loading, createContact, updateContact, deleteContact } = useContacts();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [tempFilter, setTempFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'funnel' | 'list'>('funnel');
   const [formOpen, setFormOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | undefined>();
@@ -83,6 +113,7 @@ export default function Contatos() {
     return contacts.filter((c) => {
       if (!c.is_active) return false;
       if (statusFilter !== 'all' && c.funnel_status !== statusFilter) return false;
+      if (tempFilter !== 'all' && c.temperatura_lead !== tempFilter) return false;
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
         return (
@@ -96,7 +127,7 @@ export default function Contatos() {
       }
       return true;
     });
-  }, [contacts, searchQuery, statusFilter]);
+  }, [contacts, searchQuery, statusFilter, tempFilter]);
 
   const groupedByStage = useMemo(() => {
     const groups: Record<string, Contact[]> = {};
@@ -108,6 +139,32 @@ export default function Contatos() {
     });
     return groups;
   }, [filteredContacts]);
+
+  // Dashboard metrics
+  const metrics = useMemo(() => {
+    const active = contacts.filter(c => c.is_active);
+    const orcamento = active.filter(c => c.funnel_status === 'orcamento_enviado');
+    const negociacao = active.filter(c => c.funnel_status === 'em_negociacao');
+    const openStages = ['novo_lead', 'orcamento_enviado', 'em_negociacao'];
+    const valorAberto = active
+      .filter(c => openStages.includes(c.funnel_status))
+      .reduce((sum, c) => sum + (c.valor_estimado || 0), 0);
+    return {
+      total: active.length,
+      orcamento: orcamento.length,
+      negociacao: negociacao.length,
+      valorAberto,
+    };
+  }, [contacts]);
+
+  // Sum per stage
+  const stageSums = useMemo(() => {
+    const sums: Record<string, number> = {};
+    FUNNEL_STAGES.forEach(s => {
+      sums[s.key] = (groupedByStage[s.key] || []).reduce((sum, c) => sum + (c.valor_estimado || 0), 0);
+    });
+    return sums;
+  }, [groupedByStage]);
 
   const handleSave = async (data: Partial<Contact>) => {
     if (editingContact) {
@@ -140,14 +197,27 @@ export default function Contatos() {
     }
   };
 
-  const ContactCard = ({ contact }: { contact: Contact }) => {
-    const stage = getStage(contact.funnel_status);
+  const TempBadge = ({ temp }: { temp?: string }) => {
+    const cfg = TEMP_CONFIG[(temp || 'morno') as keyof typeof TEMP_CONFIG] || TEMP_CONFIG.morno;
+    const Icon = cfg.icon;
     return (
-      <Card className="p-3 space-y-2 hover:shadow-md transition-shadow cursor-pointer" onClick={() => { setEditingContact(contact); setFormOpen(true); }}>
-        <div className="flex items-start justify-between">
+      <span className={cn('inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold', cfg.className)}>
+        <Icon className="h-2.5 w-2.5" />
+        {cfg.label}
+      </span>
+    );
+  };
+
+  const ContactCard = ({ contact }: { contact: Contact }) => {
+    const alert = getUltimoContatoAlert(contact.ultimo_contato);
+    const valor = formatCurrencyShort(contact.valor_estimado);
+
+    return (
+      <Card className="p-3 space-y-1.5 hover:shadow-md transition-shadow cursor-pointer" onClick={() => { setEditingContact(contact); setFormOpen(true); }}>
+        <div className="flex items-start justify-between gap-1">
           <div className="min-w-0 flex-1">
             <p className="font-medium text-sm truncate">{contact.name}</p>
-            {contact.fantasy_name && <p className="text-xs text-muted-foreground truncate">{contact.fantasy_name}</p>}
+            {contact.origem_lead && <p className="text-[10px] text-muted-foreground truncate">via {contact.origem_lead}</p>}
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -173,16 +243,29 @@ export default function Contatos() {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          {contact.email && <span className="truncate">{contact.email}</span>}
+
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <TempBadge temp={contact.temperatura_lead} />
+          {valor && (
+            <span className="text-xs font-semibold text-green-700 bg-green-50 rounded-full px-1.5 py-0.5 border border-green-200">
+              {valor}
+            </span>
+          )}
+          {alert && (
+            <span className={cn('inline-flex items-center gap-0.5 text-[10px] font-medium rounded-full px-1.5 py-0.5', alert.className)}>
+              <Clock className="h-2.5 w-2.5" />
+              {alert.label}
+            </span>
+          )}
         </div>
+
         <div className="flex items-center gap-1">
           {(contact.whatsapp || contact.mobile || contact.phone) && (
             <Button variant="ghost" size="icon" className="h-6 w-6 text-green-600" onClick={(e) => { e.stopPropagation(); handleWhatsApp(contact); }}>
               <MessageCircle className="h-3 w-3" />
             </Button>
           )}
-          {contact.city && <span className="text-xs text-muted-foreground">{contact.city}/{contact.state}</span>}
+          {contact.email && <span className="text-[10px] text-muted-foreground truncate">{contact.email}</span>}
         </div>
       </Card>
     );
@@ -191,8 +274,8 @@ export default function Contatos() {
   return (
     <div className="min-h-screen pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-background border-b px-4 py-3">
-        <div className="flex items-center justify-between gap-3 mb-3">
+      <div className="sticky top-0 z-30 bg-background border-b px-4 py-3 space-y-3">
+        <div className="flex items-center justify-between gap-3">
           <h1 className="text-xl font-bold flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
             Contatos
@@ -203,8 +286,33 @@ export default function Contatos() {
           </Button>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1 max-w-md">
+        {/* Mini Dashboard */}
+        <div className="grid grid-cols-4 gap-2">
+          <div className="rounded-lg border bg-card p-2 text-center">
+            <Users className="h-4 w-4 mx-auto text-muted-foreground" />
+            <p className="text-lg font-bold">{metrics.total}</p>
+            <p className="text-[10px] text-muted-foreground">Total</p>
+          </div>
+          <div className="rounded-lg border bg-amber-50 border-amber-200 p-2 text-center">
+            <FileText className="h-4 w-4 mx-auto text-amber-600" />
+            <p className="text-lg font-bold text-amber-700">{metrics.orcamento}</p>
+            <p className="text-[10px] text-amber-600">Orçamento</p>
+          </div>
+          <div className="rounded-lg border bg-orange-50 border-orange-200 p-2 text-center">
+            <Handshake className="h-4 w-4 mx-auto text-orange-600" />
+            <p className="text-lg font-bold text-orange-700">{metrics.negociacao}</p>
+            <p className="text-[10px] text-orange-600">Negociação</p>
+          </div>
+          <div className="rounded-lg border bg-green-50 border-green-200 p-2 text-center">
+            <DollarSign className="h-4 w-4 mx-auto text-green-600" />
+            <p className="text-lg font-bold text-green-700">{formatCurrencyShort(metrics.valorAberto) || 'R$ 0'}</p>
+            <p className="text-[10px] text-green-600">Em aberto</p>
+          </div>
+        </div>
+
+        {/* Filters row */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="relative flex-1 min-w-[140px] max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar contatos..."
@@ -214,7 +322,7 @@ export default function Contatos() {
             />
           </div>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-40 h-9">
+            <SelectTrigger className="w-36 h-9">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -224,7 +332,32 @@ export default function Contatos() {
               ))}
             </SelectContent>
           </Select>
-          <div className="flex border rounded-md">
+
+          {/* Temperature filter chips */}
+          <div className="flex gap-1">
+            {[
+              { value: 'all', label: 'Todos', icon: null },
+              { value: 'frio', label: 'Frio', icon: Snowflake },
+              { value: 'morno', label: 'Morno', icon: Sun },
+              { value: 'quente', label: 'Quente', icon: Flame },
+            ].map(opt => {
+              const Icon = opt.icon;
+              return (
+                <Button
+                  key={opt.value}
+                  variant={tempFilter === opt.value ? 'default' : 'outline'}
+                  size="sm"
+                  className="h-8 px-2.5 text-xs rounded-full"
+                  onClick={() => setTempFilter(opt.value)}
+                >
+                  {Icon && <Icon className="h-3 w-3 mr-0.5" />}
+                  {opt.label}
+                </Button>
+              );
+            })}
+          </div>
+
+          <div className="flex border rounded-md ml-auto">
             <Button variant={viewMode === 'funnel' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 rounded-r-none" onClick={() => setViewMode('funnel')}>
               <LayoutGrid className="h-4 w-4" />
             </Button>
@@ -248,10 +381,10 @@ export default function Contatos() {
             ))}
           </div>
         ) : viewMode === 'funnel' ? (
-          /* Funnel View */
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 overflow-x-auto">
             {FUNNEL_STAGES.map((stage) => {
               const stageContacts = groupedByStage[stage.key] || [];
+              const stageSum = stageSums[stage.key];
               return (
                 <div key={stage.key} className="min-w-[200px]">
                   <div className={cn("rounded-lg border p-2 mb-2", stage.bgLight)}>
@@ -259,8 +392,13 @@ export default function Contatos() {
                       <span className={cn("text-xs font-semibold", stage.textColor)}>{stage.label}</span>
                       <Badge variant="secondary" className="text-xs h-5 px-1.5">{stageContacts.length}</Badge>
                     </div>
+                    {stageSum > 0 && (
+                      <p className={cn("text-xs font-bold mt-1", stage.textColor)}>
+                        {formatCurrencyShort(stageSum)}
+                      </p>
+                    )}
                   </div>
-                  <div className="space-y-2 max-h-[calc(100vh-220px)] overflow-y-auto">
+                  <div className="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto">
                     {stageContacts.map(contact => (
                       <ContactCard key={contact.id} contact={contact} />
                     ))}
@@ -273,28 +411,29 @@ export default function Contatos() {
             })}
           </div>
         ) : (
-          /* List View */
           <Card>
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
+                  <TableHead>Temp.</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Contato</TableHead>
-                  <TableHead>Cidade</TableHead>
+                  <TableHead>Valor Est.</TableHead>
+                  <TableHead>Últ. Contato</TableHead>
+                  <TableHead>Origem</TableHead>
                   <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredContacts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                       Nenhum contato encontrado
                     </TableCell>
                   </TableRow>
                 ) : (
                   filteredContacts.map((contact) => {
-                    const stage = getStage(contact.funnel_status);
+                    const alert = getUltimoContatoAlert(contact.ultimo_contato);
                     return (
                       <TableRow key={contact.id}>
                         <TableCell>
@@ -303,6 +442,7 @@ export default function Contatos() {
                           </span>
                           {contact.fantasy_name && <p className="text-xs text-muted-foreground">{contact.fantasy_name}</p>}
                         </TableCell>
+                        <TableCell><TempBadge temp={contact.temperatura_lead} /></TableCell>
                         <TableCell>
                           <Select value={contact.funnel_status || 'novo_lead'} onValueChange={(v) => handleStatusChange(contact, v)}>
                             <SelectTrigger className="h-7 text-xs w-36">
@@ -315,17 +455,13 @@ export default function Contatos() {
                             </SelectContent>
                           </Select>
                         </TableCell>
+                        <TableCell className="text-sm font-medium">{formatCurrencyShort(contact.valor_estimado) || '-'}</TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-1">
-                            {contact.email && <span className="text-xs">{contact.email}</span>}
-                            {(contact.whatsapp || contact.mobile || contact.phone) && (
-                              <Button variant="ghost" size="icon" className="h-6 w-6 text-green-600" onClick={() => handleWhatsApp(contact)}>
-                                <MessageCircle className="h-3 w-3" />
-                              </Button>
-                            )}
-                          </div>
+                          {alert ? (
+                            <span className={cn('text-xs font-medium rounded px-1.5 py-0.5', alert.className)}>{alert.label}</span>
+                          ) : '-'}
                         </TableCell>
-                        <TableCell className="text-sm">{contact.city ? `${contact.city}/${contact.state}` : '-'}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{contact.origem_lead || '-'}</TableCell>
                         <TableCell>
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
