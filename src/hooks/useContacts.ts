@@ -74,6 +74,9 @@ export interface Contact {
   // Sales channels journey
   sales_channels?: Array<{ platform_id: string; added_at: string }>;
   
+  // Funnel
+  funnel_status: string; // 'novo_lead' | 'orcamento_enviado' | 'em_negociacao' | 'cliente' | 'pos_venda' | 'perdido'
+  
   // Other
   company_name?: string;
   notes?: string;
@@ -175,6 +178,7 @@ export function useContacts() {
           category: cleanValue(contact.category),
           company_name: cleanValue(contact.company_name),
           notes: cleanValue(contact.notes),
+          funnel_status: contact.funnel_status || 'novo_lead',
           is_active: contact.is_active ?? true,
         })
         .select()
