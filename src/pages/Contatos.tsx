@@ -45,6 +45,7 @@ import {
   ShoppingCart,
   LayoutGrid,
   List,
+  Triangle,
   ArrowRight,
   UserPlus,
   Users,
@@ -64,6 +65,7 @@ import { ContactFormDialog } from '@/components/financial/ContactFormDialog';
 import { ContactOrderHistory } from '@/components/financial/ContactOrderHistory';
 import { ContactHistoryDialog } from '@/components/ContactHistoryDialog';
 import { cn } from '@/lib/utils';
+import { FunnelView } from '@/components/FunnelView';
 import { differenceInDays, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -107,7 +109,7 @@ export default function Contatos() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [tempFilter, setTempFilter] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'funnel' | 'list'>('funnel');
+  const [viewMode, setViewMode] = useState<'kanban' | 'funnel' | 'list'>('kanban');
   const [formOpen, setFormOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -394,10 +396,13 @@ export default function Contatos() {
           </div>
 
           <div className="flex border rounded-md ml-auto">
-            <Button variant={viewMode === 'funnel' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 rounded-r-none" onClick={() => setViewMode('funnel')}>
+            <Button variant={viewMode === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 rounded-r-none" onClick={() => setViewMode('kanban')} title="Kanban">
               <LayoutGrid className="h-4 w-4" />
             </Button>
-            <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 rounded-l-none" onClick={() => setViewMode('list')}>
+            <Button variant={viewMode === 'funnel' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 rounded-none border-x" onClick={() => setViewMode('funnel')} title="Funil">
+              <Triangle className="h-4 w-4" />
+            </Button>
+            <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 rounded-l-none" onClick={() => setViewMode('list')} title="Lista">
               <List className="h-4 w-4" />
             </Button>
           </div>
@@ -416,7 +421,7 @@ export default function Contatos() {
               </div>
             ))}
           </div>
-        ) : viewMode === 'funnel' ? (
+        ) : viewMode === 'kanban' ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 overflow-x-auto">
             {FUNNEL_STAGES.map((stage) => {
               const stageContacts = groupedByStage[stage.key] || [];
@@ -446,6 +451,8 @@ export default function Contatos() {
               );
             })}
           </div>
+        ) : viewMode === 'funnel' ? (
+          <FunnelView contacts={contacts} />
         ) : (
           <Card>
             <Table>
