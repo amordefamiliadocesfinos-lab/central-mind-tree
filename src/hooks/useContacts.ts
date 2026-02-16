@@ -85,6 +85,7 @@ export interface Contact {
   company_name?: string;
   notes?: string;
   is_active: boolean;
+  converted_at?: string;
   created_at: string;
   updated_at: string;
 }

@@ -55,12 +55,17 @@ import {
   Snowflake,
   Sun,
   Clock,
+  TrendingUp,
+  History,
 } from 'lucide-react';
 import { useContacts, Contact } from '@/hooks/useContacts';
+import { useContactHistory } from '@/hooks/useContactHistory';
 import { ContactFormDialog } from '@/components/financial/ContactFormDialog';
 import { ContactOrderHistory } from '@/components/financial/ContactOrderHistory';
+import { ContactHistoryDialog } from '@/components/ContactHistoryDialog';
 import { cn } from '@/lib/utils';
 import { differenceInDays, parseISO } from 'date-fns';
+import { toast } from 'sonner';
 
 const FUNNEL_STAGES = [
   { key: 'novo_lead', label: 'Novo Lead', color: 'bg-blue-500', textColor: 'text-blue-700', bgLight: 'bg-blue-50 border-blue-200' },
@@ -98,6 +103,7 @@ function formatCurrencyShort(v?: number | null) {
 
 export default function Contatos() {
   const { contacts, loading, createContact, updateContact, deleteContact } = useContacts();
+  const { addEntry } = useContactHistory();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [tempFilter, setTempFilter] = useState<string>('all');
@@ -108,6 +114,8 @@ export default function Contatos() {
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyContact, setHistoryContact] = useState<Contact | null>(null);
+  const [timelineOpen, setTimelineOpen] = useState(false);
+  const [timelineContact, setTimelineContact] = useState<Contact | null>(null);
 
   const filteredContacts = useMemo(() => {
     return contacts.filter((c) => {
@@ -145,15 +153,20 @@ export default function Contatos() {
     const active = contacts.filter(c => c.is_active);
     const orcamento = active.filter(c => c.funnel_status === 'orcamento_enviado');
     const negociacao = active.filter(c => c.funnel_status === 'em_negociacao');
+    const clientes = active.filter(c => c.funnel_status === 'cliente' || c.funnel_status === 'pos_venda');
     const openStages = ['novo_lead', 'orcamento_enviado', 'em_negociacao'];
     const valorAberto = active
       .filter(c => openStages.includes(c.funnel_status))
       .reduce((sum, c) => sum + (c.valor_estimado || 0), 0);
+    const totalLeads = active.filter(c => c.funnel_status !== 'perdido').length;
+    const conversionRate = totalLeads > 0 ? Math.round((clientes.length / totalLeads) * 100) : 0;
     return {
       total: active.length,
       orcamento: orcamento.length,
       negociacao: negociacao.length,
+      clientes: clientes.length,
       valorAberto,
+      conversionRate,
     };
   }, [contacts]);
 
@@ -177,7 +190,21 @@ export default function Contatos() {
   };
 
   const handleStatusChange = async (contact: Contact, newStatus: string) => {
-    await updateContact(contact.id, { funnel_status: newStatus });
+    const oldStage = FUNNEL_STAGES.find(s => s.key === contact.funnel_status);
+    const newStage = FUNNEL_STAGES.find(s => s.key === newStatus);
+    
+    const updates: Partial<Contact> = { funnel_status: newStatus };
+    
+    // If moving to "cliente", register conversion
+    if (newStatus === 'cliente' && contact.funnel_status !== 'cliente') {
+      updates.converted_at = new Date().toISOString();
+      await addEntry(contact.id, 'conversion', `Convertido para Cliente`);
+      toast.success('🎉 Conversão registrada!');
+    } else {
+      await addEntry(contact.id, 'stage_change', `Movido de "${oldStage?.label || contact.funnel_status}" para "${newStage?.label || newStatus}"`, oldStage?.label, newStage?.label);
+    }
+    
+    await updateContact(contact.id, updates);
   };
 
   const handleWhatsApp = (contact: Contact) => {
@@ -232,9 +259,13 @@ export default function Contatos() {
                   Mover para {s.label}
                 </DropdownMenuItem>
               ))}
+              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setTimelineContact(contact); setTimelineOpen(true); }}>
+                <History className="h-3 w-3 mr-2" />
+                Timeline
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setHistoryContact(contact); setHistoryOpen(true); }}>
                 <ShoppingCart className="h-3 w-3 mr-2" />
-                Histórico
+                Pedidos
               </DropdownMenuItem>
               <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setContactToDelete(contact); setDeleteDialogOpen(true); }} className="text-destructive">
                 <Trash2 className="h-3 w-3 mr-2" />
@@ -287,7 +318,7 @@ export default function Contatos() {
         </div>
 
         {/* Mini Dashboard */}
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-5 gap-2">
           <div className="rounded-lg border bg-card p-2 text-center">
             <Users className="h-4 w-4 mx-auto text-muted-foreground" />
             <p className="text-lg font-bold">{metrics.total}</p>
@@ -307,6 +338,11 @@ export default function Contatos() {
             <DollarSign className="h-4 w-4 mx-auto text-green-600" />
             <p className="text-lg font-bold text-green-700">{formatCurrencyShort(metrics.valorAberto) || 'R$ 0'}</p>
             <p className="text-[10px] text-green-600">Em aberto</p>
+          </div>
+          <div className="rounded-lg border bg-emerald-50 border-emerald-200 p-2 text-center">
+            <TrendingUp className="h-4 w-4 mx-auto text-emerald-600" />
+            <p className="text-lg font-bold text-emerald-700">{metrics.conversionRate}%</p>
+            <p className="text-[10px] text-emerald-600">Conversão</p>
           </div>
         </div>
 
@@ -514,6 +550,13 @@ export default function Contatos() {
       </AlertDialog>
 
       <ContactOrderHistory open={historyOpen} onOpenChange={setHistoryOpen} contact={historyContact} />
+
+      <ContactHistoryDialog
+        open={timelineOpen}
+        onOpenChange={setTimelineOpen}
+        contactId={timelineContact?.id || null}
+        contactName={timelineContact?.name || ''}
+      />
     </div>
   );
 }
