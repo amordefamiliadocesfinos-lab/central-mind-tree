@@ -294,6 +294,44 @@ export type Database = {
         }
         Relationships: []
       }
+      contact_history: {
+        Row: {
+          contact_id: string
+          created_at: string
+          description: string
+          event_type: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          description: string
+          event_type?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          description?: string
+          event_type?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_history_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
           address: string | null
@@ -316,6 +354,7 @@ export type Database = {
           contact_info: string | null
           contact_people: Json | null
           contact_type: string | null
+          converted_at: string | null
           created_at: string
           credit_limit_type: string | null
           credit_limit_value: number | null
@@ -386,6 +425,7 @@ export type Database = {
           contact_info?: string | null
           contact_people?: Json | null
           contact_type?: string | null
+          converted_at?: string | null
           created_at?: string
           credit_limit_type?: string | null
           credit_limit_value?: number | null
@@ -456,6 +496,7 @@ export type Database = {
           contact_info?: string | null
           contact_people?: Json | null
           contact_type?: string | null
+          converted_at?: string | null
           created_at?: string
           credit_limit_type?: string | null
           credit_limit_value?: number | null
