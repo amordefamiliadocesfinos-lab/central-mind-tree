@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useDigital, DIGITAL_STATUS } from '@/hooks/useDigital';
+import { useIdeaTypes } from '@/hooks/useIdeaTypes';
 import { useProductsList } from '@/hooks/useProductsList';
 import { IdeaCard, IdeaEditor, KanbanBoard, MediaLibrary, MetricsChart, BatchVariationDialog, PlatformsManager, DigitalCalendar } from '@/components/digital';
+import { IdeaTypesManager } from '@/components/digital/IdeaTypesManager';
 import { TrendsPanel } from '@/components/digital/TrendsPanel';
 import { InteractionsPanel } from '@/components/digital/InteractionsPanel';
 import { ServicePanel } from '@/components/digital/ServicePanel';
@@ -65,6 +67,8 @@ export default function Digital() {
   const [nodes, setNodes] = useState<Node[]>([]);
   const isMobile = useIsMobile();
   const { products } = useProductsList();
+  const { ideaTypes } = useIdeaTypes();
+  const [typeFilter, setTypeFilter] = useState<string>('all');
 
   // Fetch nodes for linking
   useEffect(() => {
@@ -90,6 +94,11 @@ export default function Digital() {
   };
 
   const selectedIdeaData = ideas.find(i => i.id === selectedIdea);
+
+  // Apply type filter on top of hook filters
+  const displayedIdeas = typeFilter === 'all'
+    ? filteredIdeas
+    : filteredIdeas.filter(i => i.idea_type === typeFilter);
 
   if (loading) {
     return (
@@ -257,6 +266,23 @@ export default function Digital() {
                   </SelectContent>
                 </Select>
               )}
+
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="h-8 w-auto min-w-[100px]">
+                  <SelectValue placeholder="Tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Tipos</SelectItem>
+                  {ideaTypes.map(t => (
+                    <SelectItem key={t.key} value={t.key}>
+                      <div className="flex items-center gap-2">
+                        <span>{t.icon}</span>
+                        {t.label}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Stats */}
@@ -304,7 +330,7 @@ export default function Digital() {
           ) : activeTab === 'ideias' ? (
             viewMode === 'kanban' ? (
               <KanbanBoard
-                ideas={filteredIdeas}
+                ideas={displayedIdeas}
                 onUpdateIdea={updateIdea}
                 onUpdateVariation={updateVariation}
                 onSelectIdea={setSelectedIdea}
@@ -312,7 +338,7 @@ export default function Digital() {
               />
             ) : (
               <div className="space-y-3">
-                {filteredIdeas.length === 0 ? (
+                {displayedIdeas.length === 0 ? (
                   <Card className="p-8 text-center">
                     <p className="text-muted-foreground">Nenhuma ideia encontrada.</p>
                     <Button className="mt-4" onClick={() => setShowCreateDialog(true)}>
@@ -321,7 +347,7 @@ export default function Digital() {
                     </Button>
                   </Card>
                 ) : (
-                  filteredIdeas.map((idea) => (
+                  displayedIdeas.map((idea) => (
                     <IdeaCard
                       key={idea.id}
                       idea={idea}
@@ -329,6 +355,7 @@ export default function Digital() {
                       platforms={activePlatforms}
                       nodes={nodes}
                       products={products}
+                      ideaTypes={ideaTypes}
                     />
                   ))
                 )}
@@ -355,7 +382,10 @@ export default function Digital() {
           ) : activeTab === 'metricas' ? (
             <MetricsChart variations={allVariationsWithTitle} platforms={activePlatforms} />
           ) : (
-            <PlatformsManager />
+            <div className="space-y-4">
+              <IdeaTypesManager />
+              <PlatformsManager />
+            </div>
           )}
         </main>
       )}
@@ -377,10 +407,14 @@ export default function Digital() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="conteudo">📄 Conteúdo</SelectItem>
-                <SelectItem value="anuncio">📢 Anúncio de Produto</SelectItem>
-                <SelectItem value="cadastro">📦 Cadastro de Produto</SelectItem>
-                <SelectItem value="campanha">🚀 Campanha</SelectItem>
+                {ideaTypes.map(t => (
+                  <SelectItem key={t.key} value={t.key}>
+                    <div className="flex items-center gap-2">
+                      <span>{t.icon}</span>
+                      {t.label}
+                    </div>
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

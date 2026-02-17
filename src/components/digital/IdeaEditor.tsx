@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { IDEA_TYPES } from './IdeaCard';
+import { useIdeaTypes } from '@/hooks/useIdeaTypes';
 import { DigitalIdea, DigitalVariation, DIGITAL_STATUS } from '@/hooks/useDigital';
 import { Platform } from '@/hooks/usePlatforms';
 import { useProductsList } from '@/hooks/useProductsList';
@@ -70,6 +70,7 @@ export function IdeaEditor({
 }: IdeaEditorProps) {
   const isMobile = useIsMobile();
   const { products } = useProductsList();
+  const { ideaTypes } = useIdeaTypes();
   const [selectedVariation, setSelectedVariation] = useState<DigitalVariation | null>(null);
   const [showAddPlatform, setShowAddPlatform] = useState(false);
   const [showBatchDialog, setShowBatchDialog] = useState(false);
@@ -388,11 +389,11 @@ export function IdeaEditor({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {Object.entries(IDEA_TYPES).map(([key, config]) => (
-                      <SelectItem key={key} value={key}>
+                    {ideaTypes.map((t) => (
+                      <SelectItem key={t.key} value={t.key}>
                         <div className="flex items-center gap-2">
-                          {config.icon}
-                          {config.label}
+                          <span>{t.icon}</span>
+                          {t.label}
                         </div>
                       </SelectItem>
                     ))}
