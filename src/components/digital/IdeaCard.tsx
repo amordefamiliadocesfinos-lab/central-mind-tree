@@ -1,19 +1,16 @@
 import { DigitalIdea, DIGITAL_STATUS } from '@/hooks/useDigital';
 import { Platform } from '@/hooks/usePlatforms';
 import { ProductListItem } from '@/hooks/useProductsList';
+import { IdeaType } from '@/hooks/useIdeaTypes';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { Calendar, ChevronRight, FileText, Megaphone, PackagePlus, Rocket, LinkIcon, Package } from 'lucide-react';
+import { Calendar, ChevronRight, LinkIcon, Package } from 'lucide-react';
 
-export const IDEA_TYPES: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
-  conteudo: { label: 'Conteúdo', icon: <FileText className="h-3 w-3" />, color: 'bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30' },
-  anuncio: { label: 'Anúncio', icon: <Megaphone className="h-3 w-3" />, color: 'bg-orange-500/15 text-orange-700 dark:text-orange-300 border-orange-500/30' },
-  cadastro: { label: 'Cadastro', icon: <PackagePlus className="h-3 w-3" />, color: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30' },
-  campanha: { label: 'Campanha', icon: <Rocket className="h-3 w-3" />, color: 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30' },
-};
+// Fallback for unknown types
+const DEFAULT_TYPE = { label: 'Outro', icon: '📄', color: 'bg-muted text-muted-foreground border-border' };
 
 interface Node {
   id: string;
@@ -27,9 +24,10 @@ interface IdeaCardProps {
   platforms?: Platform[];
   nodes?: Node[];
   products?: ProductListItem[];
+  ideaTypes?: IdeaType[];
 }
 
-export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products = [] }: IdeaCardProps) {
+export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products = [], ideaTypes = [] }: IdeaCardProps) {
   const statusConfig = DIGITAL_STATUS[idea.status];
   const variations = idea.variations || [];
   
@@ -42,7 +40,10 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
     .filter(v => v.scheduled_date)
     .sort((a, b) => (a.scheduled_date || '').localeCompare(b.scheduled_date || ''))[0];
 
-  const ideaType = IDEA_TYPES[idea.idea_type || 'conteudo'] || IDEA_TYPES.conteudo;
+  const dynamicType = ideaTypes.find(t => t.key === idea.idea_type);
+  const ideaType = dynamicType
+    ? { label: dynamicType.label, icon: dynamicType.icon, color: dynamicType.color }
+    : DEFAULT_TYPE;
   const linkedNode = idea.node_id ? nodes.find(n => n.id === idea.node_id) : null;
   const linkedProduct = idea.product_id ? products.find(p => p.id === idea.product_id) : null;
 
@@ -68,7 +69,7 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
         {/* Row 1: Type badge + Status badge */}
         <div className="flex items-center gap-1.5 mb-2 flex-wrap">
           <Badge variant="outline" className={cn('text-[10px] gap-1 font-medium border', ideaType.color)}>
-            {ideaType.icon}
+            <span>{ideaType.icon}</span>
             {ideaType.label}
           </Badge>
           <Badge className={cn('text-[10px] text-white shrink-0', statusConfig.color)}>

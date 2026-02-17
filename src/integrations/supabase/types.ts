@@ -548,6 +548,42 @@ export type Database = {
         }
         Relationships: []
       }
+      digital_idea_types: {
+        Row: {
+          color: string
+          created_at: string
+          icon: string
+          id: string
+          is_active: boolean
+          is_default: boolean
+          key: string
+          label: string
+          order_index: number
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          icon?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          key: string
+          label: string
+          order_index?: number
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          icon?: string
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          key?: string
+          label?: string
+          order_index?: number
+        }
+        Relationships: []
+      }
       digital_ideas: {
         Row: {
           created_at: string
