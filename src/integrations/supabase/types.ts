@@ -551,6 +551,8 @@ export type Database = {
       digital_ideas: {
         Row: {
           created_at: string
+          custom_field_values: Json | null
+          custom_fields: Json | null
           id: string
           idea_type: string
           key_message: string | null
@@ -567,6 +569,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          custom_field_values?: Json | null
+          custom_fields?: Json | null
           id?: string
           idea_type?: string
           key_message?: string | null
@@ -583,6 +587,8 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          custom_field_values?: Json | null
+          custom_fields?: Json | null
           id?: string
           idea_type?: string
           key_message?: string | null

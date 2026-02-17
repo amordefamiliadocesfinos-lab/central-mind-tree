@@ -13,6 +13,7 @@ import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { Plus, Edit2, Trash2, ChevronDown, ChevronUp, Settings2, Sparkles, Loader2, GripVertical, Type, AlignLeft, ChevronRight, Copy, FolderPlus, Wand2, Check, RotateCcw } from 'lucide-react';
+import { CustomFieldsDefinition } from './CustomFieldsDefinition';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -897,83 +898,11 @@ export function PlatformsManager() {
                     </div>
                   </div>
 
-                  {/* Custom Fields Section */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium">Campos Personalizados</Label>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-7 px-2 text-xs"
-                        onClick={addField}
-                      >
-                        <Plus className="h-3.5 w-3.5 mr-1" />
-                        Adicionar Campo
-                      </Button>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      {formData.custom_fields.map((field, index) => (
-                        <div key={field.id} className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-                          <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
-                          
-                          <Input
-                            value={field.label}
-                            onChange={(e) => updateField(index, { 
-                              label: e.target.value,
-                              id: e.target.value.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') || field.id
-                            })}
-                            placeholder="Nome do campo"
-                            className="h-9 flex-1"
-                          />
-                          
-                          <Select
-                            value={field.type}
-                            onValueChange={(v) => updateField(index, { type: v as 'input' | 'textarea' })}
-                          >
-                            <SelectTrigger className="w-28 h-9">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="input">
-                                <div className="flex items-center gap-2">
-                                  <Type className="h-3.5 w-3.5" />
-                                  Linha
-                                </div>
-                              </SelectItem>
-                              <SelectItem value="textarea">
-                                <div className="flex items-center gap-2">
-                                  <AlignLeft className="h-3.5 w-3.5" />
-                                  Texto
-                                </div>
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
-                          
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-destructive shrink-0"
-                            onClick={() => removeField(index)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                      
-                      {formData.custom_fields.length === 0 && (
-                        <p className="text-sm text-muted-foreground text-center py-4 border-2 border-dashed rounded-lg">
-                          Nenhum campo definido. Clique em "Adicionar Campo" acima.
-                        </p>
-                      )}
-                    </div>
-                    
-                    <p className="text-xs text-muted-foreground">
-                      Defina os campos que aparecerão ao criar conteúdo para esta plataforma.
-                    </p>
-                  </div>
+                  {/* Custom Fields Section - using reusable component */}
+                  <CustomFieldsDefinition
+                    fields={formData.custom_fields}
+                    onChange={(fields) => setFormData(prev => ({ ...prev, custom_fields: fields }))}
+                  />
 
                   {/* Checklist Template */}
                   <div className="space-y-2">

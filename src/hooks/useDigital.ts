@@ -37,6 +37,8 @@ export interface DigitalIdea {
   node_id: string | null;
   product_id: string | null;
   media_urls: string[];
+  custom_fields: import('./usePlatforms').CustomField[];
+  custom_field_values: Record<string, string>;
   created_at: string;
   updated_at: string;
   variations?: DigitalVariation[];
@@ -140,7 +142,13 @@ export function useDigital() {
       return a.order_index - b.order_index;
     });
 
-    setIdeas(sorted as unknown as DigitalIdea[]);
+    const parsed = (sorted || []).map(item => ({
+      ...item,
+      custom_fields: Array.isArray(item.custom_fields) ? item.custom_fields : [],
+      custom_field_values: (item.custom_field_values && typeof item.custom_field_values === 'object' && !Array.isArray(item.custom_field_values)) ? item.custom_field_values : {},
+    }));
+
+    setIdeas(parsed as unknown as DigitalIdea[]);
     setLoading(false);
   }, []);
 
@@ -169,13 +177,22 @@ export function useDigital() {
 
     toast.success('Ideia criada!');
     fetchIdeas();
-    return data as DigitalIdea;
+    return data as unknown as DigitalIdea;
   }, [fetchIdeas]);
 
   const updateIdea = useCallback(async (id: string, updates: Partial<DigitalIdea>) => {
+    // Convert complex fields to JSON-compatible format
+    const dbUpdates: Record<string, unknown> = { ...updates };
+    if (updates.custom_fields) {
+      dbUpdates.custom_fields = JSON.parse(JSON.stringify(updates.custom_fields));
+    }
+    if (updates.custom_field_values) {
+      dbUpdates.custom_field_values = JSON.parse(JSON.stringify(updates.custom_field_values));
+    }
+
     const { error } = await supabase
       .from('digital_ideas')
-      .update(updates)
+      .update(dbUpdates)
       .eq('id', id);
 
     if (error) {
