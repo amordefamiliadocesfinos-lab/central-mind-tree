@@ -5,7 +5,8 @@ import { toast } from 'sonner';
 export interface CustomField {
   id: string;
   label: string;
-  type: 'input' | 'textarea';
+  type: 'input' | 'textarea' | 'number' | 'select' | 'date' | 'media';
+  select_options?: string[];
 }
 
 export interface Platform {
@@ -77,23 +78,25 @@ export function usePlatforms() {
   }, []);
 
   const createPlatform = useCallback(async (platform: Partial<Platform>) => {
+    const insertData = {
+      name: platform.name || 'Nova Plataforma',
+      icon: platform.icon || '📱',
+      group_type: platform.group_type || 'other',
+      aspect_ratio: platform.aspect_ratio,
+      duration: platform.duration,
+      fields: platform.fields || ['caption', 'cta'],
+      custom_fields: JSON.parse(JSON.stringify(platform.custom_fields || [
+        { id: 'caption', label: 'Legenda', type: 'textarea' },
+        { id: 'cta', label: 'Call to Action', type: 'input' },
+      ])),
+      checklist_template: JSON.parse(JSON.stringify(platform.checklist_template || [])),
+      is_active: true,
+      order_index: platforms.length,
+    };
+
     const { data, error } = await supabase
       .from('digital_platforms')
-      .insert({
-        name: platform.name || 'Nova Plataforma',
-        icon: platform.icon || '📱',
-        group_type: platform.group_type || 'other',
-        aspect_ratio: platform.aspect_ratio,
-        duration: platform.duration,
-        fields: platform.fields || ['caption', 'cta'],
-        custom_fields: platform.custom_fields || [
-          { id: 'caption', label: 'Legenda', type: 'textarea' },
-          { id: 'cta', label: 'Call to Action', type: 'input' },
-        ],
-        checklist_template: platform.checklist_template || [],
-        is_active: true,
-        order_index: platforms.length,
-      })
+      .insert(insertData)
       .select()
       .single();
 

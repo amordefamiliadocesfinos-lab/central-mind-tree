@@ -14,7 +14,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, Plus, Trash2, Settings, Calendar, Image, Copy, Layers, Link2, X, ImagePlus, Eye, EyeOff, Sparkles, Loader2, Wand2 } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Settings, Calendar, Image, Copy, Layers, Link2, X, ImagePlus, Eye, EyeOff, Sparkles, Loader2, Wand2, SlidersHorizontal } from 'lucide-react';
+import { CustomFieldsDefinition } from './CustomFieldsDefinition';
+import { CustomFieldsRenderer } from './CustomFieldsRenderer';
 import { AIVariationsGenerator } from './AIVariationsGenerator';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { VariationEditor } from './VariationEditor';
@@ -25,6 +27,7 @@ import { MediaLibrary } from './MediaLibrary';
 import { MediaGallery } from './MediaThumbnail';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -571,6 +574,31 @@ export function IdeaEditor({
                   </Select>
                 </div>
               )}
+
+              {/* Custom Fields Values */}
+              {(idea.custom_fields || []).length > 0 && (
+                <CustomFieldsRenderer
+                  fields={idea.custom_fields || []}
+                  values={(idea.custom_field_values as Record<string, string>) || {}}
+                  onChange={(values) => onUpdate(idea.id, { custom_field_values: values } as any)}
+                />
+              )}
+
+              {/* Custom Fields Definition */}
+              <Collapsible>
+                <CollapsibleTrigger asChild>
+                  <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground gap-1">
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                    Gerenciar campos personalizados ({(idea.custom_fields || []).length})
+                  </Button>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-2">
+                  <CustomFieldsDefinition
+                    fields={idea.custom_fields || []}
+                    onChange={(fields) => onUpdate(idea.id, { custom_fields: fields } as any)}
+                  />
+                </CollapsibleContent>
+              </Collapsible>
             </CardContent>
           </Card>
 
