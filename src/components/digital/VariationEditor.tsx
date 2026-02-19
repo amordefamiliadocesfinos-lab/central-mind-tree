@@ -340,6 +340,96 @@ export function VariationEditor({
         </CardContent>
       </Card>
 
+      {/* Preview Section */}
+      {(() => {
+        const aspectRatio = platformConfig?.aspect_ratio || variation.aspect_ratio || '1:1';
+        const previewAspectClass = (() => {
+          if (aspectRatio.includes('9:16') || aspectRatio.includes('4:5')) return 'aspect-[9/16] max-h-[380px]';
+          if (aspectRatio.includes('16:9') || aspectRatio.includes('1.91:1')) return 'aspect-video';
+          return 'aspect-square max-h-[320px]';
+        })();
+
+        // Collect all visible media
+        const allMedia = [...inheritedMedia, ...extraMedia];
+        const firstMedia = allMedia[0] || null;
+        const isVideo = firstMedia && /\.(mp4|webm|mov)(\?|$)/i.test(firstMedia);
+
+        // Gather text content from custom fields
+        const customFields = platformConfig?.custom_fields || [];
+        const customFieldValues = variation.custom_field_values || {};
+        const mainText = customFields.length > 0
+          ? customFieldValues[customFields[0].id] || variation.caption || variation.title || ''
+          : variation.caption || variation.title || '';
+
+        return (
+          <Card className="overflow-hidden">
+            <CardHeader className="py-2 px-3">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Eye className="h-4 w-4" />
+                  Pré-visualização
+                </CardTitle>
+                <Badge variant="outline" className="text-[10px]">{aspectRatio}</Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-3 pt-0">
+              <div className={cn(
+                'relative w-full mx-auto rounded-lg overflow-hidden border bg-muted/30',
+                previewAspectClass
+              )}>
+                {firstMedia ? (
+                  isVideo ? (
+                    <video
+                      src={firstMedia}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      muted
+                      loop
+                      playsInline
+                      autoPlay
+                    />
+                  ) : (
+                    <img
+                      src={firstMedia}
+                      alt="Preview"
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                  )
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center text-muted-foreground space-y-1">
+                      <ImagePlus className="h-8 w-8 mx-auto opacity-40" />
+                      <p className="text-xs">Sem mídia</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Text overlay */}
+                {mainText && (
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 pt-12">
+                    <p className="text-white text-sm font-medium line-clamp-3 drop-shadow-md">
+                      {mainText}
+                    </p>
+                    {variation.cta && (
+                      <span className="inline-block mt-1.5 text-[11px] bg-white/20 text-white px-2 py-0.5 rounded-full backdrop-blur-sm">
+                        {variation.cta}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                {/* Platform badge */}
+                <div className="absolute top-2 left-2">
+                  <Badge variant="secondary" className="text-[10px] bg-black/40 text-white border-0 backdrop-blur-sm gap-1">
+                    <span>{platformConfig?.icon || '📱'}</span>
+                    {platformConfig?.name}
+                  </Badge>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
       {/* Idea Context - Collapsible */}
       <Collapsible open={showIdea} onOpenChange={setShowIdea}>
         <Card>
