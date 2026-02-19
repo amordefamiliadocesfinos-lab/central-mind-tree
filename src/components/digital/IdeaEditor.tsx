@@ -286,6 +286,28 @@ export function IdeaEditor({
     );
   }
 
+  // Determine preview aspect ratio from first variation's platform
+  const previewAspect = (() => {
+    const firstVariation = variations[0];
+    if (!firstVariation) return '1:1';
+    const platform = getPlatform(firstVariation.platform);
+    return platform?.aspect_ratio || '1:1';
+  })();
+
+  const previewAspectClass = (() => {
+    if (previewAspect.includes('9:16') || previewAspect.includes('4:5')) return 'aspect-[9/16] max-h-[420px]';
+    if (previewAspect.includes('16:9') || previewAspect.includes('1.91:1')) return 'aspect-video';
+    return 'aspect-square max-h-[360px]';
+  })();
+
+  const previewFormatLabel = (() => {
+    if (previewAspect.includes('9:16') || previewAspect.includes('4:5')) return 'Vertical';
+    if (previewAspect.includes('16:9') || previewAspect.includes('1.91:1')) return 'Horizontal';
+    return 'Quadrado';
+  })();
+
+  const currentIdeaType = ideaTypes.find(t => t.key === idea.idea_type);
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -326,19 +348,79 @@ export function IdeaEditor({
         </div>
       </div>
 
-      {/* Progress Bar */}
-      {variations.length > 0 && (
-        <Card className="bg-muted/50">
-          <CardContent className="p-3">
-            <div className="flex items-center justify-between text-sm mb-2">
-              <span className="text-muted-foreground">Progresso</span>
-              <span className="font-medium tabular-nums">{completedVariations}/{variations.length}</span>
+      {/* ====== PREVIEW AREA (fixed top) ====== */}
+      <Card className="overflow-hidden border-2 border-border/60">
+        <div className="bg-muted/30 px-4 py-2 flex items-center justify-between border-b">
+          <div className="flex items-center gap-2">
+            <Eye className="h-4 w-4 text-muted-foreground" />
+            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pré-visualização</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {currentIdeaType && (
+              <Badge variant="secondary" className="text-xs" style={{ backgroundColor: currentIdeaType.color + '22', color: currentIdeaType.color }}>
+                {currentIdeaType.icon} {currentIdeaType.label}
+              </Badge>
+            )}
+            <Badge variant="outline" className="text-xs font-normal">
+              {previewFormatLabel} • {previewAspect}
+            </Badge>
+          </div>
+        </div>
+        <div className="flex justify-center bg-muted/10 p-4">
+          <div className={cn('relative w-full max-w-sm bg-background rounded-lg border shadow-sm overflow-hidden', previewAspectClass)}>
+            {/* Media preview */}
+            {(idea.media_urls?.length || 0) > 0 ? (
+              (() => {
+                const firstMedia = idea.media_urls[0];
+                const isVideo = /\.(mp4|webm|mov)(\?|$)/i.test(firstMedia);
+                return isVideo ? (
+                  <video src={firstMedia} className="absolute inset-0 w-full h-full object-cover" muted autoPlay loop playsInline />
+                ) : (
+                  <img src={firstMedia} alt="" className="absolute inset-0 w-full h-full object-cover" />
+                );
+              })()
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center bg-muted/40">
+                <div className="text-center text-muted-foreground">
+                  <Image className="h-10 w-10 mx-auto mb-2 opacity-40" />
+                  <p className="text-xs">Sem mídia</p>
+                </div>
+              </div>
+            )}
+            {/* Text overlay at bottom */}
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 pt-12">
+              <h3 className="text-white font-bold text-sm leading-tight line-clamp-2">
+                {idea.title || 'Título da ideia'}
+              </h3>
+              {(idea.objective || idea.key_message) && (
+                <p className="text-white/80 text-xs mt-1 line-clamp-2">
+                  {idea.objective || idea.key_message}
+                </p>
+              )}
             </div>
-            <Progress value={progress} className="h-2" />
-          </CardContent>
-        </Card>
-      )}
+          </div>
+        </div>
+        {/* Platforms strip */}
+        {variations.length > 0 && (
+          <div className="px-4 py-2 border-t bg-muted/20 flex items-center gap-3 overflow-x-auto">
+            <span className="text-xs text-muted-foreground shrink-0">Plataformas:</span>
+            <div className="flex items-center gap-1.5">
+              {variations.map(v => {
+                const p = getPlatform(v.platform);
+                return (
+                  <span key={v.id} className="text-lg" title={p?.name}>{p?.icon || '📱'}</span>
+                );
+              })}
+            </div>
+            <div className="ml-auto flex items-center gap-2 shrink-0">
+              <Progress value={progress} className="w-16 h-1.5" />
+              <span className="text-xs text-muted-foreground tabular-nums">{completedVariations}/{variations.length}</span>
+            </div>
+          </div>
+        )}
+      </Card>
 
+      {/* ====== SECONDARY CONTENT IN TABS ====== */}
       <Tabs defaultValue="idea">
         <TabsList className="grid w-full grid-cols-3 h-12">
           <TabsTrigger value="idea" className="h-10">
