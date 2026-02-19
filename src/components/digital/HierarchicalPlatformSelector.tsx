@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Platform } from '@/hooks/usePlatforms';
 import { usePlatformGroups } from '@/hooks/usePlatformGroups';
+import { PlatformIcon } from './PlatformsManager';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -183,7 +184,7 @@ export function HierarchicalPlatformSelector({
           )}
           onClick={() => handleSelect(platform.id)}
         >
-          <span className="text-lg mr-2">{platform.icon}</span>
+          <PlatformIcon icon={platform.icon} size="md" className="mr-2" />
           <span className="flex-1 text-left truncate">{platform.name}</span>
           {platform.aspect_ratio && (
             <Badge variant="outline" className="ml-2 text-[10px]">
@@ -208,7 +209,7 @@ export function HierarchicalPlatformSelector({
               ) : (
                 <ChevronRight className="h-4 w-4 mr-2 shrink-0" />
               )}
-              <span className="text-lg mr-2">{platform.icon}</span>
+              <PlatformIcon icon={platform.icon} size="md" className="mr-2" />
               <span className="flex-1 text-left truncate">{platform.name}</span>
               <Badge variant="secondary" className="ml-2 text-[10px]">
                 {children.filter(c => c.platform.is_active).length}
@@ -251,7 +252,7 @@ export function HierarchicalPlatformSelector({
               )}
               onClick={() => handleSelect(platform.id)}
             >
-              <span className="text-lg mr-2">{platform.icon}</span>
+              <PlatformIcon icon={platform.icon} size="md" className="mr-2" />
               <div className="flex-1 text-left min-w-0">
                 <div className="truncate font-medium">{platform.name}</div>
                 <div className="text-[10px] text-muted-foreground truncate">

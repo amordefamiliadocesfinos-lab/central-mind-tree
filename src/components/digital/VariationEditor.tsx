@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { DigitalVariation, DigitalIdea, DIGITAL_STATUS } from '@/hooks/useDigital';
 import { Platform } from '@/hooks/usePlatforms';
+import { PlatformIcon } from './PlatformsManager';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -323,7 +324,7 @@ export function VariationEditor({
       <Card className="bg-muted/50">
         <CardContent className="p-3">
           <div className="flex items-center gap-3">
-            <span className="text-3xl">{platformConfig?.icon || '📱'}</span>
+            <PlatformIcon icon={platformConfig?.icon || '📱'} size="xl" />
             <div className="flex-1 min-w-0">
               <h2 className="font-semibold">{platformConfig?.name || 'Plataforma'}</h2>
               <p className="text-sm text-muted-foreground truncate">{idea.title}</p>
@@ -420,7 +421,7 @@ export function VariationEditor({
                 {/* Platform badge */}
                 <div className="absolute top-2 left-2">
                   <Badge variant="secondary" className="text-[10px] bg-black/40 text-white border-0 backdrop-blur-sm gap-1">
-                    <span>{platformConfig?.icon || '📱'}</span>
+                    <PlatformIcon icon={platformConfig?.icon || '📱'} size="sm" />
                     {platformConfig?.name}
                   </Badge>
                 </div>
