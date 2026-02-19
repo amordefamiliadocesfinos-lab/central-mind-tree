@@ -2,6 +2,7 @@ import { DigitalIdea, DIGITAL_STATUS } from '@/hooks/useDigital';
 import { Platform } from '@/hooks/usePlatforms';
 import { ProductListItem } from '@/hooks/useProductsList';
 import { IdeaType } from '@/hooks/useIdeaTypes';
+import { PlatformIcon } from './PlatformsManager';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -108,7 +109,7 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
                 {Array.from(uniquePlatforms.values()).slice(0, 6).map(p => (
                   <Tooltip key={p.id}>
                     <TooltipTrigger asChild>
-                      <span className="text-base leading-none cursor-default">{p.icon}</span>
+                      <PlatformIcon icon={p.icon} size="sm" className="cursor-default" />
                     </TooltipTrigger>
                     <TooltipContent side="bottom" className="text-xs">
                       {p.name}

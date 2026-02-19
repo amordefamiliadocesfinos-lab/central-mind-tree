@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { usePlatforms, Platform, CustomField } from '@/hooks/usePlatforms';
 import { usePlatformGroups, PlatformGroup } from '@/hooks/usePlatformGroups';
 import { Button } from '@/components/ui/button';
@@ -12,11 +12,44 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-import { Plus, Edit2, Trash2, ChevronDown, ChevronUp, Settings2, Sparkles, Loader2, GripVertical, Type, AlignLeft, ChevronRight, Copy, FolderPlus, Wand2, Check, RotateCcw } from 'lucide-react';
+import { Plus, Edit2, Trash2, ChevronDown, ChevronUp, Settings2, Sparkles, Loader2, GripVertical, Type, AlignLeft, ChevronRight, Copy, FolderPlus, Wand2, Check, RotateCcw, ImagePlus, Upload, Undo2 } from 'lucide-react';
 import { CustomFieldsDefinition } from './CustomFieldsDefinition';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+
+// Helper to check if icon is a URL (image) vs emoji
+function isIconUrl(icon: string): boolean {
+  return icon.startsWith('http') || icon.startsWith('/');
+}
+
+// Reusable component to render platform icon (emoji or image)
+export function PlatformIcon({ icon, size = 'md', className }: { icon: string; size?: 'sm' | 'md' | 'lg' | 'xl'; className?: string }) {
+  const sizeClasses = {
+    sm: 'h-4 w-4',
+    md: 'h-6 w-6',
+    lg: 'h-8 w-8',
+    xl: 'h-12 w-12',
+  };
+  const textSizes = {
+    sm: 'text-sm',
+    md: 'text-lg',
+    lg: 'text-2xl',
+    xl: 'text-4xl',
+  };
+
+  if (isIconUrl(icon)) {
+    return (
+      <img
+        src={icon}
+        alt="Ícone"
+        className={cn(sizeClasses[size], 'rounded object-cover', className)}
+      />
+    );
+  }
+  return <span className={cn(textSizes[size], className)}>{icon}</span>;
+}
 
 const EMOJI_OPTIONS = ['📱', '📷', '🎬', '📺', '⚡', '🎵', '📘', '🎥', '🎠', '🛒', '🟡', '🧡', '🟢', '🔵', '🟣', '📦', '🏪', '💼', '🌐', '📧'];
 
@@ -90,6 +123,38 @@ export function PlatformsManager() {
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
   const [expandedPlatforms, setExpandedPlatforms] = useState<Record<string, boolean>>({});
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [iconUploading, setIconUploading] = useState(false);
+  const iconInputRef = useRef<HTMLInputElement>(null);
+
+  // Upload custom icon image
+  const handleIconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast.error('Apenas imagens são permitidas');
+      return;
+    }
+    setIconUploading(true);
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `platform-icons/${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage.from('media').upload(path, file, { upsert: true });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage.from('media').getPublicUrl(path);
+      setFormData(prev => ({ ...prev, icon: urlData.publicUrl }));
+      toast.success('Ícone atualizado!');
+    } catch (err) {
+      console.error('Icon upload error:', err);
+      toast.error('Erro ao fazer upload do ícone');
+    } finally {
+      setIconUploading(false);
+      if (iconInputRef.current) iconInputRef.current.value = '';
+    }
+  };
+
+  const restoreDefaultIcon = () => {
+    setFormData(prev => ({ ...prev, icon: '📱' }));
+  };
 
   // AI: Generate full platform structure from name
   const generatePlatformStructure = async () => {
@@ -405,7 +470,7 @@ export function PlatformsManager() {
               </Button>
             )}
             {!hasChildren && depth > 0 && <div className="w-6" />}
-            <span className="text-2xl">{platform.icon}</span>
+            <PlatformIcon icon={platform.icon} size="lg" />
             <div>
               <div className="font-medium">{platform.name}</div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -768,27 +833,70 @@ export function PlatformsManager() {
               <div className="flex gap-3">
                 <div className="space-y-2">
                   <Label>Ícone</Label>
-                  <Select
-                    value={formData.icon}
-                    onValueChange={(v) => setFormData({ ...formData, icon: v })}
-                  >
-                    <SelectTrigger className="w-16 h-12 text-xl">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <div className="grid grid-cols-5 gap-1 p-2">
-                        {EMOJI_OPTIONS.map(emoji => (
-                          <SelectItem
-                            key={emoji}
-                            value={emoji}
-                            className="text-xl justify-center p-2"
+                  <input
+                    ref={iconInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleIconUpload}
+                    className="hidden"
+                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className="w-16 h-12 p-0 relative"
+                        disabled={iconUploading}
+                      >
+                        {iconUploading ? (
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : (
+                          <PlatformIcon icon={formData.icon} size="lg" />
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64 p-3" align="start">
+                      <div className="space-y-3">
+                        <p className="text-xs font-medium text-muted-foreground">Escolha um emoji</p>
+                        <div className="grid grid-cols-5 gap-1">
+                          {EMOJI_OPTIONS.map(emoji => (
+                            <Button
+                              key={emoji}
+                              variant={formData.icon === emoji ? 'default' : 'ghost'}
+                              size="icon"
+                              className="text-xl h-9 w-9"
+                              onClick={() => setFormData(prev => ({ ...prev, icon: emoji }))}
+                            >
+                              {emoji}
+                            </Button>
+                          ))}
+                        </div>
+                        <div className="border-t pt-2 space-y-2">
+                          <p className="text-xs font-medium text-muted-foreground">Ou use uma imagem</p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full gap-2"
+                            onClick={() => iconInputRef.current?.click()}
+                            disabled={iconUploading}
                           >
-                            {emoji}
-                          </SelectItem>
-                        ))}
+                            <Upload className="h-3.5 w-3.5" />
+                            Upload de imagem
+                          </Button>
+                          {isIconUrl(formData.icon) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="w-full gap-2 text-xs"
+                              onClick={restoreDefaultIcon}
+                            >
+                              <Undo2 className="h-3.5 w-3.5" />
+                              Restaurar emoji padrão
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                    </SelectContent>
-                  </Select>
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div className="flex-1 space-y-2">
                   <Label>Nome da Plataforma</Label>
