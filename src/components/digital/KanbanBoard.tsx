@@ -1,13 +1,24 @@
 import { useState, useMemo } from 'react';
 import { DndContext, DragOverlay, closestCorners, useSensor, useSensors, PointerSensor, TouchSensor } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { SortableContext, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { DigitalIdea, DigitalVariation, DIGITAL_STATUS, PLATFORMS } from '@/hooks/useDigital';
+import { DigitalIdea, DigitalVariation, DIGITAL_STATUS } from '@/hooks/useDigital';
+import { Platform } from '@/hooks/usePlatforms';
+import { ProductListItem } from '@/hooks/useProductsList';
+import { IdeaType } from '@/hooks/useIdeaTypes';
+import { PlatformIcon } from './PlatformsManager';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { Calendar, GripVertical } from 'lucide-react';
+import { Calendar, GripVertical, LinkIcon, Package, Target, Users } from 'lucide-react';
+
+interface Node {
+  id: string;
+  title: string;
+  color: string;
+}
 
 interface KanbanBoardProps {
   ideas: DigitalIdea[];
@@ -15,10 +26,36 @@ interface KanbanBoardProps {
   onUpdateVariation: (id: string, updates: Partial<DigitalVariation>) => void;
   onSelectIdea: (id: string) => void;
   viewMode: 'ideas' | 'variations';
+  platforms?: Platform[];
+  nodes?: Node[];
+  products?: ProductListItem[];
+  ideaTypes?: IdeaType[];
 }
 
+const DEFAULT_TYPE = { label: 'Outro', icon: '📄', color: 'bg-muted text-muted-foreground border-border' };
+
+const formatDate = (d: string) => {
+  const parts = d.split('-');
+  const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+  return `${parseInt(parts[2])} ${months[parseInt(parts[1]) - 1]}`;
+};
+
 // Sortable Idea Card
-function SortableIdeaCard({ idea, onClick }: { idea: DigitalIdea; onClick: () => void }) {
+function SortableIdeaCard({
+  idea,
+  onClick,
+  platforms = [],
+  nodes = [],
+  products = [],
+  ideaTypes = [],
+}: {
+  idea: DigitalIdea;
+  onClick: () => void;
+  platforms?: Platform[];
+  nodes?: Node[];
+  products?: ProductListItem[];
+  ideaTypes?: IdeaType[];
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: idea.id,
   });
@@ -34,6 +71,27 @@ function SortableIdeaCard({ idea, onClick }: { idea: DigitalIdea; onClick: () =>
   const completedVariations = variations.filter(v => v.status === 'concluido').length;
   const progress = variations.length > 0 ? (completedVariations / variations.length) * 100 : 0;
 
+  const getPlatform = (platformId: string) => platforms.find(p => p.id === platformId);
+
+  const uniquePlatforms = new Map<string, Platform>();
+  variations.forEach(v => {
+    const p = getPlatform(v.platform);
+    if (p && !uniquePlatforms.has(p.id)) uniquePlatforms.set(p.id, p);
+  });
+  const primaryPlatform = uniquePlatforms.size > 0 ? Array.from(uniquePlatforms.values())[0] : null;
+
+  const dynamicType = ideaTypes.find(t => t.key === idea.idea_type);
+  const ideaType = dynamicType
+    ? { label: dynamicType.label, icon: dynamicType.icon, color: dynamicType.color }
+    : DEFAULT_TYPE;
+
+  const linkedNode = idea.node_id ? nodes.find(n => n.id === idea.node_id) : null;
+  const linkedProduct = idea.product_id ? products.find(p => p.id === idea.product_id) : null;
+
+  const scheduledDates = variations.filter(v => v.scheduled_date).map(v => v.scheduled_date!).sort();
+  const firstDate = scheduledDates[0];
+  const lastDate = scheduledDates[scheduledDates.length - 1];
+
   return (
     <Card
       ref={setNodeRef}
@@ -45,48 +103,123 @@ function SortableIdeaCard({ idea, onClick }: { idea: DigitalIdea; onClick: () =>
       )}
       onClick={onClick}
     >
-      <CardContent className="p-3">
-        <div className="flex items-start gap-2">
-          <button {...attributes} {...listeners} className="touch-none mt-1">
+      <CardContent className="p-3 space-y-1.5">
+        {/* Grip + Platform header */}
+        <div className="flex items-center gap-1.5">
+          <button {...attributes} {...listeners} className="touch-none shrink-0">
             <GripVertical className="h-4 w-4 text-muted-foreground" />
           </button>
-          <div className="flex-1 min-w-0">
-            <h4 className="font-medium text-sm truncate">{idea.title}</h4>
-            {idea.objective && (
-              <p className="text-xs text-muted-foreground line-clamp-1">{idea.objective}</p>
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+            {primaryPlatform ? (
+              <>
+                <PlatformIcon icon={primaryPlatform.icon} size="sm" />
+                <span className="text-xs text-muted-foreground truncate">{primaryPlatform.name}</span>
+              </>
+            ) : (
+              <span className="text-xs text-muted-foreground">Sem plataforma</span>
             )}
-            {variations.length > 0 && (
-              <div className="flex items-center gap-2 mt-2">
-                <div className="flex gap-0.5">
-                  {variations.slice(0, 4).map(v => (
-                    <span key={v.id} className="text-xs" title={PLATFORMS[v.platform]?.label}>
-                      {PLATFORMS[v.platform]?.icon}
-                    </span>
-                  ))}
-                  {variations.length > 4 && (
-                    <span className="text-xs text-muted-foreground">+{variations.length - 4}</span>
-                  )}
-                </div>
-                <Progress value={progress} className="w-12 h-1" />
-                <span className="text-xs text-muted-foreground tabular-nums">{Math.round(progress)}%</span>
+            {uniquePlatforms.size > 1 && (
+              <div className="flex items-center gap-0.5 ml-0.5">
+                {Array.from(uniquePlatforms.values()).slice(1, 3).map(p => (
+                  <Tooltip key={p.id}>
+                    <TooltipTrigger asChild>
+                      <span><PlatformIcon icon={p.icon} size="sm" className="opacity-60" /></span>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="text-xs">{p.name}</TooltipContent>
+                  </Tooltip>
+                ))}
+                {uniquePlatforms.size > 3 && (
+                  <span className="text-[10px] text-muted-foreground">+{uniquePlatforms.size - 3}</span>
+                )}
               </div>
             )}
           </div>
         </div>
+
+        {/* Title */}
+        <h4 className="font-semibold text-sm leading-snug">{idea.title}</h4>
+
+        {/* Type + badges */}
+        <div className="flex items-center gap-1 flex-wrap">
+          <Badge variant="outline" className={cn('text-[10px] gap-0.5 font-medium border py-0 h-5', ideaType.color)}>
+            <span>{ideaType.icon}</span>
+            {ideaType.label}
+          </Badge>
+          {idea.kpi && (
+            <Badge variant="outline" className="text-[10px] gap-0.5 font-normal text-muted-foreground uppercase py-0 h-5">
+              {idea.kpi}
+            </Badge>
+          )}
+          {linkedNode && (
+            <Badge variant="outline" className="text-[10px] gap-0.5 font-normal text-muted-foreground py-0 h-5">
+              <LinkIcon className="h-2.5 w-2.5" />
+              <span className="truncate max-w-[80px]">{linkedNode.title}</span>
+            </Badge>
+          )}
+          {linkedProduct && (
+            <Badge variant="outline" className="text-[10px] gap-0.5 font-normal text-muted-foreground border-emerald-500/30 py-0 h-5">
+              <Package className="h-2.5 w-2.5" />
+              <span className="truncate max-w-[80px]">{linkedProduct.name}</span>
+            </Badge>
+          )}
+        </div>
+
+        {/* Date */}
+        {firstDate && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Calendar className="h-3 w-3 shrink-0" />
+            <span className="tabular-nums">
+              {formatDate(firstDate)}
+              {lastDate && lastDate !== firstDate && ` → ${formatDate(lastDate)}`}
+            </span>
+          </div>
+        )}
+
+        {/* Objective */}
+        {idea.objective && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Target className="h-3 w-3 shrink-0" />
+            <span className="line-clamp-1">{idea.objective}</span>
+          </div>
+        )}
+
+        {/* Target audience */}
+        {idea.target_audience && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Users className="h-3 w-3 shrink-0" />
+            <span className="line-clamp-1">{idea.target_audience}</span>
+          </div>
+        )}
+
+        {/* Progress */}
+        {variations.length > 0 && (
+          <div className="flex items-center gap-2 pt-1 border-t border-border/50">
+            <span className="text-xs text-muted-foreground tabular-nums font-medium">{completedVariations}/{variations.length}</span>
+            <span className="text-xs text-muted-foreground">posts</span>
+            <Progress value={progress} className="w-14 h-1.5 flex-1 max-w-[60px]" />
+            <span className="text-[10px] text-muted-foreground tabular-nums">{Math.round(progress)}%</span>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 }
 
 // Sortable Variation Card
-function SortableVariationCard({ 
-  variation, 
+function SortableVariationCard({
+  variation,
   ideaTitle,
-  onClick 
-}: { 
-  variation: DigitalVariation & { ideaTitle: string }; 
+  onClick,
+  platforms = [],
+  ideaTypes = [],
+  ideaType: ideaTypeKey,
+}: {
+  variation: DigitalVariation & { ideaTitle: string };
   ideaTitle: string;
   onClick: () => void;
+  platforms?: Platform[];
+  ideaTypes?: IdeaType[];
+  ideaType?: string;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: variation.id,
@@ -99,10 +232,15 @@ function SortableVariationCard({
   };
 
   const statusConfig = DIGITAL_STATUS[variation.status];
-  const platformConfig = PLATFORMS[variation.platform];
+  const platform = platforms.find(p => p.id === variation.platform);
   const checklistProgress = variation.checklist?.length
     ? (variation.checklist.filter(c => c.done).length / variation.checklist.length) * 100
     : 0;
+
+  const dynamicType = ideaTypes.find(t => t.key === ideaTypeKey);
+  const typeInfo = dynamicType
+    ? { label: dynamicType.label, icon: dynamicType.icon, color: dynamicType.color }
+    : DEFAULT_TYPE;
 
   return (
     <Card
@@ -115,40 +253,54 @@ function SortableVariationCard({
       )}
       onClick={onClick}
     >
-      <CardContent className="p-3">
-        <div className="flex items-start gap-2">
-          <button {...attributes} {...listeners} className="touch-none mt-1">
+      <CardContent className="p-3 space-y-1.5">
+        {/* Grip + Platform */}
+        <div className="flex items-center gap-1.5">
+          <button {...attributes} {...listeners} className="touch-none shrink-0">
             <GripVertical className="h-4 w-4 text-muted-foreground" />
           </button>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-lg">{platformConfig?.icon}</span>
-              <span className="text-xs text-muted-foreground truncate">{platformConfig?.label}</span>
+          {platform ? (
+            <div className="flex items-center gap-1.5 min-w-0 flex-1">
+              <PlatformIcon icon={platform.icon} size="sm" />
+              <span className="text-xs font-medium text-foreground truncate">{platform.name}</span>
             </div>
-            <p className="text-xs font-medium truncate mt-1">{ideaTitle}</p>
-            
-            <div className="flex items-center gap-2 mt-2">
-              {variation.scheduled_date && (
-                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Calendar className="h-3 w-3" />
-                  <span className="tabular-nums">{variation.scheduled_date.slice(5).replace('-', '/')}</span>
-                </div>
-              )}
-              {variation.checklist && variation.checklist.length > 0 && (
-                <>
-                  <Progress value={checklistProgress} className="w-10 h-1" />
-                  <span className="text-xs text-muted-foreground tabular-nums">{Math.round(checklistProgress)}%</span>
-                </>
-              )}
-            </div>
-          </div>
+          ) : (
+            <span className="text-xs text-muted-foreground">Plataforma</span>
+          )}
         </div>
+
+        {/* Idea title */}
+        <h4 className="font-semibold text-sm leading-snug">{ideaTitle}</h4>
+
+        {/* Type badge */}
+        <div className="flex items-center gap-1 flex-wrap">
+          <Badge variant="outline" className={cn('text-[10px] gap-0.5 font-medium border py-0 h-5', typeInfo.color)}>
+            <span>{typeInfo.icon}</span>
+            {typeInfo.label}
+          </Badge>
+        </div>
+
+        {/* Date */}
+        {variation.scheduled_date && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Calendar className="h-3 w-3 shrink-0" />
+            <span className="tabular-nums">{formatDate(variation.scheduled_date)}</span>
+          </div>
+        )}
+
+        {/* Checklist progress */}
+        {variation.checklist && variation.checklist.length > 0 && (
+          <div className="flex items-center gap-2 pt-1 border-t border-border/50">
+            <Progress value={checklistProgress} className="w-14 h-1.5" />
+            <span className="text-[10px] text-muted-foreground tabular-nums">{Math.round(checklistProgress)}%</span>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 }
 
-export function KanbanBoard({ ideas, onUpdateIdea, onUpdateVariation, onSelectIdea, viewMode }: KanbanBoardProps) {
+export function KanbanBoard({ ideas, onUpdateIdea, onUpdateVariation, onSelectIdea, viewMode, platforms = [], nodes = [], products = [], ideaTypes = [] }: KanbanBoardProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
@@ -156,7 +308,6 @@ export function KanbanBoard({ ideas, onUpdateIdea, onUpdateVariation, onSelectId
     useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 5 } })
   );
 
-  // Group by status
   const columns = useMemo(() => {
     if (viewMode === 'ideas') {
       return Object.entries(DIGITAL_STATUS).map(([status, config]) => ({
@@ -165,11 +316,10 @@ export function KanbanBoard({ ideas, onUpdateIdea, onUpdateVariation, onSelectId
         items: ideas.filter(i => i.status === status),
       }));
     } else {
-      // Flatten all variations
-      const allVariations = ideas.flatMap(idea => 
-        (idea.variations || []).map(v => ({ ...v, ideaTitle: idea.title }))
+      const allVariations = ideas.flatMap(idea =>
+        (idea.variations || []).map(v => ({ ...v, ideaTitle: idea.title, ideaType: idea.idea_type }))
       );
-      
+
       return Object.entries(DIGITAL_STATUS).map(([status, config]) => ({
         status,
         config,
@@ -180,21 +330,17 @@ export function KanbanBoard({ ideas, onUpdateIdea, onUpdateVariation, onSelectId
 
   const handleDragStart = (event: any) => {
     setActiveId(event.active.id);
-    // Haptic feedback
     if (navigator.vibrate) navigator.vibrate(50);
   };
 
   const handleDragEnd = (event: any) => {
     const { active, over } = event;
     setActiveId(null);
-
     if (!over) return;
 
-    // Find which column the item was dropped into
-    const overColumn = columns.find(col => 
+    const overColumn = columns.find(col =>
       col.items.some(item => item.id === over.id) || col.status === over.id
     );
-
     if (!overColumn) return;
 
     const newStatus = overColumn.status as keyof typeof DIGITAL_STATUS;
@@ -205,7 +351,6 @@ export function KanbanBoard({ ideas, onUpdateIdea, onUpdateVariation, onSelectId
         onUpdateIdea(active.id, { status: newStatus });
       }
     } else {
-      // Find the variation
       const activeVariation = ideas.flatMap(i => i.variations || []).find(v => v.id === active.id);
       if (activeVariation && activeVariation.status !== newStatus) {
         onUpdateVariation(active.id, { status: newStatus });
@@ -220,7 +365,7 @@ export function KanbanBoard({ ideas, onUpdateIdea, onUpdateVariation, onSelectId
     } else {
       for (const idea of ideas) {
         const variation = idea.variations?.find(v => v.id === activeId);
-        if (variation) return { ...variation, ideaTitle: idea.title };
+        if (variation) return { ...variation, ideaTitle: idea.title, ideaType: idea.idea_type };
       }
     }
     return null;
@@ -235,10 +380,7 @@ export function KanbanBoard({ ideas, onUpdateIdea, onUpdateVariation, onSelectId
     >
       <div className="flex gap-3 overflow-x-auto pb-4 -mx-4 px-4">
         {columns.map(({ status, config, items }) => (
-          <div
-            key={status}
-            className="flex-shrink-0 w-64 md:w-72"
-          >
+          <div key={status} className="flex-shrink-0 w-72 md:w-80">
             <Card className="h-full">
               <CardHeader className="py-3 px-4">
                 <div className="flex items-center justify-between">
@@ -257,25 +399,32 @@ export function KanbanBoard({ ideas, onUpdateIdea, onUpdateVariation, onSelectId
                   strategy={verticalListSortingStrategy}
                   id={status}
                 >
-                  {items.map(item => (
+                  {items.map(item =>
                     viewMode === 'ideas' ? (
                       <SortableIdeaCard
                         key={item.id}
                         idea={item as DigitalIdea}
                         onClick={() => onSelectIdea((item as DigitalIdea).id)}
+                        platforms={platforms}
+                        nodes={nodes}
+                        products={products}
+                        ideaTypes={ideaTypes}
                       />
                     ) : (
                       <SortableVariationCard
                         key={item.id}
                         variation={item as DigitalVariation & { ideaTitle: string }}
                         ideaTitle={(item as any).ideaTitle}
+                        ideaType={(item as any).ideaType}
                         onClick={() => {
                           const idea = ideas.find(i => i.variations?.some(v => v.id === item.id));
                           if (idea) onSelectIdea(idea.id);
                         }}
+                        platforms={platforms}
+                        ideaTypes={ideaTypes}
                       />
                     )
-                  ))}
+                  )}
                 </SortableContext>
 
                 {items.length === 0 && (
@@ -299,10 +448,7 @@ export function KanbanBoard({ ideas, onUpdateIdea, onUpdateVariation, onSelectId
         ) : activeItem ? (
           <Card className="shadow-lg rotate-3 cursor-grabbing opacity-90">
             <CardContent className="p-3">
-              <div className="flex items-center gap-2">
-                <span className="text-lg">{PLATFORMS[(activeItem as any).platform]?.icon}</span>
-                <span className="text-xs">{(activeItem as any).ideaTitle}</span>
-              </div>
+              <span className="text-xs">{(activeItem as any).ideaTitle}</span>
             </CardContent>
           </Card>
         ) : null}

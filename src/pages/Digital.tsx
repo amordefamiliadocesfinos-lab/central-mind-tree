@@ -400,6 +400,10 @@ export default function Digital() {
                 onUpdateVariation={updateVariation}
                 onSelectIdea={setSelectedIdea}
                 viewMode={kanbanMode}
+                platforms={activePlatforms}
+                nodes={nodes}
+                products={products}
+                ideaTypes={ideaTypes}
               />
             ) : (
               <div className="space-y-3">
