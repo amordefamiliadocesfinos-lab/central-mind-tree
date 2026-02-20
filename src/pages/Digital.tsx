@@ -69,6 +69,9 @@ export default function Digital() {
   const { products } = useProductsList();
   const { ideaTypes } = useIdeaTypes();
   const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [nodeFilter, setNodeFilter] = useState<string>('all');
+  const [productFilter, setProductFilter] = useState<string>('all');
+  const [periodFilter, setPeriodFilter] = useState<string>('all');
 
   // Fetch nodes for linking
   useEffect(() => {
@@ -95,10 +98,26 @@ export default function Digital() {
 
   const selectedIdeaData = ideas.find(i => i.id === selectedIdea);
 
-  // Apply type filter on top of hook filters
-  const displayedIdeas = typeFilter === 'all'
-    ? filteredIdeas
-    : filteredIdeas.filter(i => i.idea_type === typeFilter);
+  // Apply advanced filters on top of hook filters
+  const displayedIdeas = filteredIdeas.filter(idea => {
+    if (typeFilter !== 'all' && idea.idea_type !== typeFilter) return false;
+    if (nodeFilter !== 'all' && idea.node_id !== nodeFilter) return false;
+    if (productFilter !== 'all' && idea.product_id !== productFilter) return false;
+    if (periodFilter !== 'all') {
+      const now = new Date();
+      const vars = idea.variations || [];
+      const dates = vars.map(v => v.scheduled_date).filter(Boolean) as string[];
+      if (dates.length === 0) return periodFilter === 'sem_data';
+      if (periodFilter === 'sem_data') return false;
+      const s = new Date(now); const e = new Date(now);
+      if (periodFilter === 'esta_semana') { s.setDate(now.getDate() - now.getDay()); e.setDate(s.getDate() + 6); }
+      else if (periodFilter === 'este_mes') { s.setDate(1); e.setMonth(e.getMonth() + 1, 0); }
+      else if (periodFilter === 'proximo_mes') { s.setMonth(s.getMonth() + 1, 1); e.setMonth(e.getMonth() + 2, 0); }
+      const ss = s.toISOString().slice(0, 10); const ee = e.toISOString().slice(0, 10);
+      if (!dates.some(d => d >= ss && d <= ee)) return false;
+    }
+    return true;
+  });
 
   if (loading) {
     return (
@@ -255,18 +274,6 @@ export default function Digital() {
                 </SelectContent>
               </Select>
 
-              {viewMode === 'kanban' && (
-                <Select value={kanbanMode} onValueChange={(v) => setKanbanMode(v as any)}>
-                  <SelectTrigger className="h-8 w-auto min-w-[100px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ideas">Por Ideia</SelectItem>
-                    <SelectItem value="variations">Por Variação</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-
               <Select value={typeFilter} onValueChange={setTypeFilter}>
                 <SelectTrigger className="h-8 w-auto min-w-[100px]">
                   <SelectValue placeholder="Tipo" />
@@ -283,6 +290,64 @@ export default function Digital() {
                   ))}
                 </SelectContent>
               </Select>
+
+              {nodes.length > 0 && (
+                <Select value={nodeFilter} onValueChange={setNodeFilter}>
+                  <SelectTrigger className="h-8 w-auto min-w-[110px]">
+                    <SelectValue placeholder="Vínculo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos Vínculos</SelectItem>
+                    {nodes.map(n => (
+                      <SelectItem key={n.id} value={n.id}>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: n.color }} />
+                          {n.title}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
+              {products.length > 0 && (
+                <Select value={productFilter} onValueChange={setProductFilter}>
+                  <SelectTrigger className="h-8 w-auto min-w-[110px]">
+                    <SelectValue placeholder="Produto" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos Produtos</SelectItem>
+                    {products.map(p => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+
+              <Select value={periodFilter} onValueChange={setPeriodFilter}>
+                <SelectTrigger className="h-8 w-auto min-w-[110px]">
+                  <SelectValue placeholder="Período" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os Períodos</SelectItem>
+                  <SelectItem value="esta_semana">Esta Semana</SelectItem>
+                  <SelectItem value="este_mes">Este Mês</SelectItem>
+                  <SelectItem value="proximo_mes">Próximo Mês</SelectItem>
+                  <SelectItem value="sem_data">Sem Data</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {viewMode === 'kanban' && (
+                <Select value={kanbanMode} onValueChange={(v) => setKanbanMode(v as any)}>
+                  <SelectTrigger className="h-8 w-auto min-w-[100px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ideas">Por Ideia</SelectItem>
+                    <SelectItem value="variations">Por Variação</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </div>
 
             {/* Stats */}
