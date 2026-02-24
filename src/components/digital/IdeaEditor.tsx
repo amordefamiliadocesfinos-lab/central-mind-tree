@@ -409,7 +409,7 @@ export function IdeaEditor({
               {variations.map(v => {
                 const p = getPlatform(v.platform);
                 return (
-                  <span key={v.id} className="text-lg" title={p?.name}>{p?.icon || '📱'}</span>
+                  <span key={v.id} title={p?.name}><PlatformIcon icon={p?.icon || '📱'} size="md" /></span>
                 );
               })}
             </div>
@@ -825,7 +825,7 @@ export function IdeaEditor({
                           className="flex items-center gap-3 min-w-0 flex-1"
                           onClick={() => setSelectedVariation(variation)}
                         >
-                          <span className="text-2xl">{platformConfig?.icon || '📱'}</span>
+                          <PlatformIcon icon={platformConfig?.icon || '📱'} size="lg" />
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
                               <span className="font-medium truncate">

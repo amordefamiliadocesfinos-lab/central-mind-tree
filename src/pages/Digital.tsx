@@ -4,6 +4,7 @@ import { useIdeaTypes } from '@/hooks/useIdeaTypes';
 import { useProductsList } from '@/hooks/useProductsList';
 import { IdeaCard, IdeaEditor, KanbanBoard, MediaLibrary, MetricsChart, BatchVariationDialog, PlatformsManager, DigitalCalendar } from '@/components/digital';
 import { IdeaTypesManager } from '@/components/digital/IdeaTypesManager';
+import { PlatformIcon } from '@/components/digital/PlatformsManager';
 import { TrendsPanel } from '@/components/digital/TrendsPanel';
 import { InteractionsPanel } from '@/components/digital/InteractionsPanel';
 import { ServicePanel } from '@/components/digital/ServicePanel';
@@ -265,7 +266,7 @@ export default function Digital() {
                     platforms.map(platform => (
                       <SelectItem key={platform.id} value={platform.id}>
                         <div className="flex items-center gap-2">
-                          <span>{platform.icon}</span>
+                          <PlatformIcon icon={platform.icon} size="sm" />
                           {platform.name}
                         </div>
                       </SelectItem>
