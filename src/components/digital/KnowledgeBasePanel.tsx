@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PlatformIcon } from './PlatformsManager';
 import { useKnowledgeBase, KnowledgeItem } from '@/hooks/useKnowledgeBase';
 import { usePlatforms } from '@/hooks/usePlatforms';
 import { Button } from '@/components/ui/button';
@@ -201,7 +202,7 @@ export function KnowledgeBasePanel() {
                       <SelectItem value="__none__">Todas as plataformas</SelectItem>
                       {activePlatforms.map((p) => (
                         <SelectItem key={p.id} value={p.id}>
-                          {p.icon} {p.name}
+                          <span className="flex items-center gap-1"><PlatformIcon icon={p.icon} size="sm" /> {p.name}</span>
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -302,11 +303,16 @@ export function KnowledgeBasePanel() {
                           <div className="flex-1 space-y-2">
                             <div className="flex items-center gap-2">
                               <h4 className="font-medium">{item.question}</h4>
-                              {getPlatformName(item.platform_id) && (
-                                <Badge variant="secondary" className="text-xs">
-                                  {getPlatformName(item.platform_id)}
+                            {(() => {
+                              const pName = getPlatformName(item.platform_id);
+                              const platform = item.platform_id ? activePlatforms.find(p => p.id === item.platform_id) : null;
+                              return pName && platform ? (
+                                <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                                  <PlatformIcon icon={platform.icon} size="sm" />
+                                  {platform.name}
                                 </Badge>
-                              )}
+                              ) : null;
+                            })()}
                             </div>
                             <p className="text-sm text-muted-foreground">{item.answer}</p>
                             {item.keywords && item.keywords.length > 0 && (

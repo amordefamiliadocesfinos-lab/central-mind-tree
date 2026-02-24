@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Platform } from '@/hooks/usePlatforms';
+import { PlatformIcon } from './PlatformsManager';
 import { usePlatformGroups } from '@/hooks/usePlatformGroups';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -194,7 +195,7 @@ export function BatchVariationDialog({
           onClick={() => togglePlatform(platform.id)}
         >
           <Checkbox checked={isSelected} onCheckedChange={() => togglePlatform(platform.id)} />
-          <span className="text-lg">{platform.icon}</span>
+          <PlatformIcon icon={platform.icon} size="md" />
           <span className="text-sm flex-1 truncate">{platform.name}</span>
           {platform.aspect_ratio && (
             <Badge variant="outline" className="text-[10px]">
@@ -232,7 +233,7 @@ export function BatchVariationDialog({
                 ) : (
                   <ChevronRight className="h-4 w-4 text-muted-foreground" />
                 )}
-                <span className="text-lg">{platform.icon}</span>
+                <PlatformIcon icon={platform.icon} size="md" />
                 <span className="text-sm flex-1 truncate">{platform.name}</span>
                 <Badge variant="secondary" className="text-[10px]">
                   {selectedCount}/{descendantLeafIds.length}
@@ -276,7 +277,7 @@ export function BatchVariationDialog({
               onClick={() => togglePlatform(platform.id)}
             >
               <Checkbox checked={isSelected} onCheckedChange={() => togglePlatform(platform.id)} />
-              <span className="text-lg">{platform.icon}</span>
+              <PlatformIcon icon={platform.icon} size="md" />
               <div className="flex-1 min-w-0">
                 <div className="text-sm truncate">{platform.name}</div>
                 <div className="text-[10px] text-muted-foreground truncate">

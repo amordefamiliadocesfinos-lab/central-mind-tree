@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useIdeaTypes } from '@/hooks/useIdeaTypes';
 import { DigitalIdea, DigitalVariation, DIGITAL_STATUS } from '@/hooks/useDigital';
 import { Platform } from '@/hooks/usePlatforms';
+import { PlatformIcon } from './PlatformsManager';
 import { useProductsList } from '@/hooks/useProductsList';
 import { ProductSelector } from './ProductSelector';
 import { Button } from '@/components/ui/button';
@@ -895,7 +896,7 @@ export function IdeaEditor({
                                         handleDuplicate(variation.id, platform.id);
                                       }}
                                     >
-                                      {platform.icon} {platform.name}
+                                      <span className="flex items-center gap-1"><PlatformIcon icon={platform.icon} size="sm" /> {platform.name}</span>
                                     </Button>
                                   ))}
                                 </Card>
