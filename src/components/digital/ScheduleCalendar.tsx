@@ -3,6 +3,7 @@ import { DigitalVariation, DIGITAL_STATUS } from '@/hooks/useDigital';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { PlatformIcon } from './PlatformsManager';
 import { cn } from '@/lib/utils';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, parseISO, startOfWeek, endOfWeek } from 'date-fns';
@@ -230,7 +231,7 @@ export function ScheduleCalendar({ variations, onSelectVariation, platforms = []
                     onClick={() => onSelectVariation(v)}
                   >
                     <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-lg shrink-0">{platform.icon}</span>
+                      <span className="shrink-0"><PlatformIcon icon={platform.icon} size="md" /></span>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <span className="text-xs font-bold bg-muted px-1.5 py-0.5 rounded shrink-0">{abbr}</span>

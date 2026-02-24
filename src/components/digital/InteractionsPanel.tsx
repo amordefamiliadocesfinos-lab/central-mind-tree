@@ -6,6 +6,7 @@ import {
   INTERACTION_TYPES,
 } from '@/hooks/useDigitalInteractions';
 import { usePlatforms } from '@/hooks/usePlatforms';
+import { PlatformIcon } from './PlatformsManager';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -278,7 +279,7 @@ export function InteractionsPanel() {
                     <SelectItem value="__none__">Nenhuma</SelectItem>
                     {activePlatforms.map((p) => (
                       <SelectItem key={p.id} value={p.id}>
-                        {p.icon} {p.name}
+                        <span className="flex items-center gap-1"><PlatformIcon icon={p.icon} size="sm" /> {p.name}</span>
                       </SelectItem>
                     ))}
                   </SelectContent>

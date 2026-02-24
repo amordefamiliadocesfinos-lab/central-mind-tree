@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useServiceChat, ServiceConversation, ServiceMessage, SalesChannelEntry } from '@/hooks/useServiceChat';
 import { usePlatforms } from '@/hooks/usePlatforms';
+import { PlatformIcon } from './PlatformsManager';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -165,7 +166,7 @@ export function ServicePanel() {
             <SelectItem value="all">Todas ({totalOpen})</SelectItem>
             {platformCounts.map(p => (
               <SelectItem key={p.id} value={p.id}>
-                {p.icon} {p.name} ({p.count})
+                <span className="flex items-center gap-1"><PlatformIcon icon={p.icon} size="sm" /> {p.name} ({p.count})</span>
               </SelectItem>
             ))}
           </SelectContent>
@@ -214,7 +215,7 @@ export function ServicePanel() {
                       filterPlatform === p.id ? 'bg-primary/10 text-primary font-medium' : 'hover:bg-muted'
                     )}
                   >
-                    <span>{p.icon}</span>
+                    <PlatformIcon icon={p.icon} size="sm" />
                     <span className="truncate">{p.name}</span>
                     {p.count > 0 && (
                       <Badge variant="secondary" className="ml-auto text-xs">{p.count}</Badge>
@@ -294,7 +295,7 @@ export function ServicePanel() {
               <SelectContent>
                 <SelectItem value="__none__">Nenhuma</SelectItem>
                 {activePlatforms.map(p => (
-                  <SelectItem key={p.id} value={p.id}>{p.icon} {p.name}</SelectItem>
+                  <SelectItem key={p.id} value={p.id}><span className="flex items-center gap-1"><PlatformIcon icon={p.icon} size="sm" /> {p.name}</span></SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -359,7 +360,7 @@ function ConversationList({ conversations, platforms, activeId, onSelect }: {
                 )}
               </div>
               <div className="flex items-center gap-1.5 mt-0.5">
-                {platform && <span className="text-xs">{platform.icon}</span>}
+                {platform && <PlatformIcon icon={platform.icon} size="sm" />}
                 <span className="text-xs text-muted-foreground truncate">
                   {conv.last_message_preview || 'Nova conversa'}
                 </span>
@@ -422,7 +423,7 @@ function ChatHeader({ conversation, platform, onBack, onUpdateFunnel, onClose, o
             {conversation.contact_name || conversation.contact_handle || 'Cliente'}
           </p>
           <div className="flex items-center gap-1.5">
-            {platform && <span className="text-xs">{platform.icon} {platform.name}</span>}
+            {platform && <span className="text-xs flex items-center gap-1"><PlatformIcon icon={platform.icon} size="sm" /> {platform.name}</span>}
             {conversation.contact_handle && <span className="text-xs text-muted-foreground">{conversation.contact_handle}</span>}
           </div>
         </div>
@@ -511,7 +512,7 @@ function ChatHeader({ conversation, platform, onBack, onUpdateFunnel, onClose, o
               <SelectContent>
                 <SelectItem value="__none__">+ Adicionar canal...</SelectItem>
                 {platforms.map(p => (
-                  <SelectItem key={p.id} value={p.id}>{p.icon} {p.name}</SelectItem>
+                  <SelectItem key={p.id} value={p.id}><span className="flex items-center gap-1"><PlatformIcon icon={p.icon} size="sm" /> {p.name}</span></SelectItem>
                 ))}
               </SelectContent>
             </Select>
