@@ -92,6 +92,17 @@ function SortableIdeaCard({
   const firstDate = scheduledDates[0];
   const lastDate = scheduledDates[scheduledDates.length - 1];
 
+  // First media thumbnail from idea or first variation
+  const firstMedia = (() => {
+    const ideaMedia = idea.media_urls as string[] | null;
+    if (ideaMedia && ideaMedia.length > 0) return ideaMedia[0];
+    for (const v of variations) {
+      const vMedia = v.media_urls as string[] | null;
+      if (vMedia && vMedia.length > 0) return vMedia[0];
+    }
+    return null;
+  })();
+
   const toggleExpand = (e: React.MouseEvent) => {
     e.stopPropagation();
     setExpanded(prev => !prev);
@@ -108,53 +119,70 @@ function SortableIdeaCard({
       )}
       onClick={onClick}
     >
-      <CardContent className="p-3 space-y-1.5">
-        {/* Grip + Platform icons (no names) */}
-        <div className="flex items-center gap-1.5">
-          <button {...attributes} {...listeners} className="touch-none shrink-0">
-            <GripVertical className="h-4 w-4 text-muted-foreground" />
-          </button>
-          {uniquePlatforms.size > 0 ? (
-            <div className="flex items-center gap-1 flex-1 min-w-0 flex-wrap">
-              {Array.from(uniquePlatforms.values()).map(p => (
-                <Tooltip key={p.id}>
-                  <TooltipTrigger asChild>
-                    <span><PlatformIcon icon={p.icon} size="sm" /></span>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="text-xs">{p.name}</TooltipContent>
-                </Tooltip>
-              ))}
+      <CardContent className="p-3">
+        <div className="flex gap-2.5">
+          {/* Main content */}
+          <div className="flex-1 min-w-0 space-y-1.5">
+            {/* Grip + Platform icons (no names) */}
+            <div className="flex items-center gap-1.5">
+              <button {...attributes} {...listeners} className="touch-none shrink-0">
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
+              </button>
+              {uniquePlatforms.size > 0 ? (
+                <div className="flex items-center gap-1 flex-1 min-w-0 flex-wrap">
+                  {Array.from(uniquePlatforms.values()).map(p => (
+                    <Tooltip key={p.id}>
+                      <TooltipTrigger asChild>
+                        <span><PlatformIcon icon={p.icon} size="sm" /></span>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="text-xs">{p.name}</TooltipContent>
+                    </Tooltip>
+                  ))}
+                </div>
+              ) : (
+                <span className="text-xs text-muted-foreground">Sem plataforma</span>
+              )}
+              {/* Expand toggle */}
+              <button
+                onClick={toggleExpand}
+                className="shrink-0 p-0.5 rounded hover:bg-muted transition-colors"
+              >
+                {expanded ? (
+                  <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
+                ) : (
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                )}
+              </button>
             </div>
-          ) : (
-            <span className="text-xs text-muted-foreground">Sem plataforma</span>
+
+            {/* Title */}
+            <h4 className="font-semibold text-sm leading-snug line-clamp-2">{idea.title}</h4>
+
+            {/* Type badge */}
+            <div className="flex items-center gap-1 flex-wrap">
+              <Badge variant="outline" className={cn('text-[10px] gap-0.5 font-medium border py-0 h-5', ideaType.color)}>
+                <span>{ideaType.icon}</span>
+                {ideaType.label}
+              </Badge>
+            </div>
+          </div>
+
+          {/* Thumbnail */}
+          {firstMedia && (
+            <div className="shrink-0 w-14 h-14 rounded-md overflow-hidden bg-muted/50 self-center">
+              <img
+                src={firstMedia}
+                alt=""
+                className="w-full h-full object-cover"
+                loading="lazy"
+              />
+            </div>
           )}
-          {/* Expand toggle */}
-          <button
-            onClick={toggleExpand}
-            className="shrink-0 p-0.5 rounded hover:bg-muted transition-colors"
-          >
-            {expanded ? (
-              <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
-            ) : (
-              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-            )}
-          </button>
-        </div>
-
-        {/* Title */}
-        <h4 className="font-semibold text-sm leading-snug line-clamp-2">{idea.title}</h4>
-
-        {/* Type badge (no KPI) */}
-        <div className="flex items-center gap-1 flex-wrap">
-          <Badge variant="outline" className={cn('text-[10px] gap-0.5 font-medium border py-0 h-5', ideaType.color)}>
-            <span>{ideaType.icon}</span>
-            {ideaType.label}
-          </Badge>
         </div>
 
         {/* Expandable details */}
         {expanded && (
-          <div className="space-y-1.5 pt-1 border-t border-border/50 animate-in fade-in-0 slide-in-from-top-1 duration-200">
+          <div className="space-y-1.5 pt-1.5 mt-1.5 border-t border-border/50 animate-in fade-in-0 slide-in-from-top-1 duration-200">
             {idea.kpi && (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <span className="font-medium uppercase">{idea.kpi}</span>
@@ -188,7 +216,7 @@ function SortableIdeaCard({
         )}
 
         {/* Footer: date + progress */}
-        <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/50">
+        <div className="flex items-center justify-between gap-2 pt-1.5 mt-1.5 border-t border-border/50">
           <div className="flex items-center gap-1 text-[11px] text-muted-foreground min-w-0">
             {firstDate && (
               <>
