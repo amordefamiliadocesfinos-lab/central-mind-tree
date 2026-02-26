@@ -404,9 +404,9 @@ export function useRoutine(options: UseRoutineOptions = {}) {
 
   // Auto-plan day
   const autoPlanDay = useCallback(async (dateStr?: string | Date) => {
-    const targetDate = dateStr 
-      ? (dateStr instanceof Date ? format(dateStr, 'yyyy-MM-dd') : dateStr)
-      : format(selectedDate, 'yyyy-MM-dd');
+    const targetDate = (typeof dateStr === 'string')
+      ? dateStr
+      : (dateStr instanceof Date ? format(dateStr, 'yyyy-MM-dd') : format(selectedDate, 'yyyy-MM-dd'));
     
     // Clear existing blocks for the day
     const { error: deleteError } = await supabase
