@@ -27,18 +27,18 @@ export function TimerWidget({ linesMode, onLinesModeChange }: TimerWidgetProps) 
     loadTimerState();
   }, []);
 
+  // Detect timer completion via separate effect
   useEffect(() => {
-    if (status === "running" && remainingSeconds > 0) {
+    if (remainingSeconds <= 0 && status === "running") {
+      handleStop();
+      toast({ title: "Timer finalizado!" });
+    }
+  }, [remainingSeconds, status]);
+
+  useEffect(() => {
+    if (status === "running") {
       intervalRef.current = window.setInterval(() => {
-        setRemainingSeconds((prev) => {
-          const next = prev - 1;
-          if (next <= 0) {
-            handleStop();
-            toast({ title: "Timer finalizado!" });
-            return 0;
-          }
-          return next;
-        });
+        setRemainingSeconds((prev) => Math.max(prev - 1, 0));
       }, 1000);
     } else {
       if (intervalRef.current) {
@@ -52,13 +52,27 @@ export function TimerWidget({ linesMode, onLinesModeChange }: TimerWidgetProps) 
         clearInterval(intervalRef.current);
       }
     };
-  }, [status, remainingSeconds]);
+  }, [status]);
+
+  const statusRef = useRef(status);
+  statusRef.current = status;
+  const remainingRef = useRef(remainingSeconds);
+  remainingRef.current = remainingSeconds;
+
+  // Save periodically (every 5s) instead of every tick
+  useEffect(() => {
+    if (!stateIdRef.current) return;
+    // Save immediately on status change
+    saveTimerState();
+  }, [status]);
 
   useEffect(() => {
-    if (stateIdRef.current) {
+    if (!stateIdRef.current || status !== 'running') return;
+    const saveInterval = window.setInterval(() => {
       saveTimerState();
-    }
-  }, [remainingSeconds, status]);
+    }, 5000);
+    return () => clearInterval(saveInterval);
+  }, [status]);
 
   const loadTimerState = async () => {
     const { data, error } = await supabase
@@ -69,8 +83,30 @@ export function TimerWidget({ linesMode, onLinesModeChange }: TimerWidgetProps) 
 
     if (!error && data) {
       stateIdRef.current = data.id;
-      setRemainingSeconds(data.remaining_seconds);
-      setStatus(data.status as "stopped" | "running" | "paused");
+      const savedStatus = data.status as "stopped" | "running" | "paused";
+
+      if (savedStatus === "running" && data.last_update) {
+        const elapsedSinceLastSave = Math.floor(
+          (Date.now() - new Date(data.last_update).getTime()) / 1000
+        );
+        const adjusted = data.remaining_seconds - elapsedSinceLastSave;
+
+        if (adjusted <= 0) {
+          setRemainingSeconds(0);
+          setStatus("stopped");
+          await supabase
+            .from("timer_state")
+            .update({ remaining_seconds: 0, status: "stopped", last_update: new Date().toISOString() })
+            .eq("id", data.id);
+          toast({ title: "Timer finalizado!" });
+        } else {
+          setRemainingSeconds(adjusted);
+          setStatus("running");
+        }
+      } else {
+        setRemainingSeconds(data.remaining_seconds);
+        setStatus(savedStatus);
+      }
     }
   };
 
@@ -80,8 +116,8 @@ export function TimerWidget({ linesMode, onLinesModeChange }: TimerWidgetProps) 
     await supabase
       .from("timer_state")
       .update({
-        remaining_seconds: remainingSeconds,
-        status: status,
+        remaining_seconds: remainingRef.current,
+        status: statusRef.current,
         last_update: new Date().toISOString(),
       })
       .eq("id", stateIdRef.current);

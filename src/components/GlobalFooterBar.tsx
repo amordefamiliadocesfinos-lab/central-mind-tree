@@ -273,20 +273,38 @@ export function GlobalFooterBar() {
   // Timer countdown logic - use ref-based interval to avoid restart on every tick
   const statusRef = useRef(status);
   statusRef.current = status;
+  const remainingRef = useRef(remainingSeconds);
+  remainingRef.current = remainingSeconds;
+  const lastSavedRef = useRef(0);
+
+  // Detect timer completion via a separate effect (no side effects inside setState updater)
+  useEffect(() => {
+    if (remainingSeconds <= 0 && status === "running") {
+      // Timer just hit zero while running — complete it
+      setStatus("stopped");
+      playAlertSound();
+      notify("Timer finalizado!", {
+        body: "Seu tempo de foco terminou.",
+        tag: "timer-complete",
+      });
+      toast({ title: "Timer finalizado!" });
+
+      // Force save 0 immediately
+      if (stateId) {
+        supabase
+          .from("timer_state")
+          .update({ remaining_seconds: 0, status: "stopped", last_update: new Date().toISOString() })
+          .eq("id", stateId);
+      }
+    }
+  }, [remainingSeconds, status]);
 
   useEffect(() => {
     let intervalId: number | null = null;
 
     if (status === "running") {
       intervalId = window.setInterval(() => {
-        setRemainingSeconds((prev) => {
-          const next = prev - 1;
-          if (next <= 0) {
-            handleTimerComplete();
-            return 0;
-          }
-          return next;
-        });
+        setRemainingSeconds((prev) => Math.max(prev - 1, 0));
       }, 1000);
     }
 
@@ -294,11 +312,6 @@ export function GlobalFooterBar() {
       if (intervalId) clearInterval(intervalId);
     };
   }, [status]);
-
-  // Save timer state periodically (every 5s) and on status change, not every tick
-  const remainingRef = useRef(remainingSeconds);
-  remainingRef.current = remainingSeconds;
-  const lastSavedRef = useRef(0);
 
   useEffect(() => {
     if (!stateId) return;
@@ -419,20 +432,7 @@ export function GlobalFooterBar() {
       .eq("id", stateId);
   };
 
-  const handleTimerComplete = () => {
-    setStatus("stopped");
-    
-    // Play sound
-    playAlertSound();
-    
-    // Show notification (works even in other tabs)
-    notify("Timer finalizado!", {
-      body: "Seu tempo de foco terminou.",
-      tag: "timer-complete",
-    });
-
-    toast({ title: "Timer finalizado!" });
-  };
+  // handleTimerComplete is now handled via the useEffect that watches remainingSeconds reaching 0
 
   const handleStart = async () => {
     if (remainingSeconds > 0) {
