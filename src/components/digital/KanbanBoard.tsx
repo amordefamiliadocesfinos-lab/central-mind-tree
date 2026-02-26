@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { Calendar, GripVertical } from 'lucide-react';
+import { Calendar, ChevronDown, ChevronUp, GripVertical, LinkIcon, Package, Target, Users } from 'lucide-react';
 
 interface Node {
   id: string;
@@ -56,6 +56,7 @@ function SortableIdeaCard({
   products?: ProductListItem[];
   ideaTypes?: IdeaType[];
 }) {
+  const [expanded, setExpanded] = useState(false);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: idea.id,
   });
@@ -78,7 +79,6 @@ function SortableIdeaCard({
     const p = getPlatform(v.platform);
     if (p && !uniquePlatforms.has(p.id)) uniquePlatforms.set(p.id, p);
   });
-  const primaryPlatform = uniquePlatforms.size > 0 ? Array.from(uniquePlatforms.values())[0] : null;
 
   const dynamicType = ideaTypes.find(t => t.key === idea.idea_type);
   const ideaType = dynamicType
@@ -92,6 +92,11 @@ function SortableIdeaCard({
   const firstDate = scheduledDates[0];
   const lastDate = scheduledDates[scheduledDates.length - 1];
 
+  const toggleExpand = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpanded(prev => !prev);
+  };
+
   return (
     <Card
       ref={setNodeRef}
@@ -104,51 +109,83 @@ function SortableIdeaCard({
       onClick={onClick}
     >
       <CardContent className="p-3 space-y-1.5">
-        {/* Grip + Platform header */}
+        {/* Grip + Platform icons (no names) */}
         <div className="flex items-center gap-1.5">
           <button {...attributes} {...listeners} className="touch-none shrink-0">
             <GripVertical className="h-4 w-4 text-muted-foreground" />
           </button>
-          <div className="flex items-center gap-1.5 min-w-0 flex-1">
-            {primaryPlatform ? (
-              <>
-                <PlatformIcon icon={primaryPlatform.icon} size="sm" />
-                <span className="text-xs text-muted-foreground truncate">{primaryPlatform.name}</span>
-              </>
+          {uniquePlatforms.size > 0 ? (
+            <div className="flex items-center gap-1 flex-1 min-w-0 flex-wrap">
+              {Array.from(uniquePlatforms.values()).map(p => (
+                <Tooltip key={p.id}>
+                  <TooltipTrigger asChild>
+                    <span><PlatformIcon icon={p.icon} size="sm" /></span>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">{p.name}</TooltipContent>
+                </Tooltip>
+              ))}
+            </div>
+          ) : (
+            <span className="text-xs text-muted-foreground">Sem plataforma</span>
+          )}
+          {/* Expand toggle */}
+          <button
+            onClick={toggleExpand}
+            className="shrink-0 p-0.5 rounded hover:bg-muted transition-colors"
+          >
+            {expanded ? (
+              <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" />
             ) : (
-              <span className="text-xs text-muted-foreground">Sem plataforma</span>
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
             )}
-            {uniquePlatforms.size > 1 && (
-              <div className="flex items-center gap-0.5 ml-0.5">
-                {Array.from(uniquePlatforms.values()).slice(1, 3).map(p => (
-                  <Tooltip key={p.id}>
-                    <TooltipTrigger asChild>
-                      <span><PlatformIcon icon={p.icon} size="sm" className="opacity-60" /></span>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="text-xs">{p.name}</TooltipContent>
-                  </Tooltip>
-                ))}
-                {uniquePlatforms.size > 3 && (
-                  <span className="text-[10px] text-muted-foreground">+{uniquePlatforms.size - 3}</span>
-                )}
-              </div>
-            )}
-          </div>
+          </button>
         </div>
 
         {/* Title */}
         <h4 className="font-semibold text-sm leading-snug line-clamp-2">{idea.title}</h4>
 
-        {/* Type badge + KPI inline */}
+        {/* Type badge (no KPI) */}
         <div className="flex items-center gap-1 flex-wrap">
           <Badge variant="outline" className={cn('text-[10px] gap-0.5 font-medium border py-0 h-5', ideaType.color)}>
             <span>{ideaType.icon}</span>
             {ideaType.label}
           </Badge>
-          {idea.kpi && (
-            <span className="text-[10px] text-muted-foreground uppercase">• {idea.kpi}</span>
-          )}
         </div>
+
+        {/* Expandable details */}
+        {expanded && (
+          <div className="space-y-1.5 pt-1 border-t border-border/50 animate-in fade-in-0 slide-in-from-top-1 duration-200">
+            {idea.kpi && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="font-medium uppercase">{idea.kpi}</span>
+              </div>
+            )}
+            {linkedNode && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <LinkIcon className="h-3 w-3 shrink-0" />
+                <span className="truncate">{linkedNode.title}</span>
+              </div>
+            )}
+            {linkedProduct && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Package className="h-3 w-3 shrink-0" />
+                <span className="truncate">{linkedProduct.name}</span>
+              </div>
+            )}
+            {idea.objective && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Target className="h-3 w-3 shrink-0" />
+                <span className="line-clamp-2">{idea.objective}</span>
+              </div>
+            )}
+            {idea.target_audience && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Users className="h-3 w-3 shrink-0" />
+                <span className="line-clamp-1">{idea.target_audience}</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Footer: date + progress */}
         <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/50">

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { DigitalIdea, DIGITAL_STATUS } from '@/hooks/useDigital';
 import { Platform } from '@/hooks/usePlatforms';
 import { ProductListItem } from '@/hooks/useProductsList';
@@ -8,7 +9,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { Calendar, ChevronRight, LinkIcon, Package, Target, Users, MoreVertical } from 'lucide-react';
+import { Calendar, ChevronDown, ChevronUp, LinkIcon, Package, Target, Users, MoreVertical } from 'lucide-react';
 
 // Fallback for unknown types
 const DEFAULT_TYPE = { label: 'Outro', icon: '📄', color: 'bg-muted text-muted-foreground border-border' };
@@ -29,6 +30,7 @@ interface IdeaCardProps {
 }
 
 export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products = [], ideaTypes = [] }: IdeaCardProps) {
+  const [expanded, setExpanded] = useState(false);
   const statusConfig = DIGITAL_STATUS[idea.status];
   const variations = idea.variations || [];
   
@@ -61,13 +63,15 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
     }
   });
 
-  // Get the primary platform for the header
-  const primaryPlatform = uniquePlatforms.size > 0 ? Array.from(uniquePlatforms.values())[0] : null;
-
   const formatDate = (d: string) => {
     const parts = d.split('-');
     const months = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
     return `${parseInt(parts[2])} ${months[parseInt(parts[1]) - 1]}`;
+  };
+
+  const toggleExpand = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpanded(prev => !prev);
   };
 
   return (
@@ -80,61 +84,40 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
       onClick={onClick}
     >
       <CardContent className="p-3 sm:p-4 space-y-2.5">
-        {/* Row 1: Platform header + menu */}
+        {/* Row 1: Platform icons (no names) + expand toggle */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 min-w-0">
-            {primaryPlatform ? (
-              <div className="flex items-center gap-1.5">
-                <PlatformIcon icon={primaryPlatform.icon} size="md" />
-                <span className="text-sm font-medium text-foreground truncate">{primaryPlatform.name}</span>
-              </div>
+          <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+            {uniquePlatforms.size > 0 ? (
+              Array.from(uniquePlatforms.values()).map(p => (
+                <Tooltip key={p.id}>
+                  <TooltipTrigger asChild>
+                    <span><PlatformIcon icon={p.icon} size="md" /></span>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="text-xs">{p.name}</TooltipContent>
+                </Tooltip>
+              ))
             ) : (
               <span className="text-sm text-muted-foreground">Sem plataforma</span>
             )}
-            {uniquePlatforms.size > 1 && (
-              <div className="flex items-center gap-0.5 ml-1">
-                {Array.from(uniquePlatforms.values()).slice(1, 4).map(p => (
-                  <Tooltip key={p.id}>
-                    <TooltipTrigger asChild>
-                      <span><PlatformIcon icon={p.icon} size="sm" className="cursor-default opacity-70" /></span>
-                    </TooltipTrigger>
-                    <TooltipContent side="bottom" className="text-xs">{p.name}</TooltipContent>
-                  </Tooltip>
-                ))}
-                {uniquePlatforms.size > 4 && (
-                  <span className="text-[10px] text-muted-foreground font-medium ml-0.5">
-                    +{uniquePlatforms.size - 4}
-                  </span>
-                )}
-              </div>
-            )}
           </div>
-          <MoreVertical className="h-4 w-4 text-muted-foreground shrink-0" />
+          <button
+            onClick={toggleExpand}
+            className="shrink-0 p-0.5 rounded hover:bg-muted transition-colors"
+          >
+            {expanded ? (
+              <ChevronUp className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            )}
+          </button>
         </div>
 
-        {/* Row 2: Type + Status badges */}
+        {/* Row 2: Type badge */}
         <div className="flex items-center gap-1.5 flex-wrap">
           <Badge variant="outline" className={cn('text-[10px] gap-1 font-medium border', ideaType.color)}>
             <span>{ideaType.icon}</span>
             {ideaType.label}
           </Badge>
-          {idea.kpi && (
-            <Badge variant="outline" className="text-[10px] gap-1 font-normal text-muted-foreground uppercase">
-              {idea.kpi}
-            </Badge>
-          )}
-          {linkedNode && (
-            <Badge variant="outline" className="text-[10px] gap-1 font-normal text-muted-foreground">
-              <LinkIcon className="h-2.5 w-2.5" />
-              <span className="truncate max-w-[100px]">{linkedNode.title}</span>
-            </Badge>
-          )}
-          {linkedProduct && (
-            <Badge variant="outline" className="text-[10px] gap-1 font-normal text-muted-foreground border-emerald-500/30">
-              <Package className="h-2.5 w-2.5" />
-              <span className="truncate max-w-[100px]">{linkedProduct.name}</span>
-            </Badge>
-          )}
         </div>
 
         {/* Row 3: Full Title */}
@@ -151,23 +134,42 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
           </div>
         )}
 
-        {/* Row 5: Objective */}
-        {idea.objective && (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Target className="h-3 w-3 shrink-0" />
-            <span className="line-clamp-1">{idea.objective}</span>
+        {/* Expandable details */}
+        {expanded && (
+          <div className="space-y-1.5 pt-1 border-t border-border/50 animate-in fade-in-0 slide-in-from-top-1 duration-200">
+            {idea.kpi && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="font-medium uppercase">{idea.kpi}</span>
+              </div>
+            )}
+            {linkedNode && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <LinkIcon className="h-3 w-3 shrink-0" />
+                <span className="truncate">{linkedNode.title}</span>
+              </div>
+            )}
+            {linkedProduct && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Package className="h-3 w-3 shrink-0" />
+                <span className="truncate">{linkedProduct.name}</span>
+              </div>
+            )}
+            {idea.objective && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Target className="h-3 w-3 shrink-0" />
+                <span className="line-clamp-2">{idea.objective}</span>
+              </div>
+            )}
+            {idea.target_audience && (
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Users className="h-3 w-3 shrink-0" />
+                <span className="line-clamp-1">Público: {idea.target_audience}</span>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Row 6: Target audience */}
-        {idea.target_audience && (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Users className="h-3 w-3 shrink-0" />
-            <span className="line-clamp-1">Público: {idea.target_audience}</span>
-          </div>
-        )}
-
-        {/* Row 7: Variations count + Progress + Status */}
+        {/* Footer: Variations count + Progress + Status */}
         <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/50">
           <div className="flex items-center gap-2 min-w-0">
             {variations.length > 0 && (
