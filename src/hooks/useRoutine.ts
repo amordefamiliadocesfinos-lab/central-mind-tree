@@ -403,8 +403,10 @@ export function useRoutine(options: UseRoutineOptions = {}) {
   }, [fetchBlocks]);
 
   // Auto-plan day
-  const autoPlanDay = useCallback(async (dateStr?: string) => {
-    const targetDate = dateStr || format(selectedDate, 'yyyy-MM-dd');
+  const autoPlanDay = useCallback(async (dateStr?: string | Date) => {
+    const targetDate = dateStr 
+      ? (dateStr instanceof Date ? format(dateStr, 'yyyy-MM-dd') : dateStr)
+      : format(selectedDate, 'yyyy-MM-dd');
     
     // Clear existing blocks for the day
     const { error: deleteError } = await supabase
