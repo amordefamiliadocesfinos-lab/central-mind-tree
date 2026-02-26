@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { Calendar, GripVertical, LinkIcon, Package, Target, Users } from 'lucide-react';
+import { Calendar, GripVertical } from 'lucide-react';
 
 interface Node {
   id: string;
@@ -137,69 +137,39 @@ function SortableIdeaCard({
         </div>
 
         {/* Title */}
-        <h4 className="font-semibold text-sm leading-snug">{idea.title}</h4>
+        <h4 className="font-semibold text-sm leading-snug line-clamp-2">{idea.title}</h4>
 
-        {/* Type + badges */}
+        {/* Type badge + KPI inline */}
         <div className="flex items-center gap-1 flex-wrap">
           <Badge variant="outline" className={cn('text-[10px] gap-0.5 font-medium border py-0 h-5', ideaType.color)}>
             <span>{ideaType.icon}</span>
             {ideaType.label}
           </Badge>
           {idea.kpi && (
-            <Badge variant="outline" className="text-[10px] gap-0.5 font-normal text-muted-foreground uppercase py-0 h-5">
-              {idea.kpi}
-            </Badge>
-          )}
-          {linkedNode && (
-            <Badge variant="outline" className="text-[10px] gap-0.5 font-normal text-muted-foreground py-0 h-5">
-              <LinkIcon className="h-2.5 w-2.5" />
-              <span className="truncate max-w-[80px]">{linkedNode.title}</span>
-            </Badge>
-          )}
-          {linkedProduct && (
-            <Badge variant="outline" className="text-[10px] gap-0.5 font-normal text-muted-foreground border-emerald-500/30 py-0 h-5">
-              <Package className="h-2.5 w-2.5" />
-              <span className="truncate max-w-[80px]">{linkedProduct.name}</span>
-            </Badge>
+            <span className="text-[10px] text-muted-foreground uppercase">• {idea.kpi}</span>
           )}
         </div>
 
-        {/* Date */}
-        {firstDate && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Calendar className="h-3 w-3 shrink-0" />
-            <span className="tabular-nums">
-              {formatDate(firstDate)}
-              {lastDate && lastDate !== firstDate && ` → ${formatDate(lastDate)}`}
-            </span>
+        {/* Footer: date + progress */}
+        <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/50">
+          <div className="flex items-center gap-1 text-[11px] text-muted-foreground min-w-0">
+            {firstDate && (
+              <>
+                <Calendar className="h-3 w-3 shrink-0" />
+                <span className="tabular-nums truncate">
+                  {formatDate(firstDate)}
+                  {lastDate && lastDate !== firstDate && ` → ${formatDate(lastDate)}`}
+                </span>
+              </>
+            )}
           </div>
-        )}
-
-        {/* Objective */}
-        {idea.objective && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Target className="h-3 w-3 shrink-0" />
-            <span className="line-clamp-1">{idea.objective}</span>
-          </div>
-        )}
-
-        {/* Target audience */}
-        {idea.target_audience && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Users className="h-3 w-3 shrink-0" />
-            <span className="line-clamp-1">{idea.target_audience}</span>
-          </div>
-        )}
-
-        {/* Progress */}
-        {variations.length > 0 && (
-          <div className="flex items-center gap-2 pt-1 border-t border-border/50">
-            <span className="text-xs text-muted-foreground tabular-nums font-medium">{completedVariations}/{variations.length}</span>
-            <span className="text-xs text-muted-foreground">posts</span>
-            <Progress value={progress} className="w-14 h-1.5 flex-1 max-w-[60px]" />
-            <span className="text-[10px] text-muted-foreground tabular-nums">{Math.round(progress)}%</span>
-          </div>
-        )}
+          {variations.length > 0 && (
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="text-[10px] text-muted-foreground tabular-nums">{completedVariations}/{variations.length}</span>
+              <Progress value={progress} className="w-10 h-1.5" />
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
