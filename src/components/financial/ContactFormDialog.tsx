@@ -18,6 +18,7 @@ import {
 import { CalendarIcon, Loader2, Search, MessageCircle, Plus, X, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { usePlatforms } from '@/hooks/usePlatforms';
+import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Contact } from '@/hooks/useContacts';
@@ -289,16 +290,24 @@ export function ContactFormDialog({
           <section>
             <h3 className="text-lg font-semibold mb-4">Dados cadastrais</h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome *</Label>
-                <Input
-                  id="name"
-                  value={form.name || ''}
-                  onChange={(e) => updateField('name', e.target.value)}
-                  placeholder="Nome completo"
-                />
-              </div>
+            <div className="flex items-start gap-6 mb-4">
+              <ContactAvatar
+                photoUrl={form.photo_url}
+                name={form.name}
+                size="lg"
+                editable
+                onPhotoChange={(url) => updateField('photo_url', url)}
+              />
+              <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nome *</Label>
+                  <Input
+                    id="name"
+                    value={form.name || ''}
+                    onChange={(e) => updateField('name', e.target.value)}
+                    placeholder="Nome completo"
+                  />
+                </div>
               
               <div className="space-y-2">
                 <Label htmlFor="fantasy_name">Fantasia</Label>
@@ -318,6 +327,7 @@ export function ContactFormDialog({
                   onChange={(e) => updateField('code', e.target.value)}
                   placeholder="Código interno"
                 />
+              </div>
               </div>
             </div>
 

@@ -75,6 +75,7 @@ import { ContactTagsManager } from '@/components/crm/ContactTagsManager';
 import { ContactActivitiesPanel } from '@/components/crm/ContactActivitiesPanel';
 import { cn } from '@/lib/utils';
 import { FunnelView } from '@/components/FunnelView';
+import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { differenceInDays, parseISO } from 'date-fns';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -335,10 +336,13 @@ export default function Contatos() {
           onClick={() => { setEditingContact(contact); setFormOpen(true); }}
         >
           <div className="flex items-start justify-between gap-1">
-            <div className="min-w-0 flex-1">
-              <p className="font-semibold text-sm truncate leading-tight">{contact.name}</p>
-              {contact.fantasy_name && <p className="text-[10px] text-muted-foreground truncate">{contact.fantasy_name}</p>}
-              {contact.origem_lead && <p className="text-[10px] text-muted-foreground/70 truncate">via {contact.origem_lead}</p>}
+            <div className="flex items-center gap-2 min-w-0 flex-1">
+              <ContactAvatar photoUrl={contact.photo_url} name={contact.name} size="sm" />
+              <div className="min-w-0">
+                <p className="font-semibold text-sm truncate leading-tight">{contact.name}</p>
+                {contact.fantasy_name && <p className="text-[10px] text-muted-foreground truncate">{contact.fantasy_name}</p>}
+                {contact.origem_lead && <p className="text-[10px] text-muted-foreground/70 truncate">via {contact.origem_lead}</p>}
+              </div>
             </div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -689,10 +693,15 @@ export default function Contatos() {
                     return (
                       <TableRow key={contact.id} className="hover:bg-muted/30">
                         <TableCell>
-                          <span className="text-primary hover:underline cursor-pointer font-medium" onClick={() => { setEditingContact(contact); setFormOpen(true); }}>
-                            {contact.name}
-                          </span>
-                          {contact.fantasy_name && <p className="text-xs text-muted-foreground">{contact.fantasy_name}</p>}
+                          <div className="flex items-center gap-2">
+                            <ContactAvatar photoUrl={contact.photo_url} name={contact.name} size="sm" />
+                            <div>
+                              <span className="text-primary hover:underline cursor-pointer font-medium" onClick={() => { setEditingContact(contact); setFormOpen(true); }}>
+                                {contact.name}
+                              </span>
+                              {contact.fantasy_name && <p className="text-xs text-muted-foreground">{contact.fantasy_name}</p>}
+                            </div>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="text-[10px]">
