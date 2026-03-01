@@ -76,7 +76,7 @@ import { ContactActivitiesPanel } from '@/components/crm/ContactActivitiesPanel'
 import { cn } from '@/lib/utils';
 import { FunnelView } from '@/components/FunnelView';
 import { ContactAvatar } from '@/components/crm/ContactAvatar';
-import { differenceInDays, parseISO } from 'date-fns';
+import { differenceInDays, parseISO, format } from 'date-fns';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -316,6 +316,11 @@ export default function Contatos() {
     const alert = getUltimoContatoAlert(contact.ultimo_contato);
     const valor = formatCurrencyShort(contact.valor_estimado);
     const contactTags = getTagsForContact(contact.id);
+    const [expanded, setExpanded] = useState(false);
+
+    const ultimoContatoFormatted = contact.ultimo_contato
+      ? (() => { try { return format(parseISO(contact.ultimo_contato), 'dd/MM/yyyy'); } catch { return null; } })()
+      : null;
 
     return (
       <motion.div
@@ -341,7 +346,6 @@ export default function Contatos() {
               <div className="min-w-0">
                 <p className="font-semibold text-sm truncate leading-tight">{contact.name}</p>
                 {contact.fantasy_name && <p className="text-[10px] text-muted-foreground truncate">{contact.fantasy_name}</p>}
-                {contact.origem_lead && <p className="text-[10px] text-muted-foreground/70 truncate">via {contact.origem_lead}</p>}
               </div>
             </div>
             <DropdownMenu>
@@ -406,6 +410,14 @@ export default function Contatos() {
             )}
           </div>
 
+          {/* Último contato */}
+          {ultimoContatoFormatted && (
+            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+              <CalendarClock className="h-2.5 w-2.5" />
+              <span>Último contato: {ultimoContatoFormatted}</span>
+            </div>
+          )}
+
           {/* Tags */}
           {contactTags.length > 0 && (
             <div className="flex items-center gap-1 flex-wrap">
@@ -424,14 +436,69 @@ export default function Contatos() {
             </div>
           )}
 
-          <div className="flex items-center gap-1 pt-0.5">
-            {(contact.whatsapp || contact.mobile || contact.phone) && (
-              <Button variant="ghost" size="icon" className="h-5 w-5 text-green-600 hover:text-green-700" onClick={(e) => { e.stopPropagation(); handleWhatsApp(contact); }}>
-                <MessageCircle className="h-3 w-3" />
-              </Button>
-            )}
-            {contact.email && <span className="text-[10px] text-muted-foreground truncate">{contact.email}</span>}
+          <div className="flex items-center justify-between pt-0.5">
+            <div className="flex items-center gap-1">
+              {(contact.whatsapp || contact.mobile || contact.phone) && (
+                <Button variant="ghost" size="icon" className="h-5 w-5 text-green-600 hover:text-green-700" onClick={(e) => { e.stopPropagation(); handleWhatsApp(contact); }}>
+                  <MessageCircle className="h-3 w-3" />
+                </Button>
+              )}
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-5 w-5 text-muted-foreground hover:text-foreground"
+              onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+            >
+              {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            </Button>
           </div>
+
+          {/* Expanded details */}
+          <AnimatePresence>
+            {expanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="border-t pt-2 mt-1 space-y-1.5 text-[10px] text-muted-foreground">
+                  {contact.email && (
+                    <div className="flex items-center gap-1 truncate">
+                      <span className="font-medium text-foreground">Email:</span> {contact.email}
+                    </div>
+                  )}
+                  {(contact.phone || contact.whatsapp || contact.mobile) && (
+                    <div className="flex items-center gap-1 truncate">
+                      <span className="font-medium text-foreground">Tel:</span> {contact.whatsapp || contact.mobile || contact.phone}
+                    </div>
+                  )}
+                  {contact.city && (
+                    <div className="flex items-center gap-1 truncate">
+                      <span className="font-medium text-foreground">Cidade:</span> {contact.city}{contact.state ? ` - ${contact.state}` : ''}
+                    </div>
+                  )}
+                  {contact.origem_lead && (
+                    <div className="flex items-center gap-1 truncate">
+                      <span className="font-medium text-foreground">Origem:</span> {contact.origem_lead}
+                    </div>
+                  )}
+                  {contact.document && (
+                    <div className="flex items-center gap-1 truncate">
+                      <span className="font-medium text-foreground">Doc:</span> {contact.document}
+                    </div>
+                  )}
+                  {contact.notes && (
+                    <div className="truncate">
+                      <span className="font-medium text-foreground">Obs:</span> {contact.notes}
+                    </div>
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </Card>
       </motion.div>
     );
