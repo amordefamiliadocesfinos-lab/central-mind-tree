@@ -247,6 +247,15 @@ export default function Contatos() {
     }
   };
 
+  const handleTempChange = async (contact: Contact, newTemp: string) => {
+    if (contact.temperatura_lead === newTemp) return;
+    const oldLabel = TEMP_CONFIG[contact.temperatura_lead as keyof typeof TEMP_CONFIG]?.label || contact.temperatura_lead;
+    const newLabel = TEMP_CONFIG[newTemp as keyof typeof TEMP_CONFIG]?.label || newTemp;
+    await addEntry(contact.id, 'stage_change', `Temperatura alterada de "${oldLabel}" para "${newLabel}"`, oldLabel, newLabel);
+    await updateContact(contact.id, { temperatura_lead: newTemp });
+    toast.success(`Temperatura alterada para ${newLabel}`);
+  };
+
   const handleConfirmDelete = async () => {
     if (contactToDelete) {
       await deleteContact(contactToDelete.id);
@@ -351,6 +360,18 @@ export default function Contatos() {
                   Pedidos
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
+                <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Temperatura</div>
+                {Object.entries(TEMP_CONFIG).filter(([key]) => key !== contact.temperatura_lead).map(([key, cfg]) => {
+                  const Icon = cfg.icon;
+                  return (
+                    <DropdownMenuItem key={key} onClick={(e) => { e.stopPropagation(); handleTempChange(contact, key); }}>
+                      <Icon className="h-3 w-3 mr-2" />
+                      {cfg.label}
+                    </DropdownMenuItem>
+                  );
+                })}
+                <DropdownMenuSeparator />
+                <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Mover para</div>
                 {FUNNEL_STAGES.filter(s => s.key !== contact.funnel_status).map(s => (
                   <DropdownMenuItem key={s.key} onClick={(e) => { e.stopPropagation(); handleStatusChange(contact, s.key); }}>
                     <ArrowRight className="h-3 w-3 mr-2" />
@@ -678,7 +699,26 @@ export default function Contatos() {
                             {contact.type === 'ambos' ? 'Ambos' : contact.type === 'fornecedor' ? 'Fornecedor' : 'Cliente'}
                           </Badge>
                         </TableCell>
-                        <TableCell><TempBadge temp={contact.temperatura_lead} /></TableCell>
+                        <TableCell>
+                          <Select value={contact.temperatura_lead || 'morno'} onValueChange={(v) => handleTempChange(contact, v)}>
+                            <SelectTrigger className="h-7 text-xs w-28 border-0 bg-transparent p-0 shadow-none">
+                              <TempBadge temp={contact.temperatura_lead} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.entries(TEMP_CONFIG).map(([key, cfg]) => {
+                                const Icon = cfg.icon;
+                                return (
+                                  <SelectItem key={key} value={key}>
+                                    <span className="flex items-center gap-1.5">
+                                      <Icon className="h-3 w-3" />
+                                      {cfg.label}
+                                    </span>
+                                  </SelectItem>
+                                );
+                              })}
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
                         <TableCell>
                           <Select value={contact.funnel_status || 'novo_lead'} onValueChange={(v) => handleStatusChange(contact, v)}>
                             <SelectTrigger className="h-7 text-xs w-36">
@@ -732,6 +772,17 @@ export default function Contatos() {
                                 <ShoppingCart className="h-3.5 w-3.5 mr-2" />
                                 Pedidos
                               </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Temperatura</div>
+                              {Object.entries(TEMP_CONFIG).filter(([key]) => key !== contact.temperatura_lead).map(([key, cfg]) => {
+                                const Icon = cfg.icon;
+                                return (
+                                  <DropdownMenuItem key={key} onClick={() => handleTempChange(contact, key)}>
+                                    <Icon className="h-3.5 w-3.5 mr-2" />
+                                    {cfg.label}
+                                  </DropdownMenuItem>
+                                );
+                              })}
                               <DropdownMenuSeparator />
                               <DropdownMenuItem onClick={() => { setContactToDelete(contact); setDeleteDialogOpen(true); }} className="text-destructive">
                                 <Trash2 className="h-3.5 w-3.5 mr-2" />
