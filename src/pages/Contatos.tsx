@@ -344,8 +344,8 @@ export default function Contatos() {
             <div className="flex items-center gap-2 min-w-0 flex-1">
               <ContactAvatar photoUrl={contact.photo_url} name={contact.name} size="sm" />
               <div className="min-w-0">
-                <p className="font-semibold text-sm truncate leading-tight">{contact.name}</p>
-                {contact.fantasy_name && <p className="text-[10px] text-muted-foreground truncate">{contact.fantasy_name}</p>}
+                <p className="font-semibold text-sm leading-tight break-words">{contact.name}</p>
+                {contact.fantasy_name && <p className="text-[10px] text-muted-foreground break-words">{contact.fantasy_name}</p>}
               </div>
             </div>
             <DropdownMenu>
