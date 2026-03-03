@@ -81,6 +81,10 @@ export interface Contact {
   ultimo_contato?: string;
   origem_lead?: string;
   
+  // Next action
+  next_action_text?: string;
+  next_action_date?: string;
+  
   // Other
   company_name?: string;
   notes?: string;
@@ -183,6 +187,8 @@ export function useContacts() {
           category: cleanValue(contact.category),
           company_name: cleanValue(contact.company_name),
           notes: cleanValue(contact.notes),
+          next_action_text: cleanValue(contact.next_action_text),
+          next_action_date: cleanValue(contact.next_action_date),
           funnel_status: contact.funnel_status || 'novo_lead',
           temperatura_lead: contact.temperatura_lead || 'morno',
           valor_estimado: cleanNumber(contact.valor_estimado),

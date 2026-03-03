@@ -64,6 +64,7 @@ import {
   CalendarClock,
   ChevronUp,
   ChevronDown,
+  AlertTriangle,
 } from 'lucide-react';
 import { useContacts, Contact } from '@/hooks/useContacts';
 import { useContactHistory } from '@/hooks/useContactHistory';
@@ -95,6 +96,12 @@ const TEMP_CONFIG = {
   quente: { label: 'Quente', icon: Flame, className: 'bg-red-100 text-red-700 border-red-300', dot: 'bg-red-500' },
 };
 
+const CONTACT_SUBTYPE_CONFIG: Record<string, { label: string; className: string }> = {
+  revendedor: { label: 'Revendedor', className: 'bg-indigo-100 text-indigo-700 border-indigo-300' },
+  cliente_final: { label: 'Cliente Final', className: 'bg-emerald-100 text-emerald-700 border-emerald-300' },
+  atacado: { label: 'Atacado', className: 'bg-violet-100 text-violet-700 border-violet-300' },
+};
+
 function getUltimoContatoAlert(dateStr?: string | null) {
   if (!dateStr) return null;
   try {
@@ -122,6 +129,7 @@ export default function Contatos() {
   const [tempFilter, setTempFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [tagFilter, setTagFilter] = useState<string>('all');
+  const [actionFilter, setActionFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'kanban' | 'funnel' | 'list'>('kanban');
   const [formOpen, setFormOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | undefined>();
@@ -141,6 +149,12 @@ export default function Contatos() {
   const [draggedContact, setDraggedContact] = useState<Contact | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
 
+  // Helper: is next action overdue?
+  const isNextActionOverdue = useCallback((contact: Contact) => {
+    if (!contact.next_action_date) return false;
+    try { return new Date() > parseISO(contact.next_action_date); } catch { return false; }
+  }, []);
+
   const filteredContacts = useMemo(() => {
     return contacts.filter((c) => {
       if (!c.is_active) return false;
@@ -153,6 +167,12 @@ export default function Contatos() {
       if (tagFilter !== 'all') {
         const contactTags = getTagsForContact(c.id);
         if (!contactTags.some(t => t.id === tagFilter)) return false;
+      }
+      if (actionFilter === 'atrasados') {
+        if (!c.next_action_date || !isNextActionOverdue(c)) return false;
+      }
+      if (actionFilter === 'sem_acao') {
+        if (c.next_action_text || c.next_action_date) return false;
       }
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
@@ -169,7 +189,7 @@ export default function Contatos() {
       }
       return true;
     });
-  }, [contacts, searchQuery, statusFilter, tempFilter, typeFilter, tagFilter, getTagsForContact]);
+  }, [contacts, searchQuery, statusFilter, tempFilter, typeFilter, tagFilter, actionFilter, getTagsForContact, isNextActionOverdue]);
 
   const sortedContacts = useMemo(() => {
     return [...filteredContacts].sort((a, b) => {
@@ -317,9 +337,15 @@ export default function Contatos() {
     const valor = formatCurrencyShort(contact.valor_estimado);
     const contactTags = getTagsForContact(contact.id);
     const [expanded, setExpanded] = useState(false);
+    const overdue = isNextActionOverdue(contact);
+    const subtypeCfg = contact.contact_type ? CONTACT_SUBTYPE_CONFIG[contact.contact_type] : null;
 
     const ultimoContatoFormatted = contact.ultimo_contato
       ? (() => { try { return format(parseISO(contact.ultimo_contato), 'dd/MM/yyyy'); } catch { return null; } })()
+      : null;
+
+    const nextActionFormatted = contact.next_action_date
+      ? (() => { try { return format(parseISO(contact.next_action_date), "dd/MM HH:mm"); } catch { return null; } })()
       : null;
 
     return (
@@ -334,7 +360,7 @@ export default function Contatos() {
           className={cn(
             "p-3 space-y-2 hover:shadow-lg transition-all cursor-grab active:cursor-grabbing border-l-[3px]",
             draggedContact?.id === contact.id && "opacity-50 scale-95",
-            alert?.urgent ? "border-l-red-500" : "border-l-transparent"
+            overdue ? "border-l-red-500" : alert?.urgent ? "border-l-red-500" : "border-l-transparent"
           )}
           draggable
           onDragStart={(e) => handleDragStart(e, contact)}
@@ -395,7 +421,13 @@ export default function Contatos() {
             </DropdownMenu>
           </div>
 
+          {/* Badges row: subtype + temp + valor */}
           <div className="flex items-center gap-1 flex-wrap">
+            {subtypeCfg && (
+              <span className={cn('inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold', subtypeCfg.className)}>
+                {subtypeCfg.label}
+              </span>
+            )}
             <TempBadge temp={contact.temperatura_lead} />
             {valor && (
               <span className="text-[10px] font-bold text-green-700 bg-green-50 rounded-full px-1.5 py-0.5 border border-green-200">
@@ -410,6 +442,26 @@ export default function Contatos() {
             )}
           </div>
 
+          {/* Próxima ação */}
+          {(contact.next_action_text || contact.next_action_date) && (
+            <div className={cn(
+              "rounded-md px-2 py-1.5 text-[10px] border",
+              overdue ? "bg-red-50 border-red-200" : "bg-muted/50 border-border"
+            )}>
+              <div className="flex items-center gap-1">
+                {overdue && <AlertTriangle className="h-3 w-3 text-red-600 shrink-0" />}
+                <span className={cn("font-medium", overdue ? "text-red-700" : "text-foreground")}>
+                  {contact.next_action_text || 'Ação agendada'}
+                </span>
+              </div>
+              {nextActionFormatted && (
+                <p className={cn("mt-0.5", overdue ? "text-red-600 font-semibold" : "text-muted-foreground")}>
+                  {overdue ? '⚠ Atrasado — ' : ''}{nextActionFormatted}
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Último contato */}
           {ultimoContatoFormatted && (
             <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
@@ -422,11 +474,7 @@ export default function Contatos() {
           {contactTags.length > 0 && (
             <div className="flex items-center gap-1 flex-wrap">
               {contactTags.slice(0, 3).map(tag => (
-                <span
-                  key={tag.id}
-                  className="text-[9px] font-medium rounded-full px-1.5 py-0.5 text-white"
-                  style={{ backgroundColor: tag.color }}
-                >
+                <span key={tag.id} className="text-[9px] font-medium rounded-full px-1.5 py-0.5 text-white" style={{ backgroundColor: tag.color }}>
                   {tag.name}
                 </span>
               ))}
@@ -444,12 +492,7 @@ export default function Contatos() {
                 </Button>
               )}
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-5 w-5 text-muted-foreground hover:text-foreground"
-              onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
-            >
+            <Button variant="ghost" size="icon" className="h-5 w-5 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}>
               {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
             </Button>
           </div>
@@ -635,6 +678,25 @@ export default function Contatos() {
                 </Button>
               );
             })}
+          </div>
+
+          {/* Action quick filters */}
+          <div className="flex gap-0.5 bg-muted/50 rounded-lg p-0.5">
+            {[
+              { value: 'all', label: 'Todos' },
+              { value: 'atrasados', label: '⚠ Atrasados' },
+              { value: 'sem_acao', label: 'Sem ação' },
+            ].map(opt => (
+              <Button
+                key={opt.value}
+                variant={actionFilter === opt.value ? 'default' : 'ghost'}
+                size="sm"
+                className={cn("h-7 px-2.5 text-xs rounded-md", actionFilter === opt.value && "shadow-sm")}
+                onClick={() => setActionFilter(opt.value)}
+              >
+                {opt.label}
+              </Button>
+            ))}
           </div>
 
           <div className="flex border rounded-lg ml-auto overflow-hidden">
