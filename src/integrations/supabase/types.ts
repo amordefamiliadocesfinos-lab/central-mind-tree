@@ -480,6 +480,8 @@ export type Database = {
           mother_name: string | null
           name: string
           neighborhood: string | null
+          next_action_date: string | null
+          next_action_text: string | null
           next_visit: string | null
           nfe_email: string | null
           notes: string | null
@@ -551,6 +553,8 @@ export type Database = {
           mother_name?: string | null
           name: string
           neighborhood?: string | null
+          next_action_date?: string | null
+          next_action_text?: string | null
           next_visit?: string | null
           nfe_email?: string | null
           notes?: string | null
@@ -622,6 +626,8 @@ export type Database = {
           mother_name?: string | null
           name?: string
           neighborhood?: string | null
+          next_action_date?: string | null
+          next_action_text?: string | null
           next_visit?: string | null
           nfe_email?: string | null
           notes?: string | null
