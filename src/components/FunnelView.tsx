@@ -16,9 +16,10 @@ import { parseISO, isAfter, subDays, startOfMonth } from 'date-fns';
 
 const FUNNEL_STAGES = [
   { key: 'novo_lead', label: 'Novo Lead', color: 'bg-blue-500', textColor: 'text-blue-700', bgLight: 'bg-blue-50 border-blue-200' },
-  { key: 'orcamento_enviado', label: 'Orçamento Enviado', color: 'bg-amber-500', textColor: 'text-amber-700', bgLight: 'bg-amber-50 border-amber-200' },
-  { key: 'em_negociacao', label: 'Em Negociação', color: 'bg-orange-500', textColor: 'text-orange-700', bgLight: 'bg-orange-50 border-orange-200' },
-  { key: 'cliente', label: 'Cliente', color: 'bg-green-500', textColor: 'text-green-700', bgLight: 'bg-green-50 border-green-200' },
+  { key: 'contato_realizado', label: 'Contato Realizado', color: 'bg-cyan-500', textColor: 'text-cyan-700', bgLight: 'bg-cyan-50 border-cyan-200' },
+  { key: 'proposta_enviada', label: 'Proposta Enviada', color: 'bg-amber-500', textColor: 'text-amber-700', bgLight: 'bg-amber-50 border-amber-200' },
+  { key: 'negociacao', label: 'Negociação', color: 'bg-orange-500', textColor: 'text-orange-700', bgLight: 'bg-orange-50 border-orange-200' },
+  { key: 'fechado', label: 'Fechado', color: 'bg-green-500', textColor: 'text-green-700', bgLight: 'bg-green-50 border-green-200' },
 ];
 
 function formatCurrency(v: number) {
@@ -171,7 +172,7 @@ export function FunnelView({ contacts }: FunnelViewProps) {
             <p className="text-2xl font-bold text-green-700">
               {formatCurrency(
                 filteredContacts
-                  .filter(c => ['novo_lead', 'orcamento_enviado', 'em_negociacao'].includes(c.funnel_status))
+                  .filter(c => ['novo_lead', 'contato_realizado', 'proposta_enviada', 'negociacao'].includes(c.funnel_status))
                   .reduce((s, c) => s + (c.valor_estimado || 0), 0)
               )}
             </p>
@@ -180,12 +181,12 @@ export function FunnelView({ contacts }: FunnelViewProps) {
           <div>
             {(() => {
               const leads = filteredContacts.filter(c => c.funnel_status === 'novo_lead').length;
-              const clients = filteredContacts.filter(c => c.funnel_status === 'cliente').length;
-              const rate = leads > 0 ? Math.round((clients / leads) * 100) : 0;
+              const closed = filteredContacts.filter(c => c.funnel_status === 'fechado').length;
+              const rate = leads > 0 ? Math.round((closed / leads) * 100) : 0;
               return (
                 <>
                   <p className="text-2xl font-bold text-emerald-700">{rate}%</p>
-                  <p className="text-xs text-muted-foreground">Lead → Cliente</p>
+                  <p className="text-xs text-muted-foreground">Lead → Fechado</p>
                 </>
               );
             })()}
