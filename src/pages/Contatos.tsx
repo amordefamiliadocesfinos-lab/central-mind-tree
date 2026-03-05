@@ -83,12 +83,18 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 const FUNNEL_STAGES = [
   { key: 'novo_lead', label: 'Novo Lead', color: 'bg-blue-500', textColor: 'text-blue-700', bgLight: 'bg-blue-50/80 border-blue-200', headerBg: 'bg-gradient-to-r from-blue-500 to-blue-400' },
-  { key: 'orcamento_enviado', label: 'Orçamento Enviado', color: 'bg-amber-500', textColor: 'text-amber-700', bgLight: 'bg-amber-50/80 border-amber-200', headerBg: 'bg-gradient-to-r from-amber-500 to-amber-400' },
-  { key: 'em_negociacao', label: 'Em Negociação', color: 'bg-orange-500', textColor: 'text-orange-700', bgLight: 'bg-orange-50/80 border-orange-200', headerBg: 'bg-gradient-to-r from-orange-500 to-orange-400' },
-  { key: 'cliente', label: 'Cliente', color: 'bg-green-500', textColor: 'text-green-700', bgLight: 'bg-green-50/80 border-green-200', headerBg: 'bg-gradient-to-r from-green-500 to-green-400' },
-  { key: 'pos_venda', label: 'Pós-venda', color: 'bg-purple-500', textColor: 'text-purple-700', bgLight: 'bg-purple-50/80 border-purple-200', headerBg: 'bg-gradient-to-r from-purple-500 to-purple-400' },
+  { key: 'contato_realizado', label: 'Contato Realizado', color: 'bg-cyan-500', textColor: 'text-cyan-700', bgLight: 'bg-cyan-50/80 border-cyan-200', headerBg: 'bg-gradient-to-r from-cyan-500 to-cyan-400' },
+  { key: 'proposta_enviada', label: 'Proposta Enviada', color: 'bg-amber-500', textColor: 'text-amber-700', bgLight: 'bg-amber-50/80 border-amber-200', headerBg: 'bg-gradient-to-r from-amber-500 to-amber-400' },
+  { key: 'negociacao', label: 'Negociação', color: 'bg-orange-500', textColor: 'text-orange-700', bgLight: 'bg-orange-50/80 border-orange-200', headerBg: 'bg-gradient-to-r from-orange-500 to-orange-400' },
+  { key: 'fechado', label: 'Fechado', color: 'bg-green-500', textColor: 'text-green-700', bgLight: 'bg-green-50/80 border-green-200', headerBg: 'bg-gradient-to-r from-green-500 to-green-400' },
   { key: 'perdido', label: 'Perdido', color: 'bg-red-500', textColor: 'text-red-700', bgLight: 'bg-red-50/80 border-red-200', headerBg: 'bg-gradient-to-r from-red-500 to-red-400' },
 ];
+
+const PRIORITY_CONFIG = {
+  quente: { label: 'Alta', borderColor: 'border-l-red-400' },
+  morno: { label: 'Média', borderColor: 'border-l-amber-400' },
+  frio: { label: 'Baixa', borderColor: 'border-l-sky-400' },
+};
 
 const TEMP_CONFIG = {
   frio: { label: 'Frio', icon: Snowflake, className: 'bg-sky-100 text-sky-700 border-sky-300', dot: 'bg-sky-500' },
@@ -223,16 +229,16 @@ export default function Contatos() {
 
   const metrics = useMemo(() => {
     const active = contacts.filter(c => c.is_active);
-    const orcamento = active.filter(c => c.funnel_status === 'orcamento_enviado');
-    const negociacao = active.filter(c => c.funnel_status === 'em_negociacao');
-    const clientes = active.filter(c => c.funnel_status === 'cliente' || c.funnel_status === 'pos_venda');
-    const openStages = ['novo_lead', 'orcamento_enviado', 'em_negociacao'];
+    const propostas = active.filter(c => c.funnel_status === 'proposta_enviada');
+    const negociacao = active.filter(c => c.funnel_status === 'negociacao');
+    const fechados = active.filter(c => c.funnel_status === 'fechado');
+    const openStages = ['novo_lead', 'contato_realizado', 'proposta_enviada', 'negociacao'];
     const valorAberto = active
       .filter(c => openStages.includes(c.funnel_status))
       .reduce((sum, c) => sum + (c.valor_estimado || 0), 0);
     const totalLeads = active.filter(c => c.funnel_status !== 'perdido').length;
-    const conversionRate = totalLeads > 0 ? Math.round((clientes.length / totalLeads) * 100) : 0;
-    return { total: active.length, orcamento: orcamento.length, negociacao: negociacao.length, clientes: clientes.length, valorAberto, conversionRate };
+    const conversionRate = totalLeads > 0 ? Math.round((fechados.length / totalLeads) * 100) : 0;
+    return { total: active.length, propostas: propostas.length, negociacao: negociacao.length, fechados: fechados.length, valorAberto, conversionRate };
   }, [contacts]);
 
   const handleSave = async (data: Partial<Contact>) => {
@@ -249,10 +255,10 @@ export default function Contatos() {
     const oldStage = FUNNEL_STAGES.find(s => s.key === contact.funnel_status);
     const newStage = FUNNEL_STAGES.find(s => s.key === newStatus);
     const updates: Partial<Contact> = { funnel_status: newStatus };
-    if (newStatus === 'cliente' && contact.funnel_status !== 'cliente') {
+    if (newStatus === 'fechado' && contact.funnel_status !== 'fechado') {
       updates.converted_at = new Date().toISOString();
-      await addEntry(contact.id, 'conversion', `Convertido para Cliente`);
-      toast.success('🎉 Conversão registrada!');
+      await addEntry(contact.id, 'conversion', `Negócio Fechado!`);
+      toast.success('🎉 Negócio fechado!');
     } else {
       await addEntry(contact.id, 'stage_change', `Movido de "${oldStage?.label || contact.funnel_status}" para "${newStage?.label || newStatus}"`, oldStage?.label, newStage?.label);
     }
@@ -333,16 +339,8 @@ export default function Contatos() {
   };
 
   const ContactCard = ({ contact }: { contact: Contact }) => {
-    const alert = getUltimoContatoAlert(contact.ultimo_contato);
-    const valor = formatCurrencyShort(contact.valor_estimado);
-    const contactTags = getTagsForContact(contact.id);
-    const [expanded, setExpanded] = useState(false);
     const overdue = isNextActionOverdue(contact);
-    const subtypeCfg = contact.contact_type ? CONTACT_SUBTYPE_CONFIG[contact.contact_type] : null;
-
-    const ultimoContatoFormatted = contact.ultimo_contato
-      ? (() => { try { return format(parseISO(contact.ultimo_contato), 'dd/MM/yyyy'); } catch { return null; } })()
-      : null;
+    const priorityCfg = PRIORITY_CONFIG[(contact.temperatura_lead || 'morno') as keyof typeof PRIORITY_CONFIG] || PRIORITY_CONFIG.morno;
 
     const nextActionFormatted = contact.next_action_date
       ? (() => { try { return format(parseISO(contact.next_action_date), "dd/MM HH:mm"); } catch { return null; } })()
@@ -351,197 +349,55 @@ export default function Contatos() {
     return (
       <motion.div
         layout
-        initial={{ opacity: 0, y: 8 }}
+        initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={{ duration: 0.15 }}
       >
         <Card
           className={cn(
-            "p-3 space-y-2 hover:shadow-lg transition-all cursor-grab active:cursor-grabbing border-l-[3px]",
+            "p-3 hover:shadow-md transition-all cursor-grab active:cursor-grabbing border-l-[3px]",
             draggedContact?.id === contact.id && "opacity-50 scale-95",
-            overdue ? "border-l-red-500" : alert?.urgent ? "border-l-red-500" : "border-l-transparent"
+            priorityCfg.borderColor
           )}
           draggable
           onDragStart={(e) => handleDragStart(e, contact)}
           onClick={() => { setEditingContact(contact); setFormOpen(true); }}
         >
-          <div className="flex items-start justify-between gap-1">
-            <div className="flex items-center gap-2 min-w-0 flex-1">
-              <ContactAvatar photoUrl={contact.photo_url} name={contact.name} size="sm" />
-              <div className="min-w-0">
-                <p className="font-semibold text-sm leading-tight break-words">{contact.name}</p>
-                {contact.fantasy_name && <p className="text-[10px] text-muted-foreground break-words">{contact.fantasy_name}</p>}
-              </div>
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 opacity-60 hover:opacity-100">
-                  <MoreVertical className="h-3 w-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setActivitiesContact(contact); setActivitiesOpen(true); }}>
-                  <CalendarClock className="h-3.5 w-3.5 mr-2" />
-                  Atividades
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setTimelineContact(contact); setTimelineOpen(true); }}>
-                  <History className="h-3.5 w-3.5 mr-2" />
-                  Timeline
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setHistoryContact(contact); setHistoryOpen(true); }}>
-                  <ShoppingCart className="h-3.5 w-3.5 mr-2" />
-                  Pedidos
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Temperatura</div>
-                {Object.entries(TEMP_CONFIG).filter(([key]) => key !== contact.temperatura_lead).map(([key, cfg]) => {
-                  const Icon = cfg.icon;
-                  return (
-                    <DropdownMenuItem key={key} onClick={(e) => { e.stopPropagation(); handleTempChange(contact, key); }}>
-                      <Icon className="h-3 w-3 mr-2" />
-                      {cfg.label}
-                    </DropdownMenuItem>
-                  );
-                })}
-                <DropdownMenuSeparator />
-                <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Mover para</div>
-                {FUNNEL_STAGES.filter(s => s.key !== contact.funnel_status).map(s => (
-                  <DropdownMenuItem key={s.key} onClick={(e) => { e.stopPropagation(); handleStatusChange(contact, s.key); }}>
-                    <ArrowRight className="h-3 w-3 mr-2" />
-                    {s.label}
-                  </DropdownMenuItem>
-                ))}
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setContactToDelete(contact); setDeleteDialogOpen(true); }} className="text-destructive">
-                  <Trash2 className="h-3.5 w-3.5 mr-2" />
-                  Excluir
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          {/* Nome */}
+          <p className="font-semibold text-sm leading-tight break-words">{contact.name}</p>
 
-          {/* Badges row: subtype + temp + valor */}
-          <div className="flex items-center gap-1 flex-wrap">
-            {subtypeCfg && (
-              <span className={cn('inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold', subtypeCfg.className)}>
-                {subtypeCfg.label}
-              </span>
-            )}
-            <TempBadge temp={contact.temperatura_lead} />
-            {valor && (
-              <span className="text-[10px] font-bold text-green-700 bg-green-50 rounded-full px-1.5 py-0.5 border border-green-200">
-                {valor}
-              </span>
-            )}
-            {alert && (
-              <span className={cn('inline-flex items-center gap-0.5 text-[10px] font-medium rounded-full px-1.5 py-0.5 border', alert.className)}>
-                <Clock className="h-2.5 w-2.5" />
-                {alert.label}
-              </span>
-            )}
-          </div>
+          {/* Origem */}
+          {contact.origem_lead && (
+            <p className="text-[11px] text-muted-foreground mt-1">{contact.origem_lead}</p>
+          )}
+
+          {/* Valor estimado */}
+          {contact.valor_estimado ? (
+            <p className="text-xs font-bold text-green-700 dark:text-green-400 mt-1.5">
+              {formatCurrencyShort(contact.valor_estimado)}
+            </p>
+          ) : null}
 
           {/* Próxima ação */}
           {(contact.next_action_text || contact.next_action_date) && (
             <div className={cn(
-              "rounded-md px-2 py-1.5 text-[10px] border",
-              overdue ? "bg-red-50 border-red-200" : "bg-muted/50 border-border"
+              "rounded-md px-2 py-1.5 text-[11px] border mt-2",
+              overdue ? "bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800" : "bg-muted/50 border-border"
             )}>
-              <div className="flex items-center gap-1">
-                {overdue && <AlertTriangle className="h-3 w-3 text-red-600 shrink-0" />}
-                <span className={cn("font-medium", overdue ? "text-red-700" : "text-foreground")}>
-                  {contact.next_action_text || 'Ação agendada'}
-                </span>
-              </div>
+              {contact.next_action_text && (
+                <p className={cn("font-medium leading-tight", overdue ? "text-red-700 dark:text-red-400" : "text-foreground")}>
+                  {contact.next_action_text}
+                </p>
+              )}
               {nextActionFormatted && (
-                <p className={cn("mt-0.5", overdue ? "text-red-600 font-semibold" : "text-muted-foreground")}>
-                  {overdue ? '⚠ Atrasado — ' : ''}{nextActionFormatted}
+                <p className={cn("text-[10px] mt-0.5", overdue ? "text-red-600 dark:text-red-400 font-semibold" : "text-muted-foreground")}>
+                  {overdue && <AlertTriangle className="h-3 w-3 inline mr-0.5 -mt-0.5" />}
+                  {overdue ? 'Atrasado · ' : ''}{nextActionFormatted}
                 </p>
               )}
             </div>
           )}
-
-          {/* Último contato */}
-          {ultimoContatoFormatted && (
-            <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-              <CalendarClock className="h-2.5 w-2.5" />
-              <span>Último contato: {ultimoContatoFormatted}</span>
-            </div>
-          )}
-
-          {/* Tags */}
-          {contactTags.length > 0 && (
-            <div className="flex items-center gap-1 flex-wrap">
-              {contactTags.slice(0, 3).map(tag => (
-                <span key={tag.id} className="text-[9px] font-medium rounded-full px-1.5 py-0.5 text-white" style={{ backgroundColor: tag.color }}>
-                  {tag.name}
-                </span>
-              ))}
-              {contactTags.length > 3 && (
-                <span className="text-[9px] text-muted-foreground">+{contactTags.length - 3}</span>
-              )}
-            </div>
-          )}
-
-          <div className="flex items-center justify-between pt-0.5">
-            <div className="flex items-center gap-1">
-              {(contact.whatsapp || contact.mobile || contact.phone) && (
-                <Button variant="ghost" size="icon" className="h-5 w-5 text-green-600 hover:text-green-700" onClick={(e) => { e.stopPropagation(); handleWhatsApp(contact); }}>
-                  <MessageCircle className="h-3 w-3" />
-                </Button>
-              )}
-            </div>
-            <Button variant="ghost" size="icon" className="h-5 w-5 text-muted-foreground hover:text-foreground" onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}>
-              {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-            </Button>
-          </div>
-
-          {/* Expanded details */}
-          <AnimatePresence>
-            {expanded && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden"
-              >
-                <div className="border-t pt-2 mt-1 space-y-1.5 text-[10px] text-muted-foreground">
-                  {contact.email && (
-                    <div className="flex items-center gap-1 truncate">
-                      <span className="font-medium text-foreground">Email:</span> {contact.email}
-                    </div>
-                  )}
-                  {(contact.phone || contact.whatsapp || contact.mobile) && (
-                    <div className="flex items-center gap-1 truncate">
-                      <span className="font-medium text-foreground">Tel:</span> {contact.whatsapp || contact.mobile || contact.phone}
-                    </div>
-                  )}
-                  {contact.city && (
-                    <div className="flex items-center gap-1 truncate">
-                      <span className="font-medium text-foreground">Cidade:</span> {contact.city}{contact.state ? ` - ${contact.state}` : ''}
-                    </div>
-                  )}
-                  {contact.origem_lead && (
-                    <div className="flex items-center gap-1 truncate">
-                      <span className="font-medium text-foreground">Origem:</span> {contact.origem_lead}
-                    </div>
-                  )}
-                  {contact.document && (
-                    <div className="flex items-center gap-1 truncate">
-                      <span className="font-medium text-foreground">Doc:</span> {contact.document}
-                    </div>
-                  )}
-                  {contact.notes && (
-                    <div className="truncate">
-                      <span className="font-medium text-foreground">Obs:</span> {contact.notes}
-                    </div>
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </Card>
       </motion.div>
     );
@@ -579,8 +435,8 @@ export default function Contatos() {
           </Card>
           <Card className="p-2.5 text-center border-0 shadow-sm bg-amber-50 dark:bg-amber-950/30">
             <FileText className="h-4 w-4 mx-auto text-amber-600 mb-0.5" />
-            <p className="text-xl font-bold text-amber-700 leading-tight">{metrics.orcamento}</p>
-            <p className="text-[10px] text-amber-600 font-medium">Orçamento</p>
+            <p className="text-xl font-bold text-amber-700 leading-tight">{metrics.propostas}</p>
+            <p className="text-[10px] text-amber-600 font-medium">Propostas</p>
           </Card>
           <Card className="p-2.5 text-center border-0 shadow-sm bg-orange-50 dark:bg-orange-950/30">
             <Handshake className="h-4 w-4 mx-auto text-orange-600 mb-0.5" />
