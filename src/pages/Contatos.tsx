@@ -127,7 +127,7 @@ function formatCurrencyShort(v?: number | null) {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
-type SortField = 'name' | 'valor_estimado' | 'ultimo_contato' | 'created_at';
+type SortField = 'name' | 'valor_estimado' | 'ultimo_contato' | 'created_at' | 'temperatura';
 type SortDir = 'asc' | 'desc';
 
 export default function Contatos() {
@@ -204,15 +204,18 @@ export default function Contatos() {
   const sortedContacts = useMemo(() => {
     return [...filteredContacts].sort((a, b) => {
       let cmp = 0;
+      const tempOrder: Record<string, number> = { quente: 3, morno: 2, frio: 1 };
       if (sortField === 'name') cmp = (a.name || '').localeCompare(b.name || '');
       else if (sortField === 'valor_estimado') cmp = (a.valor_estimado || 0) - (b.valor_estimado || 0);
       else if (sortField === 'ultimo_contato') cmp = (a.ultimo_contato || '').localeCompare(b.ultimo_contato || '');
       else if (sortField === 'created_at') cmp = (a.created_at || '').localeCompare(b.created_at || '');
+      else if (sortField === 'temperatura') cmp = (tempOrder[a.temperatura_lead || 'morno'] || 2) - (tempOrder[b.temperatura_lead || 'morno'] || 2);
       return sortDir === 'asc' ? cmp : -cmp;
     });
   }, [filteredContacts, sortField, sortDir]);
 
   const groupedByStage = useMemo(() => {
+    const tempOrder: Record<string, number> = { quente: 3, morno: 2, frio: 1 };
     const groups: Record<string, Contact[]> = {};
     FUNNEL_STAGES.forEach(s => { groups[s.key] = []; });
     filteredContacts.forEach(c => {
@@ -220,8 +223,20 @@ export default function Contatos() {
       if (groups[key]) groups[key].push(c);
       else groups['novo_lead'].push(c);
     });
+    // Sort within each stage
+    Object.keys(groups).forEach(key => {
+      groups[key].sort((a, b) => {
+        let cmp = 0;
+        if (sortField === 'name') cmp = (a.name || '').localeCompare(b.name || '');
+        else if (sortField === 'valor_estimado') cmp = (a.valor_estimado || 0) - (b.valor_estimado || 0);
+        else if (sortField === 'ultimo_contato') cmp = (a.ultimo_contato || '').localeCompare(b.ultimo_contato || '');
+        else if (sortField === 'created_at') cmp = (a.created_at || '').localeCompare(b.created_at || '');
+        else if (sortField === 'temperatura') cmp = (tempOrder[a.temperatura_lead || 'morno'] || 2) - (tempOrder[b.temperatura_lead || 'morno'] || 2);
+        return sortDir === 'asc' ? cmp : -cmp;
+      });
+    });
     return groups;
-  }, [filteredContacts]);
+  }, [filteredContacts, sortField, sortDir]);
 
   const stageSums = useMemo(() => {
     const sums: Record<string, number> = {};
@@ -346,6 +361,9 @@ export default function Contatos() {
     const overdue = isNextActionOverdue(contact);
     const priorityCfg = PRIORITY_CONFIG[(contact.temperatura_lead || 'morno') as keyof typeof PRIORITY_CONFIG] || PRIORITY_CONFIG.morno;
     const subtypeCfg = CONTACT_SUBTYPE_CONFIG[contact.contact_type || ''];
+    const temp = contact.temperatura_lead || 'morno';
+    const inactivityAlert = getUltimoContatoAlert(contact.ultimo_contato);
+    const semRetorno = inactivityAlert && (inactivityAlert.urgent || differenceInDays(new Date(), parseISO(contact.ultimo_contato!)) > 3);
 
     const nextActionFormatted = contact.next_action_date
       ? (() => { try { return format(parseISO(contact.next_action_date), "dd/MM HH:mm"); } catch { return null; } })()
@@ -363,7 +381,9 @@ export default function Contatos() {
           className={cn(
             "p-3 hover:shadow-md transition-all cursor-grab active:cursor-grabbing border-l-[3px]",
             draggedContact?.id === contact.id && "opacity-50 scale-95",
-            priorityCfg.borderColor
+            priorityCfg.borderColor,
+            temp === 'quente' && "shadow-sm ring-1 ring-red-200/60 bg-red-50/30 dark:bg-red-950/10 dark:ring-red-800/30",
+            temp === 'frio' && "opacity-75 bg-muted/30"
           )}
           draggable
           onDragStart={(e) => handleDragStart(e, contact)}
@@ -429,7 +449,7 @@ export default function Contatos() {
             </DropdownMenu>
           </div>
 
-          {/* Badges: Tipo + Temperatura */}
+          {/* Badges: Tipo + Temperatura + Sem Retorno */}
           <div className="flex flex-wrap items-center gap-1 mt-2">
             {subtypeCfg && (
               <span className={cn('inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold', subtypeCfg.className)}>
@@ -437,6 +457,12 @@ export default function Contatos() {
               </span>
             )}
             <TempBadge temp={contact.temperatura_lead} />
+            {semRetorno && (
+              <span className="inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold bg-red-100 text-red-700 border-red-300 dark:bg-red-950/40 dark:text-red-400 dark:border-red-700">
+                <Clock className="h-2.5 w-2.5" />
+                Sem retorno
+              </span>
+            )}
           </div>
 
           {/* Próxima ação */}
@@ -615,6 +641,28 @@ export default function Contatos() {
             ))}
           </div>
 
+          {/* Sort selector */}
+          <Select value={`${sortField}-${sortDir}`} onValueChange={(v) => {
+            const [f, d] = v.split('-') as [SortField, SortDir];
+            setSortField(f);
+            setSortDir(d);
+          }}>
+            <SelectTrigger className="w-40 h-9">
+              <ArrowUpDown className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+              <SelectValue placeholder="Ordenar" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name-asc">Nome A→Z</SelectItem>
+              <SelectItem value="name-desc">Nome Z→A</SelectItem>
+              <SelectItem value="temperatura-desc">Temp. ↑ Quente</SelectItem>
+              <SelectItem value="temperatura-asc">Temp. ↓ Frio</SelectItem>
+              <SelectItem value="ultimo_contato-asc">Últ. Contato ↑ Antigo</SelectItem>
+              <SelectItem value="ultimo_contato-desc">Últ. Contato ↓ Recente</SelectItem>
+              <SelectItem value="valor_estimado-desc">Valor ↓ Maior</SelectItem>
+              <SelectItem value="created_at-desc">Mais recente</SelectItem>
+            </SelectContent>
+          </Select>
+
           <div className="flex border rounded-lg ml-auto overflow-hidden">
             <Button variant={viewMode === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 rounded-none" onClick={() => setViewMode('kanban')} title="Kanban">
               <LayoutGrid className="h-4 w-4" />
@@ -711,7 +759,9 @@ export default function Contatos() {
                     <div className="flex items-center">Nome <SortIcon field="name" /></div>
                   </TableHead>
                   <TableHead>Tipo</TableHead>
-                  <TableHead>Temp.</TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('temperatura')}>
+                    <div className="flex items-center">Temp. <SortIcon field="temperatura" /></div>
+                  </TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('valor_estimado')}>
                     <div className="flex items-center">Valor Est. <SortIcon field="valor_estimado" /></div>
