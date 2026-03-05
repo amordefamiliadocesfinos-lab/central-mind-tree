@@ -15,6 +15,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -65,6 +68,7 @@ import {
   ChevronUp,
   ChevronDown,
   AlertTriangle,
+  Thermometer,
 } from 'lucide-react';
 import { useContacts, Contact } from '@/hooks/useContacts';
 import { useContactHistory } from '@/hooks/useContactHistory';
@@ -396,6 +400,27 @@ export default function Contatos() {
                 <DropdownMenuItem onClick={() => { setActivitiesContact(contact); setActivitiesOpen(true); }}>
                   <CalendarClock className="h-4 w-4 mr-2" /> Atividades
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuSub>
+                  <DropdownMenuSubTrigger>
+                    <Thermometer className="h-4 w-4 mr-2" /> Temperatura
+                  </DropdownMenuSubTrigger>
+                  <DropdownMenuSubContent>
+                    {Object.entries(TEMP_CONFIG).map(([key, cfg]) => {
+                      const Icon = cfg.icon;
+                      return (
+                        <DropdownMenuItem
+                          key={key}
+                          onClick={() => handleTempChange(contact, key)}
+                          className={contact.temperatura_lead === key ? 'font-bold' : ''}
+                        >
+                          <Icon className="h-4 w-4 mr-2" />
+                          {cfg.label}
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuSubContent>
+                </DropdownMenuSub>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem className="text-destructive" onClick={() => { setContactToDelete(contact); setDeleteDialogOpen(true); }}>
                   <Trash2 className="h-4 w-4 mr-2" /> Excluir
