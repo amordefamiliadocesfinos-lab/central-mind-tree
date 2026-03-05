@@ -341,6 +341,7 @@ export default function Contatos() {
   const ContactCard = ({ contact }: { contact: Contact }) => {
     const overdue = isNextActionOverdue(contact);
     const priorityCfg = PRIORITY_CONFIG[(contact.temperatura_lead || 'morno') as keyof typeof PRIORITY_CONFIG] || PRIORITY_CONFIG.morno;
+    const subtypeCfg = CONTACT_SUBTYPE_CONFIG[contact.contact_type || ''];
 
     const nextActionFormatted = contact.next_action_date
       ? (() => { try { return format(parseISO(contact.next_action_date), "dd/MM HH:mm"); } catch { return null; } })()
@@ -364,20 +365,54 @@ export default function Contatos() {
           onDragStart={(e) => handleDragStart(e, contact)}
           onClick={() => { setEditingContact(contact); setFormOpen(true); }}
         >
-          {/* Nome */}
-          <p className="font-semibold text-sm leading-tight break-words">{contact.name}</p>
+          {/* Header: Avatar + Nome + Menu */}
+          <div className="flex items-start gap-2">
+            <ContactAvatar photoUrl={contact.photo_url} name={contact.name} size="sm" />
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm leading-tight break-words">{contact.name}</p>
+              {contact.fantasy_name && (
+                <p className="text-[10px] text-muted-foreground break-words">{contact.fantasy_name}</p>
+              )}
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 -mt-0.5 -mr-1">
+                  <MoreVertical className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuItem onClick={() => { setEditingContact(contact); setFormOpen(true); }}>
+                  <Edit className="h-4 w-4 mr-2" /> Editar
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleWhatsApp(contact)}>
+                  <MessageCircle className="h-4 w-4 mr-2" /> WhatsApp
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setHistoryContact(contact); setHistoryOpen(true); }}>
+                  <ShoppingCart className="h-4 w-4 mr-2" /> Pedidos
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setTimelineContact(contact); setTimelineOpen(true); }}>
+                  <History className="h-4 w-4 mr-2" /> Histórico
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => { setActivitiesContact(contact); setActivitiesOpen(true); }}>
+                  <CalendarClock className="h-4 w-4 mr-2" /> Atividades
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-destructive" onClick={() => { setContactToDelete(contact); setDeleteDialogOpen(true); }}>
+                  <Trash2 className="h-4 w-4 mr-2" /> Excluir
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
 
-          {/* Origem */}
-          {contact.origem_lead && (
-            <p className="text-[11px] text-muted-foreground mt-1">{contact.origem_lead}</p>
-          )}
-
-          {/* Valor estimado */}
-          {contact.valor_estimado ? (
-            <p className="text-xs font-bold text-green-700 dark:text-green-400 mt-1.5">
-              {formatCurrencyShort(contact.valor_estimado)}
-            </p>
-          ) : null}
+          {/* Badges: Tipo + Temperatura */}
+          <div className="flex flex-wrap items-center gap-1 mt-2">
+            {subtypeCfg && (
+              <span className={cn('inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold', subtypeCfg.className)}>
+                {subtypeCfg.label}
+              </span>
+            )}
+            <TempBadge temp={contact.temperatura_lead} />
+          </div>
 
           {/* Próxima ação */}
           {(contact.next_action_text || contact.next_action_date) && (
