@@ -81,7 +81,7 @@ import { ContactActivitiesPanel } from '@/components/crm/ContactActivitiesPanel'
 import { cn } from '@/lib/utils';
 import { FunnelView } from '@/components/FunnelView';
 import { ContactAvatar } from '@/components/crm/ContactAvatar';
-import { differenceInDays, parseISO, format } from 'date-fns';
+import { differenceInDays, parseISO, format, isSameDay } from 'date-fns';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -177,6 +177,10 @@ export default function Contatos() {
       if (tagFilter !== 'all') {
         const contactTags = getTagsForContact(c.id);
         if (!contactTags.some(t => t.id === tagFilter)) return false;
+      }
+      if (actionFilter === 'hoje') {
+        if (!c.next_action_date) return false;
+        try { if (!isSameDay(parseISO(c.next_action_date), new Date())) return false; } catch { return false; }
       }
       if (actionFilter === 'atrasados') {
         if (!c.next_action_date || !isNextActionOverdue(c)) return false;
@@ -626,6 +630,7 @@ export default function Contatos() {
           <div className="flex gap-0.5 bg-muted/50 rounded-lg p-0.5">
             {[
               { value: 'all', label: 'Todos' },
+              { value: 'hoje', label: '📅 Hoje' },
               { value: 'atrasados', label: '⚠ Atrasados' },
               { value: 'sem_acao', label: 'Sem ação' },
             ].map(opt => (
@@ -769,6 +774,7 @@ export default function Contatos() {
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('ultimo_contato')}>
                     <div className="flex items-center">Últ. Contato <SortIcon field="ultimo_contato" /></div>
                   </TableHead>
+                  <TableHead>Próxima Ação</TableHead>
                   <TableHead>Tags</TableHead>
                   <TableHead>Origem</TableHead>
                   <TableHead className="w-12"></TableHead>
@@ -777,7 +783,7 @@ export default function Contatos() {
               <TableBody>
                 {sortedContacts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center text-muted-foreground py-12">
+                    <TableCell colSpan={10} className="text-center text-muted-foreground py-12">
                       Nenhum contato encontrado
                     </TableCell>
                   </TableRow>
@@ -840,6 +846,19 @@ export default function Contatos() {
                           {alert ? (
                             <span className={cn('text-xs font-medium rounded px-1.5 py-0.5 border', alert.className)}>{alert.label}</span>
                           ) : '-'}
+                        </TableCell>
+                        <TableCell>
+                          {contact.next_action_text || contact.next_action_date ? (
+                            <div className={cn("text-xs", isNextActionOverdue(contact) && "text-red-600 font-semibold")}>
+                              {isNextActionOverdue(contact) && <AlertTriangle className="h-3 w-3 inline mr-0.5 -mt-0.5" />}
+                              {contact.next_action_text && <span className="block truncate max-w-[120px]">{contact.next_action_text}</span>}
+                              {contact.next_action_date && (
+                                <span className="text-[10px] text-muted-foreground">
+                                  {(() => { try { return format(parseISO(contact.next_action_date), "dd/MM HH:mm"); } catch { return '-'; } })()}
+                                </span>
+                              )}
+                            </div>
+                          ) : <span className="text-muted-foreground text-xs">-</span>}
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-0.5 flex-wrap">
