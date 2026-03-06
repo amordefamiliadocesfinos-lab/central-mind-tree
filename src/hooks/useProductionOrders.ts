@@ -272,7 +272,7 @@ export function useProductionOrders() {
   }, [orders, calculateConsolidation, calculateBOM]);
 
   // Complete production order (consume BOM, add finished product to stock)
-  const completeOrder = useCallback(async (orderId: string, skipShortageCheck = false) => {
+  const completeOrder = useCallback(async (orderId: string, skipShortageCheck = false, location = 'Fábrica') => {
     const order = orders.find(o => o.id === orderId);
     if (!order || !order.product_id) return { success: false, shortages: [] };
 
@@ -287,18 +287,18 @@ export function useProductionOrders() {
     const shortages = bomLines.filter(line => line.shortage > 0);
     
     if (!skipShortageCheck && shortages.length > 0) {
-      // Return shortages so UI can handle them
       return { success: false, shortages };
     }
 
-    // Create inventory movements for BOM consumption
+    // Create inventory movements for BOM consumption (from location)
     for (const line of bomLines) {
-      // Get current stock
+      // Get current stock at location
       const { data: inv } = await supabase
         .from('inventory')
         .select('quantity')
         .eq('product_id', line.component_id)
-        .single();
+        .eq('location', location)
+        .maybeSingle();
       
       const prevBalance = inv?.quantity || 0;
       const newBalance = prevBalance - line.qty_needed;
@@ -311,6 +311,7 @@ export function useProductionOrders() {
           previous_balance: prevBalance,
           new_balance: newBalance,
           movement_type: 'consume',
+          location,
           reference_type: 'production_order',
           reference_id: orderId,
           notes: `Consumo OP ${order.order_number}`,
@@ -320,16 +321,19 @@ export function useProductionOrders() {
         .from('inventory')
         .upsert({
           product_id: line.component_id,
+          location,
           quantity: newBalance,
-        }, { onConflict: 'product_id' });
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'product_id,location' });
     }
 
-    // Add finished product to stock
+    // Add finished product to stock at location
     const { data: finishedInv } = await supabase
       .from('inventory')
       .select('quantity')
       .eq('product_id', order.product_id)
-      .single();
+      .eq('location', location)
+      .maybeSingle();
     
     const prevFinished = finishedInv?.quantity || 0;
     const newFinished = prevFinished + consolidatedQty;
@@ -342,6 +346,7 @@ export function useProductionOrders() {
         previous_balance: prevFinished,
         new_balance: newFinished,
         movement_type: 'in',
+        location,
         reference_type: 'production_order',
         reference_id: orderId,
         notes: `Entrada produção OP ${order.order_number}`,
@@ -351,8 +356,10 @@ export function useProductionOrders() {
       .from('inventory')
       .upsert({
         product_id: order.product_id,
+        location,
         quantity: newFinished,
-      }, { onConflict: 'product_id' });
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'product_id,location' });
 
     // Update order status
     await supabase
@@ -364,7 +371,7 @@ export function useProductionOrders() {
       })
       .eq('id', orderId);
 
-    toast.success(`OP concluída! ${consolidatedQty} unidades produzidas`);
+    toast.success(`OP concluída! ${consolidatedQty} unidades produzidas em ${location}`);
     fetchOrders();
     return { success: true, shortages: [] };
   }, [orders, calculateConsolidation, calculateBOM, fetchOrders]);
