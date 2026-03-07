@@ -345,6 +345,8 @@ export type Database = {
           description: string
           event_type: string
           id: string
+          interaction_date: string | null
+          interaction_type: string
           new_value: string | null
           old_value: string | null
         }
@@ -354,6 +356,8 @@ export type Database = {
           description: string
           event_type?: string
           id?: string
+          interaction_date?: string | null
+          interaction_type?: string
           new_value?: string | null
           old_value?: string | null
         }
@@ -363,6 +367,8 @@ export type Database = {
           description?: string
           event_type?: string
           id?: string
+          interaction_date?: string | null
+          interaction_type?: string
           new_value?: string | null
           old_value?: string | null
         }
