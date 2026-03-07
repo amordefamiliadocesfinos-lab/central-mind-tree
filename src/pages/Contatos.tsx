@@ -855,6 +855,7 @@ export default function Contatos() {
                     <div className="flex items-center">Últ. Contato <SortIcon field="ultimo_contato" /></div>
                   </TableHead>
                   <TableHead>Próxima Ação</TableHead>
+                  <TableHead>Próx. Contato</TableHead>
                   <TableHead>Tags</TableHead>
                   <TableHead>Origem</TableHead>
                   <TableHead className="w-12"></TableHead>
