@@ -305,6 +305,17 @@ export function ContactFormDialog({
               </div>
             </div>
 
+            {/* Próximo Contato */}
+            <div className="rounded-lg border bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 p-3 space-y-2">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">📞 Próximo Contato</Label>
+              <Input 
+                type="datetime-local" 
+                value={form.next_contact_date ? (() => { try { const d = parseISO(form.next_contact_date); return format(d, "yyyy-MM-dd'T'HH:mm"); } catch { return ''; } })() : ''}
+                onChange={(e) => updateField('next_contact_date' as any, e.target.value ? new Date(e.target.value).toISOString() : '')}
+              />
+              <p className="text-[10px] text-muted-foreground">Agende quando entrar em contato novamente com este cliente</p>
+            </div>
+
             <div className="space-y-1.5">
               <Label>Observações</Label>
               <Textarea value={form.notes || ''} onChange={(e) => updateField('notes', e.target.value)} rows={2} placeholder="Observações gerais..." />
