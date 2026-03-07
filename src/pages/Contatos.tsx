@@ -123,6 +123,22 @@ function getUltimoContatoAlert(dateStr?: string | null) {
   } catch { return null; }
 }
 
+function getNextContactStatus(dateStr?: string | null) {
+  if (!dateStr) return null;
+  try {
+    const d = parseISO(dateStr);
+    const now = new Date();
+    const today = startOfDay(now);
+    const targetDay = startOfDay(d);
+    if (isSameDay(d, now)) return { label: 'Hoje', className: 'text-amber-700 bg-amber-100 border-amber-300', isToday: true, isOverdue: false };
+    if (isBefore(targetDay, today)) {
+      const days = differenceInDays(today, targetDay);
+      return { label: `${days}d atraso`, className: 'text-red-700 bg-red-100 border-red-300', isToday: false, isOverdue: true };
+    }
+    return { label: format(d, 'dd/MM'), className: 'text-blue-700 bg-blue-100 border-blue-300', isToday: false, isOverdue: false };
+  } catch { return null; }
+}
+
 function formatCurrencyShort(v?: number | null) {
   if (!v) return null;
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 });
