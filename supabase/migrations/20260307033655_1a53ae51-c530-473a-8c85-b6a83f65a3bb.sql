@@ -1,0 +1,1 @@
+ALTER TABLE public.contacts ADD COLUMN IF NOT EXISTS next_contact_date timestamp with time zone DEFAULT NULL;
