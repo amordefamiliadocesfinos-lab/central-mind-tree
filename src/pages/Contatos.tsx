@@ -69,6 +69,7 @@ import {
   ChevronDown,
   AlertTriangle,
   Thermometer,
+  Phone,
 } from 'lucide-react';
 import { useContacts, Contact } from '@/hooks/useContacts';
 import { useContactHistory } from '@/hooks/useContactHistory';
@@ -81,7 +82,7 @@ import { ContactActivitiesPanel } from '@/components/crm/ContactActivitiesPanel'
 import { cn } from '@/lib/utils';
 import { FunnelView } from '@/components/FunnelView';
 import { ContactAvatar } from '@/components/crm/ContactAvatar';
-import { differenceInDays, parseISO, format, isSameDay } from 'date-fns';
+import { differenceInDays, parseISO, format, isSameDay, isBefore, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 
