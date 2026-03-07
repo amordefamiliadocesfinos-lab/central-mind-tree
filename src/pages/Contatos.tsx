@@ -515,6 +515,34 @@ export default function Contatos() {
               )}
             </div>
           )}
+
+          {/* Próximo Contato */}
+          {contact.next_contact_date && (() => {
+            const ncs = getNextContactStatus(contact.next_contact_date);
+            if (!ncs) return null;
+            const timeStr = (() => { try { return format(parseISO(contact.next_contact_date), "dd/MM HH:mm"); } catch { return ''; } })();
+            return (
+              <div className={cn(
+                "rounded-md px-2 py-1.5 text-[11px] border mt-2 flex items-center gap-1.5",
+                ncs.isOverdue ? "bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800" :
+                ncs.isToday ? "bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800" :
+                "bg-blue-50/50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800"
+              )}>
+                <Phone className="h-3 w-3 shrink-0" />
+                <div>
+                  <p className={cn("font-medium", ncs.isOverdue && "text-red-700 dark:text-red-400", ncs.isToday && "text-amber-700 dark:text-amber-400")}>
+                    {ncs.isOverdue && <AlertTriangle className="h-3 w-3 inline mr-0.5 -mt-0.5" />}
+                    Próx. contato: {timeStr}
+                  </p>
+                  {(ncs.isOverdue || ncs.isToday) && (
+                    <span className={cn("text-[10px] font-semibold", ncs.isOverdue ? "text-red-600" : "text-amber-600")}>
+                      {ncs.label}
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
         </Card>
       </motion.div>
     );
@@ -672,6 +700,31 @@ export default function Contatos() {
               </Button>
             ))}
           </div>
+
+          {/* Próximo Contato filter */}
+          <Button
+            variant={contactDateFilter === 'hoje_contato' ? 'default' : 'outline'}
+            size="sm"
+            className={cn(
+              "h-7 px-2.5 text-xs",
+              contactDateFilter === 'hoje_contato' && "bg-blue-600 hover:bg-blue-700 shadow-sm"
+            )}
+            onClick={() => setContactDateFilter(prev => prev === 'hoje_contato' ? 'all' : 'hoje_contato')}
+          >
+            <Phone className="h-3 w-3 mr-1" />
+            Contatos p/ Hoje
+            {(() => {
+              const count = contacts.filter(c => {
+                if (!c.is_active || !c.next_contact_date) return false;
+                try {
+                  const d = parseISO(c.next_contact_date);
+                  const today = startOfDay(new Date());
+                  return isSameDay(d, new Date()) || isBefore(startOfDay(d), today);
+                } catch { return false; }
+              }).length;
+              return count > 0 ? <Badge className="ml-1 h-4 px-1 text-[9px] bg-red-500 text-white border-0">{count}</Badge> : null;
+            })()}
+          </Button>
 
           {/* Sort selector */}
           <Select value={`${sortField}-${sortDir}`} onValueChange={(v) => {
