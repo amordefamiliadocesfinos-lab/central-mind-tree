@@ -942,6 +942,20 @@ export default function Contatos() {
                           ) : <span className="text-muted-foreground text-xs">-</span>}
                         </TableCell>
                         <TableCell>
+                          {contact.next_contact_date ? (() => {
+                            const ncs = getNextContactStatus(contact.next_contact_date);
+                            if (!ncs) return <span className="text-muted-foreground text-xs">-</span>;
+                            const timeStr = (() => { try { return format(parseISO(contact.next_contact_date), "dd/MM HH:mm"); } catch { return ''; } })();
+                            return (
+                              <span className={cn("text-[10px] font-semibold rounded px-1.5 py-0.5 border inline-flex items-center gap-1", ncs.className)}>
+                                {ncs.isOverdue && <AlertTriangle className="h-3 w-3" />}
+                                <Phone className="h-3 w-3" />
+                                {timeStr}
+                              </span>
+                            );
+                          })() : <span className="text-muted-foreground text-xs">-</span>}
+                        </TableCell>
+                        <TableCell>
                           <div className="flex gap-0.5 flex-wrap">
                             {contactTags.slice(0, 2).map(tag => (
                               <span key={tag.id} className="text-[9px] font-medium rounded-full px-1.5 py-0.5 text-white" style={{ backgroundColor: tag.color }}>
