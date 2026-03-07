@@ -280,10 +280,10 @@ export default function Contatos() {
     const updates: Partial<Contact> = { funnel_status: newStatus };
     if (newStatus === 'fechado' && contact.funnel_status !== 'fechado') {
       updates.converted_at = new Date().toISOString();
-      await addEntry(contact.id, 'conversion', `Negócio Fechado!`);
+      await addEntry(contact.id, 'conversion', `Negócio Fechado!`, new Date().toISOString());
       toast.success('🎉 Negócio fechado!');
     } else {
-      await addEntry(contact.id, 'stage_change', `Movido de "${oldStage?.label || contact.funnel_status}" para "${newStage?.label || newStatus}"`, oldStage?.label, newStage?.label);
+      await addEntry(contact.id, 'stage_change', `Movido de "${oldStage?.label || contact.funnel_status}" para "${newStage?.label || newStatus}"`, new Date().toISOString());
     }
     await updateContact(contact.id, updates);
   };
@@ -301,7 +301,7 @@ export default function Contatos() {
     if (contact.temperatura_lead === newTemp) return;
     const oldLabel = TEMP_CONFIG[contact.temperatura_lead as keyof typeof TEMP_CONFIG]?.label || contact.temperatura_lead;
     const newLabel = TEMP_CONFIG[newTemp as keyof typeof TEMP_CONFIG]?.label || newTemp;
-    await addEntry(contact.id, 'stage_change', `Temperatura alterada de "${oldLabel}" para "${newLabel}"`, oldLabel, newLabel);
+    await addEntry(contact.id, 'stage_change', `Temperatura alterada de "${oldLabel}" para "${newLabel}"`, new Date().toISOString());
     await updateContact(contact.id, { temperatura_lead: newTemp });
     toast.success(`Temperatura alterada para ${newLabel}`);
   };
