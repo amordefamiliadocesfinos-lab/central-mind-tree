@@ -206,6 +206,15 @@ export default function Contatos() {
       if (actionFilter === 'sem_acao') {
         if (c.next_action_text || c.next_action_date) return false;
       }
+      // Próximo Contato filters
+      if (contactDateFilter === 'hoje_contato') {
+        if (!c.next_contact_date) return false;
+        try {
+          const d = parseISO(c.next_contact_date);
+          const today = startOfDay(new Date());
+          if (!isSameDay(d, new Date()) && !isBefore(startOfDay(d), today)) return false;
+        } catch { return false; }
+      }
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
         return (
@@ -221,7 +230,7 @@ export default function Contatos() {
       }
       return true;
     });
-  }, [contacts, searchQuery, statusFilter, tempFilter, typeFilter, tagFilter, actionFilter, getTagsForContact, isNextActionOverdue]);
+  }, [contacts, searchQuery, statusFilter, tempFilter, typeFilter, tagFilter, actionFilter, contactDateFilter, getTagsForContact, isNextActionOverdue]);
 
   const sortedContacts = useMemo(() => {
     return [...filteredContacts].sort((a, b) => {
