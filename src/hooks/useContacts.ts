@@ -84,7 +84,8 @@ export interface Contact {
   // Next action
   next_action_text?: string;
   next_action_date?: string;
-  
+  next_contact_date?: string;
+
   // Other
   company_name?: string;
   notes?: string;
