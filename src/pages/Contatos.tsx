@@ -804,7 +804,10 @@ export default function Contatos() {
             <Button variant={viewMode === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 rounded-none" onClick={() => setViewMode('kanban')} title="Kanban">
               <LayoutGrid className="h-4 w-4" />
             </Button>
-            <Button variant={viewMode === 'funnel' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 rounded-none border-x" onClick={() => setViewMode('funnel')} title="Funil">
+            <Button variant={viewMode === 'sales_funnel' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 rounded-none border-x" onClick={() => setViewMode('sales_funnel')} title="Funil de Vendas">
+              <Filter className="h-4 w-4" />
+            </Button>
+            <Button variant={viewMode === 'funnel' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 rounded-none border-r" onClick={() => setViewMode('funnel')} title="Análise Funil">
               <Triangle className="h-4 w-4" />
             </Button>
             <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 rounded-none" onClick={() => setViewMode('list')} title="Lista">
