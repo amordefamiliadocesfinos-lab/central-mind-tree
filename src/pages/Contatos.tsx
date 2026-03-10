@@ -551,8 +551,13 @@ export default function Contatos() {
             </DropdownMenu>
           </div>
 
-          {/* Badges: Tipo + Temperatura + Sem Retorno */}
+          {/* Badges: Classificação + Tipo + Temperatura + Sem Retorno */}
           <div className="flex flex-wrap items-center gap-1 mt-2">
+            {contact.client_classification && CLIENT_CLASSIFICATION_CONFIG[contact.client_classification] && (
+              <span className={cn('inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold', CLIENT_CLASSIFICATION_CONFIG[contact.client_classification].className)}>
+                {CLIENT_CLASSIFICATION_CONFIG[contact.client_classification].emoji} {CLIENT_CLASSIFICATION_CONFIG[contact.client_classification].label}
+              </span>
+            )}
             {subtypeCfg && (
               <span className={cn('inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold', subtypeCfg.className)}>
                 {subtypeCfg.label}
