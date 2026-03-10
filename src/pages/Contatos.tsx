@@ -285,6 +285,37 @@ export default function Contatos() {
     return sums;
   }, [groupedByStage]);
 
+  const groupedBySalesFunnel = useMemo(() => {
+    const tempOrder: Record<string, number> = { quente: 3, morno: 2, frio: 1 };
+    const groups: Record<string, Contact[]> = {};
+    SALES_FUNNEL_STAGES.forEach(s => { groups[s.key] = []; });
+    filteredContacts.forEach(c => {
+      const key = c.contact_type || 'orcamento';
+      if (groups[key]) groups[key].push(c);
+      else groups['orcamento'].push(c);
+    });
+    Object.keys(groups).forEach(key => {
+      groups[key].sort((a, b) => {
+        let cmp = 0;
+        if (sortField === 'name') cmp = (a.name || '').localeCompare(b.name || '');
+        else if (sortField === 'valor_estimado') cmp = (a.valor_estimado || 0) - (b.valor_estimado || 0);
+        else if (sortField === 'ultimo_contato') cmp = (a.ultimo_contato || '').localeCompare(b.ultimo_contato || '');
+        else if (sortField === 'created_at') cmp = (a.created_at || '').localeCompare(b.created_at || '');
+        else if (sortField === 'temperatura') cmp = (tempOrder[a.temperatura_lead || 'morno'] || 2) - (tempOrder[b.temperatura_lead || 'morno'] || 2);
+        return sortDir === 'asc' ? cmp : -cmp;
+      });
+    });
+    return groups;
+  }, [filteredContacts, sortField, sortDir]);
+
+  const salesFunnelSums = useMemo(() => {
+    const sums: Record<string, number> = {};
+    SALES_FUNNEL_STAGES.forEach(s => {
+      sums[s.key] = (groupedBySalesFunnel[s.key] || []).reduce((sum, c) => sum + (c.valor_estimado || 0), 0);
+    });
+    return sums;
+  }, [groupedBySalesFunnel]);
+
   const metrics = useMemo(() => {
     const active = contacts.filter(c => c.is_active);
     const propostas = active.filter(c => c.funnel_status === 'proposta_enviada');
