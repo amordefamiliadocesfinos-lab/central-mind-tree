@@ -121,6 +121,13 @@ const CONTACT_SUBTYPE_CONFIG: Record<string, { label: string; className: string 
   atacado: { label: 'Atacado', className: 'bg-violet-100 text-violet-700 border-violet-300' },
 };
 
+const CLIENT_CLASSIFICATION_CONFIG: Record<string, { label: string; emoji: string; className: string }> = {
+  vip: { label: 'VIP', emoji: '🟢', className: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+  alto_potencial: { label: 'Alto Potencial', emoji: '🔵', className: 'bg-blue-100 text-blue-800 border-blue-300' },
+  medio: { label: 'Médio', emoji: '🟡', className: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
+  baixo_potencial: { label: 'Baixo Potencial', emoji: '⚪', className: 'bg-gray-100 text-gray-600 border-gray-300' },
+};
+
 function getUltimoContatoAlert(dateStr?: string | null) {
   if (!dateStr) return null;
   try {
