@@ -318,6 +318,16 @@ export default function Contatos() {
 
   const metrics = useMemo(() => {
     const active = contacts.filter(c => c.is_active);
+    const clientesAtivos = active.filter(c => c.contact_type === 'cliente_ativo');
+    const orcamentos = active.filter(c => c.contact_type === 'orcamento');
+    const followUpHoje = active.filter(c => {
+      if (!c.next_contact_date) return false;
+      try {
+        const d = parseISO(c.next_contact_date);
+        const today = startOfDay(new Date());
+        return isSameDay(d, new Date()) || isBefore(startOfDay(d), today);
+      } catch { return false; }
+    });
     const propostas = active.filter(c => c.funnel_status === 'proposta_enviada');
     const negociacao = active.filter(c => c.funnel_status === 'negociacao');
     const fechados = active.filter(c => c.funnel_status === 'fechado');
@@ -327,7 +337,7 @@ export default function Contatos() {
       .reduce((sum, c) => sum + (c.valor_estimado || 0), 0);
     const totalLeads = active.filter(c => c.funnel_status !== 'perdido').length;
     const conversionRate = totalLeads > 0 ? Math.round((fechados.length / totalLeads) * 100) : 0;
-    return { total: active.length, propostas: propostas.length, negociacao: negociacao.length, fechados: fechados.length, valorAberto, conversionRate };
+    return { total: active.length, propostas: propostas.length, negociacao: negociacao.length, fechados: fechados.length, valorAberto, conversionRate, clientesAtivos: clientesAtivos.length, orcamentos: orcamentos.length, followUpHoje: followUpHoje.length };
   }, [contacts]);
 
   const handleSave = async (data: Partial<Contact>) => {
