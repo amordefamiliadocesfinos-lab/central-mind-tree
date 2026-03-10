@@ -51,6 +51,7 @@ import {
   List,
   Triangle,
   ArrowRight,
+  Filter,
   UserPlus,
   Users,
   FileText,
@@ -93,6 +94,13 @@ const FUNNEL_STAGES = [
   { key: 'negociacao', label: 'Negociação', color: 'bg-orange-500', textColor: 'text-orange-700', bgLight: 'bg-orange-50/80 border-orange-200', headerBg: 'bg-gradient-to-r from-orange-500 to-orange-400' },
   { key: 'fechado', label: 'Fechado', color: 'bg-green-500', textColor: 'text-green-700', bgLight: 'bg-green-50/80 border-green-200', headerBg: 'bg-gradient-to-r from-green-500 to-green-400' },
   { key: 'perdido', label: 'Perdido', color: 'bg-red-500', textColor: 'text-red-700', bgLight: 'bg-red-50/80 border-red-200', headerBg: 'bg-gradient-to-r from-red-500 to-red-400' },
+];
+
+const SALES_FUNNEL_STAGES = [
+  { key: 'orcamento', label: 'Orçamento', emoji: '🟡', color: 'bg-yellow-500', textColor: 'text-yellow-700', bgLight: 'bg-yellow-50/80 border-yellow-200', headerBg: 'bg-gradient-to-r from-yellow-500 to-yellow-400' },
+  { key: 'em_atendimento', label: 'Em atendimento', emoji: '🔵', color: 'bg-blue-500', textColor: 'text-blue-700', bgLight: 'bg-blue-50/80 border-blue-200', headerBg: 'bg-gradient-to-r from-blue-500 to-blue-400' },
+  { key: 'cliente_ativo', label: 'Cliente ativo', emoji: '🟢', color: 'bg-green-500', textColor: 'text-green-700', bgLight: 'bg-green-50/80 border-green-200', headerBg: 'bg-gradient-to-r from-green-500 to-green-400' },
+  { key: 'inativo', label: 'Inativo', emoji: '🔴', color: 'bg-red-500', textColor: 'text-red-700', bgLight: 'bg-red-50/80 border-red-200', headerBg: 'bg-gradient-to-r from-red-500 to-red-400' },
 ];
 
 const PRIORITY_CONFIG = {
@@ -158,7 +166,7 @@ export default function Contatos() {
   const [tagFilter, setTagFilter] = useState<string>('all');
   const [actionFilter, setActionFilter] = useState<string>('all');
   const [contactDateFilter, setContactDateFilter] = useState<string>('all');
-  const [viewMode, setViewMode] = useState<'kanban' | 'funnel' | 'list'>('kanban');
+  const [viewMode, setViewMode] = useState<'kanban' | 'funnel' | 'list' | 'sales_funnel'>('kanban');
   const [formOpen, setFormOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -277,6 +285,37 @@ export default function Contatos() {
     return sums;
   }, [groupedByStage]);
 
+  const groupedBySalesFunnel = useMemo(() => {
+    const tempOrder: Record<string, number> = { quente: 3, morno: 2, frio: 1 };
+    const groups: Record<string, Contact[]> = {};
+    SALES_FUNNEL_STAGES.forEach(s => { groups[s.key] = []; });
+    filteredContacts.forEach(c => {
+      const key = c.contact_type || 'orcamento';
+      if (groups[key]) groups[key].push(c);
+      else groups['orcamento'].push(c);
+    });
+    Object.keys(groups).forEach(key => {
+      groups[key].sort((a, b) => {
+        let cmp = 0;
+        if (sortField === 'name') cmp = (a.name || '').localeCompare(b.name || '');
+        else if (sortField === 'valor_estimado') cmp = (a.valor_estimado || 0) - (b.valor_estimado || 0);
+        else if (sortField === 'ultimo_contato') cmp = (a.ultimo_contato || '').localeCompare(b.ultimo_contato || '');
+        else if (sortField === 'created_at') cmp = (a.created_at || '').localeCompare(b.created_at || '');
+        else if (sortField === 'temperatura') cmp = (tempOrder[a.temperatura_lead || 'morno'] || 2) - (tempOrder[b.temperatura_lead || 'morno'] || 2);
+        return sortDir === 'asc' ? cmp : -cmp;
+      });
+    });
+    return groups;
+  }, [filteredContacts, sortField, sortDir]);
+
+  const salesFunnelSums = useMemo(() => {
+    const sums: Record<string, number> = {};
+    SALES_FUNNEL_STAGES.forEach(s => {
+      sums[s.key] = (groupedBySalesFunnel[s.key] || []).reduce((sum, c) => sum + (c.valor_estimado || 0), 0);
+    });
+    return sums;
+  }, [groupedBySalesFunnel]);
+
   const metrics = useMemo(() => {
     const active = contacts.filter(c => c.is_active);
     const propostas = active.filter(c => c.funnel_status === 'proposta_enviada');
@@ -363,6 +402,19 @@ export default function Contatos() {
     setDragOverStage(null);
     if (draggedContact && draggedContact.funnel_status !== stageKey) {
       await handleStatusChange(draggedContact, stageKey);
+    }
+    setDraggedContact(null);
+  };
+
+  const handleSalesFunnelDrop = async (e: React.DragEvent, stageKey: string) => {
+    e.preventDefault();
+    setDragOverStage(null);
+    if (draggedContact && draggedContact.contact_type !== stageKey) {
+      const oldLabel = SALES_FUNNEL_STAGES.find(s => s.key === draggedContact.contact_type)?.label || draggedContact.contact_type || 'Sem tipo';
+      const newLabel = SALES_FUNNEL_STAGES.find(s => s.key === stageKey)?.label || stageKey;
+      await addEntry(draggedContact.id, 'stage_change', `Tipo alterado de "${oldLabel}" para "${newLabel}"`, new Date().toISOString());
+      await updateContact(draggedContact.id, { contact_type: stageKey });
+      toast.success(`Movido para ${newLabel}`);
     }
     setDraggedContact(null);
   };
@@ -752,7 +804,10 @@ export default function Contatos() {
             <Button variant={viewMode === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 rounded-none" onClick={() => setViewMode('kanban')} title="Kanban">
               <LayoutGrid className="h-4 w-4" />
             </Button>
-            <Button variant={viewMode === 'funnel' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 rounded-none border-x" onClick={() => setViewMode('funnel')} title="Funil">
+            <Button variant={viewMode === 'sales_funnel' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 rounded-none border-x" onClick={() => setViewMode('sales_funnel')} title="Funil de Vendas">
+              <Filter className="h-4 w-4" />
+            </Button>
+            <Button variant={viewMode === 'funnel' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 rounded-none border-r" onClick={() => setViewMode('funnel')} title="Análise Funil">
               <Triangle className="h-4 w-4" />
             </Button>
             <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 rounded-none" onClick={() => setViewMode('list')} title="Lista">
@@ -806,6 +861,63 @@ export default function Contatos() {
                       </p>
                     )}
                     {/* Progress bar */}
+                    <div className="mt-1.5 h-1 rounded-full bg-white/20 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-white/60 transition-all"
+                        style={{ width: `${Math.min(100, (stageContacts.length / Math.max(filteredContacts.length, 1)) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className={cn(
+                    "space-y-2 max-h-[calc(100vh-380px)] overflow-y-auto rounded-lg transition-colors p-0.5",
+                    isDragOver && "bg-primary/5"
+                  )}>
+                    <AnimatePresence>
+                      {stageContacts.map(contact => (
+                        <ContactCard key={contact.id} contact={contact} />
+                      ))}
+                    </AnimatePresence>
+                    {stageContacts.length === 0 && (
+                      <p className="text-xs text-muted-foreground text-center py-8 opacity-60">
+                        {isDragOver ? "Soltar aqui" : "Nenhum contato"}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : viewMode === 'sales_funnel' ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {SALES_FUNNEL_STAGES.map((stage) => {
+              const stageContacts = groupedBySalesFunnel[stage.key] || [];
+              const stageSum = salesFunnelSums[stage.key];
+              const isDragOver = dragOverStage === stage.key;
+              return (
+                <div
+                  key={stage.key}
+                  className="min-w-[200px]"
+                  onDragOver={(e) => handleDragOver(e, stage.key)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleSalesFunnelDrop(e, stage.key)}
+                >
+                  <div className={cn(
+                    "rounded-xl p-2.5 mb-2 transition-all",
+                    isDragOver ? "ring-2 ring-primary ring-offset-1 shadow-lg" : "",
+                    stage.headerBg,
+                  )}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-white drop-shadow-sm">{stage.emoji} {stage.label}</span>
+                      <Badge className="bg-white/30 text-white border-0 text-xs h-5 px-1.5 font-bold backdrop-blur-sm">
+                        {stageContacts.length}
+                      </Badge>
+                    </div>
+                    {stageSum > 0 && (
+                      <p className="text-[11px] font-bold text-white/90 mt-1 drop-shadow-sm">
+                        {formatCurrencyShort(stageSum)}
+                      </p>
+                    )}
                     <div className="mt-1.5 h-1 rounded-full bg-white/20 overflow-hidden">
                       <div
                         className="h-full rounded-full bg-white/60 transition-all"
