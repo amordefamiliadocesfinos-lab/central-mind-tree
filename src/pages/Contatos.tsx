@@ -709,6 +709,20 @@ export default function Contatos() {
             </SelectContent>
           </Select>
 
+          <Select value={classificationFilter} onValueChange={setClassificationFilter}>
+            <SelectTrigger className="w-40 h-9">
+              <SelectValue placeholder="Classificação" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas classif.</SelectItem>
+              {Object.entries(CLIENT_CLASSIFICATION_CONFIG).map(([key, cfg]) => (
+                <SelectItem key={key} value={key}>
+                  <span className="flex items-center gap-1.5">{cfg.emoji} {cfg.label}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           {tags.length > 0 && (
             <Select value={tagFilter} onValueChange={setTagFilter}>
               <SelectTrigger className="w-32 h-9">
