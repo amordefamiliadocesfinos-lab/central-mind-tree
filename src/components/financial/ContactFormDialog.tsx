@@ -250,7 +250,7 @@ export function ContactFormDialog({
                     </Select>
                   </div>
                   <div className="space-y-1.5">
-                    <Label>Classificação</Label>
+                    <Label>Cliente/Forn.</Label>
                     <Select value={form.type || 'cliente'} onValueChange={(v) => updateField('type', v)}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -260,6 +260,18 @@ export function ContactFormDialog({
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Classificação do Cliente</Label>
+                  <Select value={form.client_classification || ''} onValueChange={(v) => updateField('client_classification' as any, v)}>
+                    <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="vip">🟢 Cliente VIP</SelectItem>
+                      <SelectItem value="alto_potencial">🔵 Cliente Alto Potencial</SelectItem>
+                      <SelectItem value="medio">🟡 Cliente Médio</SelectItem>
+                      <SelectItem value="baixo_potencial">⚪ Cliente Baixo Potencial</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>

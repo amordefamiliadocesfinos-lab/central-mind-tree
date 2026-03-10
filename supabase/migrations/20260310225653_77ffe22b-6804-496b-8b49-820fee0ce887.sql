@@ -1,0 +1,1 @@
+ALTER TABLE public.contacts ADD COLUMN client_classification text DEFAULT null;

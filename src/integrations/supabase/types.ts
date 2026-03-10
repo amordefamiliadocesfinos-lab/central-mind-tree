@@ -456,6 +456,7 @@ export type Database = {
           birthplace: string | null
           category: string | null
           city: string | null
+          client_classification: string | null
           code: string | null
           company_name: string | null
           contact_info: string | null
@@ -530,6 +531,7 @@ export type Database = {
           birthplace?: string | null
           category?: string | null
           city?: string | null
+          client_classification?: string | null
           code?: string | null
           company_name?: string | null
           contact_info?: string | null
@@ -604,6 +606,7 @@ export type Database = {
           birthplace?: string | null
           category?: string | null
           city?: string | null
+          client_classification?: string | null
           code?: string | null
           company_name?: string | null
           contact_info?: string | null

@@ -121,6 +121,13 @@ const CONTACT_SUBTYPE_CONFIG: Record<string, { label: string; className: string 
   atacado: { label: 'Atacado', className: 'bg-violet-100 text-violet-700 border-violet-300' },
 };
 
+const CLIENT_CLASSIFICATION_CONFIG: Record<string, { label: string; emoji: string; className: string }> = {
+  vip: { label: 'VIP', emoji: '🟢', className: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+  alto_potencial: { label: 'Alto Potencial', emoji: '🔵', className: 'bg-blue-100 text-blue-800 border-blue-300' },
+  medio: { label: 'Médio', emoji: '🟡', className: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
+  baixo_potencial: { label: 'Baixo Potencial', emoji: '⚪', className: 'bg-gray-100 text-gray-600 border-gray-300' },
+};
+
 function getUltimoContatoAlert(dateStr?: string | null) {
   if (!dateStr) return null;
   try {
@@ -166,6 +173,7 @@ export default function Contatos() {
   const [tagFilter, setTagFilter] = useState<string>('all');
   const [actionFilter, setActionFilter] = useState<string>('all');
   const [contactDateFilter, setContactDateFilter] = useState<string>('all');
+  const [classificationFilter, setClassificationFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'kanban' | 'funnel' | 'list' | 'sales_funnel'>('kanban');
   const [formOpen, setFormOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | undefined>();
@@ -215,6 +223,7 @@ export default function Contatos() {
         if (c.next_action_text || c.next_action_date) return false;
       }
       // Próximo Contato filters
+      if (classificationFilter !== 'all' && c.client_classification !== classificationFilter) return false;
       if (contactDateFilter === 'hoje_contato') {
         if (!c.next_contact_date) return false;
         try {
@@ -238,7 +247,7 @@ export default function Contatos() {
       }
       return true;
     });
-  }, [contacts, searchQuery, statusFilter, tempFilter, typeFilter, tagFilter, actionFilter, contactDateFilter, getTagsForContact, isNextActionOverdue]);
+  }, [contacts, searchQuery, statusFilter, tempFilter, typeFilter, tagFilter, actionFilter, contactDateFilter, classificationFilter, getTagsForContact, isNextActionOverdue]);
 
   const sortedContacts = useMemo(() => {
     return [...filteredContacts].sort((a, b) => {
@@ -542,8 +551,13 @@ export default function Contatos() {
             </DropdownMenu>
           </div>
 
-          {/* Badges: Tipo + Temperatura + Sem Retorno */}
+          {/* Badges: Classificação + Tipo + Temperatura + Sem Retorno */}
           <div className="flex flex-wrap items-center gap-1 mt-2">
+            {contact.client_classification && CLIENT_CLASSIFICATION_CONFIG[contact.client_classification] && (
+              <span className={cn('inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold', CLIENT_CLASSIFICATION_CONFIG[contact.client_classification].className)}>
+                {CLIENT_CLASSIFICATION_CONFIG[contact.client_classification].emoji} {CLIENT_CLASSIFICATION_CONFIG[contact.client_classification].label}
+              </span>
+            )}
             {subtypeCfg && (
               <span className={cn('inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold', subtypeCfg.className)}>
                 {subtypeCfg.label}
@@ -691,6 +705,20 @@ export default function Contatos() {
               <SelectItem value="all">Todos</SelectItem>
               {FUNNEL_STAGES.map(s => (
                 <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={classificationFilter} onValueChange={setClassificationFilter}>
+            <SelectTrigger className="w-40 h-9">
+              <SelectValue placeholder="Classificação" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas classif.</SelectItem>
+              {Object.entries(CLIENT_CLASSIFICATION_CONFIG).map(([key, cfg]) => (
+                <SelectItem key={key} value={key}>
+                  <span className="flex items-center gap-1.5">{cfg.emoji} {cfg.label}</span>
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -963,6 +991,7 @@ export default function Contatos() {
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('name')}>
                     <div className="flex items-center">Nome <SortIcon field="name" /></div>
                   </TableHead>
+                  <TableHead>Classificação</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('temperatura')}>
                     <div className="flex items-center">Temp. <SortIcon field="temperatura" /></div>
@@ -984,7 +1013,7 @@ export default function Contatos() {
               <TableBody>
                 {sortedContacts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={11} className="text-center text-muted-foreground py-12">
+                    <TableCell colSpan={12} className="text-center text-muted-foreground py-12">
                       Nenhum contato encontrado
                     </TableCell>
                   </TableRow>
@@ -1004,6 +1033,13 @@ export default function Contatos() {
                               {contact.fantasy_name && <p className="text-xs text-muted-foreground">{contact.fantasy_name}</p>}
                             </div>
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          {contact.client_classification && CLIENT_CLASSIFICATION_CONFIG[contact.client_classification] ? (
+                            <span className={cn('inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold', CLIENT_CLASSIFICATION_CONFIG[contact.client_classification].className)}>
+                              {CLIENT_CLASSIFICATION_CONFIG[contact.client_classification].emoji} {CLIENT_CLASSIFICATION_CONFIG[contact.client_classification].label}
+                            </span>
+                          ) : <span className="text-muted-foreground text-xs">-</span>}
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="text-[10px]">

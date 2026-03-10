@@ -86,6 +86,9 @@ export interface Contact {
   next_action_date?: string;
   next_contact_date?: string;
 
+  // Classification
+  client_classification?: string; // 'vip' | 'alto_potencial' | 'medio' | 'baixo_potencial'
+
   // Other
   company_name?: string;
   notes?: string;
@@ -197,6 +200,7 @@ export function useContacts() {
           ultimo_contato: cleanValue(contact.ultimo_contato),
           origem_lead: cleanValue(contact.origem_lead),
           is_active: contact.is_active ?? true,
+          client_classification: cleanValue(contact.client_classification),
         })
         .select()
         .single();
