@@ -223,6 +223,7 @@ export default function Contatos() {
         if (c.next_action_text || c.next_action_date) return false;
       }
       // Próximo Contato filters
+      if (classificationFilter !== 'all' && c.client_classification !== classificationFilter) return false;
       if (contactDateFilter === 'hoje_contato') {
         if (!c.next_contact_date) return false;
         try {
