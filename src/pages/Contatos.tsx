@@ -96,6 +96,13 @@ const FUNNEL_STAGES = [
   { key: 'perdido', label: 'Perdido', color: 'bg-red-500', textColor: 'text-red-700', bgLight: 'bg-red-50/80 border-red-200', headerBg: 'bg-gradient-to-r from-red-500 to-red-400' },
 ];
 
+const SALES_FUNNEL_STAGES = [
+  { key: 'orcamento', label: 'Orçamento', emoji: '🟡', color: 'bg-yellow-500', textColor: 'text-yellow-700', bgLight: 'bg-yellow-50/80 border-yellow-200', headerBg: 'bg-gradient-to-r from-yellow-500 to-yellow-400' },
+  { key: 'em_atendimento', label: 'Em atendimento', emoji: '🔵', color: 'bg-blue-500', textColor: 'text-blue-700', bgLight: 'bg-blue-50/80 border-blue-200', headerBg: 'bg-gradient-to-r from-blue-500 to-blue-400' },
+  { key: 'cliente_ativo', label: 'Cliente ativo', emoji: '🟢', color: 'bg-green-500', textColor: 'text-green-700', bgLight: 'bg-green-50/80 border-green-200', headerBg: 'bg-gradient-to-r from-green-500 to-green-400' },
+  { key: 'inativo', label: 'Inativo', emoji: '🔴', color: 'bg-red-500', textColor: 'text-red-700', bgLight: 'bg-red-50/80 border-red-200', headerBg: 'bg-gradient-to-r from-red-500 to-red-400' },
+];
+
 const PRIORITY_CONFIG = {
   quente: { label: 'Alta', borderColor: 'border-l-red-400' },
   morno: { label: 'Média', borderColor: 'border-l-amber-400' },
