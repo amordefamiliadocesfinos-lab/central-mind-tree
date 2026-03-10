@@ -247,7 +247,7 @@ export default function Contatos() {
       }
       return true;
     });
-  }, [contacts, searchQuery, statusFilter, tempFilter, typeFilter, tagFilter, actionFilter, contactDateFilter, getTagsForContact, isNextActionOverdue]);
+  }, [contacts, searchQuery, statusFilter, tempFilter, typeFilter, tagFilter, actionFilter, contactDateFilter, classificationFilter, getTagsForContact, isNextActionOverdue]);
 
   const sortedContacts = useMemo(() => {
     return [...filteredContacts].sort((a, b) => {
