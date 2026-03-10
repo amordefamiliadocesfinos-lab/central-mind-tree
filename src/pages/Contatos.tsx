@@ -888,6 +888,63 @@ export default function Contatos() {
               );
             })}
           </div>
+        ) : viewMode === 'sales_funnel' ? (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {SALES_FUNNEL_STAGES.map((stage) => {
+              const stageContacts = groupedBySalesFunnel[stage.key] || [];
+              const stageSum = salesFunnelSums[stage.key];
+              const isDragOver = dragOverStage === stage.key;
+              return (
+                <div
+                  key={stage.key}
+                  className="min-w-[200px]"
+                  onDragOver={(e) => handleDragOver(e, stage.key)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleSalesFunnelDrop(e, stage.key)}
+                >
+                  <div className={cn(
+                    "rounded-xl p-2.5 mb-2 transition-all",
+                    isDragOver ? "ring-2 ring-primary ring-offset-1 shadow-lg" : "",
+                    stage.headerBg,
+                  )}>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-white drop-shadow-sm">{stage.emoji} {stage.label}</span>
+                      <Badge className="bg-white/30 text-white border-0 text-xs h-5 px-1.5 font-bold backdrop-blur-sm">
+                        {stageContacts.length}
+                      </Badge>
+                    </div>
+                    {stageSum > 0 && (
+                      <p className="text-[11px] font-bold text-white/90 mt-1 drop-shadow-sm">
+                        {formatCurrencyShort(stageSum)}
+                      </p>
+                    )}
+                    <div className="mt-1.5 h-1 rounded-full bg-white/20 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-white/60 transition-all"
+                        style={{ width: `${Math.min(100, (stageContacts.length / Math.max(filteredContacts.length, 1)) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  <div className={cn(
+                    "space-y-2 max-h-[calc(100vh-380px)] overflow-y-auto rounded-lg transition-colors p-0.5",
+                    isDragOver && "bg-primary/5"
+                  )}>
+                    <AnimatePresence>
+                      {stageContacts.map(contact => (
+                        <ContactCard key={contact.id} contact={contact} />
+                      ))}
+                    </AnimatePresence>
+                    {stageContacts.length === 0 && (
+                      <p className="text-xs text-muted-foreground text-center py-8 opacity-60">
+                        {isDragOver ? "Soltar aqui" : "Nenhum contato"}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : viewMode === 'funnel' ? (
           <FunnelView contacts={contacts} />
         ) : (
