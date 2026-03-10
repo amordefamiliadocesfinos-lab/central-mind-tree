@@ -51,6 +51,7 @@ import {
   List,
   Triangle,
   ArrowRight,
+  Filter,
   UserPlus,
   Users,
   FileText,
