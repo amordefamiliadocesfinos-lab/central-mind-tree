@@ -406,6 +406,19 @@ export default function Contatos() {
     setDraggedContact(null);
   };
 
+  const handleSalesFunnelDrop = async (e: React.DragEvent, stageKey: string) => {
+    e.preventDefault();
+    setDragOverStage(null);
+    if (draggedContact && draggedContact.contact_type !== stageKey) {
+      const oldLabel = SALES_FUNNEL_STAGES.find(s => s.key === draggedContact.contact_type)?.label || draggedContact.contact_type || 'Sem tipo';
+      const newLabel = SALES_FUNNEL_STAGES.find(s => s.key === stageKey)?.label || stageKey;
+      await addEntry(draggedContact.id, 'stage_change', `Tipo alterado de "${oldLabel}" para "${newLabel}"`, new Date().toISOString());
+      await updateContact(draggedContact.id, { contact_type: stageKey });
+      toast.success(`Movido para ${newLabel}`);
+    }
+    setDraggedContact(null);
+  };
+
   const toggleSort = (field: SortField) => {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     else { setSortField(field); setSortDir('asc'); }
