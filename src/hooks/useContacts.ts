@@ -86,6 +86,9 @@ export interface Contact {
   next_action_date?: string;
   next_contact_date?: string;
 
+  // Classification
+  client_classification?: string; // 'vip' | 'alto_potencial' | 'medio' | 'baixo_potencial'
+
   // Other
   company_name?: string;
   notes?: string;
