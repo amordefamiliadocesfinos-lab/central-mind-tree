@@ -1035,6 +1035,13 @@ export default function Contatos() {
                           </div>
                         </TableCell>
                         <TableCell>
+                          {contact.client_classification && CLIENT_CLASSIFICATION_CONFIG[contact.client_classification] ? (
+                            <span className={cn('inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold', CLIENT_CLASSIFICATION_CONFIG[contact.client_classification].className)}>
+                              {CLIENT_CLASSIFICATION_CONFIG[contact.client_classification].emoji} {CLIENT_CLASSIFICATION_CONFIG[contact.client_classification].label}
+                            </span>
+                          ) : <span className="text-muted-foreground text-xs">-</span>}
+                        </TableCell>
+                        <TableCell>
                           <Badge variant="outline" className="text-[10px]">
                             {contact.type === 'ambos' ? 'Ambos' : contact.type === 'fornecedor' ? 'Fornecedor' : 'Cliente'}
                           </Badge>

@@ -200,6 +200,7 @@ export function useContacts() {
           ultimo_contato: cleanValue(contact.ultimo_contato),
           origem_lead: cleanValue(contact.origem_lead),
           is_active: contact.is_active ?? true,
+          client_classification: cleanValue(contact.client_classification),
         })
         .select()
         .single();
