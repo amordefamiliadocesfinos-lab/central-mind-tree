@@ -65,7 +65,7 @@ export default function ReuniaoDetalhe() {
 
   // Timer effect
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    let interval: ReturnType<typeof setInterval>;
     if (timerRunning) {
       interval = setInterval(() => {
         setItemTimer(prev => prev + 1);

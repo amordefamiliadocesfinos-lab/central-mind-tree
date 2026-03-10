@@ -633,32 +633,30 @@ export default function Contatos() {
           </div>
         </div>
 
-        {/* Mini Dashboard */}
-        <div className="grid grid-cols-5 gap-2">
+        {/* Indicadores do CRM */}
+        <div className="grid grid-cols-4 gap-2">
           <Card className="p-2.5 text-center border-0 shadow-sm bg-card">
             <Users className="h-4 w-4 mx-auto text-muted-foreground mb-0.5" />
             <p className="text-xl font-bold leading-tight">{metrics.total}</p>
-            <p className="text-[10px] text-muted-foreground font-medium">Total</p>
-          </Card>
-          <Card className="p-2.5 text-center border-0 shadow-sm bg-amber-50 dark:bg-amber-950/30">
-            <FileText className="h-4 w-4 mx-auto text-amber-600 mb-0.5" />
-            <p className="text-xl font-bold text-amber-700 leading-tight">{metrics.propostas}</p>
-            <p className="text-[10px] text-amber-600 font-medium">Propostas</p>
-          </Card>
-          <Card className="p-2.5 text-center border-0 shadow-sm bg-orange-50 dark:bg-orange-950/30">
-            <Handshake className="h-4 w-4 mx-auto text-orange-600 mb-0.5" />
-            <p className="text-xl font-bold text-orange-700 leading-tight">{metrics.negociacao}</p>
-            <p className="text-[10px] text-orange-600 font-medium">Negociação</p>
+            <p className="text-[10px] text-muted-foreground font-medium">Total de Contatos</p>
           </Card>
           <Card className="p-2.5 text-center border-0 shadow-sm bg-green-50 dark:bg-green-950/30">
-            <DollarSign className="h-4 w-4 mx-auto text-green-600 mb-0.5" />
-            <p className="text-xl font-bold text-green-700 leading-tight">{formatCurrencyShort(metrics.valorAberto) || 'R$ 0'}</p>
-            <p className="text-[10px] text-green-600 font-medium">Em aberto</p>
+            <UserPlus className="h-4 w-4 mx-auto text-green-600 mb-0.5" />
+            <p className="text-xl font-bold text-green-700 dark:text-green-400 leading-tight">{metrics.clientesAtivos}</p>
+            <p className="text-[10px] text-green-600 dark:text-green-500 font-medium">Clientes Ativos</p>
           </Card>
-          <Card className="p-2.5 text-center border-0 shadow-sm bg-emerald-50 dark:bg-emerald-950/30">
-            <TrendingUp className="h-4 w-4 mx-auto text-emerald-600 mb-0.5" />
-            <p className="text-xl font-bold text-emerald-700 leading-tight">{metrics.conversionRate}%</p>
-            <p className="text-[10px] text-emerald-600 font-medium">Conversão</p>
+          <Card className="p-2.5 text-center border-0 shadow-sm bg-yellow-50 dark:bg-yellow-950/30">
+            <FileText className="h-4 w-4 mx-auto text-yellow-600 mb-0.5" />
+            <p className="text-xl font-bold text-yellow-700 dark:text-yellow-400 leading-tight">{metrics.orcamentos}</p>
+            <p className="text-[10px] text-yellow-600 dark:text-yellow-500 font-medium">Orçamentos</p>
+          </Card>
+          <Card className={cn(
+            "p-2.5 text-center border-0 shadow-sm",
+            metrics.followUpHoje > 0 ? "bg-red-50 dark:bg-red-950/30 ring-1 ring-red-200 dark:ring-red-800" : "bg-muted/50"
+          )}>
+            <CalendarClock className={cn("h-4 w-4 mx-auto mb-0.5", metrics.followUpHoje > 0 ? "text-red-600" : "text-muted-foreground")} />
+            <p className={cn("text-xl font-bold leading-tight", metrics.followUpHoje > 0 ? "text-red-700 dark:text-red-400" : "")}>{metrics.followUpHoje}</p>
+            <p className={cn("text-[10px] font-medium", metrics.followUpHoje > 0 ? "text-red-600 dark:text-red-500" : "text-muted-foreground")}>Follow-up Hoje</p>
           </Card>
         </div>
 

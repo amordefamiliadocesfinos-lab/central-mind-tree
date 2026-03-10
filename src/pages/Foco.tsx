@@ -327,7 +327,7 @@ export default function Foco() {
 
     updateDisplay();
 
-    let interval: NodeJS.Timeout | undefined;
+    let interval: ReturnType<typeof setInterval> | undefined;
     if (isRunning) {
       interval = setInterval(updateDisplay, 100);
     }
