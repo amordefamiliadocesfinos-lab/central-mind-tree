@@ -12,6 +12,9 @@ const EVENT_ICONS: Record<string, { icon: React.ElementType; className: string }
   reuniao: { icon: Handshake, className: 'text-purple-600 bg-purple-100 border-purple-200' },
   venda: { icon: DollarSign, className: 'text-emerald-600 bg-emerald-100 border-emerald-200' },
   observacao: { icon: StickyNote, className: 'text-gray-600 bg-gray-100 border-gray-200' },
+  stage_change: { icon: ArrowRightLeft, className: 'text-indigo-600 bg-indigo-100 border-indigo-200' },
+  conversion: { icon: Trophy, className: 'text-yellow-600 bg-yellow-100 border-yellow-200' },
+  lead_criado: { icon: UserPlus, className: 'text-primary bg-primary/10 border-primary/20' },
 };
 
 interface Props {
