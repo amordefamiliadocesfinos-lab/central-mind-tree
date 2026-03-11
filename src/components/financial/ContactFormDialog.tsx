@@ -20,6 +20,7 @@ import { CalendarIcon, Loader2, Search, MessageCircle, Plus, X, ChevronRight, Ch
 import { Badge } from '@/components/ui/badge';
 import { usePlatforms } from '@/hooks/usePlatforms';
 import { ContactAvatar } from '@/components/crm/ContactAvatar';
+import { ContactTimeline } from '@/components/crm/ContactTimeline';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Contact } from '@/hooks/useContacts';
