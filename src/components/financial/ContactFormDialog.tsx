@@ -20,6 +20,7 @@ import { CalendarIcon, Loader2, Search, MessageCircle, Plus, X, ChevronRight, Ch
 import { Badge } from '@/components/ui/badge';
 import { usePlatforms } from '@/hooks/usePlatforms';
 import { ContactAvatar } from '@/components/crm/ContactAvatar';
+import { ContactTimeline } from '@/components/crm/ContactTimeline';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Contact } from '@/hooks/useContacts';
@@ -710,6 +711,19 @@ export function ContactFormDialog({
               </section>
             </CollapsibleContent>
           </Collapsible>
+
+          {/* Timeline */}
+          {contact && (
+            <Collapsible>
+              <CollapsibleTrigger className="flex items-center gap-2 w-full py-2 text-sm font-semibold text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors">
+                <ChevronRight className="h-4 w-4 transition-transform [[data-state=open]>&]:rotate-90" />
+                Timeline
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-2 pb-4">
+                <ContactTimeline contactId={contact.id} createdAt={contact.created_at} />
+              </CollapsibleContent>
+            </Collapsible>
+          )}
         </div>
       </DialogContent>
     </Dialog>
