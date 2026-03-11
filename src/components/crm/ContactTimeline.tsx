@@ -1,9 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useContactHistory, INTERACTION_TYPES } from '@/hooks/useContactHistory';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { UserPlus, MessageCircle, Phone, FileText, Handshake, DollarSign, StickyNote, Clock, ArrowRightLeft, Trophy, Thermometer } from 'lucide-react';
+import { UserPlus, MessageCircle, Phone, FileText, Handshake, DollarSign, StickyNote, Clock, ArrowRightLeft, Trophy, Plus, X, Send } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 
 const EVENT_ICONS: Record<string, { icon: React.ElementType; className: string }> = {
   mensagem: { icon: MessageCircle, className: 'text-blue-600 bg-blue-100 border-blue-200' },
@@ -23,11 +25,23 @@ interface Props {
 }
 
 export function ContactTimeline({ contactId, createdAt }: Props) {
-  const { entries, loading, fetchHistory } = useContactHistory();
+  const { entries, loading, fetchHistory, addEntry } = useContactHistory();
+  const [showNoteInput, setShowNoteInput] = useState(false);
+  const [noteText, setNoteText] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (contactId) fetchHistory(contactId);
   }, [contactId, fetchHistory]);
+
+  const handleAddNote = async () => {
+    if (!noteText.trim()) return;
+    setSaving(true);
+    await addEntry(contactId, 'observacao', noteText.trim(), new Date().toISOString());
+    setNoteText('');
+    setShowNoteInput(false);
+    setSaving(false);
+  };
 
   const allEvents = [
     ...entries.map(e => ({
@@ -69,37 +83,84 @@ export function ContactTimeline({ contactId, createdAt }: Props) {
     );
   }
 
-  if (allEvents.length === 0) {
-    return (
-      <div className="py-4 text-center text-sm text-muted-foreground">Nenhum evento registrado</div>
-    );
-  }
-
   return (
-    <div className="relative pl-8 space-y-3">
-      <div className="absolute left-[13px] top-2 bottom-2 w-px bg-border" />
-      {allEvents.map((event) => {
-        const { icon: Icon, className } = getIcon(event.type);
-        return (
-          <div key={event.id} className="relative flex items-start gap-3">
-            <div className={cn(
-              "absolute -left-8 w-7 h-7 rounded-full border flex items-center justify-center shrink-0",
-              className
-            )}>
-              <Icon className="h-3.5 w-3.5" />
-            </div>
-            <div className="flex-1 min-w-0 pt-0.5">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-medium">{getLabel(event.type)}</span>
-                <span className="text-[10px] text-muted-foreground">{formatDate(event.date)}</span>
-              </div>
-              {event.description && event.type !== 'lead_criado' && (
-                <p className="text-xs text-muted-foreground mt-0.5 truncate">{event.description}</p>
-              )}
-            </div>
+    <div className="space-y-3">
+      {/* Add Note Button / Input */}
+      {!showNoteInput ? (
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full text-xs gap-1.5"
+          onClick={() => setShowNoteInput(true)}
+        >
+          <Plus className="h-3.5 w-3.5" />
+          Adicionar Nota
+        </Button>
+      ) : (
+        <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
+          <Textarea
+            placeholder="Escreva uma observação..."
+            value={noteText}
+            onChange={(e) => setNoteText(e.target.value)}
+            className="text-xs min-h-[60px] resize-none"
+            autoFocus
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) handleAddNote();
+            }}
+          />
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => { setShowNoteInput(false); setNoteText(''); }}
+            >
+              <X className="h-3 w-3 mr-1" />
+              Cancelar
+            </Button>
+            <Button
+              size="sm"
+              className="h-7 text-xs"
+              disabled={!noteText.trim() || saving}
+              onClick={handleAddNote}
+            >
+              <Send className="h-3 w-3 mr-1" />
+              Salvar
+            </Button>
           </div>
-        );
-      })}
+        </div>
+      )}
+
+      {/* Timeline */}
+      {allEvents.length === 0 ? (
+        <div className="py-4 text-center text-sm text-muted-foreground">Nenhum evento registrado</div>
+      ) : (
+        <div className="relative pl-8 space-y-3">
+          <div className="absolute left-[13px] top-2 bottom-2 w-px bg-border" />
+          {allEvents.map((event) => {
+            const { icon: Icon, className } = getIcon(event.type);
+            return (
+              <div key={event.id} className="relative flex items-start gap-3">
+                <div className={cn(
+                  "absolute -left-8 w-7 h-7 rounded-full border flex items-center justify-center shrink-0",
+                  className
+                )}>
+                  <Icon className="h-3.5 w-3.5" />
+                </div>
+                <div className="flex-1 min-w-0 pt-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-medium">{getLabel(event.type)}</span>
+                    <span className="text-[10px] text-muted-foreground">{formatDate(event.date)}</span>
+                  </div>
+                  {event.description && event.type !== 'lead_criado' && (
+                    <p className="text-xs text-muted-foreground mt-0.5 whitespace-pre-wrap">{event.description}</p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
