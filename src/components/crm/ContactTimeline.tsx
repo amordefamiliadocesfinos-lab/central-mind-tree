@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useContactHistory, INTERACTION_TYPES } from '@/hooks/useContactHistory';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { UserPlus, MessageCircle, Phone, FileText, Handshake, DollarSign, StickyNote, Clock } from 'lucide-react';
+import { UserPlus, MessageCircle, Phone, FileText, Handshake, DollarSign, StickyNote, Clock, ArrowRightLeft, Trophy, Thermometer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const EVENT_ICONS: Record<string, { icon: React.ElementType; className: string }> = {
