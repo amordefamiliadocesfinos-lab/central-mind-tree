@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useContactHistory, INTERACTION_TYPES } from '@/hooks/useContactHistory';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { UserPlus, MessageCircle, Phone, FileText, Handshake, DollarSign, StickyNote, Clock } from 'lucide-react';
+import { UserPlus, MessageCircle, Phone, FileText, Handshake, DollarSign, StickyNote, Clock, ArrowRightLeft, Trophy, Thermometer } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const EVENT_ICONS: Record<string, { icon: React.ElementType; className: string }> = {
@@ -12,6 +12,9 @@ const EVENT_ICONS: Record<string, { icon: React.ElementType; className: string }
   reuniao: { icon: Handshake, className: 'text-purple-600 bg-purple-100 border-purple-200' },
   venda: { icon: DollarSign, className: 'text-emerald-600 bg-emerald-100 border-emerald-200' },
   observacao: { icon: StickyNote, className: 'text-gray-600 bg-gray-100 border-gray-200' },
+  stage_change: { icon: ArrowRightLeft, className: 'text-indigo-600 bg-indigo-100 border-indigo-200' },
+  conversion: { icon: Trophy, className: 'text-yellow-600 bg-yellow-100 border-yellow-200' },
+  lead_criado: { icon: UserPlus, className: 'text-primary bg-primary/10 border-primary/20' },
 };
 
 interface Props {
@@ -42,12 +45,13 @@ export function ContactTimeline({ contactId, createdAt }: Props) {
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const getIcon = (type: string) => {
-    if (type === 'lead_criado') return { icon: UserPlus, className: 'text-primary bg-primary/10 border-primary/20' };
     return EVENT_ICONS[type] || { icon: Clock, className: 'text-muted-foreground bg-muted border-border' };
   };
 
   const getLabel = (type: string) => {
     if (type === 'lead_criado') return 'Lead criado';
+    if (type === 'stage_change') return 'Mudança de etapa';
+    if (type === 'conversion') return 'Conversão';
     return INTERACTION_TYPES.find(t => t.value === type)?.label || type;
   };
 

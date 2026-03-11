@@ -374,7 +374,10 @@ export default function Contatos() {
     if (editingContact) {
       await updateContact(editingContact.id, data);
     } else {
-      await createContact(data);
+      const newContact = await createContact(data);
+      if (newContact?.id) {
+        await addEntry(newContact.id, 'lead_criado', 'Lead criado', new Date().toISOString());
+      }
     }
     setFormOpen(false);
     setEditingContact(undefined);
