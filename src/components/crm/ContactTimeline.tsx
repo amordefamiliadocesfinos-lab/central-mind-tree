@@ -45,12 +45,13 @@ export function ContactTimeline({ contactId, createdAt }: Props) {
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const getIcon = (type: string) => {
-    if (type === 'lead_criado') return { icon: UserPlus, className: 'text-primary bg-primary/10 border-primary/20' };
     return EVENT_ICONS[type] || { icon: Clock, className: 'text-muted-foreground bg-muted border-border' };
   };
 
   const getLabel = (type: string) => {
     if (type === 'lead_criado') return 'Lead criado';
+    if (type === 'stage_change') return 'Mudança de etapa';
+    if (type === 'conversion') return 'Conversão';
     return INTERACTION_TYPES.find(t => t.value === type)?.label || type;
   };
 
