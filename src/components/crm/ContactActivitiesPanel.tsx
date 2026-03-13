@@ -33,6 +33,7 @@ interface Props {
 
 export function ContactActivitiesPanel({ open, onOpenChange, contact }: Props) {
   const { activities, loading, fetchActivities, createActivity, toggleComplete, deleteActivity } = useContactActivities();
+  const { addEntry } = useContactHistory();
   const [newTitle, setNewTitle] = useState('');
   const [newType, setNewType] = useState('follow_up');
   const [newDueDate, setNewDueDate] = useState('');
@@ -43,12 +44,21 @@ export function ContactActivitiesPanel({ open, onOpenChange, contact }: Props) {
 
   const handleCreate = async () => {
     if (!newTitle.trim() || !contact) return;
+    const dueDateISO = newDueDate ? new Date(newDueDate).toISOString() : undefined;
     await createActivity({
       contact_id: contact.id,
       activity_type: newType,
       title: newTitle.trim(),
-      due_date: newDueDate ? new Date(newDueDate).toISOString() : undefined,
+      due_date: dueDateISO,
     });
+
+    // Log to timeline
+    const typeLabel = ACTIVITY_TYPES.find(t => t.value === newType)?.label || newType;
+    const dateStr = dueDateISO
+      ? (() => { try { return ` para ${format(parseISO(dueDateISO), "dd/MM 'às' HH:mm", { locale: ptBR })}`; } catch { return ''; } })()
+      : '';
+    await addEntry(contact.id, 'follow_up', `${typeLabel} agendado${dateStr}: ${newTitle.trim()}`, new Date().toISOString());
+
     setNewTitle('');
     setNewDueDate('');
   };

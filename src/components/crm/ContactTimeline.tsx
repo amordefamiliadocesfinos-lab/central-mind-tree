@@ -67,6 +67,7 @@ export function ContactTimeline({ contactId, createdAt }: Props) {
     if (type === 'lead_criado') return 'Lead criado';
     if (type === 'stage_change') return 'Mudança de etapa';
     if (type === 'conversion') return 'Conversão';
+    if (type === 'follow_up') return 'Follow-up';
     return INTERACTION_TYPES.find(t => t.value === type)?.label || type;
   };
 
