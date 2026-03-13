@@ -177,12 +177,14 @@ export function ContactTimeline({ contactId, createdAt }: Props) {
       )}
 
       {/* Timeline */}
-      {allEvents.length === 0 ? (
-        <div className="py-4 text-center text-sm text-muted-foreground">Nenhum evento registrado</div>
+      {filteredEvents.length === 0 ? (
+        <div className="py-4 text-center text-sm text-muted-foreground">
+          {filter === 'all' ? 'Nenhum evento registrado' : 'Nenhum evento neste filtro'}
+        </div>
       ) : (
         <div className="relative pl-8 space-y-3">
           <div className="absolute left-[13px] top-2 bottom-2 w-px bg-border" />
-          {allEvents.map((event) => {
+          {filteredEvents.map((event) => {
             const { icon: Icon, className } = getIcon(event.type);
             return (
               <div key={event.id} className="relative flex items-start gap-3">
