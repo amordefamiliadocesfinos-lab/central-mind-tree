@@ -24,6 +24,9 @@ import { OperationsTab, OperationsBottomNav } from '@/components/operations/Oper
 import { OperationsSearchBar } from '@/components/operations/OperationsSearchBar';
 import { OperationsTopTabs } from '@/components/operations/OperationsTopTabs';
 import { OrderCard } from '@/components/operations/OrderCard';
+import { OrderGridCard } from '@/components/operations/OrderGridCard';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { List, LayoutGrid } from 'lucide-react';
 import { ProductCard } from '@/components/operations/ProductCard';
 import { KPICards } from '@/components/operations/KPICards';
 import { MultiLocationMovementDialog } from '@/components/operations/MultiLocationMovementDialog';
