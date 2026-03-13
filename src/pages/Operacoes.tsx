@@ -731,15 +731,29 @@ export default function Operacoes() {
               </DialogContent>
             </Dialog>
 
-            <div className="space-y-3">
-              {filteredOrders.length === 0 ? (
-                <Card className="p-8 text-center">
-                  <p className="text-muted-foreground">
-                    {searchTerm || statusFilter !== 'all' ? 'Nenhum pedido encontrado.' : 'Nenhum pedido ainda.'}
-                  </p>
-                </Card>
-              ) : (
-                filteredOrders.map((order) => (
+            {/* View toggle */}
+            <div className="flex justify-end">
+              <ToggleGroup type="single" value={ordersViewMode} onValueChange={(v) => v && setOrdersViewMode(v as 'list' | 'grid')}>
+                <ToggleGroupItem value="list" aria-label="Lista" className="gap-1.5 text-xs">
+                  <List className="h-4 w-4" />
+                  Lista
+                </ToggleGroupItem>
+                <ToggleGroupItem value="grid" aria-label="Cards" className="gap-1.5 text-xs">
+                  <LayoutGrid className="h-4 w-4" />
+                  Cards
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+
+            {filteredOrders.length === 0 ? (
+              <Card className="p-8 text-center">
+                <p className="text-muted-foreground">
+                  {searchTerm || statusFilter !== 'all' ? 'Nenhum pedido encontrado.' : 'Nenhum pedido ainda.'}
+                </p>
+              </Card>
+            ) : ordersViewMode === 'list' ? (
+              <div className="space-y-3">
+                {filteredOrders.map((order) => (
                   <OrderCard
                     key={order.id}
                     order={order as Order}
@@ -748,9 +762,22 @@ export default function Operacoes() {
                     onStatusChange={handleStatusChange}
                     onClick={(o) => setEditingOrder(rawOrders.find(ord => ord.id === o.id) || null)}
                   />
-                ))
-              )}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                {filteredOrders.map((order) => (
+                  <OrderGridCard
+                    key={order.id}
+                    order={order as Order}
+                    orderStatus={ORDER_STATUS}
+                    orderChannels={ORDER_CHANNELS}
+                    onStatusChange={handleStatusChange}
+                    onClick={(o) => setEditingOrder(rawOrders.find(ord => ord.id === o.id) || null)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         );
 
