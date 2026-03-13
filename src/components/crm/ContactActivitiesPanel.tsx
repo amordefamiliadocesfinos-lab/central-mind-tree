@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useContactActivities, ContactActivity } from '@/hooks/useContactActivities';
+import { useContactHistory } from '@/hooks/useContactHistory';
 import { Contact } from '@/hooks/useContacts';
 import { Plus, Trash2, CalendarClock, Phone, Mail, Users, MessageSquare } from 'lucide-react';
 import { format, parseISO, isPast } from 'date-fns';
