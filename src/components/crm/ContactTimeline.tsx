@@ -49,6 +49,7 @@ export function ContactTimeline({ contactId, createdAt }: Props) {
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [noteText, setNoteText] = useState('');
   const [saving, setSaving] = useState(false);
+  const [filter, setFilter] = useState<FilterType>('all');
 
   useEffect(() => {
     if (contactId) fetchHistory(contactId);
