@@ -372,7 +372,31 @@ export default function Contatos() {
 
   const handleSave = async (data: Partial<Contact>) => {
     if (editingContact) {
+      // Detect follow-up changes
+      const oldAction = editingContact.next_action_date || '';
+      const newAction = (data.next_action_date as string) || '';
+      const oldContact = editingContact.next_contact_date || '';
+      const newContact2 = (data.next_contact_date as string) || '';
+
       await updateContact(editingContact.id, data);
+
+      // Log next_action_date changes
+      if (newAction && newAction !== oldAction) {
+        const dateStr = (() => { try { return format(parseISO(newAction), "dd/MM 'às' HH:mm"); } catch { return ''; } })();
+        const desc = oldAction
+          ? `Follow-up atualizado para ${dateStr}`
+          : `Follow-up agendado para ${dateStr}`;
+        await addEntry(editingContact.id, 'follow_up', desc, new Date().toISOString());
+      }
+
+      // Log next_contact_date changes
+      if (newContact2 && newContact2 !== oldContact) {
+        const dateStr = (() => { try { return format(parseISO(newContact2), "dd/MM 'às' HH:mm"); } catch { return ''; } })();
+        const desc = oldContact
+          ? `Próximo contato atualizado para ${dateStr}`
+          : `Próximo contato agendado para ${dateStr}`;
+        await addEntry(editingContact.id, 'follow_up', desc, new Date().toISOString());
+      }
     } else {
       const newContact = await createContact(data);
       if (newContact?.id) {

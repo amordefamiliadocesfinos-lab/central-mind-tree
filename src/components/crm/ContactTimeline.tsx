@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useContactHistory, INTERACTION_TYPES } from '@/hooks/useContactHistory';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { UserPlus, MessageCircle, Phone, FileText, Handshake, DollarSign, StickyNote, Clock, ArrowRightLeft, Trophy, Plus, X, Send } from 'lucide-react';
+import { UserPlus, MessageCircle, Phone, FileText, Handshake, DollarSign, StickyNote, Clock, ArrowRightLeft, Trophy, Plus, X, Send, CalendarClock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
@@ -17,6 +17,7 @@ const EVENT_ICONS: Record<string, { icon: React.ElementType; className: string }
   stage_change: { icon: ArrowRightLeft, className: 'text-indigo-600 bg-indigo-100 border-indigo-200' },
   conversion: { icon: Trophy, className: 'text-yellow-600 bg-yellow-100 border-yellow-200' },
   lead_criado: { icon: UserPlus, className: 'text-primary bg-primary/10 border-primary/20' },
+  follow_up: { icon: CalendarClock, className: 'text-orange-600 bg-orange-100 border-orange-200' },
 };
 
 interface Props {
@@ -66,6 +67,7 @@ export function ContactTimeline({ contactId, createdAt }: Props) {
     if (type === 'lead_criado') return 'Lead criado';
     if (type === 'stage_change') return 'Mudança de etapa';
     if (type === 'conversion') return 'Conversão';
+    if (type === 'follow_up') return 'Follow-up';
     return INTERACTION_TYPES.find(t => t.value === type)?.label || type;
   };
 
