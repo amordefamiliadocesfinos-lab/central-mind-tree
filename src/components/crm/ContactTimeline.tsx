@@ -2,10 +2,29 @@ import { useEffect, useState } from 'react';
 import { useContactHistory, INTERACTION_TYPES } from '@/hooks/useContactHistory';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { UserPlus, MessageCircle, Phone, FileText, Handshake, DollarSign, StickyNote, Clock, ArrowRightLeft, Trophy, Plus, X, Send, CalendarClock } from 'lucide-react';
+import { UserPlus, MessageCircle, Phone, FileText, Handshake, DollarSign, StickyNote, Clock, ArrowRightLeft, Trophy, Plus, X, Send, CalendarClock, Thermometer, Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+
+type FilterType = 'all' | 'notas' | 'etapas' | 'temperatura' | 'follow_ups';
+
+const FILTERS: { key: FilterType; label: string }[] = [
+  { key: 'all', label: 'Todos' },
+  { key: 'notas', label: 'Notas' },
+  { key: 'etapas', label: 'Etapas' },
+  { key: 'temperatura', label: 'Temperatura' },
+  { key: 'follow_ups', label: 'Follow-ups' },
+];
+
+const FILTER_TYPES: Record<FilterType, string[]> = {
+  all: [],
+  notas: ['observacao'],
+  etapas: ['stage_change', 'conversion', 'lead_criado'],
+  temperatura: ['stage_change'], // temperature changes use stage_change with description containing "Temperatura"
+  follow_ups: ['follow_up'],
+};
 
 const EVENT_ICONS: Record<string, { icon: React.ElementType; className: string }> = {
   mensagem: { icon: MessageCircle, className: 'text-blue-600 bg-blue-100 border-blue-200' },
