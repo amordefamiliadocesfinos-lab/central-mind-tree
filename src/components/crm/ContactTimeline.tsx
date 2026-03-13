@@ -79,6 +79,12 @@ export function ContactTimeline({ contactId, createdAt }: Props) {
     }] : []),
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
+  const filteredEvents = filter === 'all'
+    ? allEvents
+    : filter === 'temperatura'
+      ? allEvents.filter(e => e.type === 'stage_change' && e.description?.toLowerCase().includes('temperatura'))
+      : allEvents.filter(e => FILTER_TYPES[filter].includes(e.type));
+
   const getIcon = (type: string) => {
     return EVENT_ICONS[type] || { icon: Clock, className: 'text-muted-foreground bg-muted border-border' };
   };
