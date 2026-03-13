@@ -2,10 +2,29 @@ import { useEffect, useState } from 'react';
 import { useContactHistory, INTERACTION_TYPES } from '@/hooks/useContactHistory';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { UserPlus, MessageCircle, Phone, FileText, Handshake, DollarSign, StickyNote, Clock, ArrowRightLeft, Trophy, Plus, X, Send, CalendarClock } from 'lucide-react';
+import { UserPlus, MessageCircle, Phone, FileText, Handshake, DollarSign, StickyNote, Clock, ArrowRightLeft, Trophy, Plus, X, Send, CalendarClock, Thermometer, Filter } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+
+type FilterType = 'all' | 'notas' | 'etapas' | 'temperatura' | 'follow_ups';
+
+const FILTERS: { key: FilterType; label: string }[] = [
+  { key: 'all', label: 'Todos' },
+  { key: 'notas', label: 'Notas' },
+  { key: 'etapas', label: 'Etapas' },
+  { key: 'temperatura', label: 'Temperatura' },
+  { key: 'follow_ups', label: 'Follow-ups' },
+];
+
+const FILTER_TYPES: Record<FilterType, string[]> = {
+  all: [],
+  notas: ['observacao'],
+  etapas: ['stage_change', 'conversion', 'lead_criado'],
+  temperatura: ['stage_change'], // temperature changes use stage_change with description containing "Temperatura"
+  follow_ups: ['follow_up'],
+};
 
 const EVENT_ICONS: Record<string, { icon: React.ElementType; className: string }> = {
   mensagem: { icon: MessageCircle, className: 'text-blue-600 bg-blue-100 border-blue-200' },
@@ -30,6 +49,7 @@ export function ContactTimeline({ contactId, createdAt }: Props) {
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [noteText, setNoteText] = useState('');
   const [saving, setSaving] = useState(false);
+  const [filter, setFilter] = useState<FilterType>('all');
 
   useEffect(() => {
     if (contactId) fetchHistory(contactId);
@@ -59,6 +79,12 @@ export function ContactTimeline({ contactId, createdAt }: Props) {
     }] : []),
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
+  const filteredEvents = filter === 'all'
+    ? allEvents
+    : filter === 'temperatura'
+      ? allEvents.filter(e => e.type === 'stage_change' && e.description?.toLowerCase().includes('temperatura'))
+      : allEvents.filter(e => FILTER_TYPES[filter].includes(e.type));
+
   const getIcon = (type: string) => {
     return EVENT_ICONS[type] || { icon: Clock, className: 'text-muted-foreground bg-muted border-border' };
   };
@@ -87,6 +113,23 @@ export function ContactTimeline({ contactId, createdAt }: Props) {
 
   return (
     <div className="space-y-3">
+      {/* Filters */}
+      <div className="flex flex-wrap gap-1.5">
+        {FILTERS.map(f => (
+          <Badge
+            key={f.key}
+            variant={filter === f.key ? 'default' : 'outline'}
+            className={cn(
+              "cursor-pointer text-[10px] px-2 py-0.5 transition-colors",
+              filter === f.key ? '' : 'hover:bg-accent'
+            )}
+            onClick={() => setFilter(f.key)}
+          >
+            {f.label}
+          </Badge>
+        ))}
+      </div>
+
       {/* Add Note Button / Input */}
       {!showNoteInput ? (
         <Button
@@ -134,12 +177,14 @@ export function ContactTimeline({ contactId, createdAt }: Props) {
       )}
 
       {/* Timeline */}
-      {allEvents.length === 0 ? (
-        <div className="py-4 text-center text-sm text-muted-foreground">Nenhum evento registrado</div>
+      {filteredEvents.length === 0 ? (
+        <div className="py-4 text-center text-sm text-muted-foreground">
+          {filter === 'all' ? 'Nenhum evento registrado' : 'Nenhum evento neste filtro'}
+        </div>
       ) : (
         <div className="relative pl-8 space-y-3">
           <div className="absolute left-[13px] top-2 bottom-2 w-px bg-border" />
-          {allEvents.map((event) => {
+          {filteredEvents.map((event) => {
             const { icon: Icon, className } = getIcon(event.type);
             return (
               <div key={event.id} className="relative flex items-start gap-3">
