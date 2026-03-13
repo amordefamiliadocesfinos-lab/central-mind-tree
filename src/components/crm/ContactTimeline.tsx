@@ -113,6 +113,23 @@ export function ContactTimeline({ contactId, createdAt }: Props) {
 
   return (
     <div className="space-y-3">
+      {/* Filters */}
+      <div className="flex flex-wrap gap-1.5">
+        {FILTERS.map(f => (
+          <Badge
+            key={f.key}
+            variant={filter === f.key ? 'default' : 'outline'}
+            className={cn(
+              "cursor-pointer text-[10px] px-2 py-0.5 transition-colors",
+              filter === f.key ? '' : 'hover:bg-accent'
+            )}
+            onClick={() => setFilter(f.key)}
+          >
+            {f.label}
+          </Badge>
+        ))}
+      </div>
+
       {/* Add Note Button / Input */}
       {!showNoteInput ? (
         <Button
