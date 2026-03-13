@@ -17,6 +17,7 @@ const EVENT_ICONS: Record<string, { icon: React.ElementType; className: string }
   stage_change: { icon: ArrowRightLeft, className: 'text-indigo-600 bg-indigo-100 border-indigo-200' },
   conversion: { icon: Trophy, className: 'text-yellow-600 bg-yellow-100 border-yellow-200' },
   lead_criado: { icon: UserPlus, className: 'text-primary bg-primary/10 border-primary/20' },
+  follow_up: { icon: CalendarClock, className: 'text-orange-600 bg-orange-100 border-orange-200' },
 };
 
 interface Props {
