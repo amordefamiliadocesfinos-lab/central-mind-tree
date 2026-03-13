@@ -15,7 +15,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Package, ShoppingCart, Factory, ArrowLeft, Trash2, AlertTriangle, Warehouse, DollarSign, ClipboardCheck } from 'lucide-react';
+import { Plus, Package, ShoppingCart, Factory, ArrowLeft, Trash2, AlertTriangle, Warehouse, DollarSign, ClipboardCheck, List, LayoutGrid } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ProductGallery } from '@/components/ProductGallery';
 import { ProductMovementHistory } from '@/components/ProductMovementHistory';
@@ -24,6 +24,8 @@ import { OperationsTab, OperationsBottomNav } from '@/components/operations/Oper
 import { OperationsSearchBar } from '@/components/operations/OperationsSearchBar';
 import { OperationsTopTabs } from '@/components/operations/OperationsTopTabs';
 import { OrderCard } from '@/components/operations/OrderCard';
+import { OrderGridCard } from '@/components/operations/OrderGridCard';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { ProductCard } from '@/components/operations/ProductCard';
 import { KPICards } from '@/components/operations/KPICards';
 import { MultiLocationMovementDialog } from '@/components/operations/MultiLocationMovementDialog';
@@ -150,6 +152,7 @@ export default function Operacoes() {
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
   const [showCostEditor, setShowCostEditor] = useState(false);
   const [showNewContactFromSale, setShowNewContactFromSale] = useState(false);
+  const [ordersViewMode, setOrdersViewMode] = useState<'list' | 'grid'>('list');
   const { createContact } = useContacts();
 
   const [newProduct, setNewProduct] = useState<Partial<Product>>({ 
@@ -727,15 +730,29 @@ export default function Operacoes() {
               </DialogContent>
             </Dialog>
 
-            <div className="space-y-3">
-              {filteredOrders.length === 0 ? (
-                <Card className="p-8 text-center">
-                  <p className="text-muted-foreground">
-                    {searchTerm || statusFilter !== 'all' ? 'Nenhum pedido encontrado.' : 'Nenhum pedido ainda.'}
-                  </p>
-                </Card>
-              ) : (
-                filteredOrders.map((order) => (
+            {/* View toggle */}
+            <div className="flex justify-end">
+              <ToggleGroup type="single" value={ordersViewMode} onValueChange={(v) => v && setOrdersViewMode(v as 'list' | 'grid')}>
+                <ToggleGroupItem value="list" aria-label="Lista" className="gap-1.5 text-xs">
+                  <List className="h-4 w-4" />
+                  Lista
+                </ToggleGroupItem>
+                <ToggleGroupItem value="grid" aria-label="Cards" className="gap-1.5 text-xs">
+                  <LayoutGrid className="h-4 w-4" />
+                  Cards
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+
+            {filteredOrders.length === 0 ? (
+              <Card className="p-8 text-center">
+                <p className="text-muted-foreground">
+                  {searchTerm || statusFilter !== 'all' ? 'Nenhum pedido encontrado.' : 'Nenhum pedido ainda.'}
+                </p>
+              </Card>
+            ) : ordersViewMode === 'list' ? (
+              <div className="space-y-3">
+                {filteredOrders.map((order) => (
                   <OrderCard
                     key={order.id}
                     order={order as Order}
@@ -744,9 +761,22 @@ export default function Operacoes() {
                     onStatusChange={handleStatusChange}
                     onClick={(o) => setEditingOrder(rawOrders.find(ord => ord.id === o.id) || null)}
                   />
-                ))
-              )}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                {filteredOrders.map((order) => (
+                  <OrderGridCard
+                    key={order.id}
+                    order={order as Order}
+                    orderStatus={ORDER_STATUS}
+                    orderChannels={ORDER_CHANNELS}
+                    onStatusChange={handleStatusChange}
+                    onClick={(o) => setEditingOrder(rawOrders.find(ord => ord.id === o.id) || null)}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         );
 
