@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useContactHistory, INTERACTION_TYPES } from '@/hooks/useContactHistory';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { UserPlus, MessageCircle, Phone, FileText, Handshake, DollarSign, StickyNote, Clock, ArrowRightLeft, Trophy, Plus, X, Send } from 'lucide-react';
+import { UserPlus, MessageCircle, Phone, FileText, Handshake, DollarSign, StickyNote, Clock, ArrowRightLeft, Trophy, Plus, X, Send, CalendarClock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
