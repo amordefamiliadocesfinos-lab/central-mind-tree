@@ -153,6 +153,7 @@ export default function Operacoes() {
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
   const [showCostEditor, setShowCostEditor] = useState(false);
   const [showNewContactFromSale, setShowNewContactFromSale] = useState(false);
+  const [ordersViewMode, setOrdersViewMode] = useState<'list' | 'grid'>('list');
   const { createContact } = useContacts();
 
   const [newProduct, setNewProduct] = useState<Partial<Product>>({ 
