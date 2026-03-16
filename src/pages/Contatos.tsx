@@ -723,6 +723,15 @@ export default function Contatos() {
           </Card>
         </div>
 
+        {/* Leads que precisam de contato */}
+        <LeadsNeedContactPanel
+          contacts={contacts}
+          onOpenContact={(contact) => {
+            setEditingContact(contact);
+            setFormOpen(true);
+          }}
+        />
+
         {/* Filters row */}
         <div className="flex items-center gap-2 flex-wrap">
           <div className="relative flex-1 min-w-[140px] max-w-md">
