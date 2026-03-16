@@ -80,6 +80,7 @@ import { ContactOrderHistory } from '@/components/financial/ContactOrderHistory'
 import { ContactHistoryDialog } from '@/components/ContactHistoryDialog';
 import { ContactTagsManager } from '@/components/crm/ContactTagsManager';
 import { ContactActivitiesPanel } from '@/components/crm/ContactActivitiesPanel';
+import { LeadsNeedContactPanel } from '@/components/crm/LeadsNeedContactPanel';
 import { cn } from '@/lib/utils';
 import { FunnelView } from '@/components/FunnelView';
 import { ContactAvatar } from '@/components/crm/ContactAvatar';
@@ -721,6 +722,15 @@ export default function Contatos() {
             <p className={cn("text-[10px] font-medium", metrics.followUpHoje > 0 ? "text-red-600 dark:text-red-500" : "text-muted-foreground")}>Follow-up Hoje</p>
           </Card>
         </div>
+
+        {/* Leads que precisam de contato */}
+        <LeadsNeedContactPanel
+          contacts={contacts}
+          onOpenContact={(contact) => {
+            setEditingContact(contact);
+            setFormOpen(true);
+          }}
+        />
 
         {/* Filters row */}
         <div className="flex items-center gap-2 flex-wrap">
