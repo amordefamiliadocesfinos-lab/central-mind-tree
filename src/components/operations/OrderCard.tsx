@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ChevronRight, Trash2, Package, Factory } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
+import { OrderPriorityBadge } from './OrderPriorityBadge';
 
 const formatDate = (dateStr: string | null | undefined): string => {
   if (!dateStr) return '';
