@@ -232,9 +232,15 @@ export function sortProductsByCategory(products: Product[]): Product[] {
 
 export function sortOrdersByStatus(orders: Order[]): Order[] {
   return [...orders].sort((a, b) => {
+    // Primary sort: priority based on due date (urgent first)
+    const prioA = getDueDatePrioritySortOrder(a.due_date);
+    const prioB = getDueDatePrioritySortOrder(b.due_date);
+
+    if (prioA !== prioB) return prioA - prioB;
+
+    // Secondary sort: status order
     const statusA = ORDER_STATUS[a.status as keyof typeof ORDER_STATUS];
     const statusB = ORDER_STATUS[b.status as keyof typeof ORDER_STATUS];
-
     const orderA = statusA?.order ?? 99;
     const orderB = statusB?.order ?? 99;
 
@@ -242,7 +248,7 @@ export function sortOrdersByStatus(orders: Order[]): Order[] {
 
     // Then by due date (earliest first)
     if (a.due_date && b.due_date) {
-      return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+      return parseISO(a.due_date).getTime() - parseISO(b.due_date).getTime();
     }
     if (a.due_date) return -1;
     if (b.due_date) return 1;
@@ -250,4 +256,18 @@ export function sortOrdersByStatus(orders: Order[]): Order[] {
     // Finally by created date
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
   });
+}
+
+function getDueDatePrioritySortOrder(dueDate: string | null | undefined): number {
+  if (!dueDate) return 5; // no due date = lowest priority
+  const { differenceInDays, startOfDay } = require('date-fns');
+  const { parseISO } = require('date-fns');
+  const today = startOfDay(new Date());
+  const due = startOfDay(parseISO(dueDate));
+  const diff = differenceInDays(due, today);
+  if (diff < 0) return 0;  // atrasado
+  if (diff === 0) return 1; // urgente
+  if (diff === 1) return 2; // alta
+  if (diff <= 3) return 3;  // atenção
+  return 4;                  // normal
 }

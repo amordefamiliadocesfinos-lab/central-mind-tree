@@ -73,6 +73,7 @@ export function OrderCard({ order, orderStatus, orderChannels, onStatusChange, o
                   Produção
                 </Badge>
               )}
+              <OrderPriorityBadge dueDate={order.due_date} />
             </div>
             <p className="text-sm text-muted-foreground mt-1 truncate">
               {order.customer_name || 'Cliente não informado'}
