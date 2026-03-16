@@ -182,69 +182,34 @@ export default function Operacoes() {
     contact_id: null as string | null,
     channel: 'direto',
     due_date: '',
+    discount_amount: 0,
+    shipping_amount: 0,
+    discount_text: '',
+    shipping_text: '',
     items: [] as { product_id: string; quantity: number; unit_price: number; _unit_price_text?: string }[],
   });
-
-  const [editingCostText, setEditingCostText] = useState('');
-  const [editingPriceText, setEditingPriceText] = useState('');
-
-  const getProductBalance = (productId: string) => productBalances[productId] || 0;
-
-  useEffect(() => {
-    if (!showProductDialog) return;
-    setNewProductPriceText(newProduct.price != null ? String(newProduct.price) : '');
-    setNewProductCostText(newProduct.cost != null ? String(newProduct.cost) : '');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showProductDialog]);
-
-  useEffect(() => {
-    if (!editingProduct) return;
-    setEditingCostText(editingProduct.cost != null ? String(editingProduct.cost) : '');
-    setEditingPriceText(editingProduct.price != null ? String(editingProduct.price) : '');
-  }, [editingProduct]);
-
-  // Handlers
-  const handleAddProduct = async () => {
-    const result = await createProduct(newProduct);
-    if (result) {
-      setShowProductDialog(false);
-      setNewProduct({ sku: '', name: '', min_stock: 0, price: 0, category: '', unit: 'un', media_urls: [], cover_image_url: null });
-      setNewProductPriceText('');
-      setNewProductCostText('');
-    }
-  };
-
-  const handleUpdateProduct = async () => {
-    if (!editingProduct) return;
-    await updateProduct(editingProduct.id, editingProduct);
-    setEditingProduct(null);
-  };
-
-  const handleDeleteProduct = async () => {
-    if (!deletingProduct) return;
-    await deleteProduct(deletingProduct.id);
-    setDeletingProduct(null);
-    setEditingProduct(null);
-  };
-
-  const handleAddOrder = async () => {
-    const { items, ...orderData } = newOrder;
-    await createOrder(
-      { ...orderData, contact_id: newOrder.contact_id || undefined }, 
-      items as Partial<OrderItem>[]
-    );
-    setShowOrderDialog(false);
-    setNewOrder({ customer_name: '', contact_id: null, channel: 'direto', order_type: 'production', due_date: '', items: [] });
-  };
+...
+  const saleSubtotal = newSale.items.reduce((acc, item) => acc + (item.quantity * item.unit_price), 0);
+  const saleTotal = Math.max(0, saleSubtotal - newSale.discount_amount + newSale.shipping_amount);
 
   const handleAddSale = async () => {
-    const { items, ...saleData } = newSale;
+    const { items, discount_text, shipping_text, ...saleData } = newSale;
     await createOrder(
       { ...saleData, order_type: 'stock', contact_id: newSale.contact_id || undefined },
       items as Partial<OrderItem>[]
     );
     setShowSaleDialog(false);
-    setNewSale({ customer_name: '', contact_id: null, channel: 'direto', due_date: '', items: [] });
+    setNewSale({
+      customer_name: '',
+      contact_id: null,
+      channel: 'direto',
+      due_date: '',
+      discount_amount: 0,
+      shipping_amount: 0,
+      discount_text: '',
+      shipping_text: '',
+      items: [],
+    });
   };
 
   const addItemToOrder = () => {
