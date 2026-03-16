@@ -188,9 +188,8 @@ export default function Operacoes() {
     shipping_text: '',
     items: [] as { product_id: string; quantity: number; unit_price: number; _unit_price_text?: string }[],
   });
-...
-  const saleSubtotal = newSale.items.reduce((acc, item) => acc + (item.quantity * item.unit_price), 0);
-  const saleTotal = Math.max(0, saleSubtotal - newSale.discount_amount + newSale.shipping_amount);
+
+  const editingCostText = useState('');
 
   const handleAddSale = async () => {
     const { items, discount_text, shipping_text, ...saleData } = newSale;
