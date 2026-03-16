@@ -80,6 +80,7 @@ import { ContactOrderHistory } from '@/components/financial/ContactOrderHistory'
 import { ContactHistoryDialog } from '@/components/ContactHistoryDialog';
 import { ContactTagsManager } from '@/components/crm/ContactTagsManager';
 import { ContactActivitiesPanel } from '@/components/crm/ContactActivitiesPanel';
+import { LeadsNeedContactPanel } from '@/components/crm/LeadsNeedContactPanel';
 import { cn } from '@/lib/utils';
 import { FunnelView } from '@/components/FunnelView';
 import { ContactAvatar } from '@/components/crm/ContactAvatar';
