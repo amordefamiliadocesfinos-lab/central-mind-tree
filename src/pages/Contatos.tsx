@@ -622,6 +622,16 @@ export default function Contatos() {
                 Sem retorno
               </span>
             )}
+            {leadEsfriando && (
+              <span className="inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-950/40 dark:text-orange-400 dark:border-orange-700">
+                🔥 Lead esfriando
+              </span>
+            )}
+            {followUpNecessario && (
+              <span className="inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-700">
+                ⚠ Follow-up necessário
+              </span>
+            )}
           </div>
 
           {/* Próxima ação */}
