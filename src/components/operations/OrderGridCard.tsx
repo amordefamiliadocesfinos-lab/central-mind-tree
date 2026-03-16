@@ -4,6 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Package, Factory } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
+import { OrderPriorityBadge } from './OrderPriorityBadge';
 
 const formatDate = (dateStr: string | null | undefined): string => {
   if (!dateStr) return '';
@@ -85,12 +86,15 @@ export function OrderGridCard({ order, orderStatus, orderChannels, onStatusChang
           )}
         </div>
 
-        {/* Line 3 - Info */}
+        {/* Line 3 - Info + Priority */}
         <div className="text-xs text-muted-foreground space-y-0.5">
           <p><span className="font-medium">Cliente:</span> {order.customer_name || '—'}</p>
           <p><span className="font-medium">Pedido:</span> {formatDate(order.order_date)}</p>
           {order.due_date && (
-            <p><span className="font-medium text-amber-600">Entrega:</span> {formatDate(order.due_date)}</p>
+            <div className="flex items-center gap-1.5">
+              <span><span className="font-medium text-amber-600">Entrega:</span> {formatDate(order.due_date)}</span>
+              <OrderPriorityBadge dueDate={order.due_date} />
+            </div>
           )}
         </div>
 

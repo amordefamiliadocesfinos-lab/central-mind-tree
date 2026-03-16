@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ChevronRight, Trash2, Package, Factory } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
+import { OrderPriorityBadge } from './OrderPriorityBadge';
 
 const formatDate = (dateStr: string | null | undefined): string => {
   if (!dateStr) return '';
@@ -72,6 +73,7 @@ export function OrderCard({ order, orderStatus, orderChannels, onStatusChange, o
                   Produção
                 </Badge>
               )}
+              <OrderPriorityBadge dueDate={order.due_date} />
             </div>
             <p className="text-sm text-muted-foreground mt-1 truncate">
               {order.customer_name || 'Cliente não informado'}
