@@ -246,12 +246,26 @@ export function useOrders() {
   }, [fetchInventory]);
 
   const createOrder = useCallback(async (order: Partial<Order>, items: Partial<OrderItem>[]) => {
-    // Calculate total
-    const total = items.reduce((acc, item) => {
+    const pricingData = order as Partial<Order> & {
+      discount_amount?: number;
+      shipping_amount?: number;
+    };
+
+    const subtotal = items.reduce((acc, item) => {
       return acc + (item.quantity || 0) * (item.unit_price || 0);
     }, 0);
+    const discountAmount = pricingData.discount_amount || 0;
+    const shippingAmount = pricingData.shipping_amount || 0;
+    const total = Math.max(0, subtotal - discountAmount + shippingAmount);
 
     const orderType = order.order_type || 'production';
+
+    const pricingNotes = [
+      discountAmount > 0 ? `Desconto: ${discountAmount.toFixed(2)}` : null,
+      shippingAmount > 0 ? `Frete: ${shippingAmount.toFixed(2)}` : null,
+    ].filter(Boolean).join(' | ');
+
+    const combinedNotes = [order.notes, pricingNotes].filter(Boolean).join('\n');
 
     const { data: newOrder, error: orderError } = await supabase
       .from('orders')
@@ -265,7 +279,7 @@ export function useOrders() {
         total_value: total,
         order_date: order.order_date || new Date().toISOString().split('T')[0],
         due_date: order.due_date,
-        notes: order.notes,
+        notes: combinedNotes || null,
         order_type: orderType,
       })
       .select()

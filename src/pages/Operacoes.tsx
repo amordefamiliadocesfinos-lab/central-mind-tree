@@ -16,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Package, ShoppingCart, Factory, ArrowLeft, Trash2, AlertTriangle, Warehouse, DollarSign, ClipboardCheck, List, LayoutGrid } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 import { ProductGallery } from '@/components/ProductGallery';
 import { ProductMovementHistory } from '@/components/ProductMovementHistory';
 import { BOMEditor } from '@/components/BOMEditor';
@@ -182,6 +182,10 @@ export default function Operacoes() {
     contact_id: null as string | null,
     channel: 'direto',
     due_date: '',
+    discount_amount: 0,
+    shipping_amount: 0,
+    discount_text: '',
+    shipping_text: '',
     items: [] as { product_id: string; quantity: number; unit_price: number; _unit_price_text?: string }[],
   });
 
@@ -190,20 +194,9 @@ export default function Operacoes() {
 
   const getProductBalance = (productId: string) => productBalances[productId] || 0;
 
-  useEffect(() => {
-    if (!showProductDialog) return;
-    setNewProductPriceText(newProduct.price != null ? String(newProduct.price) : '');
-    setNewProductCostText(newProduct.cost != null ? String(newProduct.cost) : '');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showProductDialog]);
+  const saleSubtotal = newSale.items.reduce((acc, item) => acc + (item.quantity * item.unit_price), 0);
+  const saleTotal = Math.max(0, saleSubtotal - newSale.discount_amount + newSale.shipping_amount);
 
-  useEffect(() => {
-    if (!editingProduct) return;
-    setEditingCostText(editingProduct.cost != null ? String(editingProduct.cost) : '');
-    setEditingPriceText(editingProduct.price != null ? String(editingProduct.price) : '');
-  }, [editingProduct]);
-
-  // Handlers
   const handleAddProduct = async () => {
     const result = await createProduct(newProduct);
     if (result) {
@@ -230,7 +223,7 @@ export default function Operacoes() {
   const handleAddOrder = async () => {
     const { items, ...orderData } = newOrder;
     await createOrder(
-      { ...orderData, contact_id: newOrder.contact_id || undefined }, 
+      { ...orderData, contact_id: newOrder.contact_id || undefined },
       items as Partial<OrderItem>[]
     );
     setShowOrderDialog(false);
@@ -238,13 +231,23 @@ export default function Operacoes() {
   };
 
   const handleAddSale = async () => {
-    const { items, ...saleData } = newSale;
+    const { items, discount_text, shipping_text, ...saleData } = newSale;
     await createOrder(
       { ...saleData, order_type: 'stock', contact_id: newSale.contact_id || undefined },
       items as Partial<OrderItem>[]
     );
     setShowSaleDialog(false);
-    setNewSale({ customer_name: '', contact_id: null, channel: 'direto', due_date: '', items: [] });
+    setNewSale({
+      customer_name: '',
+      contact_id: null,
+      channel: 'direto',
+      due_date: '',
+      discount_amount: 0,
+      shipping_amount: 0,
+      discount_text: '',
+      shipping_text: '',
+      items: [],
+    });
   };
 
   const addItemToOrder = () => {
@@ -713,9 +716,64 @@ export default function Operacoes() {
                         </Button>
                       </div>
                     ))}
+
+                    <div className="grid grid-cols-2 gap-3 mt-4">
+                      <div>
+                        <Label>Desconto</Label>
+                        <DecimalInput
+                          className="h-10"
+                          placeholder="0,00"
+                          value={newSale.discount_text}
+                          onValueChange={(v) => setNewSale({ ...newSale, discount_text: v })}
+                          onValueCommit={(parsed) => {
+                            setNewSale((prev) => ({
+                              ...prev,
+                              discount_amount: parsed?.number ?? 0,
+                              discount_text: parsed?.normalized ?? '',
+                            }));
+                          }}
+                          min={0}
+                          maxDecimals={2}
+                        />
+                      </div>
+                      <div>
+                        <Label>Frete</Label>
+                        <DecimalInput
+                          className="h-10"
+                          placeholder="0,00"
+                          value={newSale.shipping_text}
+                          onValueChange={(v) => setNewSale({ ...newSale, shipping_text: v })}
+                          onValueCommit={(parsed) => {
+                            setNewSale((prev) => ({
+                              ...prev,
+                              shipping_amount: parsed?.number ?? 0,
+                              shipping_text: parsed?.normalized ?? '',
+                            }));
+                          }}
+                          min={0}
+                          maxDecimals={2}
+                        />
+                      </div>
+                    </div>
+
                     {newSale.items.length > 0 && (
-                      <div className="text-right text-sm font-medium mt-2">
-                        Total: R$ {newSale.items.reduce((acc, item) => acc + (item.quantity * item.unit_price), 0).toFixed(2)}
+                      <div className="mt-3 space-y-1 text-sm">
+                        <div className="flex items-center justify-between text-muted-foreground">
+                          <span>Subtotal</span>
+                          <span>{formatCurrency(saleSubtotal)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-muted-foreground">
+                          <span>Desconto</span>
+                          <span>- {formatCurrency(newSale.discount_amount)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-muted-foreground">
+                          <span>Frete</span>
+                          <span>{formatCurrency(newSale.shipping_amount)}</span>
+                        </div>
+                        <div className="flex items-center justify-between pt-2 border-t font-medium">
+                          <span>Total</span>
+                          <span>{formatCurrency(saleTotal)}</span>
+                        </div>
                       </div>
                     )}
                   </div>
