@@ -509,6 +509,10 @@ export default function Contatos() {
   };
 
   const ContactCard = ({ contact }: { contact: Contact }) => {
+    const [showFollowUp, setShowFollowUp] = useState(false);
+    const [followUpNote, setFollowUpNote] = useState('');
+    const [followUpType, setFollowUpType] = useState('mensagem');
+    const [savingFollowUp, setSavingFollowUp] = useState(false);
     const overdue = isNextActionOverdue(contact);
     const priorityCfg = PRIORITY_CONFIG[(contact.temperatura_lead || 'morno') as keyof typeof PRIORITY_CONFIG] || PRIORITY_CONFIG.morno;
     const subtypeCfg = CONTACT_SUBTYPE_CONFIG[contact.contact_type || ''];
