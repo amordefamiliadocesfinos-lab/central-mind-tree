@@ -509,6 +509,10 @@ export default function Contatos() {
   };
 
   const ContactCard = ({ contact }: { contact: Contact }) => {
+    const [showFollowUp, setShowFollowUp] = useState(false);
+    const [followUpNote, setFollowUpNote] = useState('');
+    const [followUpType, setFollowUpType] = useState('mensagem');
+    const [savingFollowUp, setSavingFollowUp] = useState(false);
     const overdue = isNextActionOverdue(contact);
     const priorityCfg = PRIORITY_CONFIG[(contact.temperatura_lead || 'morno') as keyof typeof PRIORITY_CONFIG] || PRIORITY_CONFIG.morno;
     const subtypeCfg = CONTACT_SUBTYPE_CONFIG[contact.contact_type || ''];
@@ -522,6 +526,21 @@ export default function Contatos() {
     const nextActionFormatted = contact.next_action_date
       ? (() => { try { return format(parseISO(contact.next_action_date), "dd/MM HH:mm"); } catch { return null; } })()
       : null;
+
+    const FOLLOW_UP_LABELS: Record<string, string> = {
+      mensagem: 'Mensagem', ligacao: 'Ligação', whatsapp: 'WhatsApp', reuniao: 'Reunião',
+    };
+
+    const handleSaveFollowUp = async () => {
+      if (!followUpNote.trim()) return;
+      setSavingFollowUp(true);
+      const now = new Date().toISOString();
+      const desc = `[${FOLLOW_UP_LABELS[followUpType] || followUpType}] ${followUpNote.trim()}`;
+      await addEntry(contact.id, followUpType, desc, now);
+      setSavingFollowUp(false);
+      setShowFollowUp(false);
+      setFollowUpNote('');
+    };
 
     return (
       <motion.div
@@ -681,6 +700,66 @@ export default function Contatos() {
               </div>
             );
           })()}
+
+          {/* Registrar Follow-up */}
+          {!showFollowUp ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full mt-2 h-7 text-[11px] gap-1"
+              onClick={(e) => { e.stopPropagation(); setShowFollowUp(true); }}
+            >
+              <MessageCircle className="h-3 w-3" />
+              Registrar Follow-up
+            </Button>
+          ) : (
+            <div
+              className="mt-2 space-y-1.5 rounded-md border bg-muted/30 p-2"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Select value={followUpType} onValueChange={setFollowUpType}>
+                <SelectTrigger className="h-7 text-[11px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="mensagem">💬 Mensagem</SelectItem>
+                  <SelectItem value="ligacao">📞 Ligação</SelectItem>
+                  <SelectItem value="whatsapp">📱 WhatsApp</SelectItem>
+                  <SelectItem value="reuniao">🤝 Reunião</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                placeholder="Nota do contato..."
+                value={followUpNote}
+                onChange={(e) => setFollowUpNote(e.target.value)}
+                className="h-7 text-[11px]"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey && followUpNote.trim()) {
+                    e.preventDefault();
+                    handleSaveFollowUp();
+                  }
+                }}
+              />
+              <div className="flex gap-1">
+                <Button
+                  size="sm"
+                  className="flex-1 h-6 text-[10px]"
+                  disabled={!followUpNote.trim() || savingFollowUp}
+                  onClick={handleSaveFollowUp}
+                >
+                  {savingFollowUp ? 'Salvando...' : 'Salvar'}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-[10px]"
+                  onClick={() => { setShowFollowUp(false); setFollowUpNote(''); }}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          )}
         </Card>
       </motion.div>
     );
