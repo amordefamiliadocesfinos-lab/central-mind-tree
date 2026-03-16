@@ -260,15 +260,13 @@ export function sortOrdersByStatus(orders: Order[]): Order[] {
 }
 
 function getDueDatePrioritySortOrder(dueDate: string | null | undefined): number {
-  if (!dueDate) return 5; // no due date = lowest priority
-  const { differenceInDays, startOfDay } = require('date-fns');
-  const { parseISO } = require('date-fns');
+  if (!dueDate) return 5;
   const today = startOfDay(new Date());
   const due = startOfDay(parseISO(dueDate));
   const diff = differenceInDays(due, today);
-  if (diff < 0) return 0;  // atrasado
-  if (diff === 0) return 1; // urgente
-  if (diff === 1) return 2; // alta
-  if (diff <= 3) return 3;  // atenção
-  return 4;                  // normal
+  if (diff < 0) return 0;
+  if (diff === 0) return 1;
+  if (diff === 1) return 2;
+  if (diff <= 3) return 3;
+  return 4;
 }
