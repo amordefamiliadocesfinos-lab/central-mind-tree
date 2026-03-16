@@ -515,6 +515,9 @@ export default function Contatos() {
     const temp = contact.temperatura_lead || 'morno';
     const inactivityAlert = getUltimoContatoAlert(contact.ultimo_contato);
     const semRetorno = inactivityAlert && (inactivityAlert.urgent || differenceInDays(new Date(), parseISO(contact.ultimo_contato!)) > 3);
+    const daysSinceContact = contact.ultimo_contato ? differenceInDays(new Date(), parseISO(contact.ultimo_contato)) : null;
+    const leadEsfriando = daysSinceContact !== null && daysSinceContact >= 14;
+    const followUpNecessario = !leadEsfriando && daysSinceContact !== null && daysSinceContact >= 7;
 
     const nextActionFormatted = contact.next_action_date
       ? (() => { try { return format(parseISO(contact.next_action_date), "dd/MM HH:mm"); } catch { return null; } })()
@@ -617,6 +620,16 @@ export default function Contatos() {
               <span className="inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold bg-red-100 text-red-700 border-red-300 dark:bg-red-950/40 dark:text-red-400 dark:border-red-700">
                 <Clock className="h-2.5 w-2.5" />
                 Sem retorno
+              </span>
+            )}
+            {leadEsfriando && (
+              <span className="inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-950/40 dark:text-orange-400 dark:border-orange-700">
+                🔥 Lead esfriando
+              </span>
+            )}
+            {followUpNecessario && (
+              <span className="inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-700">
+                ⚠ Follow-up necessário
               </span>
             )}
           </div>
