@@ -678,9 +678,64 @@ export default function Operacoes() {
                         </Button>
                       </div>
                     ))}
+
+                    <div className="grid grid-cols-2 gap-3 mt-4">
+                      <div>
+                        <Label>Desconto</Label>
+                        <DecimalInput
+                          className="h-10"
+                          placeholder="0,00"
+                          value={newSale.discount_text}
+                          onValueChange={(v) => setNewSale({ ...newSale, discount_text: v })}
+                          onValueCommit={(parsed) => {
+                            setNewSale((prev) => ({
+                              ...prev,
+                              discount_amount: parsed?.number ?? 0,
+                              discount_text: parsed?.normalized ?? '',
+                            }));
+                          }}
+                          min={0}
+                          maxDecimals={2}
+                        />
+                      </div>
+                      <div>
+                        <Label>Frete</Label>
+                        <DecimalInput
+                          className="h-10"
+                          placeholder="0,00"
+                          value={newSale.shipping_text}
+                          onValueChange={(v) => setNewSale({ ...newSale, shipping_text: v })}
+                          onValueCommit={(parsed) => {
+                            setNewSale((prev) => ({
+                              ...prev,
+                              shipping_amount: parsed?.number ?? 0,
+                              shipping_text: parsed?.normalized ?? '',
+                            }));
+                          }}
+                          min={0}
+                          maxDecimals={2}
+                        />
+                      </div>
+                    </div>
+
                     {newSale.items.length > 0 && (
-                      <div className="text-right text-sm font-medium mt-2">
-                        Total: R$ {newSale.items.reduce((acc, item) => acc + (item.quantity * item.unit_price), 0).toFixed(2)}
+                      <div className="mt-3 space-y-1 text-sm">
+                        <div className="flex items-center justify-between text-muted-foreground">
+                          <span>Subtotal</span>
+                          <span>{formatCurrency(saleSubtotal)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-muted-foreground">
+                          <span>Desconto</span>
+                          <span>- {formatCurrency(newSale.discount_amount)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-muted-foreground">
+                          <span>Frete</span>
+                          <span>{formatCurrency(newSale.shipping_amount)}</span>
+                        </div>
+                        <div className="flex items-center justify-between pt-2 border-t font-medium">
+                          <span>Total</span>
+                          <span>{formatCurrency(saleTotal)}</span>
+                        </div>
                       </div>
                     )}
                   </div>
