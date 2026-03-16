@@ -527,6 +527,21 @@ export default function Contatos() {
       ? (() => { try { return format(parseISO(contact.next_action_date), "dd/MM HH:mm"); } catch { return null; } })()
       : null;
 
+    const FOLLOW_UP_LABELS: Record<string, string> = {
+      mensagem: 'Mensagem', ligacao: 'Ligação', whatsapp: 'WhatsApp', reuniao: 'Reunião',
+    };
+
+    const handleSaveFollowUp = async () => {
+      if (!followUpNote.trim()) return;
+      setSavingFollowUp(true);
+      const now = new Date().toISOString();
+      const desc = `[${FOLLOW_UP_LABELS[followUpType] || followUpType}] ${followUpNote.trim()}`;
+      await addEntry(contact.id, followUpType, desc, now);
+      setSavingFollowUp(false);
+      setShowFollowUp(false);
+      setFollowUpNote('');
+    };
+
     return (
       <motion.div
         layout
