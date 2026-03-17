@@ -427,7 +427,10 @@ export default function Contatos() {
     if (phone) {
       const clean = phone.replace(/\D/g, '');
       const full = clean.startsWith('55') ? clean : `55${clean}`;
-      window.open(`https://wa.me/${full}`, '_blank');
+      const message = encodeURIComponent(
+        'Olá, tudo bem?\nAqui é da Amor de Família Doces Finos e Artesanais.\nEstou entrando em contato para saber se posso ajudar com seu pedido ou orçamento.'
+      );
+      window.open(`https://wa.me/${full}?text=${message}`, '_blank');
     }
   };
 

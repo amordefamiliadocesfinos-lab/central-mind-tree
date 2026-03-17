@@ -202,7 +202,10 @@ export function ContactFormDialog({
     if (phone) {
       const cleanPhone = phone.replace(/\D/g, '');
       const fullPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
-      window.open(`https://wa.me/${fullPhone}`, '_blank');
+      const message = encodeURIComponent(
+        'Olá, tudo bem?\nAqui é da Amor de Família Doces Finos e Artesanais.\nEstou entrando em contato para saber se posso ajudar com seu pedido ou orçamento.'
+      );
+      window.open(`https://wa.me/${fullPhone}?text=${message}`, '_blank');
     }
   };
 
