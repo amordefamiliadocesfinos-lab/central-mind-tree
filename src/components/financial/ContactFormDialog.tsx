@@ -199,7 +199,7 @@ export function ContactFormDialog({
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleWhatsAppClick = () => {
+  const handleWhatsAppClick = async () => {
     const phone = form.whatsapp || form.mobile || form.phone;
     if (phone) {
       const cleanPhone = phone.replace(/\D/g, '');
@@ -207,6 +207,9 @@ export function ContactFormDialog({
       const message = encodeURIComponent(
         'Olá, tudo bem?\nAqui é da Amor de Família Doces Finos e Artesanais.\nEstou entrando em contato para saber se posso ajudar com seu pedido ou orçamento.'
       );
+      if (contact?.id) {
+        await addEntry(contact.id, 'whatsapp', '💬 Contato realizado via WhatsApp', new Date().toISOString());
+      }
       window.open(`https://wa.me/${fullPhone}?text=${message}`, '_blank');
     }
   };
