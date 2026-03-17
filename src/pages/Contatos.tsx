@@ -422,14 +422,16 @@ export default function Contatos() {
     await updateContact(contact.id, updates);
   };
 
-  const handleWhatsApp = (contact: Contact) => {
+  const handleWhatsApp = async (contact: Contact) => {
     const phone = contact.whatsapp || contact.mobile || contact.phone;
     if (phone) {
       const clean = phone.replace(/\D/g, '');
       const full = clean.startsWith('55') ? clean : `55${clean}`;
+      const now = new Date().toISOString();
       const message = encodeURIComponent(
         'Olá, tudo bem?\nAqui é da Amor de Família Doces Finos e Artesanais.\nEstou entrando em contato para saber se posso ajudar com seu pedido ou orçamento.'
       );
+      await addEntry(contact.id, 'whatsapp', '💬 Contato realizado via WhatsApp', now);
       window.open(`https://wa.me/${full}?text=${message}`, '_blank');
     }
   };

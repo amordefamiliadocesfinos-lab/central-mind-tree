@@ -24,6 +24,7 @@ import { ContactTimeline } from '@/components/crm/ContactTimeline';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Contact } from '@/hooks/useContacts';
+import { useContactHistory } from '@/hooks/useContactHistory';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -73,6 +74,7 @@ export function ContactFormDialog({
   const [loading, setLoading] = useState(false);
   const [addressTab, setAddressTab] = useState('geral');
   const [showDetails, setShowDetails] = useState(false);
+  const { addEntry } = useContactHistory();
   const { activePlatforms } = usePlatforms();
   
   const [form, setForm] = useState<Partial<Contact>>({
@@ -197,7 +199,7 @@ export function ContactFormDialog({
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleWhatsAppClick = () => {
+  const handleWhatsAppClick = async () => {
     const phone = form.whatsapp || form.mobile || form.phone;
     if (phone) {
       const cleanPhone = phone.replace(/\D/g, '');
@@ -205,6 +207,9 @@ export function ContactFormDialog({
       const message = encodeURIComponent(
         'Olá, tudo bem?\nAqui é da Amor de Família Doces Finos e Artesanais.\nEstou entrando em contato para saber se posso ajudar com seu pedido ou orçamento.'
       );
+      if (contact?.id) {
+        await addEntry(contact.id, 'whatsapp', '💬 Contato realizado via WhatsApp', new Date().toISOString());
+      }
       window.open(`https://wa.me/${fullPhone}?text=${message}`, '_blank');
     }
   };
