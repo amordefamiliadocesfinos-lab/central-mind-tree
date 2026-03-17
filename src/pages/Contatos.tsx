@@ -706,65 +706,81 @@ export default function Contatos() {
             );
           })()}
 
-          {/* Registrar Follow-up */}
-          {!showFollowUp ? (
+          <div className="mt-2 flex gap-2">
             <Button
               variant="outline"
-              size="sm"
-              className="w-full mt-2 h-7 text-[11px] gap-1"
-              onClick={(e) => { e.stopPropagation(); setShowFollowUp(true); }}
+              size="icon"
+              className="h-7 w-7 shrink-0"
+              disabled={!(contact.whatsapp || contact.mobile || contact.phone)}
+              onClick={(e) => {
+                e.stopPropagation();
+                void handleWhatsApp(contact);
+              }}
+              title={contact.whatsapp || contact.mobile || contact.phone ? 'Abrir WhatsApp' : 'Contato sem telefone'}
+              aria-label={contact.whatsapp || contact.mobile || contact.phone ? 'Abrir WhatsApp' : 'Contato sem telefone'}
             >
-              <MessageCircle className="h-3 w-3" />
-              Registrar Follow-up
+              <MessageCircle className="h-3.5 w-3.5" />
             </Button>
-          ) : (
-            <div
-              className="mt-2 space-y-1.5 rounded-md border bg-muted/30 p-2"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <Select value={followUpType} onValueChange={setFollowUpType}>
-                <SelectTrigger className="h-7 text-[11px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="mensagem">💬 Mensagem</SelectItem>
-                  <SelectItem value="ligacao">📞 Ligação</SelectItem>
-                  <SelectItem value="whatsapp">📱 WhatsApp</SelectItem>
-                  <SelectItem value="reuniao">🤝 Reunião</SelectItem>
-                </SelectContent>
-              </Select>
-              <Input
-                placeholder="Nota do contato..."
-                value={followUpNote}
-                onChange={(e) => setFollowUpNote(e.target.value)}
-                className="h-7 text-[11px]"
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey && followUpNote.trim()) {
-                    e.preventDefault();
-                    handleSaveFollowUp();
-                  }
-                }}
-              />
-              <div className="flex gap-1">
-                <Button
-                  size="sm"
-                  className="flex-1 h-6 text-[10px]"
-                  disabled={!followUpNote.trim() || savingFollowUp}
-                  onClick={handleSaveFollowUp}
-                >
-                  {savingFollowUp ? 'Salvando...' : 'Salvar'}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 text-[10px]"
-                  onClick={() => { setShowFollowUp(false); setFollowUpNote(''); }}
-                >
-                  Cancelar
-                </Button>
+
+            {!showFollowUp ? (
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex-1 h-7 text-[11px] gap-1"
+                onClick={(e) => { e.stopPropagation(); setShowFollowUp(true); }}
+              >
+                <MessageCircle className="h-3 w-3" />
+                Registrar Follow-up
+              </Button>
+            ) : (
+              <div
+                className="flex-1 space-y-1.5 rounded-md border bg-muted/30 p-2"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Select value={followUpType} onValueChange={setFollowUpType}>
+                  <SelectTrigger className="h-7 text-[11px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="mensagem">💬 Mensagem</SelectItem>
+                    <SelectItem value="ligacao">📞 Ligação</SelectItem>
+                    <SelectItem value="whatsapp">📱 WhatsApp</SelectItem>
+                    <SelectItem value="reuniao">🤝 Reunião</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Input
+                  placeholder="Nota do contato..."
+                  value={followUpNote}
+                  onChange={(e) => setFollowUpNote(e.target.value)}
+                  className="h-7 text-[11px]"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey && followUpNote.trim()) {
+                      e.preventDefault();
+                      handleSaveFollowUp();
+                    }
+                  }}
+                />
+                <div className="flex gap-1">
+                  <Button
+                    size="sm"
+                    className="flex-1 h-6 text-[10px]"
+                    disabled={!followUpNote.trim() || savingFollowUp}
+                    onClick={handleSaveFollowUp}
+                  >
+                    {savingFollowUp ? 'Salvando...' : 'Salvar'}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 text-[10px]"
+                    onClick={() => { setShowFollowUp(false); setFollowUpNote(''); }}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </Card>
       </motion.div>
     );
