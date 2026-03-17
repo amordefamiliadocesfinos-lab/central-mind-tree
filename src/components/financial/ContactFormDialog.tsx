@@ -24,6 +24,7 @@ import { ContactTimeline } from '@/components/crm/ContactTimeline';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Contact } from '@/hooks/useContacts';
+import { useContactHistory } from '@/hooks/useContactHistory';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
