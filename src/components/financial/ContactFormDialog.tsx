@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { usePlatforms } from '@/hooks/usePlatforms';
 import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { ContactTimeline } from '@/components/crm/ContactTimeline';
+import { ContactOrdersList } from '@/components/crm/ContactOrdersList';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Contact } from '@/hooks/useContacts';
