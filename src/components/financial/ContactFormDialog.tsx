@@ -76,6 +76,7 @@ export function ContactFormDialog({
   const [addressTab, setAddressTab] = useState('geral');
   const [showDetails, setShowDetails] = useState(false);
   const { addEntry } = useContactHistory();
+  const navigate = useNavigate();
   const { activePlatforms } = usePlatforms();
   
   const [form, setForm] = useState<Partial<Contact>>({
