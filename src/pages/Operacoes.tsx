@@ -148,7 +148,18 @@ export default function Operacoes() {
       const newParams = new URLSearchParams({ tab: 'orders' });
       setSearchParams(newParams, { replace: true });
     }
-  }, []);
+
+    // Auto-open order from CRM contact orders list
+    const orderId = searchParams.get('orderId');
+    if (orderId && rawOrders.length > 0) {
+      const order = rawOrders.find((o: any) => o.id === orderId);
+      if (order) {
+        setEditingOrder(order as any);
+      }
+      const newParams = new URLSearchParams({ tab: 'orders' });
+      setSearchParams(newParams, { replace: true });
+    }
+  }, [rawOrders.length]);
 
   // Filters from store
   const { searchTerm, categoryFilter, statusFilter, setSearchTerm, setCategoryFilter, setStatusFilter, resetFilters } = useSearchFilters();
