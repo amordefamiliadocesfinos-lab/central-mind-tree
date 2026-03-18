@@ -16,7 +16,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { CalendarIcon, Loader2, Search, MessageCircle, Plus, X, ChevronRight, ChevronDown } from 'lucide-react';
+import { CalendarIcon, Loader2, Search, MessageCircle, Plus, X, ChevronRight, ChevronDown, ShoppingCart } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { usePlatforms } from '@/hooks/usePlatforms';
 import { ContactAvatar } from '@/components/crm/ContactAvatar';
