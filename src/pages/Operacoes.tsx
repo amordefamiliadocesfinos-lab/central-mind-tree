@@ -260,10 +260,23 @@ export default function Operacoes() {
 
   const handleAddOrder = async () => {
     const { items, ...orderData } = newOrder;
-    await createOrder(
+    const result = await createOrder(
       { ...orderData, contact_id: newOrder.contact_id || undefined },
       items as Partial<OrderItem>[]
     );
+    
+    // Log timeline event if order was created from CRM
+    if (result && crmContactId && newOrder.contact_id) {
+      const orderNum = result.order_number || result.id.slice(0, 8);
+      await addEntry(
+        crmContactId,
+        'conversao',
+        `🧾 Lead convertido em pedido #${orderNum}`,
+        new Date().toISOString()
+      );
+      setCrmContactId(null);
+    }
+    
     setShowOrderDialog(false);
     setNewOrder({ customer_name: '', contact_id: null, channel: 'direto', order_type: 'production', due_date: '', items: [] });
   };
