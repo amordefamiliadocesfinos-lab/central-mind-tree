@@ -127,6 +127,29 @@ export default function Operacoes() {
     setSearchParams({ tab }, { replace: true });
   }, [setSearchParams]);
 
+  // Auto-open order dialog from CRM "Converter em Pedido"
+  useEffect(() => {
+    if (searchParams.get('newOrder') === 'true') {
+      const contactName = searchParams.get('contactName') || '';
+      const contactId = searchParams.get('contactId') || null;
+      const contactPhone = searchParams.get('contactPhone') || '';
+      const contactEmail = searchParams.get('contactEmail') || '';
+      const contactNotes = searchParams.get('contactNotes') || '';
+      setNewOrder({
+        customer_name: contactName,
+        contact_id: contactId,
+        channel: 'direto',
+        order_type: 'production',
+        due_date: '',
+        items: [],
+      });
+      setShowOrderDialog(true);
+      // Clean up URL params
+      const newParams = new URLSearchParams({ tab: 'orders' });
+      setSearchParams(newParams, { replace: true });
+    }
+  }, []);
+
   // Filters from store
   const { searchTerm, categoryFilter, statusFilter, setSearchTerm, setCategoryFilter, setStatusFilter, resetFilters } = useSearchFilters();
 
