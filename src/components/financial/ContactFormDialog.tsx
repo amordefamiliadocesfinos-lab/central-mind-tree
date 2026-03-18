@@ -16,7 +16,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { CalendarIcon, Loader2, Search, MessageCircle, Plus, X, ChevronRight, ChevronDown } from 'lucide-react';
+import { CalendarIcon, Loader2, Search, MessageCircle, Plus, X, ChevronRight, ChevronDown, ShoppingCart } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { usePlatforms } from '@/hooks/usePlatforms';
 import { ContactAvatar } from '@/components/crm/ContactAvatar';
@@ -75,6 +76,7 @@ export function ContactFormDialog({
   const [addressTab, setAddressTab] = useState('geral');
   const [showDetails, setShowDetails] = useState(false);
   const { addEntry } = useContactHistory();
+  const navigate = useNavigate();
   const { activePlatforms } = usePlatforms();
   
   const [form, setForm] = useState<Partial<Contact>>({
@@ -222,6 +224,28 @@ export function ContactFormDialog({
             {contact ? 'Editar' : 'Novo'} Contato
           </DialogTitle>
           <div className="flex items-center gap-2">
+            {contact && ['negociacao', 'proposta_enviada', 'contato_realizado'].includes(contact.funnel_status) && (
+              <Button
+                variant="outline"
+                className="gap-1 border-primary/30 text-primary hover:bg-primary/10"
+                onClick={() => {
+                  const params = new URLSearchParams({
+                    tab: 'orders',
+                    newOrder: 'true',
+                    contactId: contact.id,
+                    contactName: contact.name || '',
+                    contactPhone: contact.phone || contact.whatsapp || contact.mobile || '',
+                    contactEmail: contact.email || '',
+                    ...(contact.notes ? { contactNotes: contact.notes } : {}),
+                  });
+                  onOpenChange(false);
+                  navigate(`/operacoes?${params.toString()}`);
+                }}
+              >
+                <ShoppingCart className="h-4 w-4" />
+                Converter em Pedido
+              </Button>
+            )}
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
             <Button onClick={handleSubmit} disabled={loading} className="bg-green-600 hover:bg-green-700">
               {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
