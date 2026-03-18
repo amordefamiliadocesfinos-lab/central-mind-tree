@@ -144,6 +144,7 @@ export default function Operacoes() {
         due_date: '',
         items: [],
       });
+      setCrmContactId(contactId);
       setShowOrderDialog(true);
       // Clean up URL params
       const newParams = new URLSearchParams({ tab: 'orders' });
