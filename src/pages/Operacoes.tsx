@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useContacts } from '@/hooks/useContacts';
+import { useContactHistory } from '@/hooks/useContactHistory';
 import { ContactFormDialog } from '@/components/financial/ContactFormDialog';
 import { useOrders } from '@/hooks/useOrders';
 import { useMRP } from '@/hooks/useMRP';
@@ -143,6 +144,7 @@ export default function Operacoes() {
         due_date: '',
         items: [],
       });
+      setCrmContactId(contactId);
       setShowOrderDialog(true);
       // Clean up URL params
       const newParams = new URLSearchParams({ tab: 'orders' });
@@ -188,6 +190,8 @@ export default function Operacoes() {
   const [showNewContactFromSale, setShowNewContactFromSale] = useState(false);
   const [ordersViewMode, setOrdersViewMode] = useState<'list' | 'grid'>('list');
   const { createContact } = useContacts();
+  const { addEntry } = useContactHistory();
+  const [crmContactId, setCrmContactId] = useState<string | null>(null);
 
   const [newProduct, setNewProduct] = useState<Partial<Product>>({ 
     sku: '', 
@@ -256,10 +260,23 @@ export default function Operacoes() {
 
   const handleAddOrder = async () => {
     const { items, ...orderData } = newOrder;
-    await createOrder(
+    const result = await createOrder(
       { ...orderData, contact_id: newOrder.contact_id || undefined },
       items as Partial<OrderItem>[]
     );
+    
+    // Log timeline event if order was created from CRM
+    if (result && crmContactId && newOrder.contact_id) {
+      const orderNum = result.order_number || result.id.slice(0, 8);
+      await addEntry(
+        crmContactId,
+        'conversao',
+        `🧾 Lead convertido em pedido #${orderNum}`,
+        new Date().toISOString()
+      );
+      setCrmContactId(null);
+    }
+    
     setShowOrderDialog(false);
     setNewOrder({ customer_name: '', contact_id: null, channel: 'direto', order_type: 'production', due_date: '', items: [] });
   };
