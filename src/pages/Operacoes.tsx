@@ -189,6 +189,8 @@ export default function Operacoes() {
   const [showNewContactFromSale, setShowNewContactFromSale] = useState(false);
   const [ordersViewMode, setOrdersViewMode] = useState<'list' | 'grid'>('list');
   const { createContact } = useContacts();
+  const { addEntry } = useContactHistory();
+  const [crmContactId, setCrmContactId] = useState<string | null>(null);
 
   const [newProduct, setNewProduct] = useState<Partial<Product>>({ 
     sku: '', 
