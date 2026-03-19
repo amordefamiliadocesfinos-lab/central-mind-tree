@@ -74,6 +74,7 @@ import {
 } from 'lucide-react';
 import { useContacts, Contact } from '@/hooks/useContacts';
 import { useContactHistory } from '@/hooks/useContactHistory';
+import { useContactsWithOrders } from '@/hooks/useContactsWithOrders';
 import { useContactTags } from '@/hooks/useContactTags';
 import { ContactFormDialog } from '@/components/financial/ContactFormDialog';
 import { ContactOrderHistory } from '@/components/financial/ContactOrderHistory';
