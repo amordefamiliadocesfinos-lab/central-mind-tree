@@ -223,8 +223,14 @@ export function ContactFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="flex flex-row items-center justify-between">
-          <DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
             {contact ? 'Editar' : 'Novo'} Contato
+            {contact && hasOrders(contact.id) && (
+              <span className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold bg-green-100 text-green-800 border-green-300 dark:bg-green-950/40 dark:text-green-400 dark:border-green-700">
+                <ShoppingCart className="h-3 w-3" />
+                Cliente
+              </span>
+            )}
           </DialogTitle>
           <div className="flex items-center gap-2">
             {contact && ['negociacao', 'proposta_enviada', 'contato_realizado'].includes(contact.funnel_status) && (
