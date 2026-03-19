@@ -631,6 +631,12 @@ export default function Contatos() {
 
           {/* Badges: Classificação + Tipo + Temperatura + Sem Retorno */}
           <div className="flex flex-wrap items-center gap-1 mt-2">
+            {hasOrders(contact.id) && (
+              <span className="inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold bg-green-100 text-green-800 border-green-300 dark:bg-green-950/40 dark:text-green-400 dark:border-green-700">
+                <ShoppingCart className="h-2.5 w-2.5" />
+                Cliente
+              </span>
+            )}
             {contact.client_classification && CLIENT_CLASSIFICATION_CONFIG[contact.client_classification] && (
               <span className={cn('inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold', CLIENT_CLASSIFICATION_CONFIG[contact.client_classification].className)}>
                 {CLIENT_CLASSIFICATION_CONFIG[contact.client_classification].emoji} {CLIENT_CLASSIFICATION_CONFIG[contact.client_classification].label}
