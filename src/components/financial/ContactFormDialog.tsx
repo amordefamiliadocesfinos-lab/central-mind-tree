@@ -27,6 +27,7 @@ import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Contact } from '@/hooks/useContacts';
 import { useContactHistory } from '@/hooks/useContactHistory';
+import { useContactsWithOrders } from '@/hooks/useContactsWithOrders';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
