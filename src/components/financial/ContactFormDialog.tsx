@@ -80,6 +80,7 @@ export function ContactFormDialog({
   const { addEntry } = useContactHistory();
   const navigate = useNavigate();
   const { activePlatforms } = usePlatforms();
+  const { hasOrders } = useContactsWithOrders();
   
   const [form, setForm] = useState<Partial<Contact>>({
     name: '',
