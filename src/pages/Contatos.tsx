@@ -1224,6 +1224,12 @@ export default function Contatos() {
                           <Badge variant="outline" className="text-[10px]">
                             {contact.type === 'ambos' ? 'Ambos' : contact.type === 'fornecedor' ? 'Fornecedor' : 'Cliente'}
                           </Badge>
+                          {hasOrders(contact.id) && (
+                            <span className="inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold bg-green-100 text-green-800 border-green-300 dark:bg-green-950/40 dark:text-green-400 dark:border-green-700">
+                              <ShoppingCart className="h-2.5 w-2.5" />
+                              Cliente
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell>
                           <Select value={contact.temperatura_lead || 'morno'} onValueChange={(v) => handleTempChange(contact, v)}>
