@@ -166,7 +166,7 @@ function formatCurrencyShort(v?: number | null) {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
-type SortField = 'name' | 'valor_estimado' | 'ultimo_contato' | 'created_at' | 'temperatura';
+type SortField = 'name' | 'valor_estimado' | 'ultimo_contato' | 'created_at' | 'temperatura' | 'score';
 type SortDir = 'asc' | 'desc';
 
 export default function Contatos() {
