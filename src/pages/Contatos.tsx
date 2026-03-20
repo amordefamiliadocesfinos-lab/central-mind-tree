@@ -701,6 +701,13 @@ export default function Contatos() {
             )}
           </div>
 
+          {/* Lead Score */}
+          <div className="mt-1.5 flex items-center">
+            <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold', scoreInfo.className)}>
+              {scoreInfo.emoji} Score: {scoreInfo.score} ({scoreInfo.label})
+            </span>
+          </div>
+
           {/* Sugestão automática de mensagem */}
           {noResponseInfo && (
             <div className="mt-2 rounded-md border border-amber-200 bg-amber-50/60 dark:border-amber-800 dark:bg-amber-950/20 px-2 py-1.5">
