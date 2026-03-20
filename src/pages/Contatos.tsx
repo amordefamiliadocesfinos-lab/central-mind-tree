@@ -78,6 +78,7 @@ import { useContacts, Contact } from '@/hooks/useContacts';
 import { useContactHistory } from '@/hooks/useContactHistory';
 import { useContactsWithOrders } from '@/hooks/useContactsWithOrders';
 import { useNoResponseDetection } from '@/hooks/useNoResponseDetection';
+import { useLeadScore } from '@/hooks/useLeadScore';
 import { useContactTags } from '@/hooks/useContactTags';
 import { ContactFormDialog } from '@/components/financial/ContactFormDialog';
 import { WhatsAppMessageSelector } from '@/components/crm/WhatsAppMessageSelector';
@@ -165,7 +166,7 @@ function formatCurrencyShort(v?: number | null) {
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 });
 }
 
-type SortField = 'name' | 'valor_estimado' | 'ultimo_contato' | 'created_at' | 'temperatura';
+type SortField = 'name' | 'valor_estimado' | 'ultimo_contato' | 'created_at' | 'temperatura' | 'score';
 type SortDir = 'asc' | 'desc';
 
 export default function Contatos() {
@@ -174,6 +175,7 @@ export default function Contatos() {
   const { getTagsForContact } = useContactTags();
   const { hasOrders } = useContactsWithOrders();
   const { getNoResponseInfo, refreshNoResponse } = useNoResponseDetection();
+  const { getScore } = useLeadScore(contacts, getNoResponseInfo, hasOrders);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [tempFilter, setTempFilter] = useState<string>('all');
@@ -266,9 +268,10 @@ export default function Contatos() {
       else if (sortField === 'ultimo_contato') cmp = (a.ultimo_contato || '').localeCompare(b.ultimo_contato || '');
       else if (sortField === 'created_at') cmp = (a.created_at || '').localeCompare(b.created_at || '');
       else if (sortField === 'temperatura') cmp = (tempOrder[a.temperatura_lead || 'morno'] || 2) - (tempOrder[b.temperatura_lead || 'morno'] || 2);
+      else if (sortField === 'score') cmp = getScore(a.id).score - getScore(b.id).score;
       return sortDir === 'asc' ? cmp : -cmp;
     });
-  }, [filteredContacts, sortField, sortDir]);
+  }, [filteredContacts, sortField, sortDir, getScore]);
 
   // Priority sort: overdue > hot+today > hot > warm+overdue > warm > cold > rest
   const prioritySortContacts = useCallback((list: Contact[]) => {
@@ -549,6 +552,7 @@ export default function Contatos() {
     const leadEsfriando = daysSinceContact !== null && daysSinceContact >= 14;
     const followUpNecessario = !leadEsfriando && daysSinceContact !== null && daysSinceContact >= 7;
     const noResponseInfo = getNoResponseInfo(contact.id);
+    const scoreInfo = getScore(contact.id);
 
     const nextActionFormatted = contact.next_action_date
       ? (() => { try { return format(parseISO(contact.next_action_date), "dd/MM HH:mm"); } catch { return null; } })()
@@ -695,6 +699,13 @@ export default function Contatos() {
                 {noResponseInfo.emoji} {noResponseInfo.label} há {noResponseInfo.daysSince}d
               </span>
             )}
+          </div>
+
+          {/* Lead Score */}
+          <div className="mt-1.5 flex items-center">
+            <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold', scoreInfo.className)}>
+              {scoreInfo.emoji} Score: {scoreInfo.score} ({scoreInfo.label})
+            </span>
           </div>
 
           {/* Sugestão automática de mensagem */}
@@ -1075,6 +1086,7 @@ export default function Contatos() {
               <SelectItem value="ultimo_contato-asc">Últ. Contato ↑ Antigo</SelectItem>
               <SelectItem value="ultimo_contato-desc">Últ. Contato ↓ Recente</SelectItem>
               <SelectItem value="valor_estimado-desc">Valor ↓ Maior</SelectItem>
+              <SelectItem value="score-desc">Score ↓ Maior</SelectItem>
               <SelectItem value="created_at-desc">Mais recente</SelectItem>
             </SelectContent>
           </Select>
@@ -1246,6 +1258,7 @@ export default function Contatos() {
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('ultimo_contato')}>
                     <div className="flex items-center">Últ. Contato <SortIcon field="ultimo_contato" /></div>
                   </TableHead>
+                  <TableHead>Score</TableHead>
                   <TableHead>Resposta</TableHead>
                   <TableHead>Próxima Ação</TableHead>
                   <TableHead>Próx. Contato</TableHead>
@@ -1257,7 +1270,7 @@ export default function Contatos() {
               <TableBody>
                 {sortedContacts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={13} className="text-center text-muted-foreground py-12">
+                    <TableCell colSpan={14} className="text-center text-muted-foreground py-12">
                       Nenhum contato encontrado
                     </TableCell>
                   </TableRow>
@@ -1333,6 +1346,16 @@ export default function Contatos() {
                           {alert ? (
                             <span className={cn('text-xs font-medium rounded px-1.5 py-0.5 border', alert.className)}>{alert.label}</span>
                           ) : '-'}
+                        </TableCell>
+                        <TableCell>
+                          {(() => {
+                            const si = getScore(contact.id);
+                            return (
+                              <span className={cn('inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-bold', si.className)}>
+                                {si.emoji} {si.score}
+                              </span>
+                            );
+                          })()}
                         </TableCell>
                         <TableCell>
                           {(() => {
