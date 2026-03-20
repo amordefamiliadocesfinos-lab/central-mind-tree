@@ -858,7 +858,14 @@ export default function Operacoes() {
               </ToggleGroup>
             </div>
 
-            {filteredOrders.length === 0 ? (
+            {ordersViewMode === 'planning' ? (
+              <ProductionPlanningView
+                orders={filteredOrders as Order[]}
+                orderStatus={ORDER_STATUS}
+                onStatusChange={handleStatusChange}
+                onClick={(o) => setEditingOrder(rawOrders.find(ord => ord.id === o.id) || null)}
+              />
+            ) : filteredOrders.length === 0 ? (
               <Card className="p-8 text-center">
                 <p className="text-muted-foreground">
                   {searchTerm || statusFilter !== 'all' ? 'Nenhum pedido encontrado.' : 'Nenhum pedido ainda.'}
