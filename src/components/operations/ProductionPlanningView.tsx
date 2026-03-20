@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertTriangle, Clock, Calendar, CalendarClock, Package } from 'lucide-react';
+import { Calendar, Package, ClipboardList } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { differenceInDays, startOfDay, parseISO, format } from 'date-fns';
 import { getNowSaoPaulo } from '@/lib/dateUtils';
@@ -32,6 +32,24 @@ interface PlanningGroup {
   orders: Order[];
 }
 
+interface ProductSummary {
+  name: string;
+  totalQty: number;
+}
+
+function getProductSummary(orders: Order[]): ProductSummary[] {
+  const map: Record<string, number> = {};
+  for (const order of orders) {
+    for (const item of order.items || []) {
+      const name = item.product?.name || 'Produto sem nome';
+      map[name] = (map[name] || 0) + item.quantity;
+    }
+  }
+  return Object.entries(map)
+    .map(([name, totalQty]) => ({ name, totalQty }))
+    .sort((a, b) => b.totalQty - a.totalQty);
+}
+
 function groupOrders(orders: Order[]): PlanningGroup[] {
   const today = startOfDay(getNowSaoPaulo());
   const groups: Record<string, Order[]> = {
@@ -56,46 +74,36 @@ function groupOrders(orders: Order[]): PlanningGroup[] {
   }
 
   return [
-    {
-      key: 'hoje',
-      label: 'Produzir Hoje',
-      emoji: '🔴',
-      headerClass: 'bg-gradient-to-r from-red-500 to-red-400',
-      orders: groups.hoje,
-    },
-    {
-      key: 'amanha',
-      label: 'Produzir Amanhã',
-      emoji: '🟠',
-      headerClass: 'bg-gradient-to-r from-orange-500 to-orange-400',
-      orders: groups.amanha,
-    },
-    {
-      key: 'breve',
-      label: 'Produzir em Breve',
-      emoji: '🟡',
-      headerClass: 'bg-gradient-to-r from-amber-500 to-amber-400',
-      orders: groups.breve,
-    },
-    {
-      key: 'futuro',
-      label: 'Produção Futura',
-      emoji: '🟢',
-      headerClass: 'bg-gradient-to-r from-green-500 to-green-400',
-      orders: groups.futuro,
-    },
+    { key: 'hoje', label: 'Produzir Hoje', emoji: '🔴', headerClass: 'bg-gradient-to-r from-red-500 to-red-400', orders: groups.hoje },
+    { key: 'amanha', label: 'Produzir Amanhã', emoji: '🟠', headerClass: 'bg-gradient-to-r from-orange-500 to-orange-400', orders: groups.amanha },
+    { key: 'breve', label: 'Produzir em Breve', emoji: '🟡', headerClass: 'bg-gradient-to-r from-amber-500 to-amber-400', orders: groups.breve },
+    { key: 'futuro', label: 'Produção Futura', emoji: '🟢', headerClass: 'bg-gradient-to-r from-green-500 to-green-400', orders: groups.futuro },
     ...(groups.sem_data.length > 0
-      ? [
-          {
-            key: 'sem_data',
-            label: 'Sem Data de Entrega',
-            emoji: '⚪',
-            headerClass: 'bg-gradient-to-r from-gray-400 to-gray-300',
-            orders: groups.sem_data,
-          },
-        ]
+      ? [{ key: 'sem_data', label: 'Sem Data de Entrega', emoji: '⚪', headerClass: 'bg-gradient-to-r from-gray-400 to-gray-300', orders: groups.sem_data }]
       : []),
   ];
+}
+
+function ProductionSummaryBlock({ orders }: { orders: Order[] }) {
+  const summary = useMemo(() => getProductSummary(orders), [orders]);
+  if (summary.length === 0) return null;
+
+  return (
+    <Card className="p-3 mb-2 border-dashed border-primary/30 bg-primary/5">
+      <div className="flex items-center gap-1.5 mb-2">
+        <ClipboardList className="h-3.5 w-3.5 text-primary" />
+        <span className="text-xs font-bold text-primary">Resumo de Produção</span>
+      </div>
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1">
+        {summary.map((item) => (
+          <div key={item.name} className="flex items-center justify-between gap-2 text-xs">
+            <span className="truncate text-muted-foreground">{item.name}</span>
+            <span className="font-bold tabular-nums whitespace-nowrap">{item.totalQty.toLocaleString('pt-BR')}x</span>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
 }
 
 interface ProductionPlanningViewProps {
@@ -118,11 +126,9 @@ export function ProductionPlanningView({
 
   const groups = useMemo(() => groupOrders(productionOrders), [productionOrders]);
 
-  const totalPending = productionOrders.length;
-
   return (
     <div className="space-y-4">
-      {/* Summary */}
+      {/* Summary KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {groups.slice(0, 4).map((g) => (
           <Card key={g.key} className="p-3 text-center border-0 shadow-sm">
@@ -148,6 +154,9 @@ export function ProductionPlanningView({
             </div>
           </div>
 
+          {/* Production Summary */}
+          <ProductionSummaryBlock orders={group.orders} />
+
           {group.orders.length === 0 ? (
             <p className="text-xs text-muted-foreground text-center py-4 opacity-60">
               Nenhum pedido neste grupo
@@ -157,17 +166,9 @@ export function ProductionPlanningView({
               {group.orders.map((order) => {
                 const mainProduct = order.items?.[0];
                 const totalQty = order.items?.reduce((s, i) => s + i.quantity, 0) || 0;
-                const statusCfg = orderStatus[order.status] || {
-                  label: order.status,
-                  color: 'bg-muted',
-                };
                 const dueFormatted = order.due_date
                   ? (() => {
-                      try {
-                        return format(parseISO(order.due_date), 'dd/MM');
-                      } catch {
-                        return '';
-                      }
+                      try { return format(parseISO(order.due_date), 'dd/MM'); } catch { return ''; }
                     })()
                   : null;
 
@@ -179,29 +180,20 @@ export function ProductionPlanningView({
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0 space-y-1">
-                        {/* Customer */}
                         <p className="font-semibold text-sm leading-tight truncate">
                           {order.customer_name || order.order_number || 'Pedido'}
                         </p>
-
-                        {/* Product */}
                         {mainProduct?.product?.name && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Package className="h-3 w-3 shrink-0" />
                             <span className="truncate">{mainProduct.product.name}</span>
                             {(order.items?.length || 0) > 1 && (
-                              <span className="text-[10px] opacity-60">
-                                +{(order.items?.length || 1) - 1}
-                              </span>
+                              <span className="text-[10px] opacity-60">+{(order.items?.length || 1) - 1}</span>
                             )}
                           </div>
                         )}
-
-                        {/* Qty + Due date */}
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs font-medium">
-                            Qtd: {totalQty}
-                          </span>
+                          <span className="text-xs font-medium">Qtd: {totalQty}</span>
                           {dueFormatted && (
                             <span className="text-xs text-muted-foreground flex items-center gap-0.5">
                               <Calendar className="h-3 w-3" />
@@ -211,28 +203,19 @@ export function ProductionPlanningView({
                           <OrderPriorityBadge dueDate={order.due_date} />
                         </div>
                       </div>
-
-                      {/* Status */}
                       <div onClick={(e) => e.stopPropagation()}>
-                        <Select
-                          value={order.status}
-                          onValueChange={(v) => onStatusChange(order, v)}
-                        >
+                        <Select value={order.status} onValueChange={(v) => onStatusChange(order, v)}>
                           <SelectTrigger className="h-7 text-[11px] w-28">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             {Object.entries(orderStatus).map(([key, cfg]) => (
-                              <SelectItem key={key} value={key}>
-                                {cfg.label}
-                              </SelectItem>
+                              <SelectItem key={key} value={key}>{cfg.label}</SelectItem>
                             ))}
                           </SelectContent>
                         </Select>
                       </div>
                     </div>
-
-                    {/* Value */}
                     {order.total_value != null && order.total_value > 0 && (
                       <p className="text-xs font-bold text-primary mt-1">
                         {formatCurrency(order.total_value)}
