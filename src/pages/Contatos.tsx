@@ -1339,14 +1339,38 @@ export default function Contatos() {
                             const nrInfo = getNoResponseInfo(contact.id);
                             if (!nrInfo) return <span className="text-muted-foreground text-xs">-</span>;
                             return (
-                              <span className={cn(
-                                'text-[10px] font-semibold rounded-full px-1.5 py-0.5 border inline-flex items-center gap-0.5',
-                                nrInfo.status === 'follow_up_urgente' && 'bg-red-100 text-red-700 border-red-300',
-                                nrInfo.status === 'sem_resposta' && 'bg-amber-100 text-amber-700 border-amber-300',
-                                nrInfo.status === 'lead_esfriando' && 'bg-sky-100 text-sky-700 border-sky-300',
-                              )}>
-                                {nrInfo.emoji} {nrInfo.daysSince}d
-                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <span className={cn(
+                                  'text-[10px] font-semibold rounded-full px-1.5 py-0.5 border inline-flex items-center gap-0.5',
+                                  nrInfo.status === 'follow_up_urgente' && 'bg-red-100 text-red-700 border-red-300',
+                                  nrInfo.status === 'sem_resposta' && 'bg-amber-100 text-amber-700 border-amber-300',
+                                  nrInfo.status === 'lead_esfriando' && 'bg-sky-100 text-sky-700 border-sky-300',
+                                )}>
+                                  {nrInfo.emoji} {nrInfo.daysSince}d
+                                </span>
+                                {(contact.whatsapp || contact.mobile || contact.phone) && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-5 w-5 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                    title="Enviar sugestão via WhatsApp"
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      const phone = contact.whatsapp || contact.mobile || contact.phone;
+                                      if (!phone) return;
+                                      const clean = phone.replace(/\D/g, '');
+                                      const full = clean.startsWith('55') ? clean : `55${clean}`;
+                                      const now = new Date().toISOString();
+                                      const encoded = encodeURIComponent(nrInfo.suggestedMessage);
+                                      await addEntry(contact.id, 'whatsapp', `💬 Follow-up enviado automaticamente (sugerido pelo sistema · ${nrInfo.suggestedLabel})`, now);
+                                      window.open(`https://wa.me/${full}?text=${encoded}`, '_blank');
+                                      setTimeout(() => refreshNoResponse(), 500);
+                                    }}
+                                  >
+                                    <Send className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
                             );
                           })()}
                         </TableCell>
