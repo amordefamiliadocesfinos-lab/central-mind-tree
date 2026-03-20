@@ -1257,6 +1257,7 @@ export default function Contatos() {
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('ultimo_contato')}>
                     <div className="flex items-center">Últ. Contato <SortIcon field="ultimo_contato" /></div>
                   </TableHead>
+                  <TableHead>Score</TableHead>
                   <TableHead>Resposta</TableHead>
                   <TableHead>Próxima Ação</TableHead>
                   <TableHead>Próx. Contato</TableHead>
