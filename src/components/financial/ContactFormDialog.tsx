@@ -788,6 +788,14 @@ export function ContactFormDialog({
           )}
         </div>
       </DialogContent>
+
+      <WhatsAppMessageSelector
+        open={whatsAppOpen}
+        onOpenChange={setWhatsAppOpen}
+        contactName={form.name || ''}
+        funnelStatus={form.funnel_status || ''}
+        onSend={handleWhatsAppSend}
+      />
     </Dialog>
   );
 }
