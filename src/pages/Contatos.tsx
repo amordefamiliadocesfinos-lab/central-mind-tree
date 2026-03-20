@@ -268,6 +268,7 @@ export default function Contatos() {
       else if (sortField === 'ultimo_contato') cmp = (a.ultimo_contato || '').localeCompare(b.ultimo_contato || '');
       else if (sortField === 'created_at') cmp = (a.created_at || '').localeCompare(b.created_at || '');
       else if (sortField === 'temperatura') cmp = (tempOrder[a.temperatura_lead || 'morno'] || 2) - (tempOrder[b.temperatura_lead || 'morno'] || 2);
+      else if (sortField === 'score') cmp = getScore(a.id).score - getScore(b.id).score;
       return sortDir === 'asc' ? cmp : -cmp;
     });
   }, [filteredContacts, sortField, sortDir]);
