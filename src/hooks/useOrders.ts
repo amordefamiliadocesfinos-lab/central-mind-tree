@@ -71,6 +71,7 @@ export interface ProductionNeed {
 const ORDER_STATUS = {
   pendente: { label: 'Pendente', color: 'bg-yellow-500' },
   producao: { label: 'Em Produção', color: 'bg-red-500' },
+  produzido: { label: 'Produzido', color: 'bg-emerald-600' },
   pronto: { label: 'Pronto', color: 'bg-green-500' },
   enviado: { label: 'Enviado', color: 'bg-blue-500' },
   concluido: { label: 'Concluído', color: 'bg-gray-500' },

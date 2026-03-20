@@ -7,10 +7,11 @@ export const ORDER_STATUS = {
   rascunho: { label: 'Rascunho', color: 'bg-slate-400', order: 0 },
   confirmado: { label: 'Confirmado', color: 'bg-yellow-500', order: 1 },
   producao: { label: 'Em Produção', color: 'bg-orange-500', order: 2 },
-  pronto: { label: 'Pronto', color: 'bg-green-500', order: 3 },
-  enviado: { label: 'Enviado', color: 'bg-blue-500', order: 4 },
-  concluido: { label: 'Concluído', color: 'bg-gray-500', order: 5 },
-  cancelado: { label: 'Cancelado', color: 'bg-gray-400', order: 6 },
+  produzido: { label: 'Produzido', color: 'bg-emerald-600', order: 3 },
+  pronto: { label: 'Pronto', color: 'bg-green-500', order: 4 },
+  enviado: { label: 'Enviado', color: 'bg-blue-500', order: 5 },
+  concluido: { label: 'Concluído', color: 'bg-gray-500', order: 6 },
+  cancelado: { label: 'Cancelado', color: 'bg-gray-400', order: 7 },
 } as const;
 
 export const ORDER_CHANNELS = {
