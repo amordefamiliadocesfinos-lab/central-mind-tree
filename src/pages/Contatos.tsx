@@ -1298,6 +1298,22 @@ export default function Contatos() {
                           ) : '-'}
                         </TableCell>
                         <TableCell>
+                          {(() => {
+                            const nrInfo = getNoResponseInfo(contact.id);
+                            if (!nrInfo) return <span className="text-muted-foreground text-xs">-</span>;
+                            return (
+                              <span className={cn(
+                                'text-[10px] font-semibold rounded-full px-1.5 py-0.5 border inline-flex items-center gap-0.5',
+                                nrInfo.status === 'follow_up_urgente' && 'bg-red-100 text-red-700 border-red-300',
+                                nrInfo.status === 'sem_resposta' && 'bg-amber-100 text-amber-700 border-amber-300',
+                                nrInfo.status === 'lead_esfriando' && 'bg-sky-100 text-sky-700 border-sky-300',
+                              )}>
+                                {nrInfo.emoji} {nrInfo.daysSince}d
+                              </span>
+                            );
+                          })()}
+                        </TableCell>
+                        <TableCell>
                           {contact.next_action_text || contact.next_action_date ? (
                             <div className={cn("text-xs", isNextActionOverdue(contact) && "text-red-600 font-semibold")}>
                               {isNextActionOverdue(contact) && <AlertTriangle className="h-3 w-3 inline mr-0.5 -mt-0.5" />}
