@@ -75,6 +75,7 @@ import {
 import { useContacts, Contact } from '@/hooks/useContacts';
 import { useContactHistory } from '@/hooks/useContactHistory';
 import { useContactsWithOrders } from '@/hooks/useContactsWithOrders';
+import { useNoResponseDetection } from '@/hooks/useNoResponseDetection';
 import { useContactTags } from '@/hooks/useContactTags';
 import { ContactFormDialog } from '@/components/financial/ContactFormDialog';
 import { WhatsAppMessageSelector } from '@/components/crm/WhatsAppMessageSelector';
@@ -170,6 +171,7 @@ export default function Contatos() {
   const { addEntry } = useContactHistory();
   const { getTagsForContact } = useContactTags();
   const { hasOrders } = useContactsWithOrders();
+  const { getNoResponseInfo, refreshNoResponse } = useNoResponseDetection();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [tempFilter, setTempFilter] = useState<string>('all');
@@ -270,6 +272,7 @@ export default function Contatos() {
   const prioritySortContacts = useCallback((list: Contact[]) => {
     const tempScore: Record<string, number> = { quente: 30, morno: 20, frio: 10 };
     const classScore: Record<string, number> = { vip: 4, alto_potencial: 3, medio: 2, baixo_potencial: 1 };
+    const noResponseScore: Record<string, number> = { follow_up_urgente: 80, sem_resposta: 60, lead_esfriando: 40 };
     const now = new Date();
     const today = startOfDay(now);
 
@@ -285,6 +288,9 @@ export default function Contatos() {
       const actionToday = c.next_action_date && isSameDay(parseISO(c.next_action_date), now);
       const contactToday = c.next_contact_date && isSameDay(parseISO(c.next_contact_date), now);
       if (actionToday || contactToday) score += 50;
+      // No-response detection boost
+      const nrInfo = getNoResponseInfo(c.id);
+      if (nrInfo) score += noResponseScore[nrInfo.status!] || 0;
       // No contact > 7 days
       if (c.ultimo_contato) {
         const days = differenceInDays(now, parseISO(c.ultimo_contato));
@@ -304,7 +310,7 @@ export default function Contatos() {
       if (ua !== ub) return ub - ua; // higher urgency first
       return (a.name || '').localeCompare(b.name || '');
     });
-  }, []);
+  }, [getNoResponseInfo]);
 
   const groupedByStage = useMemo(() => {
     const groups: Record<string, Contact[]> = {};
@@ -444,6 +450,7 @@ export default function Contatos() {
       const encoded = encodeURIComponent(message);
       await addEntry(whatsAppContact.id, 'whatsapp', `💬 Mensagem iniciada via WhatsApp (${templateLabel})`, now);
       window.open(`https://wa.me/${full}?text=${encoded}`, '_blank');
+      setTimeout(() => refreshNoResponse(), 500);
     }
     setWhatsAppContact(null);
   };
@@ -539,6 +546,7 @@ export default function Contatos() {
     const daysSinceContact = contact.ultimo_contato ? differenceInDays(new Date(), parseISO(contact.ultimo_contato)) : null;
     const leadEsfriando = daysSinceContact !== null && daysSinceContact >= 14;
     const followUpNecessario = !leadEsfriando && daysSinceContact !== null && daysSinceContact >= 7;
+    const noResponseInfo = getNoResponseInfo(contact.id);
 
     const nextActionFormatted = contact.next_action_date
       ? (() => { try { return format(parseISO(contact.next_action_date), "dd/MM HH:mm"); } catch { return null; } })()
@@ -557,6 +565,7 @@ export default function Contatos() {
       setSavingFollowUp(false);
       setShowFollowUp(false);
       setFollowUpNote('');
+      setTimeout(() => refreshNoResponse(), 500);
     };
 
     return (
@@ -672,6 +681,16 @@ export default function Contatos() {
             {followUpNecessario && (
               <span className="inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-700">
                 ⚠ Follow-up necessário
+              </span>
+            )}
+            {noResponseInfo && (
+              <span className={cn(
+                'inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold',
+                noResponseInfo.status === 'follow_up_urgente' && 'bg-red-100 text-red-700 border-red-300 dark:bg-red-950/40 dark:text-red-400 dark:border-red-700',
+                noResponseInfo.status === 'sem_resposta' && 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-700',
+                noResponseInfo.status === 'lead_esfriando' && 'bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-950/40 dark:text-sky-400 dark:border-sky-700',
+              )}>
+                {noResponseInfo.emoji} {noResponseInfo.label} há {noResponseInfo.daysSince}d
               </span>
             )}
           </div>
@@ -1192,6 +1211,7 @@ export default function Contatos() {
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('ultimo_contato')}>
                     <div className="flex items-center">Últ. Contato <SortIcon field="ultimo_contato" /></div>
                   </TableHead>
+                  <TableHead>Resposta</TableHead>
                   <TableHead>Próxima Ação</TableHead>
                   <TableHead>Próx. Contato</TableHead>
                   <TableHead>Tags</TableHead>
@@ -1202,7 +1222,7 @@ export default function Contatos() {
               <TableBody>
                 {sortedContacts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={12} className="text-center text-muted-foreground py-12">
+                    <TableCell colSpan={13} className="text-center text-muted-foreground py-12">
                       Nenhum contato encontrado
                     </TableCell>
                   </TableRow>
@@ -1278,6 +1298,22 @@ export default function Contatos() {
                           {alert ? (
                             <span className={cn('text-xs font-medium rounded px-1.5 py-0.5 border', alert.className)}>{alert.label}</span>
                           ) : '-'}
+                        </TableCell>
+                        <TableCell>
+                          {(() => {
+                            const nrInfo = getNoResponseInfo(contact.id);
+                            if (!nrInfo) return <span className="text-muted-foreground text-xs">-</span>;
+                            return (
+                              <span className={cn(
+                                'text-[10px] font-semibold rounded-full px-1.5 py-0.5 border inline-flex items-center gap-0.5',
+                                nrInfo.status === 'follow_up_urgente' && 'bg-red-100 text-red-700 border-red-300',
+                                nrInfo.status === 'sem_resposta' && 'bg-amber-100 text-amber-700 border-amber-300',
+                                nrInfo.status === 'lead_esfriando' && 'bg-sky-100 text-sky-700 border-sky-300',
+                              )}>
+                                {nrInfo.emoji} {nrInfo.daysSince}d
+                              </span>
+                            );
+                          })()}
                         </TableCell>
                         <TableCell>
                           {contact.next_action_text || contact.next_action_date ? (
