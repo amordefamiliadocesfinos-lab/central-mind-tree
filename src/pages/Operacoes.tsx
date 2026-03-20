@@ -842,7 +842,7 @@ export default function Operacoes() {
 
             {/* View toggle */}
             <div className="flex justify-end">
-              <ToggleGroup type="single" value={ordersViewMode} onValueChange={(v) => v && setOrdersViewMode(v as 'list' | 'grid')}>
+              <ToggleGroup type="single" value={ordersViewMode} onValueChange={(v) => v && setOrdersViewMode(v as 'list' | 'grid' | 'planning')}>
                 <ToggleGroupItem value="list" aria-label="Lista" className="gap-1.5 text-xs">
                   <List className="h-4 w-4" />
                   Lista
@@ -850,6 +850,10 @@ export default function Operacoes() {
                 <ToggleGroupItem value="grid" aria-label="Cards" className="gap-1.5 text-xs">
                   <LayoutGrid className="h-4 w-4" />
                   Cards
+                </ToggleGroupItem>
+                <ToggleGroupItem value="planning" aria-label="Planejamento" className="gap-1.5 text-xs">
+                  <CalendarClock className="h-4 w-4" />
+                  Planejamento
                 </ToggleGroupItem>
               </ToggleGroup>
             </div>
