@@ -1,0 +1,250 @@
+import { useMemo } from 'react';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AlertTriangle, Clock, Calendar, CalendarClock, Package } from 'lucide-react';
+import { cn, formatCurrency } from '@/lib/utils';
+import { differenceInDays, startOfDay, parseISO, format } from 'date-fns';
+import { getNowSaoPaulo } from '@/lib/dateUtils';
+import { OrderPriorityBadge } from './OrderPriorityBadge';
+
+interface OrderItem {
+  quantity: number;
+  unit_price?: number | null;
+  product?: { name: string };
+}
+
+interface Order {
+  id: string;
+  order_number?: string | null;
+  customer_name?: string | null;
+  status: string;
+  due_date?: string | null;
+  total_value?: number | null;
+  items?: OrderItem[];
+}
+
+interface PlanningGroup {
+  key: string;
+  label: string;
+  emoji: string;
+  headerClass: string;
+  orders: Order[];
+}
+
+function groupOrders(orders: Order[]): PlanningGroup[] {
+  const today = startOfDay(getNowSaoPaulo());
+  const groups: Record<string, Order[]> = {
+    hoje: [],
+    amanha: [],
+    breve: [],
+    futuro: [],
+    sem_data: [],
+  };
+
+  for (const order of orders) {
+    if (!order.due_date) {
+      groups.sem_data.push(order);
+      continue;
+    }
+    const due = startOfDay(parseISO(order.due_date));
+    const diff = differenceInDays(due, today);
+    if (diff <= 0) groups.hoje.push(order);
+    else if (diff === 1) groups.amanha.push(order);
+    else if (diff <= 3) groups.breve.push(order);
+    else groups.futuro.push(order);
+  }
+
+  return [
+    {
+      key: 'hoje',
+      label: 'Produzir Hoje',
+      emoji: '🔴',
+      headerClass: 'bg-gradient-to-r from-red-500 to-red-400',
+      orders: groups.hoje,
+    },
+    {
+      key: 'amanha',
+      label: 'Produzir Amanhã',
+      emoji: '🟠',
+      headerClass: 'bg-gradient-to-r from-orange-500 to-orange-400',
+      orders: groups.amanha,
+    },
+    {
+      key: 'breve',
+      label: 'Produzir em Breve',
+      emoji: '🟡',
+      headerClass: 'bg-gradient-to-r from-amber-500 to-amber-400',
+      orders: groups.breve,
+    },
+    {
+      key: 'futuro',
+      label: 'Produção Futura',
+      emoji: '🟢',
+      headerClass: 'bg-gradient-to-r from-green-500 to-green-400',
+      orders: groups.futuro,
+    },
+    ...(groups.sem_data.length > 0
+      ? [
+          {
+            key: 'sem_data',
+            label: 'Sem Data de Entrega',
+            emoji: '⚪',
+            headerClass: 'bg-gradient-to-r from-gray-400 to-gray-300',
+            orders: groups.sem_data,
+          },
+        ]
+      : []),
+  ];
+}
+
+interface ProductionPlanningViewProps {
+  orders: Order[];
+  orderStatus: Record<string, { label: string; color: string }>;
+  onStatusChange: (order: Order, newStatus: string) => void;
+  onClick: (order: Order) => void;
+}
+
+export function ProductionPlanningView({
+  orders,
+  orderStatus,
+  onStatusChange,
+  onClick,
+}: ProductionPlanningViewProps) {
+  const productionOrders = useMemo(
+    () => orders.filter((o) => o.status !== 'concluido' && o.status !== 'cancelado'),
+    [orders]
+  );
+
+  const groups = useMemo(() => groupOrders(productionOrders), [productionOrders]);
+
+  const totalPending = productionOrders.length;
+
+  return (
+    <div className="space-y-4">
+      {/* Summary */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {groups.slice(0, 4).map((g) => (
+          <Card key={g.key} className="p-3 text-center border-0 shadow-sm">
+            <p className="text-2xl font-bold">{g.orders.length}</p>
+            <p className="text-[11px] text-muted-foreground font-medium">
+              {g.emoji} {g.label}
+            </p>
+          </Card>
+        ))}
+      </div>
+
+      {/* Groups */}
+      {groups.map((group) => (
+        <div key={group.key}>
+          <div className={cn('rounded-xl p-3 mb-2', group.headerClass)}>
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-bold text-white drop-shadow-sm">
+                {group.emoji} {group.label}
+              </span>
+              <Badge className="bg-white/30 text-white border-0 text-xs h-5 px-2 font-bold backdrop-blur-sm">
+                {group.orders.length}
+              </Badge>
+            </div>
+          </div>
+
+          {group.orders.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-4 opacity-60">
+              Nenhum pedido neste grupo
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {group.orders.map((order) => {
+                const mainProduct = order.items?.[0];
+                const totalQty = order.items?.reduce((s, i) => s + i.quantity, 0) || 0;
+                const statusCfg = orderStatus[order.status] || {
+                  label: order.status,
+                  color: 'bg-muted',
+                };
+                const dueFormatted = order.due_date
+                  ? (() => {
+                      try {
+                        return format(parseISO(order.due_date), 'dd/MM');
+                      } catch {
+                        return '';
+                      }
+                    })()
+                  : null;
+
+                return (
+                  <Card
+                    key={order.id}
+                    className="p-3 hover:shadow-md transition-all cursor-pointer border-l-[3px] border-l-transparent hover:border-l-primary"
+                    onClick={() => onClick(order)}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0 space-y-1">
+                        {/* Customer */}
+                        <p className="font-semibold text-sm leading-tight truncate">
+                          {order.customer_name || order.order_number || 'Pedido'}
+                        </p>
+
+                        {/* Product */}
+                        {mainProduct?.product?.name && (
+                          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Package className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{mainProduct.product.name}</span>
+                            {(order.items?.length || 0) > 1 && (
+                              <span className="text-[10px] opacity-60">
+                                +{(order.items?.length || 1) - 1}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Qty + Due date */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-xs font-medium">
+                            Qtd: {totalQty}
+                          </span>
+                          {dueFormatted && (
+                            <span className="text-xs text-muted-foreground flex items-center gap-0.5">
+                              <Calendar className="h-3 w-3" />
+                              {dueFormatted}
+                            </span>
+                          )}
+                          <OrderPriorityBadge dueDate={order.due_date} />
+                        </div>
+                      </div>
+
+                      {/* Status */}
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <Select
+                          value={order.status}
+                          onValueChange={(v) => onStatusChange(order, v)}
+                        >
+                          <SelectTrigger className="h-7 text-[11px] w-28">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Object.entries(orderStatus).map(([key, cfg]) => (
+                              <SelectItem key={key} value={key}>
+                                {cfg.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    {/* Value */}
+                    {order.total_value != null && order.total_value > 0 && (
+                      <p className="text-xs font-bold text-primary mt-1">
+                        {formatCurrency(order.total_value)}
+                      </p>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
