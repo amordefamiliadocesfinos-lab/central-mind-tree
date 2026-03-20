@@ -16,7 +16,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Package, ShoppingCart, Factory, ArrowLeft, Trash2, AlertTriangle, Warehouse, DollarSign, ClipboardCheck, List, LayoutGrid } from 'lucide-react';
+import { Plus, Package, ShoppingCart, Factory, ArrowLeft, Trash2, AlertTriangle, Warehouse, DollarSign, ClipboardCheck, List, LayoutGrid, CalendarClock } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { ProductGallery } from '@/components/ProductGallery';
 import { ProductMovementHistory } from '@/components/ProductMovementHistory';
@@ -37,6 +37,7 @@ import { ProductionTab } from '@/components/operations/ProductionTab';
 import { OperationsCalendarTab } from '@/components/operations/OperationsCalendarTab';
 import { MRPTab } from '@/components/operations/MRPTab';
 import { ProductCostEditor } from '@/components/operations/ProductCostEditor';
+import { ProductionPlanningView } from '@/components/operations/ProductionPlanningView';
 import { ContactAutocomplete } from '@/components/operations/ContactAutocomplete';
 import { 
   useAppStore, 
@@ -188,7 +189,7 @@ export default function Operacoes() {
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
   const [showCostEditor, setShowCostEditor] = useState(false);
   const [showNewContactFromSale, setShowNewContactFromSale] = useState(false);
-  const [ordersViewMode, setOrdersViewMode] = useState<'list' | 'grid'>('list');
+  const [ordersViewMode, setOrdersViewMode] = useState<'list' | 'grid' | 'planning'>('list');
   const { createContact } = useContacts();
   const { addEntry } = useContactHistory();
   const [crmContactId, setCrmContactId] = useState<string | null>(null);
@@ -841,7 +842,7 @@ export default function Operacoes() {
 
             {/* View toggle */}
             <div className="flex justify-end">
-              <ToggleGroup type="single" value={ordersViewMode} onValueChange={(v) => v && setOrdersViewMode(v as 'list' | 'grid')}>
+              <ToggleGroup type="single" value={ordersViewMode} onValueChange={(v) => v && setOrdersViewMode(v as 'list' | 'grid' | 'planning')}>
                 <ToggleGroupItem value="list" aria-label="Lista" className="gap-1.5 text-xs">
                   <List className="h-4 w-4" />
                   Lista
@@ -850,10 +851,21 @@ export default function Operacoes() {
                   <LayoutGrid className="h-4 w-4" />
                   Cards
                 </ToggleGroupItem>
+                <ToggleGroupItem value="planning" aria-label="Planejamento" className="gap-1.5 text-xs">
+                  <CalendarClock className="h-4 w-4" />
+                  Planejamento
+                </ToggleGroupItem>
               </ToggleGroup>
             </div>
 
-            {filteredOrders.length === 0 ? (
+            {ordersViewMode === 'planning' ? (
+              <ProductionPlanningView
+                orders={filteredOrders as Order[]}
+                orderStatus={ORDER_STATUS}
+                onStatusChange={handleStatusChange}
+                onClick={(o) => setEditingOrder(rawOrders.find(ord => ord.id === o.id) || null)}
+              />
+            ) : filteredOrders.length === 0 ? (
               <Card className="p-8 text-center">
                 <p className="text-muted-foreground">
                   {searchTerm || statusFilter !== 'all' ? 'Nenhum pedido encontrado.' : 'Nenhum pedido ainda.'}
