@@ -272,6 +272,7 @@ export default function Contatos() {
   const prioritySortContacts = useCallback((list: Contact[]) => {
     const tempScore: Record<string, number> = { quente: 30, morno: 20, frio: 10 };
     const classScore: Record<string, number> = { vip: 4, alto_potencial: 3, medio: 2, baixo_potencial: 1 };
+    const noResponseScore: Record<string, number> = { follow_up_urgente: 80, sem_resposta: 60, lead_esfriando: 40 };
     const now = new Date();
     const today = startOfDay(now);
 
@@ -287,6 +288,9 @@ export default function Contatos() {
       const actionToday = c.next_action_date && isSameDay(parseISO(c.next_action_date), now);
       const contactToday = c.next_contact_date && isSameDay(parseISO(c.next_contact_date), now);
       if (actionToday || contactToday) score += 50;
+      // No-response detection boost
+      const nrInfo = getNoResponseInfo(c.id);
+      if (nrInfo) score += noResponseScore[nrInfo.status!] || 0;
       // No contact > 7 days
       if (c.ultimo_contato) {
         const days = differenceInDays(now, parseISO(c.ultimo_contato));
@@ -306,7 +310,7 @@ export default function Contatos() {
       if (ua !== ub) return ub - ua; // higher urgency first
       return (a.name || '').localeCompare(b.name || '');
     });
-  }, []);
+  }, [getNoResponseInfo]);
 
   const groupedByStage = useMemo(() => {
     const groups: Record<string, Contact[]> = {};
