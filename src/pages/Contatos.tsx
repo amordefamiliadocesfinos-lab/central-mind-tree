@@ -545,6 +545,7 @@ export default function Contatos() {
     const daysSinceContact = contact.ultimo_contato ? differenceInDays(new Date(), parseISO(contact.ultimo_contato)) : null;
     const leadEsfriando = daysSinceContact !== null && daysSinceContact >= 14;
     const followUpNecessario = !leadEsfriando && daysSinceContact !== null && daysSinceContact >= 7;
+    const noResponseInfo = getNoResponseInfo(contact.id);
 
     const nextActionFormatted = contact.next_action_date
       ? (() => { try { return format(parseISO(contact.next_action_date), "dd/MM HH:mm"); } catch { return null; } })()
