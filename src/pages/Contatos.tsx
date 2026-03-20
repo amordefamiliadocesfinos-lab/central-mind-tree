@@ -171,6 +171,7 @@ export default function Contatos() {
   const { addEntry } = useContactHistory();
   const { getTagsForContact } = useContactTags();
   const { hasOrders } = useContactsWithOrders();
+  const { getNoResponseInfo, refreshNoResponse } = useNoResponseDetection();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [tempFilter, setTempFilter] = useState<string>('all');
