@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { WhatsAppMessageSelector } from '@/components/crm/WhatsAppMessageSelector';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -122,13 +123,25 @@ export function ContactsManager() {
     setEditingContact(undefined);
   };
 
+  const [whatsAppContact, setWhatsAppContact] = useState<Contact | undefined>(undefined);
+
   const handleWhatsAppClick = (contact: Contact) => {
     const phone = contact.whatsapp || contact.mobile || contact.phone;
     if (phone) {
+      setWhatsAppContact(contact);
+    }
+  };
+
+  const handleWhatsAppSend = (message: string, _templateLabel: string) => {
+    if (!whatsAppContact) return;
+    const phone = whatsAppContact.whatsapp || whatsAppContact.mobile || whatsAppContact.phone;
+    if (phone) {
       const cleanPhone = phone.replace(/\D/g, '');
       const fullPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
-      window.open(`https://wa.me/${fullPhone}`, '_blank');
+      const encoded = encodeURIComponent(message);
+      window.open(`https://wa.me/${fullPhone}?text=${encoded}`, '_blank');
     }
+    setWhatsAppContact(undefined);
   };
 
   const handleHistoryClick = (contact: Contact) => {
@@ -355,6 +368,13 @@ export function ContactsManager() {
         open={historyOpen}
         onOpenChange={setHistoryOpen}
         contact={historyContact}
+      />
+      <WhatsAppMessageSelector
+        open={!!whatsAppContact}
+        onOpenChange={(open) => { if (!open) setWhatsAppContact(undefined); }}
+        contactName={whatsAppContact?.name || ''}
+        funnelStatus={whatsAppContact?.funnel_status || ''}
+        onSend={handleWhatsAppSend}
       />
     </div>
   );

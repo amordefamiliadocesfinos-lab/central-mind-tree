@@ -77,6 +77,7 @@ import { useContactHistory } from '@/hooks/useContactHistory';
 import { useContactsWithOrders } from '@/hooks/useContactsWithOrders';
 import { useContactTags } from '@/hooks/useContactTags';
 import { ContactFormDialog } from '@/components/financial/ContactFormDialog';
+import { WhatsAppMessageSelector } from '@/components/crm/WhatsAppMessageSelector';
 import { ContactOrderHistory } from '@/components/financial/ContactOrderHistory';
 import { ContactHistoryDialog } from '@/components/ContactHistoryDialog';
 import { ContactTagsManager } from '@/components/crm/ContactTagsManager';
@@ -424,18 +425,27 @@ export default function Contatos() {
     await updateContact(contact.id, updates);
   };
 
-  const handleWhatsApp = async (contact: Contact) => {
+  const [whatsAppContact, setWhatsAppContact] = useState<Contact | null>(null);
+
+  const handleWhatsApp = (contact: Contact) => {
     const phone = contact.whatsapp || contact.mobile || contact.phone;
+    if (phone) {
+      setWhatsAppContact(contact);
+    }
+  };
+
+  const handleWhatsAppSend = async (message: string, templateLabel: string) => {
+    if (!whatsAppContact) return;
+    const phone = whatsAppContact.whatsapp || whatsAppContact.mobile || whatsAppContact.phone;
     if (phone) {
       const clean = phone.replace(/\D/g, '');
       const full = clean.startsWith('55') ? clean : `55${clean}`;
       const now = new Date().toISOString();
-      const message = encodeURIComponent(
-        'Olá, tudo bem?\nAqui é da Amor de Família Doces Finos e Artesanais.\nEstou entrando em contato para saber se posso ajudar com seu pedido ou orçamento.'
-      );
-      await addEntry(contact.id, 'whatsapp', '💬 Contato realizado via WhatsApp', now);
-      window.open(`https://wa.me/${full}?text=${message}`, '_blank');
+      const encoded = encodeURIComponent(message);
+      await addEntry(whatsAppContact.id, 'whatsapp', `💬 Mensagem iniciada via WhatsApp (${templateLabel})`, now);
+      window.open(`https://wa.me/${full}?text=${encoded}`, '_blank');
     }
+    setWhatsAppContact(null);
   };
 
   const handleTempChange = async (contact: Contact, newTemp: string) => {
@@ -1393,6 +1403,14 @@ export default function Contatos() {
         open={activitiesOpen}
         onOpenChange={setActivitiesOpen}
         contact={activitiesContact}
+      />
+
+      <WhatsAppMessageSelector
+        open={!!whatsAppContact}
+        onOpenChange={(open) => { if (!open) setWhatsAppContact(null); }}
+        contactName={whatsAppContact?.name || ''}
+        funnelStatus={whatsAppContact?.funnel_status || ''}
+        onSend={handleWhatsAppSend}
       />
     </div>
   );
