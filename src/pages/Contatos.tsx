@@ -1086,6 +1086,7 @@ export default function Contatos() {
               <SelectItem value="ultimo_contato-asc">Últ. Contato ↑ Antigo</SelectItem>
               <SelectItem value="ultimo_contato-desc">Últ. Contato ↓ Recente</SelectItem>
               <SelectItem value="valor_estimado-desc">Valor ↓ Maior</SelectItem>
+              <SelectItem value="score-desc">Score ↓ Maior</SelectItem>
               <SelectItem value="created_at-desc">Mais recente</SelectItem>
             </SelectContent>
           </Select>
