@@ -450,6 +450,7 @@ export default function Contatos() {
       const encoded = encodeURIComponent(message);
       await addEntry(whatsAppContact.id, 'whatsapp', `💬 Mensagem iniciada via WhatsApp (${templateLabel})`, now);
       window.open(`https://wa.me/${full}?text=${encoded}`, '_blank');
+      setTimeout(() => refreshNoResponse(), 500);
     }
     setWhatsAppContact(null);
   };
