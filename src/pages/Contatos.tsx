@@ -1404,6 +1404,14 @@ export default function Contatos() {
         onOpenChange={setActivitiesOpen}
         contact={activitiesContact}
       />
+
+      <WhatsAppMessageSelector
+        open={!!whatsAppContact}
+        onOpenChange={(open) => { if (!open) setWhatsAppContact(null); }}
+        contactName={whatsAppContact?.name || ''}
+        funnelStatus={whatsAppContact?.funnel_status || ''}
+        onSend={handleWhatsAppSend}
+      />
     </div>
   );
 }
