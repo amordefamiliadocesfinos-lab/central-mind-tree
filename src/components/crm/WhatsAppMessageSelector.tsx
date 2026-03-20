@@ -33,6 +33,8 @@ const WHATSAPP_TEMPLATES = [
   },
 ] as const;
 
+type TemplateKey = typeof WHATSAPP_TEMPLATES[number]['key'];
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
