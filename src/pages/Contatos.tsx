@@ -71,6 +71,8 @@ import {
   AlertTriangle,
   Thermometer,
   Phone,
+  Lightbulb,
+  Send,
 } from 'lucide-react';
 import { useContacts, Contact } from '@/hooks/useContacts';
 import { useContactHistory } from '@/hooks/useContactHistory';
