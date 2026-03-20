@@ -94,11 +94,14 @@ export function useNoResponseDetection() {
 
       if (status) {
         const cfg = STATUS_CONFIG[status];
+        const suggested = SUGGESTED_MESSAGES[status];
         map.set(contactId, {
           status,
           daysSince: days,
           label: cfg.label,
           emoji: cfg.emoji,
+          suggestedMessage: suggested.message,
+          suggestedLabel: suggested.label,
         });
       }
     }
