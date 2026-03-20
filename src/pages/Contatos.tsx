@@ -271,7 +271,7 @@ export default function Contatos() {
       else if (sortField === 'score') cmp = getScore(a.id).score - getScore(b.id).score;
       return sortDir === 'asc' ? cmp : -cmp;
     });
-  }, [filteredContacts, sortField, sortDir]);
+  }, [filteredContacts, sortField, sortDir, getScore]);
 
   // Priority sort: overdue > hot+today > hot > warm+overdue > warm > cold > rest
   const prioritySortContacts = useCallback((list: Contact[]) => {
