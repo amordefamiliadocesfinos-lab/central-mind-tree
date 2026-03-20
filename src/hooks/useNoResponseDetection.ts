@@ -29,10 +29,9 @@ export function useNoResponseDetection() {
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
-    // Fetch all contact_history ordered by date desc
     const { data, error } = await supabase
       .from('contact_history')
-      .select('contact_id, interaction_type, interaction_date, description')
+      .select('contact_id, interaction_type, interaction_date, description, created_at')
       .order('interaction_date', { ascending: false })
       .limit(5000);
 
@@ -41,7 +40,6 @@ export function useNoResponseDetection() {
       return;
     }
 
-    // Group by contact_id, find latest WhatsApp sent and latest interaction after it
     const contactEntries: Record<string, Array<{ interaction_type: string; interaction_date: string; description: string }>> = {};
     
     for (const entry of data) {
