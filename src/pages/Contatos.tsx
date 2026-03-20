@@ -71,6 +71,8 @@ import {
   AlertTriangle,
   Thermometer,
   Phone,
+  Lightbulb,
+  Send,
 } from 'lucide-react';
 import { useContacts, Contact } from '@/hooks/useContacts';
 import { useContactHistory } from '@/hooks/useContactHistory';
@@ -695,7 +697,40 @@ export default function Contatos() {
             )}
           </div>
 
-          {/* Próxima ação */}
+          {/* Sugestão automática de mensagem */}
+          {noResponseInfo && (
+            <div className="mt-2 rounded-md border border-amber-200 bg-amber-50/60 dark:border-amber-800 dark:bg-amber-950/20 px-2 py-1.5">
+              <div className="flex items-center gap-1 text-[10px] font-semibold text-amber-700 dark:text-amber-400 mb-1">
+                <Lightbulb className="h-3 w-3" />
+                Sugestão pronta
+              </div>
+              <p className="text-[10px] text-muted-foreground line-clamp-2 whitespace-pre-wrap leading-relaxed">
+                {noResponseInfo.suggestedMessage}
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-1.5 h-6 text-[10px] gap-1 w-full border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-900/40"
+                disabled={!(contact.whatsapp || contact.mobile || contact.phone)}
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  const phone = contact.whatsapp || contact.mobile || contact.phone;
+                  if (!phone) return;
+                  const clean = phone.replace(/\D/g, '');
+                  const full = clean.startsWith('55') ? clean : `55${clean}`;
+                  const now = new Date().toISOString();
+                  const encoded = encodeURIComponent(noResponseInfo.suggestedMessage);
+                  await addEntry(contact.id, 'whatsapp', `💬 Follow-up enviado automaticamente (sugerido pelo sistema · ${noResponseInfo.suggestedLabel})`, now);
+                  window.open(`https://wa.me/${full}?text=${encoded}`, '_blank');
+                  setTimeout(() => refreshNoResponse(), 500);
+                }}
+              >
+                <Send className="h-2.5 w-2.5" />
+                Enviar mensagem
+              </Button>
+            </div>
+          )}
+
           {(contact.next_action_text || contact.next_action_date) && (
             <div className={cn(
               "rounded-md px-2 py-1.5 text-[11px] border mt-2",
@@ -1304,14 +1339,38 @@ export default function Contatos() {
                             const nrInfo = getNoResponseInfo(contact.id);
                             if (!nrInfo) return <span className="text-muted-foreground text-xs">-</span>;
                             return (
-                              <span className={cn(
-                                'text-[10px] font-semibold rounded-full px-1.5 py-0.5 border inline-flex items-center gap-0.5',
-                                nrInfo.status === 'follow_up_urgente' && 'bg-red-100 text-red-700 border-red-300',
-                                nrInfo.status === 'sem_resposta' && 'bg-amber-100 text-amber-700 border-amber-300',
-                                nrInfo.status === 'lead_esfriando' && 'bg-sky-100 text-sky-700 border-sky-300',
-                              )}>
-                                {nrInfo.emoji} {nrInfo.daysSince}d
-                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <span className={cn(
+                                  'text-[10px] font-semibold rounded-full px-1.5 py-0.5 border inline-flex items-center gap-0.5',
+                                  nrInfo.status === 'follow_up_urgente' && 'bg-red-100 text-red-700 border-red-300',
+                                  nrInfo.status === 'sem_resposta' && 'bg-amber-100 text-amber-700 border-amber-300',
+                                  nrInfo.status === 'lead_esfriando' && 'bg-sky-100 text-sky-700 border-sky-300',
+                                )}>
+                                  {nrInfo.emoji} {nrInfo.daysSince}d
+                                </span>
+                                {(contact.whatsapp || contact.mobile || contact.phone) && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-5 w-5 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                    title="Enviar sugestão via WhatsApp"
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      const phone = contact.whatsapp || contact.mobile || contact.phone;
+                                      if (!phone) return;
+                                      const clean = phone.replace(/\D/g, '');
+                                      const full = clean.startsWith('55') ? clean : `55${clean}`;
+                                      const now = new Date().toISOString();
+                                      const encoded = encodeURIComponent(nrInfo.suggestedMessage);
+                                      await addEntry(contact.id, 'whatsapp', `💬 Follow-up enviado automaticamente (sugerido pelo sistema · ${nrInfo.suggestedLabel})`, now);
+                                      window.open(`https://wa.me/${full}?text=${encoded}`, '_blank');
+                                      setTimeout(() => refreshNoResponse(), 500);
+                                    }}
+                                  >
+                                    <Send className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              </div>
                             );
                           })()}
                         </TableCell>

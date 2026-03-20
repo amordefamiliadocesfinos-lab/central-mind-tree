@@ -9,12 +9,29 @@ export interface NoResponseInfo {
   daysSince: number;
   label: string;
   emoji: string;
+  suggestedMessage: string;
+  suggestedLabel: string;
 }
 
 const STATUS_CONFIG: Record<string, { label: string; emoji: string }> = {
   sem_resposta: { label: 'Sem resposta', emoji: '⚠' },
   follow_up_urgente: { label: 'Follow-up urgente', emoji: '🔥' },
   lead_esfriando: { label: 'Lead esfriando', emoji: '❄' },
+};
+
+const SUGGESTED_MESSAGES: Record<string, { message: string; label: string }> = {
+  sem_resposta: {
+    message: 'Olá, tudo bem?\nSó passando para ver se conseguiu analisar o que conversamos 😊',
+    label: 'Follow-up 2 dias',
+  },
+  follow_up_urgente: {
+    message: 'Oi, tudo bem?\nQueria saber se ainda tem interesse no pedido ou se posso te ajudar de alguma forma.',
+    label: 'Follow-up 5 dias',
+  },
+  lead_esfriando: {
+    message: 'Olá! Tudo bem?\nComo não tivemos retorno, estou passando para ver se ainda faz sentido para você 😊\nSe precisar, posso montar uma nova proposta.',
+    label: 'Follow-up 10 dias',
+  },
 };
 
 function getStatus(days: number): NoResponseStatus {
@@ -77,11 +94,14 @@ export function useNoResponseDetection() {
 
       if (status) {
         const cfg = STATUS_CONFIG[status];
+        const suggested = SUGGESTED_MESSAGES[status];
         map.set(contactId, {
           status,
           daysSince: days,
           label: cfg.label,
           emoji: cfg.emoji,
+          suggestedMessage: suggested.message,
+          suggestedLabel: suggested.label,
         });
       }
     }
