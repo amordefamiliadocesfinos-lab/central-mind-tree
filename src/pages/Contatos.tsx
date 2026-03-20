@@ -565,6 +565,7 @@ export default function Contatos() {
       setSavingFollowUp(false);
       setShowFollowUp(false);
       setFollowUpNote('');
+      setTimeout(() => refreshNoResponse(), 500);
     };
 
     return (
