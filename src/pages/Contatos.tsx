@@ -697,7 +697,40 @@ export default function Contatos() {
             )}
           </div>
 
-          {/* Próxima ação */}
+          {/* Sugestão automática de mensagem */}
+          {noResponseInfo && (
+            <div className="mt-2 rounded-md border border-amber-200 bg-amber-50/60 dark:border-amber-800 dark:bg-amber-950/20 px-2 py-1.5">
+              <div className="flex items-center gap-1 text-[10px] font-semibold text-amber-700 dark:text-amber-400 mb-1">
+                <Lightbulb className="h-3 w-3" />
+                Sugestão pronta
+              </div>
+              <p className="text-[10px] text-muted-foreground line-clamp-2 whitespace-pre-wrap leading-relaxed">
+                {noResponseInfo.suggestedMessage}
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-1.5 h-6 text-[10px] gap-1 w-full border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-900/40"
+                disabled={!(contact.whatsapp || contact.mobile || contact.phone)}
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  const phone = contact.whatsapp || contact.mobile || contact.phone;
+                  if (!phone) return;
+                  const clean = phone.replace(/\D/g, '');
+                  const full = clean.startsWith('55') ? clean : `55${clean}`;
+                  const now = new Date().toISOString();
+                  const encoded = encodeURIComponent(noResponseInfo.suggestedMessage);
+                  await addEntry(contact.id, 'whatsapp', `💬 Follow-up enviado automaticamente (sugerido pelo sistema · ${noResponseInfo.suggestedLabel})`, now);
+                  window.open(`https://wa.me/${full}?text=${encoded}`, '_blank');
+                  setTimeout(() => refreshNoResponse(), 500);
+                }}
+              >
+                <Send className="h-2.5 w-2.5" />
+                Enviar mensagem
+              </Button>
+            </div>
+          )}
+
           {(contact.next_action_text || contact.next_action_date) && (
             <div className={cn(
               "rounded-md px-2 py-1.5 text-[11px] border mt-2",
