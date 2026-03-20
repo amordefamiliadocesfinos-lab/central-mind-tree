@@ -37,6 +37,7 @@ import { ProductionTab } from '@/components/operations/ProductionTab';
 import { OperationsCalendarTab } from '@/components/operations/OperationsCalendarTab';
 import { MRPTab } from '@/components/operations/MRPTab';
 import { ProductCostEditor } from '@/components/operations/ProductCostEditor';
+import { ProductionPlanningView } from '@/components/operations/ProductionPlanningView';
 import { ContactAutocomplete } from '@/components/operations/ContactAutocomplete';
 import { 
   useAppStore, 
