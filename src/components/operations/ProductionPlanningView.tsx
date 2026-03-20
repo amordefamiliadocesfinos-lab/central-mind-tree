@@ -1,8 +1,9 @@
 import { useMemo } from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Calendar, Package, ClipboardList } from 'lucide-react';
+import { Calendar, Package, ClipboardList, CheckCircle2 } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { differenceInDays, startOfDay, parseISO, format } from 'date-fns';
 import { getNowSaoPaulo } from '@/lib/dateUtils';
@@ -126,6 +127,11 @@ export function ProductionPlanningView({
 
   const groups = useMemo(() => groupOrders(productionOrders), [productionOrders]);
 
+  const handleMarkProduced = (e: React.MouseEvent, order: Order) => {
+    e.stopPropagation();
+    onStatusChange(order, 'produzido');
+  };
+
   return (
     <div className="space-y-4">
       {/* Summary KPIs */}
@@ -166,6 +172,7 @@ export function ProductionPlanningView({
               {group.orders.map((order) => {
                 const mainProduct = order.items?.[0];
                 const totalQty = order.items?.reduce((s, i) => s + i.quantity, 0) || 0;
+                const isProduced = order.status === 'produzido';
                 const dueFormatted = order.due_date
                   ? (() => {
                       try { return format(parseISO(order.due_date), 'dd/MM'); } catch { return ''; }
@@ -175,14 +182,27 @@ export function ProductionPlanningView({
                 return (
                   <Card
                     key={order.id}
-                    className="p-3 hover:shadow-md transition-all cursor-pointer border-l-[3px] border-l-transparent hover:border-l-primary"
+                    className={cn(
+                      'p-3 hover:shadow-md transition-all cursor-pointer border-l-[3px]',
+                      isProduced
+                        ? 'border-l-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/20'
+                        : 'border-l-transparent hover:border-l-primary'
+                    )}
                     onClick={() => onClick(order)}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex-1 min-w-0 space-y-1">
-                        <p className="font-semibold text-sm leading-tight truncate">
-                          {order.customer_name || order.order_number || 'Pedido'}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-sm leading-tight truncate">
+                            {order.customer_name || order.order_number || 'Pedido'}
+                          </p>
+                          {isProduced && (
+                            <Badge className="bg-emerald-600 text-white border-0 text-[10px] h-5 px-1.5 gap-1">
+                              <CheckCircle2 className="h-3 w-3" />
+                              Produzido
+                            </Badge>
+                          )}
+                        </div>
                         {mainProduct?.product?.name && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Package className="h-3 w-3 shrink-0" />
@@ -203,7 +223,7 @@ export function ProductionPlanningView({
                           <OrderPriorityBadge dueDate={order.due_date} />
                         </div>
                       </div>
-                      <div onClick={(e) => e.stopPropagation()}>
+                      <div className="flex flex-col items-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                         <Select value={order.status} onValueChange={(v) => onStatusChange(order, v)}>
                           <SelectTrigger className="h-7 text-[11px] w-28">
                             <SelectValue />
@@ -214,6 +234,17 @@ export function ProductionPlanningView({
                             ))}
                           </SelectContent>
                         </Select>
+                        {!isProduced && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-7 text-[11px] w-28 border-emerald-500 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950"
+                            onClick={(e) => handleMarkProduced(e, order)}
+                          >
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Produzido
+                          </Button>
+                        )}
                       </div>
                     </div>
                     {order.total_value != null && order.total_value > 0 && (
