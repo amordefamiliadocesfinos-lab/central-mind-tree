@@ -1349,6 +1349,16 @@ export default function Contatos() {
                         </TableCell>
                         <TableCell>
                           {(() => {
+                            const si = getScore(contact.id);
+                            return (
+                              <span className={cn('inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-bold', si.className)}>
+                                {si.emoji} {si.score}
+                              </span>
+                            );
+                          })()}
+                        </TableCell>
+                        <TableCell>
+                          {(() => {
                             const nrInfo = getNoResponseInfo(contact.id);
                             if (!nrInfo) return <span className="text-muted-foreground text-xs">-</span>;
                             return (
