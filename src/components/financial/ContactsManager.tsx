@@ -369,6 +369,13 @@ export function ContactsManager() {
         onOpenChange={setHistoryOpen}
         contact={historyContact}
       />
+      <WhatsAppMessageSelector
+        open={!!whatsAppContact}
+        onOpenChange={(open) => { if (!open) setWhatsAppContact(undefined); }}
+        contactName={whatsAppContact?.name || ''}
+        funnelStatus={whatsAppContact?.funnel_status || ''}
+        onSend={handleWhatsAppSend}
+      />
     </div>
   );
 }
