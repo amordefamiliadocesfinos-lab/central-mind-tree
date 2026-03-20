@@ -6,7 +6,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-const WHATSAPP_TEMPLATES = [
+interface WhatsAppTemplate {
+  key: string;
+  label: string;
+  stages: string[];
+  message: string;
+}
+
+const WHATSAPP_TEMPLATES: WhatsAppTemplate[] = [
   {
     key: 'orcamento',
     label: 'Orçamento',
@@ -31,9 +38,7 @@ const WHATSAPP_TEMPLATES = [
     stages: ['fechado'],
     message: 'Olá! Tudo bem?\nEstamos com produção aberta essa semana, deseja fazer um novo pedido?',
   },
-] as const;
-
-type TemplateKey = typeof WHATSAPP_TEMPLATES[number]['key'];
+];
 
 interface Props {
   open: boolean;
