@@ -188,7 +188,7 @@ export default function Operacoes() {
   const [deletingProduct, setDeletingProduct] = useState<Product | null>(null);
   const [showCostEditor, setShowCostEditor] = useState(false);
   const [showNewContactFromSale, setShowNewContactFromSale] = useState(false);
-  const [ordersViewMode, setOrdersViewMode] = useState<'list' | 'grid'>('list');
+  const [ordersViewMode, setOrdersViewMode] = useState<'list' | 'grid' | 'planning'>('list');
   const { createContact } = useContacts();
   const { addEntry } = useContactHistory();
   const [crmContactId, setCrmContactId] = useState<string | null>(null);
