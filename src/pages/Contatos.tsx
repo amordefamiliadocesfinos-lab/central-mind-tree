@@ -681,6 +681,16 @@ export default function Contatos() {
                 ⚠ Follow-up necessário
               </span>
             )}
+            {noResponseInfo && (
+              <span className={cn(
+                'inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold',
+                noResponseInfo.status === 'follow_up_urgente' && 'bg-red-100 text-red-700 border-red-300 dark:bg-red-950/40 dark:text-red-400 dark:border-red-700',
+                noResponseInfo.status === 'sem_resposta' && 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-700',
+                noResponseInfo.status === 'lead_esfriando' && 'bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-950/40 dark:text-sky-400 dark:border-sky-700',
+              )}>
+                {noResponseInfo.emoji} {noResponseInfo.label} há {noResponseInfo.daysSince}d
+              </span>
+            )}
           </div>
 
           {/* Próxima ação */}
