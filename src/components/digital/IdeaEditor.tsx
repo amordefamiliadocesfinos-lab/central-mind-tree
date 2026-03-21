@@ -395,7 +395,7 @@ export function IdeaEditor({
               </h3>
               {(idea.objective || idea.key_message) && (
                 <p className="text-white/80 text-xs mt-1 line-clamp-2">
-                  {idea.objective || idea.key_message}
+                  {{ gerar_leads: '🎯 Gerar leads', vender_produto: '💰 Vender produto', reativar_clientes: '🔄 Reativar clientes', engajamento: '💬 Engajamento' }[idea.objective || ''] || idea.objective || idea.key_message}
                 </p>
               )}
             </div>
