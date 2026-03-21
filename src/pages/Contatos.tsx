@@ -79,6 +79,7 @@ import { useContactHistory } from '@/hooks/useContactHistory';
 import { useContactsWithOrders } from '@/hooks/useContactsWithOrders';
 import { useNoResponseDetection } from '@/hooks/useNoResponseDetection';
 import { useContactChecklist } from '@/hooks/useContactChecklist';
+import { useDailyMetrics } from '@/hooks/useDailyMetrics';
 import { useLeadScore } from '@/hooks/useLeadScore';
 import { useContactTags } from '@/hooks/useContactTags';
 import { ContactFormDialog } from '@/components/financial/ContactFormDialog';
@@ -179,6 +180,7 @@ export default function Contatos() {
   const { getScore } = useLeadScore(contacts, getNoResponseInfo, hasOrders);
   const contactIds = useMemo(() => contacts.filter(c => c.is_active).map(c => c.id), [contacts]);
   const { checklistMap, refetchChecklists } = useContactChecklist(contactIds);
+  const { dailyMetrics, refetchDaily } = useDailyMetrics();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [tempFilter, setTempFilter] = useState<string>('all');
@@ -458,7 +460,7 @@ export default function Contatos() {
       const encoded = encodeURIComponent(message);
       await addEntry(whatsAppContact.id, 'whatsapp', `💬 Mensagem iniciada via WhatsApp (${templateLabel})`, now);
       window.open(`https://wa.me/${full}?text=${encoded}`, '_blank');
-      setTimeout(() => { refreshNoResponse(); refetchChecklists(); }, 500);
+      setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);
     }
     setWhatsAppContact(null);
   };
@@ -574,7 +576,7 @@ export default function Contatos() {
       setSavingFollowUp(false);
       setShowFollowUp(false);
       setFollowUpNote('');
-      setTimeout(() => { refreshNoResponse(); refetchChecklists(); }, 500);
+      setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);
     };
 
     return (
@@ -767,7 +769,7 @@ export default function Contatos() {
                   const encoded = encodeURIComponent(noResponseInfo.suggestedMessage);
                   await addEntry(contact.id, 'whatsapp', `💬 Follow-up enviado automaticamente (sugerido pelo sistema · ${noResponseInfo.suggestedLabel})`, now);
                   window.open(`https://wa.me/${full}?text=${encoded}`, '_blank');
-                  setTimeout(() => { refreshNoResponse(); refetchChecklists(); }, 500);
+                  setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);
                 }}
               >
                 <Send className="h-2.5 w-2.5" />
@@ -953,7 +955,30 @@ export default function Contatos() {
           </Card>
         </div>
 
-        {/* Leads que precisam de contato */}
+        {/* Indicadores do dia */}
+        <div className="grid grid-cols-4 gap-2">
+          <Card className="p-2 text-center border-0 shadow-sm bg-blue-50/60 dark:bg-blue-950/20">
+            <Users className="h-3.5 w-3.5 mx-auto text-blue-600 mb-0.5" />
+            <p className="text-lg font-bold text-blue-700 dark:text-blue-400 leading-tight">{dailyMetrics.contactsAttended}</p>
+            <p className="text-[9px] text-blue-600 dark:text-blue-500 font-medium">Atendidos hoje</p>
+          </Card>
+          <Card className="p-2 text-center border-0 shadow-sm bg-green-50/60 dark:bg-green-950/20">
+            <MessageCircle className="h-3.5 w-3.5 mx-auto text-green-600 mb-0.5" />
+            <p className="text-lg font-bold text-green-700 dark:text-green-400 leading-tight">{dailyMetrics.messagesSent}</p>
+            <p className="text-[9px] text-green-600 dark:text-green-500 font-medium">Mensagens enviadas</p>
+          </Card>
+          <Card className="p-2 text-center border-0 shadow-sm bg-purple-50/60 dark:bg-purple-950/20">
+            <ArrowRight className="h-3.5 w-3.5 mx-auto text-purple-600 mb-0.5" />
+            <p className="text-lg font-bold text-purple-700 dark:text-purple-400 leading-tight">{dailyMetrics.responsesReceived}</p>
+            <p className="text-[9px] text-purple-600 dark:text-purple-500 font-medium">Respostas recebidas</p>
+          </Card>
+          <Card className="p-2 text-center border-0 shadow-sm bg-emerald-50/60 dark:bg-emerald-950/20">
+            <ShoppingCart className="h-3.5 w-3.5 mx-auto text-emerald-600 mb-0.5" />
+            <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400 leading-tight">{dailyMetrics.ordersGenerated}</p>
+            <p className="text-[9px] text-emerald-600 dark:text-emerald-500 font-medium">Pedidos gerados</p>
+          </Card>
+        </div>
+
         <LeadsNeedContactPanel
           contacts={contacts}
           onOpenContact={(contact) => {
@@ -1422,7 +1447,7 @@ export default function Contatos() {
                                       const encoded = encodeURIComponent(nrInfo.suggestedMessage);
                                       await addEntry(contact.id, 'whatsapp', `💬 Follow-up enviado automaticamente (sugerido pelo sistema · ${nrInfo.suggestedLabel})`, now);
                                       window.open(`https://wa.me/${full}?text=${encoded}`, '_blank');
-                                      setTimeout(() => { refreshNoResponse(); refetchChecklists(); }, 500);
+                                      setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);
                                     }}
                                   >
                                     <Send className="h-3 w-3" />
