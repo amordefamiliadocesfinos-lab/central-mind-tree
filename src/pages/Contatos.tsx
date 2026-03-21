@@ -460,7 +460,7 @@ export default function Contatos() {
       const encoded = encodeURIComponent(message);
       await addEntry(whatsAppContact.id, 'whatsapp', `💬 Mensagem iniciada via WhatsApp (${templateLabel})`, now);
       window.open(`https://wa.me/${full}?text=${encoded}`, '_blank');
-      setTimeout(() => { refreshNoResponse(); refetchChecklists(); }, 500);
+      setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);
     }
     setWhatsAppContact(null);
   };
@@ -576,7 +576,7 @@ export default function Contatos() {
       setSavingFollowUp(false);
       setShowFollowUp(false);
       setFollowUpNote('');
-      setTimeout(() => { refreshNoResponse(); refetchChecklists(); }, 500);
+      setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);
     };
 
     return (
@@ -769,7 +769,7 @@ export default function Contatos() {
                   const encoded = encodeURIComponent(noResponseInfo.suggestedMessage);
                   await addEntry(contact.id, 'whatsapp', `💬 Follow-up enviado automaticamente (sugerido pelo sistema · ${noResponseInfo.suggestedLabel})`, now);
                   window.open(`https://wa.me/${full}?text=${encoded}`, '_blank');
-                  setTimeout(() => { refreshNoResponse(); refetchChecklists(); }, 500);
+                  setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);
                 }}
               >
                 <Send className="h-2.5 w-2.5" />
@@ -1447,7 +1447,7 @@ export default function Contatos() {
                                       const encoded = encodeURIComponent(nrInfo.suggestedMessage);
                                       await addEntry(contact.id, 'whatsapp', `💬 Follow-up enviado automaticamente (sugerido pelo sistema · ${nrInfo.suggestedLabel})`, now);
                                       window.open(`https://wa.me/${full}?text=${encoded}`, '_blank');
-                                      setTimeout(() => { refreshNoResponse(); refetchChecklists(); }, 500);
+                                      setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);
                                     }}
                                   >
                                     <Send className="h-3 w-3" />
