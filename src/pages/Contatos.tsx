@@ -926,6 +926,7 @@ export default function Contatos() {
             setEditingContact(contact);
             setFormOpen(true);
           }}
+          onWhatsApp={handleWhatsApp}
         />
 
         {/* Filters row */}
