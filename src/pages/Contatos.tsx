@@ -1369,6 +1369,17 @@ export default function Contatos() {
                           </div>
                         </TableCell>
                         <TableCell>
+                          {(() => {
+                            const ul = getUrgencyLevel(contact);
+                            const ucfg = URGENCY_LEVELS[ul];
+                            return (
+                              <span className={cn('inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold', ucfg.className)}>
+                                {ucfg.emoji} {ucfg.label}
+                              </span>
+                            );
+                          })()}
+                        </TableCell>
+                        <TableCell>
                           {contact.client_classification && CLIENT_CLASSIFICATION_CONFIG[contact.client_classification] ? (
                             <span className={cn('inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold', CLIENT_CLASSIFICATION_CONFIG[contact.client_classification].className)}>
                               {CLIENT_CLASSIFICATION_CONFIG[contact.client_classification].emoji} {CLIENT_CLASSIFICATION_CONFIG[contact.client_classification].label}
