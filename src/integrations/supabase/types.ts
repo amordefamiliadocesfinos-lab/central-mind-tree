@@ -454,6 +454,7 @@ export type Database = {
           billing_zip_code: string | null
           birth_date: string | null
           birthplace: string | null
+          campaign_idea_id: string | null
           category: string | null
           city: string | null
           client_classification: string | null
@@ -529,6 +530,7 @@ export type Database = {
           billing_zip_code?: string | null
           birth_date?: string | null
           birthplace?: string | null
+          campaign_idea_id?: string | null
           category?: string | null
           city?: string | null
           client_classification?: string | null
@@ -604,6 +606,7 @@ export type Database = {
           billing_zip_code?: string | null
           birth_date?: string | null
           birthplace?: string | null
+          campaign_idea_id?: string | null
           category?: string | null
           city?: string | null
           client_classification?: string | null
@@ -665,7 +668,15 @@ export type Database = {
           whatsapp?: string | null
           zip_code?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contacts_campaign_idea_id_fkey"
+            columns: ["campaign_idea_id"]
+            isOneToOne: false
+            referencedRelation: "digital_ideas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       digital_idea_types: {
         Row: {
