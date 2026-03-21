@@ -118,6 +118,12 @@ const PRIORITY_CONFIG = {
   frio: { label: 'Baixa', borderColor: 'border-l-sky-400' },
 };
 
+const URGENCY_LEVELS = {
+  urgente: { label: 'Urgente', emoji: '🔴', className: 'bg-red-100 text-red-800 border-red-300 dark:bg-red-950/40 dark:text-red-400 dark:border-red-700', borderColor: 'border-l-red-500', ringClass: 'ring-1 ring-red-300 dark:ring-red-700' },
+  medio: { label: 'Médio', emoji: '🟡', className: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-700', borderColor: 'border-l-amber-400', ringClass: '' },
+  baixo: { label: 'Baixo', emoji: '🔵', className: 'bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-950/40 dark:text-sky-400 dark:border-sky-700', borderColor: 'border-l-sky-300', ringClass: '' },
+};
+
 const TEMP_CONFIG = {
   frio: { label: 'Frio', icon: Snowflake, className: 'bg-sky-100 text-sky-700 border-sky-300', dot: 'bg-sky-500' },
   morno: { label: 'Morno', icon: Sun, className: 'bg-amber-100 text-amber-700 border-amber-300', dot: 'bg-amber-500' },
