@@ -284,49 +284,54 @@ export default function Contatos() {
     });
   }, [filteredContacts, sortField, sortDir, getScore]);
 
-  // Priority sort: overdue > hot+today > hot > warm+overdue > warm > cold > rest
-  const prioritySortContacts = useCallback((list: Contact[]) => {
-    const tempScore: Record<string, number> = { quente: 30, morno: 20, frio: 10 };
-    const classScore: Record<string, number> = { vip: 4, alto_potencial: 3, medio: 2, baixo_potencial: 1 };
-    const noResponseScore: Record<string, number> = { follow_up_urgente: 80, sem_resposta: 60, lead_esfriando: 40 };
+  // Urgency scoring shared between sort and display
+  const tempScore: Record<string, number> = { quente: 30, morno: 20, frio: 10 };
+  const classScore: Record<string, number> = { vip: 4, alto_potencial: 3, medio: 2, baixo_potencial: 1 };
+  const noResponseScoreMap: Record<string, number> = { follow_up_urgente: 80, sem_resposta: 60, lead_esfriando: 40 };
+
+  const getUrgencyScore = useCallback((c: Contact): number => {
+    let score = 0;
     const now = new Date();
     const today = startOfDay(now);
+    score += tempScore[c.temperatura_lead || 'morno'] || 20;
+    const actionOverdue = c.next_action_date && isBefore(startOfDay(parseISO(c.next_action_date)), today);
+    const contactOverdue = c.next_contact_date && isBefore(startOfDay(parseISO(c.next_contact_date)), today);
+    if (actionOverdue || contactOverdue) score += 100;
+    const actionToday = c.next_action_date && isSameDay(parseISO(c.next_action_date), now);
+    const contactToday = c.next_contact_date && isSameDay(parseISO(c.next_contact_date), now);
+    if (actionToday || contactToday) score += 50;
+    const nrInfo = getNoResponseInfo(c.id);
+    if (nrInfo) score += noResponseScoreMap[nrInfo.status!] || 0;
+    if (c.ultimo_contato) {
+      const days = differenceInDays(now, parseISO(c.ultimo_contato));
+      if (days > 7) score += 15;
+      else if (days > 3) score += 5;
+    }
+    score += (classScore[c.client_classification || ''] || 0) * 2;
+    if (c.valor_estimado && c.valor_estimado > 0) score += Math.min(c.valor_estimado / 1000, 5);
+    return score;
+  }, [getNoResponseInfo]);
 
-    const getUrgency = (c: Contact): number => {
-      let score = 0;
-      // Temperature
-      score += tempScore[c.temperatura_lead || 'morno'] || 20;
-      // Overdue next_action or next_contact → highest boost
-      const actionOverdue = c.next_action_date && isBefore(startOfDay(parseISO(c.next_action_date)), today);
-      const contactOverdue = c.next_contact_date && isBefore(startOfDay(parseISO(c.next_contact_date)), today);
-      if (actionOverdue || contactOverdue) score += 100;
-      // Today follow-up
-      const actionToday = c.next_action_date && isSameDay(parseISO(c.next_action_date), now);
-      const contactToday = c.next_contact_date && isSameDay(parseISO(c.next_contact_date), now);
-      if (actionToday || contactToday) score += 50;
-      // No-response detection boost
-      const nrInfo = getNoResponseInfo(c.id);
-      if (nrInfo) score += noResponseScore[nrInfo.status!] || 0;
-      // No contact > 7 days
-      if (c.ultimo_contato) {
-        const days = differenceInDays(now, parseISO(c.ultimo_contato));
-        if (days > 7) score += 15;
-        else if (days > 3) score += 5;
-      }
-      // Classification bonus
-      score += (classScore[c.client_classification || ''] || 0) * 2;
-      // Estimated value bonus (small)
-      if (c.valor_estimado && c.valor_estimado > 0) score += Math.min(c.valor_estimado / 1000, 5);
-      return score;
-    };
+  const getUrgencyLevel = useCallback((contact: Contact): keyof typeof URGENCY_LEVELS => {
+    const score = getUrgencyScore(contact);
+    // Urgente: quente + sem resposta, or very high score (overdue + hot)
+    const isHot = contact.temperatura_lead === 'quente';
+    const nrInfo = getNoResponseInfo(contact.id);
+    if (isHot && nrInfo) return 'urgente';
+    if (score >= 100) return 'urgente';
+    if (score >= 40) return 'medio';
+    return 'baixo';
+  }, [getUrgencyScore, getNoResponseInfo]);
 
+  // Priority sort: overdue > hot+today > hot > warm+overdue > warm > cold > rest
+  const prioritySortContacts = useCallback((list: Contact[]) => {
     return [...list].sort((a, b) => {
-      const ua = getUrgency(a);
-      const ub = getUrgency(b);
-      if (ua !== ub) return ub - ua; // higher urgency first
+      const ua = getUrgencyScore(a);
+      const ub = getUrgencyScore(b);
+      if (ua !== ub) return ub - ua;
       return (a.name || '').localeCompare(b.name || '');
     });
-  }, [getNoResponseInfo]);
+  }, [getUrgencyScore]);
 
   const groupedByStage = useMemo(() => {
     const groups: Record<string, Contact[]> = {};
