@@ -498,29 +498,21 @@ export function IdeaEditor({
               </div>
 
               <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label>Objetivo</Label>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => generateWithAI('objective')}
-                    disabled={aiLoading.objective || !idea.title.trim()}
-                    className="h-7 px-2 gap-1"
-                  >
-                    {aiLoading.objective ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Sparkles className="h-3.5 w-3.5" />
-                    )}
-                    <span className="text-xs">Gerar</span>
-                  </Button>
-                </div>
-                <Textarea
+                <Label>Objetivo da Ideia <span className="text-destructive">*</span></Label>
+                <Select
                   value={idea.objective || ''}
-                  onChange={(e) => onUpdate(idea.id, { objective: e.target.value })}
-                  placeholder="Qual o objetivo deste conteúdo?"
-                  rows={2}
-                />
+                  onValueChange={(value) => onUpdate(idea.id, { objective: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o objetivo..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="gerar_leads">🎯 Gerar leads</SelectItem>
+                    <SelectItem value="vender_produto">💰 Vender produto</SelectItem>
+                    <SelectItem value="reativar_clientes">🔄 Reativar clientes</SelectItem>
+                    <SelectItem value="engajamento">💬 Engajamento</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
