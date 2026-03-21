@@ -177,6 +177,8 @@ export default function Contatos() {
   const { hasOrders } = useContactsWithOrders();
   const { getNoResponseInfo, refreshNoResponse } = useNoResponseDetection();
   const { getScore } = useLeadScore(contacts, getNoResponseInfo, hasOrders);
+  const contactIds = useMemo(() => contacts.filter(c => c.is_active).map(c => c.id), [contacts]);
+  const { checklistMap, refetchChecklists } = useContactChecklist(contactIds);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [tempFilter, setTempFilter] = useState<string>('all');
