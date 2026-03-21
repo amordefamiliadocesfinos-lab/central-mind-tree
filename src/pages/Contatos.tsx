@@ -79,6 +79,7 @@ import { useContactHistory } from '@/hooks/useContactHistory';
 import { useContactsWithOrders } from '@/hooks/useContactsWithOrders';
 import { useNoResponseDetection } from '@/hooks/useNoResponseDetection';
 import { useContactChecklist } from '@/hooks/useContactChecklist';
+import { useDailyMetrics } from '@/hooks/useDailyMetrics';
 import { useLeadScore } from '@/hooks/useLeadScore';
 import { useContactTags } from '@/hooks/useContactTags';
 import { ContactFormDialog } from '@/components/financial/ContactFormDialog';
