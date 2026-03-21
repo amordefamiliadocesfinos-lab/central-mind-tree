@@ -180,6 +180,7 @@ export default function Contatos() {
   const { getScore } = useLeadScore(contacts, getNoResponseInfo, hasOrders);
   const contactIds = useMemo(() => contacts.filter(c => c.is_active).map(c => c.id), [contacts]);
   const { checklistMap, refetchChecklists } = useContactChecklist(contactIds);
+  const { dailyMetrics, refetchDaily } = useDailyMetrics();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [tempFilter, setTempFilter] = useState<string>('all');
