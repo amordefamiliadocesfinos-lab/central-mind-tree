@@ -12,9 +12,16 @@ interface LeadsNeedContactPanelProps {
   contacts: Contact[];
   onOpenContact: (contact: Contact) => void;
   onWhatsApp?: (contact: Contact) => void;
+  getUrgencyLevel?: (contact: Contact) => string;
 }
 
-export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp }: LeadsNeedContactPanelProps) {
+const URGENCY_DISPLAY: Record<string, { emoji: string; className: string }> = {
+  urgente: { emoji: '🔴', className: 'bg-red-100 text-red-800 border-red-300 dark:bg-red-950/40 dark:text-red-400 dark:border-red-700' },
+  medio: { emoji: '🟡', className: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-700' },
+  baixo: { emoji: '🔵', className: 'bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-950/40 dark:text-sky-400 dark:border-sky-700' },
+};
+
+export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, getUrgencyLevel }: LeadsNeedContactPanelProps) {
   const staleLeads = useMemo(() => {
     const now = new Date();
     return contacts
