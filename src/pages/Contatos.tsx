@@ -1002,6 +1002,7 @@ export default function Contatos() {
             setFormOpen(true);
           }}
           onWhatsApp={handleWhatsApp}
+          getUrgencyLevel={getUrgencyLevel}
         />
 
         {/* Filters row */}
