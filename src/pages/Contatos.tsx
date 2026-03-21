@@ -118,6 +118,12 @@ const PRIORITY_CONFIG = {
   frio: { label: 'Baixa', borderColor: 'border-l-sky-400' },
 };
 
+const URGENCY_LEVELS = {
+  urgente: { label: 'Urgente', emoji: '🔴', className: 'bg-red-100 text-red-800 border-red-300 dark:bg-red-950/40 dark:text-red-400 dark:border-red-700', borderColor: 'border-l-red-500', ringClass: 'ring-1 ring-red-300 dark:ring-red-700' },
+  medio: { label: 'Médio', emoji: '🟡', className: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-700', borderColor: 'border-l-amber-400', ringClass: '' },
+  baixo: { label: 'Baixo', emoji: '🔵', className: 'bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-950/40 dark:text-sky-400 dark:border-sky-700', borderColor: 'border-l-sky-300', ringClass: '' },
+};
+
 const TEMP_CONFIG = {
   frio: { label: 'Frio', icon: Snowflake, className: 'bg-sky-100 text-sky-700 border-sky-300', dot: 'bg-sky-500' },
   morno: { label: 'Morno', icon: Sun, className: 'bg-amber-100 text-amber-700 border-amber-300', dot: 'bg-amber-500' },
@@ -278,49 +284,54 @@ export default function Contatos() {
     });
   }, [filteredContacts, sortField, sortDir, getScore]);
 
-  // Priority sort: overdue > hot+today > hot > warm+overdue > warm > cold > rest
-  const prioritySortContacts = useCallback((list: Contact[]) => {
-    const tempScore: Record<string, number> = { quente: 30, morno: 20, frio: 10 };
-    const classScore: Record<string, number> = { vip: 4, alto_potencial: 3, medio: 2, baixo_potencial: 1 };
-    const noResponseScore: Record<string, number> = { follow_up_urgente: 80, sem_resposta: 60, lead_esfriando: 40 };
+  // Urgency scoring shared between sort and display
+  const tempScore: Record<string, number> = { quente: 30, morno: 20, frio: 10 };
+  const classScore: Record<string, number> = { vip: 4, alto_potencial: 3, medio: 2, baixo_potencial: 1 };
+  const noResponseScoreMap: Record<string, number> = { follow_up_urgente: 80, sem_resposta: 60, lead_esfriando: 40 };
+
+  const getUrgencyScore = useCallback((c: Contact): number => {
+    let score = 0;
     const now = new Date();
     const today = startOfDay(now);
+    score += tempScore[c.temperatura_lead || 'morno'] || 20;
+    const actionOverdue = c.next_action_date && isBefore(startOfDay(parseISO(c.next_action_date)), today);
+    const contactOverdue = c.next_contact_date && isBefore(startOfDay(parseISO(c.next_contact_date)), today);
+    if (actionOverdue || contactOverdue) score += 100;
+    const actionToday = c.next_action_date && isSameDay(parseISO(c.next_action_date), now);
+    const contactToday = c.next_contact_date && isSameDay(parseISO(c.next_contact_date), now);
+    if (actionToday || contactToday) score += 50;
+    const nrInfo = getNoResponseInfo(c.id);
+    if (nrInfo) score += noResponseScoreMap[nrInfo.status!] || 0;
+    if (c.ultimo_contato) {
+      const days = differenceInDays(now, parseISO(c.ultimo_contato));
+      if (days > 7) score += 15;
+      else if (days > 3) score += 5;
+    }
+    score += (classScore[c.client_classification || ''] || 0) * 2;
+    if (c.valor_estimado && c.valor_estimado > 0) score += Math.min(c.valor_estimado / 1000, 5);
+    return score;
+  }, [getNoResponseInfo]);
 
-    const getUrgency = (c: Contact): number => {
-      let score = 0;
-      // Temperature
-      score += tempScore[c.temperatura_lead || 'morno'] || 20;
-      // Overdue next_action or next_contact → highest boost
-      const actionOverdue = c.next_action_date && isBefore(startOfDay(parseISO(c.next_action_date)), today);
-      const contactOverdue = c.next_contact_date && isBefore(startOfDay(parseISO(c.next_contact_date)), today);
-      if (actionOverdue || contactOverdue) score += 100;
-      // Today follow-up
-      const actionToday = c.next_action_date && isSameDay(parseISO(c.next_action_date), now);
-      const contactToday = c.next_contact_date && isSameDay(parseISO(c.next_contact_date), now);
-      if (actionToday || contactToday) score += 50;
-      // No-response detection boost
-      const nrInfo = getNoResponseInfo(c.id);
-      if (nrInfo) score += noResponseScore[nrInfo.status!] || 0;
-      // No contact > 7 days
-      if (c.ultimo_contato) {
-        const days = differenceInDays(now, parseISO(c.ultimo_contato));
-        if (days > 7) score += 15;
-        else if (days > 3) score += 5;
-      }
-      // Classification bonus
-      score += (classScore[c.client_classification || ''] || 0) * 2;
-      // Estimated value bonus (small)
-      if (c.valor_estimado && c.valor_estimado > 0) score += Math.min(c.valor_estimado / 1000, 5);
-      return score;
-    };
+  const getUrgencyLevel = useCallback((contact: Contact): keyof typeof URGENCY_LEVELS => {
+    const score = getUrgencyScore(contact);
+    // Urgente: quente + sem resposta, or very high score (overdue + hot)
+    const isHot = contact.temperatura_lead === 'quente';
+    const nrInfo = getNoResponseInfo(contact.id);
+    if (isHot && nrInfo) return 'urgente';
+    if (score >= 100) return 'urgente';
+    if (score >= 40) return 'medio';
+    return 'baixo';
+  }, [getUrgencyScore, getNoResponseInfo]);
 
+  // Priority sort: overdue > hot+today > hot > warm+overdue > warm > cold > rest
+  const prioritySortContacts = useCallback((list: Contact[]) => {
     return [...list].sort((a, b) => {
-      const ua = getUrgency(a);
-      const ub = getUrgency(b);
-      if (ua !== ub) return ub - ua; // higher urgency first
+      const ua = getUrgencyScore(a);
+      const ub = getUrgencyScore(b);
+      if (ua !== ub) return ub - ua;
       return (a.name || '').localeCompare(b.name || '');
     });
-  }, [getNoResponseInfo]);
+  }, [getUrgencyScore]);
 
   const groupedByStage = useMemo(() => {
     const groups: Record<string, Contact[]> = {};
@@ -548,9 +559,10 @@ export default function Contatos() {
     const [followUpType, setFollowUpType] = useState('mensagem');
     const [savingFollowUp, setSavingFollowUp] = useState(false);
     const overdue = isNextActionOverdue(contact);
-    const priorityCfg = PRIORITY_CONFIG[(contact.temperatura_lead || 'morno') as keyof typeof PRIORITY_CONFIG] || PRIORITY_CONFIG.morno;
     const subtypeCfg = CONTACT_SUBTYPE_CONFIG[contact.contact_type || ''];
     const temp = contact.temperatura_lead || 'morno';
+    const urgencyLevel = getUrgencyLevel(contact);
+    const urgencyCfg = URGENCY_LEVELS[urgencyLevel];
     const inactivityAlert = getUltimoContatoAlert(contact.ultimo_contato);
     const semRetorno = inactivityAlert && (inactivityAlert.urgent || differenceInDays(new Date(), parseISO(contact.ultimo_contato!)) > 3);
     const daysSinceContact = contact.ultimo_contato ? differenceInDays(new Date(), parseISO(contact.ultimo_contato)) : null;
@@ -591,9 +603,10 @@ export default function Contatos() {
           className={cn(
             "p-3 hover:shadow-md transition-all cursor-grab active:cursor-grabbing border-l-[3px]",
             draggedContact?.id === contact.id && "opacity-50 scale-95",
-            priorityCfg.borderColor,
-            temp === 'quente' && "shadow-sm ring-1 ring-red-200/60 bg-red-50/30 dark:bg-red-950/10 dark:ring-red-800/30",
-            temp === 'frio' && "opacity-75 bg-muted/30"
+            urgencyCfg.borderColor,
+            urgencyCfg.ringClass,
+            urgencyLevel === 'urgente' && "bg-red-50/30 dark:bg-red-950/10",
+            urgencyLevel === 'baixo' && "opacity-80 bg-muted/20"
           )}
           draggable
           onDragStart={(e) => handleDragStart(e, contact)}
@@ -659,8 +672,11 @@ export default function Contatos() {
             </DropdownMenu>
           </div>
 
-          {/* Badges: Classificação + Tipo + Temperatura + Sem Retorno */}
+          {/* Badges: Prioridade + Classificação + Tipo + Temperatura + Sem Retorno */}
           <div className="flex flex-wrap items-center gap-1 mt-2">
+            <span className={cn('inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold', urgencyCfg.className)}>
+              {urgencyCfg.emoji} {urgencyCfg.label}
+            </span>
             {hasOrders(contact.id) && (
               <span className="inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold bg-green-100 text-green-800 border-green-300 dark:bg-green-950/40 dark:text-green-400 dark:border-green-700">
                 <ShoppingCart className="h-2.5 w-2.5" />
@@ -986,6 +1002,7 @@ export default function Contatos() {
             setFormOpen(true);
           }}
           onWhatsApp={handleWhatsApp}
+          getUrgencyLevel={getUrgencyLevel}
         />
 
         {/* Filters row */}
@@ -1306,6 +1323,7 @@ export default function Contatos() {
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('name')}>
                     <div className="flex items-center">Nome <SortIcon field="name" /></div>
                   </TableHead>
+                  <TableHead>Prioridade</TableHead>
                   <TableHead>Classificação</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('temperatura')}>
@@ -1330,7 +1348,7 @@ export default function Contatos() {
               <TableBody>
                 {sortedContacts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={14} className="text-center text-muted-foreground py-12">
+                    <TableCell colSpan={15} className="text-center text-muted-foreground py-12">
                       Nenhum contato encontrado
                     </TableCell>
                   </TableRow>
@@ -1350,6 +1368,17 @@ export default function Contatos() {
                               {contact.fantasy_name && <p className="text-xs text-muted-foreground">{contact.fantasy_name}</p>}
                             </div>
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          {(() => {
+                            const ul = getUrgencyLevel(contact);
+                            const ucfg = URGENCY_LEVELS[ul];
+                            return (
+                              <span className={cn('inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold', ucfg.className)}>
+                                {ucfg.emoji} {ucfg.label}
+                              </span>
+                            );
+                          })()}
                         </TableCell>
                         <TableCell>
                           {contact.client_classification && CLIENT_CLASSIFICATION_CONFIG[contact.client_classification] ? (

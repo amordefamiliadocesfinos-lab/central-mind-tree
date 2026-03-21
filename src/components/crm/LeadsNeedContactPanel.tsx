@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { cn } from '@/lib/utils';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,9 +13,16 @@ interface LeadsNeedContactPanelProps {
   contacts: Contact[];
   onOpenContact: (contact: Contact) => void;
   onWhatsApp?: (contact: Contact) => void;
+  getUrgencyLevel?: (contact: Contact) => string;
 }
 
-export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp }: LeadsNeedContactPanelProps) {
+const URGENCY_DISPLAY: Record<string, { emoji: string; className: string }> = {
+  urgente: { emoji: '🔴', className: 'bg-red-100 text-red-800 border-red-300 dark:bg-red-950/40 dark:text-red-400 dark:border-red-700' },
+  medio: { emoji: '🟡', className: 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-700' },
+  baixo: { emoji: '🔵', className: 'bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-950/40 dark:text-sky-400 dark:border-sky-700' },
+};
+
+export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, getUrgencyLevel }: LeadsNeedContactPanelProps) {
   const staleLeads = useMemo(() => {
     const now = new Date();
     return contacts
@@ -69,7 +77,19 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp }: L
               className="flex items-center justify-between gap-2 rounded-md bg-background/80 px-2.5 py-1.5 text-sm"
             >
               <div className="flex-1 min-w-0">
-                <span className="font-medium truncate block">{contact.name}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-medium truncate">{contact.name}</span>
+                  {getUrgencyLevel && (() => {
+                    const level = getUrgencyLevel(contact);
+                    const display = URGENCY_DISPLAY[level];
+                    if (!display) return null;
+                    return (
+                      <span className={cn('inline-flex items-center rounded-full border px-1 py-0 text-[9px] font-semibold', display.className)}>
+                        {display.emoji}
+                      </span>
+                    );
+                  })()}
+                </div>
                 <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                   <span>{FUNNEL_LABELS[contact.funnel_status] || contact.funnel_status}</span>
                   <span>•</span>
