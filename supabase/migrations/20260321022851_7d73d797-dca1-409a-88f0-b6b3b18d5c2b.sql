@@ -1,0 +1,1 @@
+ALTER TABLE public.contacts ADD COLUMN campaign_idea_id uuid REFERENCES public.digital_ideas(id) ON DELETE SET NULL DEFAULT NULL;

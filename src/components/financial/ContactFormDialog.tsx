@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -78,6 +79,15 @@ export function ContactFormDialog({
   const [loading, setLoading] = useState(false);
   const [addressTab, setAddressTab] = useState('geral');
   const [showDetails, setShowDetails] = useState(false);
+  const [ideas, setIdeas] = useState<Array<{ id: string; title: string }>>([]);
+
+  useEffect(() => {
+    if (open) {
+      supabase.from('digital_ideas').select('id, title').order('title').then(({ data }) => {
+        setIdeas((data || []) as Array<{ id: string; title: string }>);
+      });
+    }
+  }, [open]);
   const { addEntry } = useContactHistory();
   const navigate = useNavigate();
   const { activePlatforms } = usePlatforms();
@@ -376,6 +386,21 @@ export function ContactFormDialog({
                 onChange={(e) => updateField('next_contact_date' as any, e.target.value ? new Date(e.target.value).toISOString() : '')}
               />
               <p className="text-[10px] text-muted-foreground">Agende quando entrar em contato novamente com este cliente</p>
+            </div>
+
+            {/* Origem da Campanha */}
+            <div className="rounded-lg border bg-orange-50/50 dark:bg-orange-950/20 border-orange-200 dark:border-orange-800 p-3 space-y-2">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-orange-600 dark:text-orange-400">📣 Origem da Campanha</Label>
+              <Select value={form.campaign_idea_id || '_none'} onValueChange={(v) => updateField('campaign_idea_id' as any, v === '_none' ? null : v)}>
+                <SelectTrigger><SelectValue placeholder="Vincular a uma ideia do Digital..." /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_none">Nenhuma</SelectItem>
+                  {ideas.map(idea => (
+                    <SelectItem key={idea.id} value={idea.id}>{idea.title}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-[10px] text-muted-foreground">Vincule este contato a uma campanha do módulo Digital para rastreabilidade</p>
             </div>
 
             <div className="space-y-1.5">
