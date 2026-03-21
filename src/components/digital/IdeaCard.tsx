@@ -112,12 +112,33 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
           </button>
         </div>
 
-        {/* Row 2: Type badge */}
+        {/* Row 2: Type badge + action tags */}
         <div className="flex items-center gap-1.5 flex-wrap">
           <Badge variant="outline" className={cn('text-[10px] gap-1 font-medium border', ideaType.color)}>
             <span>{ideaType.icon}</span>
             {ideaType.label}
           </Badge>
+          {/* Action tags from objective automation */}
+          {((idea as any).action_tags || []).includes('campanha_ativa') && (
+            <Badge className="text-[10px] bg-emerald-500/15 text-emerald-700 border-emerald-500/30 border">
+              📣 Campanha ativa
+            </Badge>
+          )}
+          {((idea as any).action_tags || []).includes('reativacao_clientes') && (
+            <Badge className="text-[10px] bg-amber-500/15 text-amber-700 border-amber-500/30 border">
+              🔄 Reativação
+            </Badge>
+          )}
+          {((idea as any).action_tags || []).includes('venda_ativa') && (
+            <Badge className="text-[10px] bg-blue-500/15 text-blue-700 border-blue-500/30 border">
+              💰 Venda ativa
+            </Badge>
+          )}
+          {((idea as any).action_tags || []).includes('engajamento') && (
+            <Badge className="text-[10px] bg-purple-500/15 text-purple-700 border-purple-500/30 border">
+              💬 Engajamento
+            </Badge>
+          )}
         </div>
 
         {/* Row 3: Full Title */}
