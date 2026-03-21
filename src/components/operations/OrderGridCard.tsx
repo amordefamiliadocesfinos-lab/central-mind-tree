@@ -5,6 +5,7 @@ import { Package, Factory } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { OrderPriorityBadge } from './OrderPriorityBadge';
+import { LateProductionBadge } from './LateProductionBadge';
 
 const formatDate = (dateStr: string | null | undefined): string => {
   if (!dateStr) return '';
@@ -95,6 +96,7 @@ export function OrderGridCard({ order, orderStatus, orderChannels, onStatusChang
             <div className="flex items-center gap-1.5">
               <span><span className="font-medium text-amber-600">Entrega:</span> {formatDate(order.due_date)}</span>
               <OrderPriorityBadge dueDate={order.due_date} />
+              <LateProductionBadge dueDate={order.due_date} status={order.status} />
             </div>
           )}
         </div>

@@ -9,6 +9,7 @@ import { cn, formatCurrency } from '@/lib/utils';
 import { differenceInDays, startOfDay, parseISO, format } from 'date-fns';
 import { getNowSaoPaulo } from '@/lib/dateUtils';
 import { OrderPriorityBadge } from './OrderPriorityBadge';
+import { LateProductionBadge } from './LateProductionBadge';
 
 interface OrderItem {
   quantity: number;
@@ -238,6 +239,7 @@ export function ProductionPlanningView({
                             </span>
                           )}
                           <OrderPriorityBadge dueDate={order.due_date} />
+                          <LateProductionBadge dueDate={order.due_date} status={order.status} />
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-1.5" onClick={(e) => e.stopPropagation()}>
