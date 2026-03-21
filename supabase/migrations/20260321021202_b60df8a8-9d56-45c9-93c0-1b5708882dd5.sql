@@ -1,0 +1,1 @@
+ALTER TABLE public.digital_ideas ADD COLUMN action_tags jsonb DEFAULT '[]'::jsonb;

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useIdeaTypes } from '@/hooks/useIdeaTypes';
 import { DigitalIdea, DigitalVariation, DIGITAL_STATUS } from '@/hooks/useDigital';
 import { Platform } from '@/hooks/usePlatforms';
@@ -31,6 +31,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useIdeaActions } from '@/hooks/useIdeaActions';
 
 type AIFieldType = 'objective' | 'target_audience' | 'key_message' | 'kpi' | 'all';
 
@@ -72,6 +73,8 @@ export function IdeaEditor({
   const isMobile = useIsMobile();
   const { products } = useProductsList();
   const { ideaTypes } = useIdeaTypes();
+  const { executeObjectiveActions } = useIdeaActions();
+  const prevObjectiveRef = useRef(idea.objective);
   const [selectedVariation, setSelectedVariation] = useState<DigitalVariation | null>(null);
   const [showAddPlatform, setShowAddPlatform] = useState(false);
   const [showBatchDialog, setShowBatchDialog] = useState(false);
@@ -501,7 +504,14 @@ export function IdeaEditor({
                 <Label>Objetivo da Ideia <span className="text-destructive">*</span></Label>
                 <Select
                   value={idea.objective || ''}
-                  onValueChange={(value) => onUpdate(idea.id, { objective: value })}
+                  onValueChange={async (value) => {
+                    onUpdate(idea.id, { objective: value });
+                    // Execute auto-actions only when objective changes
+                    if (value !== prevObjectiveRef.current) {
+                      prevObjectiveRef.current = value;
+                      await executeObjectiveActions(idea.id, value, idea.title, idea.product_id);
+                    }
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione o objetivo..." />
