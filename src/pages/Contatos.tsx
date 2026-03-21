@@ -78,6 +78,7 @@ import { useContacts, Contact } from '@/hooks/useContacts';
 import { useContactHistory } from '@/hooks/useContactHistory';
 import { useContactsWithOrders } from '@/hooks/useContactsWithOrders';
 import { useNoResponseDetection } from '@/hooks/useNoResponseDetection';
+import { useContactChecklist } from '@/hooks/useContactChecklist';
 import { useLeadScore } from '@/hooks/useLeadScore';
 import { useContactTags } from '@/hooks/useContactTags';
 import { ContactFormDialog } from '@/components/financial/ContactFormDialog';
@@ -176,6 +177,8 @@ export default function Contatos() {
   const { hasOrders } = useContactsWithOrders();
   const { getNoResponseInfo, refreshNoResponse } = useNoResponseDetection();
   const { getScore } = useLeadScore(contacts, getNoResponseInfo, hasOrders);
+  const contactIds = useMemo(() => contacts.filter(c => c.is_active).map(c => c.id), [contacts]);
+  const { checklistMap, refetchChecklists } = useContactChecklist(contactIds);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [tempFilter, setTempFilter] = useState<string>('all');
@@ -455,7 +458,7 @@ export default function Contatos() {
       const encoded = encodeURIComponent(message);
       await addEntry(whatsAppContact.id, 'whatsapp', `💬 Mensagem iniciada via WhatsApp (${templateLabel})`, now);
       window.open(`https://wa.me/${full}?text=${encoded}`, '_blank');
-      setTimeout(() => refreshNoResponse(), 500);
+      setTimeout(() => { refreshNoResponse(); refetchChecklists(); }, 500);
     }
     setWhatsAppContact(null);
   };
@@ -571,7 +574,7 @@ export default function Contatos() {
       setSavingFollowUp(false);
       setShowFollowUp(false);
       setFollowUpNote('');
-      setTimeout(() => refreshNoResponse(), 500);
+      setTimeout(() => { refreshNoResponse(); refetchChecklists(); }, 500);
     };
 
     return (
@@ -708,7 +711,38 @@ export default function Contatos() {
             </span>
           </div>
 
-          {/* Sugestão automática de mensagem */}
+          {/* Checklist de execução */}
+          {(() => {
+            const cl = checklistMap[contact.id];
+            if (!cl) return null;
+            const items = [
+              { label: 'Mensagem enviada', done: cl.messageSent },
+              { label: 'Resposta recebida', done: cl.responseReceived },
+              { label: 'Follow-up feito', done: cl.followUpDone },
+              { label: 'Tentativa concluída', done: cl.attemptConcluded },
+            ];
+            const doneCount = items.filter(i => i.done).length;
+            return (
+              <div className="mt-1.5 flex items-center gap-1.5 text-[10px]">
+                <span className="text-muted-foreground font-medium">{doneCount}/4</span>
+                {items.map((item) => (
+                  <span
+                    key={item.label}
+                    title={item.label}
+                    className={cn(
+                      'inline-flex items-center gap-0.5 rounded px-1 py-0.5 font-medium border',
+                      item.done
+                        ? 'bg-green-100 text-green-700 border-green-300 dark:bg-green-950/40 dark:text-green-400 dark:border-green-700'
+                        : 'bg-muted/50 text-muted-foreground border-border'
+                    )}
+                  >
+                    {item.done ? '✔' : '⏳'}
+                  </span>
+                ))}
+              </div>
+            );
+          })()}
+
           {noResponseInfo && (
             <div className="mt-2 rounded-md border border-amber-200 bg-amber-50/60 dark:border-amber-800 dark:bg-amber-950/20 px-2 py-1.5">
               <div className="flex items-center gap-1 text-[10px] font-semibold text-amber-700 dark:text-amber-400 mb-1">
@@ -733,7 +767,7 @@ export default function Contatos() {
                   const encoded = encodeURIComponent(noResponseInfo.suggestedMessage);
                   await addEntry(contact.id, 'whatsapp', `💬 Follow-up enviado automaticamente (sugerido pelo sistema · ${noResponseInfo.suggestedLabel})`, now);
                   window.open(`https://wa.me/${full}?text=${encoded}`, '_blank');
-                  setTimeout(() => refreshNoResponse(), 500);
+                  setTimeout(() => { refreshNoResponse(); refetchChecklists(); }, 500);
                 }}
               >
                 <Send className="h-2.5 w-2.5" />
@@ -1388,7 +1422,7 @@ export default function Contatos() {
                                       const encoded = encodeURIComponent(nrInfo.suggestedMessage);
                                       await addEntry(contact.id, 'whatsapp', `💬 Follow-up enviado automaticamente (sugerido pelo sistema · ${nrInfo.suggestedLabel})`, now);
                                       window.open(`https://wa.me/${full}?text=${encoded}`, '_blank');
-                                      setTimeout(() => refreshNoResponse(), 500);
+                                      setTimeout(() => { refreshNoResponse(); refetchChecklists(); }, 500);
                                     }}
                                   >
                                     <Send className="h-3 w-3" />
