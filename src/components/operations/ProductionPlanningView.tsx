@@ -148,6 +148,9 @@ export function ProductionPlanningView({
 
   return (
     <div className="space-y-4">
+      {/* Production filter */}
+      <FilterChips options={filterOptions} value={prodFilter} onChange={setProdFilter} />
+
       {/* Summary KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {groups.slice(0, 4).map((g) => (
