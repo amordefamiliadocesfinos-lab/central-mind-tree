@@ -711,7 +711,38 @@ export default function Contatos() {
             </span>
           </div>
 
-          {/* Sugestão automática de mensagem */}
+          {/* Checklist de execução */}
+          {(() => {
+            const cl = checklistMap[contact.id];
+            if (!cl) return null;
+            const items = [
+              { label: 'Mensagem enviada', done: cl.messageSent },
+              { label: 'Resposta recebida', done: cl.responseReceived },
+              { label: 'Follow-up feito', done: cl.followUpDone },
+              { label: 'Tentativa concluída', done: cl.attemptConcluded },
+            ];
+            const doneCount = items.filter(i => i.done).length;
+            return (
+              <div className="mt-1.5 flex items-center gap-1.5 text-[10px]">
+                <span className="text-muted-foreground font-medium">{doneCount}/4</span>
+                {items.map((item) => (
+                  <span
+                    key={item.label}
+                    title={item.label}
+                    className={cn(
+                      'inline-flex items-center gap-0.5 rounded px-1 py-0.5 font-medium border',
+                      item.done
+                        ? 'bg-green-100 text-green-700 border-green-300 dark:bg-green-950/40 dark:text-green-400 dark:border-green-700'
+                        : 'bg-muted/50 text-muted-foreground border-border'
+                    )}
+                  >
+                    {item.done ? '✔' : '⏳'}
+                  </span>
+                ))}
+              </div>
+            );
+          })()}
+
           {noResponseInfo && (
             <div className="mt-2 rounded-md border border-amber-200 bg-amber-50/60 dark:border-amber-800 dark:bg-amber-950/20 px-2 py-1.5">
               <div className="flex items-center gap-1 text-[10px] font-semibold text-amber-700 dark:text-amber-400 mb-1">
