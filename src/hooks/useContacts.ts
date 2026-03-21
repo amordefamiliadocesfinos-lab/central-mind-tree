@@ -88,6 +88,9 @@ export interface Contact {
 
   // Classification
   client_classification?: string; // 'vip' | 'alto_potencial' | 'medio' | 'baixo_potencial'
+  
+  // Campaign
+  campaign_idea_id?: string;
 
   // Other
   company_name?: string;
@@ -200,6 +203,7 @@ export function useContacts() {
           ultimo_contato: cleanValue(contact.ultimo_contato),
           origem_lead: cleanValue(contact.origem_lead),
           is_active: contact.is_active ?? true,
+          campaign_idea_id: cleanValue(contact.campaign_idea_id),
           client_classification: cleanValue(contact.client_classification),
         })
         .select()

@@ -42,6 +42,8 @@ import { ContactFormDialog } from './ContactFormDialog';
 import { ContactOrderHistory } from './ContactOrderHistory';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
+import { useState as useStateAlias, useEffect as useEffectAlias } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -64,6 +66,18 @@ export function ContactsManager() {
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyContact, setHistoryContact] = useState<Contact | null>(null);
+  const [ideaNames, setIdeaNames] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    const ideaIds = contacts.filter(c => c.campaign_idea_id).map(c => c.campaign_idea_id!);
+    if (ideaIds.length === 0) return;
+    const uniqueIds = [...new Set(ideaIds)];
+    supabase.from('digital_ideas').select('id, title').in('id', uniqueIds).then(({ data }) => {
+      const map: Record<string, string> = {};
+      (data || []).forEach((d: any) => { map[d.id] = d.title; });
+      setIdeaNames(map);
+    });
+  }, [contacts]);
 
   const filteredContacts = contacts.filter((contact) => {
     // Filter by active status
@@ -276,7 +290,7 @@ export function ContactsManager() {
                       {contact.code || '-'}
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-col">
+                      <div className="flex flex-col gap-0.5">
                         <span className="text-primary hover:underline cursor-pointer" onClick={() => handleEditClick(contact)}>
                           {contact.name}
                         </span>
@@ -284,6 +298,11 @@ export function ContactsManager() {
                           <span className="text-xs text-muted-foreground">
                             {contact.fantasy_name}
                           </span>
+                        )}
+                        {contact.campaign_idea_id && ideaNames[contact.campaign_idea_id] && (
+                          <Badge variant="outline" className="w-fit text-[10px] border-orange-300 text-orange-700 dark:border-orange-700 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/30">
+                            📣 Campanha: {ideaNames[contact.campaign_idea_id]}
+                          </Badge>
                         )}
                       </div>
                     </TableCell>
