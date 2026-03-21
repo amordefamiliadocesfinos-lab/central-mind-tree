@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Card } from '@/components/ui/card';
+import { FilterChips } from '@/components/ui/filter-bar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -120,9 +121,22 @@ export function ProductionPlanningView({
   onStatusChange,
   onClick,
 }: ProductionPlanningViewProps) {
+  const [prodFilter, setProdFilter] = useState('all');
+
+  const filterOptions = [
+    { value: 'all', label: 'Todos' },
+    { value: 'nao_produzido', label: 'Não produzidos' },
+    { value: 'produzido', label: 'Produzidos' },
+  ];
+
   const productionOrders = useMemo(
-    () => orders.filter((o) => o.status !== 'concluido' && o.status !== 'cancelado'),
-    [orders]
+    () => orders.filter((o) => {
+      if (o.status === 'concluido' || o.status === 'cancelado') return false;
+      if (prodFilter === 'produzido') return o.status === 'produzido';
+      if (prodFilter === 'nao_produzido') return o.status !== 'produzido';
+      return true;
+    }),
+    [orders, prodFilter]
   );
 
   const groups = useMemo(() => groupOrders(productionOrders), [productionOrders]);
@@ -134,6 +148,9 @@ export function ProductionPlanningView({
 
   return (
     <div className="space-y-4">
+      {/* Production filter */}
+      <FilterChips options={filterOptions} value={prodFilter} onChange={setProdFilter} />
+
       {/* Summary KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {groups.slice(0, 4).map((g) => (
