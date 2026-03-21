@@ -157,7 +157,9 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
             {idea.objective && (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Target className="h-3 w-3 shrink-0" />
-                <span className="line-clamp-2">{idea.objective}</span>
+                <span className="line-clamp-2">
+                  {{ gerar_leads: '🎯 Gerar leads', vender_produto: '💰 Vender produto', reativar_clientes: '🔄 Reativar clientes', engajamento: '💬 Engajamento' }[idea.objective] || idea.objective}
+                </span>
               </div>
             )}
             {idea.target_audience && (
