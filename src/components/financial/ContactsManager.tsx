@@ -43,7 +43,7 @@ import { ContactOrderHistory } from './ContactOrderHistory';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
-import { useState as useStateAlias, useEffect as useEffectAlias } from 'react';
+import { useEffect } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
