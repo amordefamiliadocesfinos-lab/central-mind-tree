@@ -559,9 +559,10 @@ export default function Contatos() {
     const [followUpType, setFollowUpType] = useState('mensagem');
     const [savingFollowUp, setSavingFollowUp] = useState(false);
     const overdue = isNextActionOverdue(contact);
-    const priorityCfg = PRIORITY_CONFIG[(contact.temperatura_lead || 'morno') as keyof typeof PRIORITY_CONFIG] || PRIORITY_CONFIG.morno;
     const subtypeCfg = CONTACT_SUBTYPE_CONFIG[contact.contact_type || ''];
     const temp = contact.temperatura_lead || 'morno';
+    const urgencyLevel = getUrgencyLevel(contact);
+    const urgencyCfg = URGENCY_LEVELS[urgencyLevel];
     const inactivityAlert = getUltimoContatoAlert(contact.ultimo_contato);
     const semRetorno = inactivityAlert && (inactivityAlert.urgent || differenceInDays(new Date(), parseISO(contact.ultimo_contato!)) > 3);
     const daysSinceContact = contact.ultimo_contato ? differenceInDays(new Date(), parseISO(contact.ultimo_contato)) : null;
@@ -602,9 +603,10 @@ export default function Contatos() {
           className={cn(
             "p-3 hover:shadow-md transition-all cursor-grab active:cursor-grabbing border-l-[3px]",
             draggedContact?.id === contact.id && "opacity-50 scale-95",
-            priorityCfg.borderColor,
-            temp === 'quente' && "shadow-sm ring-1 ring-red-200/60 bg-red-50/30 dark:bg-red-950/10 dark:ring-red-800/30",
-            temp === 'frio' && "opacity-75 bg-muted/30"
+            urgencyCfg.borderColor,
+            urgencyCfg.ringClass,
+            urgencyLevel === 'urgente' && "bg-red-50/30 dark:bg-red-950/10",
+            urgencyLevel === 'baixo' && "opacity-80 bg-muted/20"
           )}
           draggable
           onDragStart={(e) => handleDragStart(e, contact)}
