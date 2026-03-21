@@ -574,7 +574,7 @@ export default function Contatos() {
       setSavingFollowUp(false);
       setShowFollowUp(false);
       setFollowUpNote('');
-      setTimeout(() => refreshNoResponse(), 500);
+      setTimeout(() => { refreshNoResponse(); refetchChecklists(); }, 500);
     };
 
     return (
