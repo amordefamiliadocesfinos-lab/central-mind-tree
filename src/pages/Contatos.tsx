@@ -1322,6 +1322,7 @@ export default function Contatos() {
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('name')}>
                     <div className="flex items-center">Nome <SortIcon field="name" /></div>
                   </TableHead>
+                  <TableHead>Prioridade</TableHead>
                   <TableHead>Classificação</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort('temperatura')}>
