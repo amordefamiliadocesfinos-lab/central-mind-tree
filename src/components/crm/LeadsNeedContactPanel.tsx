@@ -76,7 +76,19 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, get
               className="flex items-center justify-between gap-2 rounded-md bg-background/80 px-2.5 py-1.5 text-sm"
             >
               <div className="flex-1 min-w-0">
-                <span className="font-medium truncate block">{contact.name}</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-medium truncate">{contact.name}</span>
+                  {getUrgencyLevel && (() => {
+                    const level = getUrgencyLevel(contact);
+                    const display = URGENCY_DISPLAY[level];
+                    if (!display) return null;
+                    return (
+                      <span className={cn('inline-flex items-center rounded-full border px-1 py-0 text-[9px] font-semibold', display.className)}>
+                        {display.emoji}
+                      </span>
+                    );
+                  })()}
+                </div>
                 <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                   <span>{FUNNEL_LABELS[contact.funnel_status] || contact.funnel_status}</span>
                   <span>•</span>
