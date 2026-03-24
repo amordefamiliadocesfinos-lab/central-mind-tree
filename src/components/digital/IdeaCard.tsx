@@ -8,10 +8,14 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
-import { Calendar, ChevronDown, ChevronUp, LinkIcon, Package, Target, Users, MoreVertical } from 'lucide-react';
+import { Calendar, Eye, ChevronDown, LinkIcon, Package, Target, Users } from 'lucide-react';
 
-// Fallback for unknown types
 const DEFAULT_TYPE = { label: 'Outro', icon: '📄', color: 'bg-muted text-muted-foreground border-border' };
 
 interface Node {
@@ -33,13 +37,12 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
   const [expanded, setExpanded] = useState(false);
   const statusConfig = DIGITAL_STATUS[idea.status];
   const variations = idea.variations || [];
-  
+
   const getPlatform = (platformId: string) => platforms.find(p => p.id === platformId);
-  
+
   const completedVariations = variations.filter(v => v.status === 'concluido').length;
   const progress = variations.length > 0 ? (completedVariations / variations.length) * 100 : 0;
 
-  // Date range from variations
   const scheduledDates = variations
     .filter(v => v.scheduled_date)
     .map(v => v.scheduled_date!)
@@ -54,7 +57,6 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
   const linkedNode = idea.node_id ? nodes.find(n => n.id === idea.node_id) : null;
   const linkedProduct = idea.product_id ? products.find(p => p.id === idea.product_id) : null;
 
-  // Group platform icons by unique platform (deduplicate)
   const uniquePlatforms = new Map<string, Platform>();
   variations.forEach(v => {
     const p = getPlatform(v.platform);
@@ -69,10 +71,7 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
     return `${parseInt(parts[2])} ${months[parseInt(parts[1]) - 1]}`;
   };
 
-  const toggleExpand = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setExpanded(prev => !prev);
-  };
+  const actionTags = (idea as any).action_tags || [];
 
   return (
     <Card
@@ -83,136 +82,123 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
       )}
       onClick={onClick}
     >
-      <CardContent className="p-3 sm:p-4 space-y-2.5">
-        {/* Row 1: Platform icons (no names) + expand toggle */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-            {uniquePlatforms.size > 0 ? (
-              Array.from(uniquePlatforms.values()).map(p => (
-                <Tooltip key={p.id}>
-                  <TooltipTrigger asChild>
-                    <span><PlatformIcon icon={p.icon} size="md" /></span>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom" className="text-xs">{p.name}</TooltipContent>
-                </Tooltip>
-              ))
-            ) : (
-              <span className="text-sm text-muted-foreground">Sem plataforma</span>
-            )}
-          </div>
-          <button
-            onClick={toggleExpand}
-            className="shrink-0 p-0.5 rounded hover:bg-muted transition-colors"
-          >
-            {expanded ? (
-              <ChevronUp className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            )}
-          </button>
-        </div>
+      <CardContent className="p-3 sm:p-4 space-y-2">
+        {/* ═══════ TOP — Always visible ═══════ */}
 
-        {/* Row 2: Type badge + action tags */}
-        <div className="flex items-center gap-1.5 flex-wrap">
+        {/* Row 1: Type badge + Status + Platforms */}
+        <div className="flex items-center justify-between gap-2">
           <Badge variant="outline" className={cn('text-[10px] gap-1 font-medium border', ideaType.color)}>
             <span>{ideaType.icon}</span>
             {ideaType.label}
           </Badge>
-          {/* Action tags from objective automation */}
-          {((idea as any).action_tags || []).includes('campanha_ativa') && (
-            <Badge className="text-[10px] bg-emerald-500/15 text-emerald-700 border-emerald-500/30 border">
-              📣 Campanha ativa
+          <div className="flex items-center gap-1.5">
+            {uniquePlatforms.size > 0 && (
+              <div className="flex items-center gap-1">
+                {Array.from(uniquePlatforms.values()).map(p => (
+                  <Tooltip key={p.id}>
+                    <TooltipTrigger asChild>
+                      <span><PlatformIcon icon={p.icon} size="md" /></span>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom" className="text-xs">{p.name}</TooltipContent>
+                  </Tooltip>
+                ))}
+              </div>
+            )}
+            <Badge className={cn('text-[10px] text-white shrink-0', statusConfig.color)}>
+              {statusConfig.label}
             </Badge>
-          )}
-          {((idea as any).action_tags || []).includes('reativacao_clientes') && (
-            <Badge className="text-[10px] bg-amber-500/15 text-amber-700 border-amber-500/30 border">
-              🔄 Reativação
-            </Badge>
-          )}
-          {((idea as any).action_tags || []).includes('venda_ativa') && (
-            <Badge className="text-[10px] bg-blue-500/15 text-blue-700 border-blue-500/30 border">
-              💰 Venda ativa
-            </Badge>
-          )}
-          {((idea as any).action_tags || []).includes('engajamento') && (
-            <Badge className="text-[10px] bg-purple-500/15 text-purple-700 border-purple-500/30 border">
-              💬 Engajamento
-            </Badge>
-          )}
+          </div>
         </div>
 
-        {/* Row 3: Full Title */}
+        {/* Row 2: Title */}
         <h3 className="font-semibold text-sm leading-snug">{idea.title}</h3>
 
-        {/* Row 4: Date range */}
-        {firstDate && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Calendar className="h-3 w-3 shrink-0" />
-            <span className="tabular-nums">
-              {formatDate(firstDate)}
-              {lastDate && lastDate !== firstDate && ` → ${formatDate(lastDate)}`}
-            </span>
-          </div>
-        )}
-
-        {/* Expandable details */}
-        {expanded && (
-          <div className="space-y-1.5 pt-1 border-t border-border/50 animate-in fade-in-0 slide-in-from-top-1 duration-200">
-            {idea.kpi && (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="font-medium uppercase">{idea.kpi}</span>
-              </div>
-            )}
-            {linkedNode && (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <LinkIcon className="h-3 w-3 shrink-0" />
-                <span className="truncate">{linkedNode.title}</span>
-              </div>
-            )}
-            {linkedProduct && (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Package className="h-3 w-3 shrink-0" />
-                <span className="truncate">{linkedProduct.name}</span>
-              </div>
-            )}
-            {idea.objective && (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Target className="h-3 w-3 shrink-0" />
-                <span className="line-clamp-2">
-                  {{ gerar_leads: '🎯 Gerar leads', vender_produto: '💰 Vender produto', reativar_clientes: '🔄 Reativar clientes', engajamento: '💬 Engajamento' }[idea.objective] || idea.objective}
-                </span>
-              </div>
-            )}
-            {idea.target_audience && (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Users className="h-3 w-3 shrink-0" />
-                <span className="line-clamp-1">Público: {idea.target_audience}</span>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Footer: Variations count + Progress + Status */}
-        <div className="flex items-center justify-between gap-2 pt-1 border-t border-border/50">
-          <div className="flex items-center gap-2 min-w-0">
-            {variations.length > 0 && (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <span className="tabular-nums font-medium">{completedVariations}/{variations.length}</span>
-                <span>posts</span>
-              </div>
-            )}
-            {variations.length > 0 && (
-              <div className="flex items-center gap-1.5">
-                <Progress value={progress} className="w-16 h-1.5" />
-                <span className="text-[10px] text-muted-foreground tabular-nums">{Math.round(progress)}%</span>
-              </div>
-            )}
-          </div>
-
-          <Badge className={cn('text-[10px] text-white shrink-0', statusConfig.color)}>
-            {statusConfig.label}
-          </Badge>
+        {/* Row 3: Date + Progress (compact) */}
+        <div className="flex items-center justify-between gap-2">
+          {firstDate ? (
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <Calendar className="h-3 w-3 shrink-0" />
+              <span className="tabular-nums">
+                {formatDate(firstDate)}
+                {lastDate && lastDate !== firstDate && ` → ${formatDate(lastDate)}`}
+              </span>
+            </div>
+          ) : <span />}
+          {variations.length > 0 && (
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-muted-foreground tabular-nums font-medium">{completedVariations}/{variations.length}</span>
+              <Progress value={progress} className="w-14 h-1.5" />
+              <span className="text-[10px] text-muted-foreground tabular-nums">{Math.round(progress)}%</span>
+            </div>
+          )}
         </div>
+
+        {/* Action tags (compact) */}
+        {actionTags.length > 0 && (
+          <div className="flex items-center gap-1 flex-wrap">
+            {actionTags.includes('campanha_ativa') && (
+              <Badge className="text-[10px] bg-emerald-500/15 text-emerald-700 border-emerald-500/30 border">📣 Campanha</Badge>
+            )}
+            {actionTags.includes('reativacao_clientes') && (
+              <Badge className="text-[10px] bg-amber-500/15 text-amber-700 border-amber-500/30 border">🔄 Reativação</Badge>
+            )}
+            {actionTags.includes('venda_ativa') && (
+              <Badge className="text-[10px] bg-blue-500/15 text-blue-700 border-blue-500/30 border">💰 Venda</Badge>
+            )}
+            {actionTags.includes('engajamento') && (
+              <Badge className="text-[10px] bg-purple-500/15 text-purple-700 border-purple-500/30 border">💬 Engajamento</Badge>
+            )}
+          </div>
+        )}
+
+        {/* ═══════ EXPANDABLE — "Ver mais" ═══════ */}
+        <Collapsible open={expanded} onOpenChange={setExpanded}>
+          <CollapsibleTrigger asChild>
+            <button
+              className="flex items-center justify-center gap-1 w-full text-[11px] text-muted-foreground hover:text-foreground transition-colors py-0.5"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Eye className="h-3 w-3" />
+              {expanded ? 'Ver menos' : 'Ver mais'}
+              <ChevronDown className={cn('h-3 w-3 transition-transform', expanded && 'rotate-180')} />
+            </button>
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <div className="space-y-1.5 pt-2 border-t border-border/50 animate-in fade-in-0 slide-in-from-top-1 duration-200">
+              {idea.kpi && (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span className="font-medium uppercase">{idea.kpi}</span>
+                </div>
+              )}
+              {linkedNode && (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <LinkIcon className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{linkedNode.title}</span>
+                </div>
+              )}
+              {linkedProduct && (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Package className="h-3 w-3 shrink-0" />
+                  <span className="truncate">{linkedProduct.name}</span>
+                </div>
+              )}
+              {idea.objective && (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Target className="h-3 w-3 shrink-0" />
+                  <span className="line-clamp-2">
+                    {{ gerar_leads: '🎯 Gerar leads', vender_produto: '💰 Vender produto', reativar_clientes: '🔄 Reativar clientes', engajamento: '💬 Engajamento' }[idea.objective] || idea.objective}
+                  </span>
+                </div>
+              )}
+              {idea.target_audience && (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Users className="h-3 w-3 shrink-0" />
+                  <span className="line-clamp-1">Público: {idea.target_audience}</span>
+                </div>
+              )}
+            </div>
+          </CollapsibleContent>
+        </Collapsible>
       </CardContent>
     </Card>
   );
