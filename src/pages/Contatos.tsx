@@ -558,6 +558,61 @@ export default function Contatos() {
     mensagem: 'Mensagem', ligacao: 'Ligação', whatsapp: 'WhatsApp', reuniao: 'Reunião',
   };
 
+  const getSmartMessage = useCallback((contact: Contact): { message: string; approach: string } => {
+    const nrInfo = getNoResponseInfo(contact.id);
+    const isClient = hasOrders(contact.id) || contact.contact_type === 'cliente_ativo';
+
+    if (isClient) {
+      return {
+        message: `Olá${contact.name ? `, ${contact.name.split(' ')[0]}` : ''}! Tudo bem?\nEstamos com produção aberta essa semana, deseja fazer um novo pedido? 😊`,
+        approach: 'Reativação de cliente ativo',
+      };
+    }
+
+    if (nrInfo) {
+      if (nrInfo.status === 'lead_esfriando' || nrInfo.status === 'follow_up_urgente') {
+        return {
+          message: `Olá${contact.name ? `, ${contact.name.split(' ')[0]}` : ''}! Tudo bem?\nQueria saber se ainda tem interesse, posso te ajudar a finalizar 😊`,
+          approach: `Follow-up urgente (${nrInfo.daysSince}d sem resposta)`,
+        };
+      }
+      if (nrInfo.status === 'sem_resposta') {
+        return {
+          message: `Oi${contact.name ? `, ${contact.name.split(' ')[0]}` : ''}! Tudo bem?\nSó passando para saber se conseguiu analisar o que conversamos 😊`,
+          approach: `Follow-up leve (${nrInfo.daysSince}d sem resposta)`,
+        };
+      }
+    }
+
+    return {
+      message: `Olá${contact.name ? `, ${contact.name.split(' ')[0]}` : ''}! Tudo bem?\nEstou entrando em contato para entender melhor seu pedido 😊`,
+      approach: 'Primeiro contato / Lead novo',
+    };
+  }, [getNoResponseInfo, hasOrders]);
+
+  const handleSmartAttend = useCallback(async (contact: Contact) => {
+    const phone = contact.whatsapp || contact.mobile || contact.phone;
+    if (!phone) return;
+
+    const { message, approach } = getSmartMessage(contact);
+    const clean = phone.replace(/\D/g, '');
+    const full = clean.startsWith('55') ? clean : `55${clean}`;
+    const now = new Date().toISOString();
+
+    // Log to timeline
+    await addEntry(contact.id, 'whatsapp', `⚡ Atendimento iniciado via ação inteligente · ${approach}`, now);
+
+    // Update último contato
+    await updateContact(contact.id, { ultimo_contato: now.split('T')[0] });
+
+    // Open WhatsApp
+    window.open(`https://wa.me/${full}?text=${encodeURIComponent(message)}`, '_blank');
+
+    // Refresh data
+    setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);
+    toast.success(`⚡ Atendimento inteligente: ${approach}`);
+  }, [getSmartMessage, addEntry, updateContact, refreshNoResponse, refetchChecklists, refetchDaily]);
+
   const renderContactCard = useCallback((contact: Contact) => {
     const noResponseInfo = getNoResponseInfo(contact.id);
     const scoreInfo = getScore(contact.id);
@@ -598,9 +653,10 @@ export default function Contatos() {
           window.open(`https://wa.me/${full}?text=${encoded}`, '_blank');
           setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);
         }}
+        onSmartAttend={async () => handleSmartAttend(contact)}
       />
     );
-  }, [getUrgencyLevel, getNoResponseInfo, getScore, hasOrders, checklistMap, draggedContact, handleWhatsApp, handleTempChange, addEntry, refreshNoResponse, refetchChecklists, refetchDaily]);
+  }, [getUrgencyLevel, getNoResponseInfo, getScore, hasOrders, checklistMap, draggedContact, handleWhatsApp, handleTempChange, addEntry, refreshNoResponse, refetchChecklists, refetchDaily, handleSmartAttend]);
 
   const { tags } = useContactTags();
 
