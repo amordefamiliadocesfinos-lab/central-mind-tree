@@ -923,9 +923,7 @@ export default function Contatos() {
                     isDragOver && "bg-primary/5"
                   )}>
                     <AnimatePresence>
-                      {stageContacts.map(contact => (
-                        <ContactCard key={contact.id} contact={contact} />
-                      ))}
+                      {stageContacts.map(contact => renderContactCard(contact))}
                     </AnimatePresence>
                     {stageContacts.length === 0 && (
                       <p className="text-xs text-muted-foreground text-center py-8 opacity-60">
@@ -980,9 +978,7 @@ export default function Contatos() {
                     isDragOver && "bg-primary/5"
                   )}>
                     <AnimatePresence>
-                      {stageContacts.map(contact => (
-                        <ContactCard key={contact.id} contact={contact} />
-                      ))}
+                      {stageContacts.map(contact => renderContactCard(contact))}
                     </AnimatePresence>
                     {stageContacts.length === 0 && (
                       <p className="text-xs text-muted-foreground text-center py-8 opacity-60">
