@@ -93,6 +93,7 @@ interface ContactCardProps {
   onDragStart: (e: React.DragEvent) => void;
   onFollowUp: (type: string, note: string) => Promise<void>;
   onSendSuggestion: () => Promise<void>;
+  onSmartAttend: () => Promise<void>;
   hasPhone: boolean;
 }
 
@@ -114,6 +115,7 @@ export function ContactCard({
   onDragStart,
   onFollowUp,
   onSendSuggestion,
+  onSmartAttend,
   hasPhone,
 }: ContactCardProps) {
   const [expanded, setExpanded] = useState(false);
@@ -243,17 +245,17 @@ export function ContactCard({
           <Button
             size="sm"
             className="w-full h-8 text-xs font-semibold gap-1.5 bg-primary hover:bg-primary/90"
-            onClick={(e) => {
+            onClick={async (e) => {
               e.stopPropagation();
               if (hasPhone) {
-                onWhatsApp();
+                await onSmartAttend();
               } else {
                 onEdit();
               }
             }}
           >
             <Send className="h-3.5 w-3.5" />
-            Atender agora
+            ⚡ Atender agora
           </Button>
 
           {/* ═══════ EXPANDABLE — "Ver mais" ═══════ */}
