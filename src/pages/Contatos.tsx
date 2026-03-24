@@ -92,6 +92,7 @@ import { LeadsNeedContactPanel } from '@/components/crm/LeadsNeedContactPanel';
 import { cn } from '@/lib/utils';
 import { FunnelView } from '@/components/FunnelView';
 import { ContactAvatar } from '@/components/crm/ContactAvatar';
+import { ContactCard } from '@/components/crm/ContactCard';
 import { differenceInDays, parseISO, format, isSameDay, isBefore, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -553,373 +554,53 @@ export default function Contatos() {
     );
   };
 
-  const ContactCard = ({ contact }: { contact: Contact }) => {
-    const [showFollowUp, setShowFollowUp] = useState(false);
-    const [followUpNote, setFollowUpNote] = useState('');
-    const [followUpType, setFollowUpType] = useState('mensagem');
-    const [savingFollowUp, setSavingFollowUp] = useState(false);
-    const overdue = isNextActionOverdue(contact);
-    const subtypeCfg = CONTACT_SUBTYPE_CONFIG[contact.contact_type || ''];
-    const temp = contact.temperatura_lead || 'morno';
-    const urgencyLevel = getUrgencyLevel(contact);
-    const urgencyCfg = URGENCY_LEVELS[urgencyLevel];
-    const inactivityAlert = getUltimoContatoAlert(contact.ultimo_contato);
-    const semRetorno = inactivityAlert && (inactivityAlert.urgent || differenceInDays(new Date(), parseISO(contact.ultimo_contato!)) > 3);
-    const daysSinceContact = contact.ultimo_contato ? differenceInDays(new Date(), parseISO(contact.ultimo_contato)) : null;
-    const leadEsfriando = daysSinceContact !== null && daysSinceContact >= 14;
-    const followUpNecessario = !leadEsfriando && daysSinceContact !== null && daysSinceContact >= 7;
+  const FOLLOW_UP_LABELS: Record<string, string> = {
+    mensagem: 'Mensagem', ligacao: 'Ligação', whatsapp: 'WhatsApp', reuniao: 'Reunião',
+  };
+
+  const renderContactCard = useCallback((contact: Contact) => {
     const noResponseInfo = getNoResponseInfo(contact.id);
     const scoreInfo = getScore(contact.id);
-
-    const nextActionFormatted = contact.next_action_date
-      ? (() => { try { return format(parseISO(contact.next_action_date), "dd/MM HH:mm"); } catch { return null; } })()
-      : null;
-
-    const FOLLOW_UP_LABELS: Record<string, string> = {
-      mensagem: 'Mensagem', ligacao: 'Ligação', whatsapp: 'WhatsApp', reuniao: 'Reunião',
-    };
-
-    const handleSaveFollowUp = async () => {
-      if (!followUpNote.trim()) return;
-      setSavingFollowUp(true);
-      const now = new Date().toISOString();
-      const desc = `[${FOLLOW_UP_LABELS[followUpType] || followUpType}] ${followUpNote.trim()}`;
-      await addEntry(contact.id, followUpType, desc, now);
-      setSavingFollowUp(false);
-      setShowFollowUp(false);
-      setFollowUpNote('');
-      setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);
-    };
+    const phone = contact.whatsapp || contact.mobile || contact.phone;
 
     return (
-      <motion.div
-        layout
-        initial={{ opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        transition={{ duration: 0.15 }}
-      >
-        <Card
-          className={cn(
-            "p-3 hover:shadow-md transition-all cursor-grab active:cursor-grabbing border-l-[3px]",
-            draggedContact?.id === contact.id && "opacity-50 scale-95",
-            urgencyCfg.borderColor,
-            urgencyCfg.ringClass,
-            urgencyLevel === 'urgente' && "bg-red-50/30 dark:bg-red-950/10",
-            urgencyLevel === 'baixo' && "opacity-80 bg-muted/20"
-          )}
-          draggable
-          onDragStart={(e) => handleDragStart(e, contact)}
-          onClick={() => { setEditingContact(contact); setFormOpen(true); }}
-        >
-          {/* Header: Avatar + Nome + Menu */}
-          <div className="flex items-start gap-2">
-            <ContactAvatar photoUrl={contact.photo_url} name={contact.name} size="sm" />
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm leading-tight break-words">{contact.name}</p>
-              {contact.fantasy_name && (
-                <p className="text-[10px] text-muted-foreground break-words">{contact.fantasy_name}</p>
-              )}
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 -mt-0.5 -mr-1">
-                  <MoreVertical className="h-3.5 w-3.5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                <DropdownMenuItem onClick={() => { setEditingContact(contact); setFormOpen(true); }}>
-                  <Edit className="h-4 w-4 mr-2" /> Editar
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleWhatsApp(contact)}>
-                  <MessageCircle className="h-4 w-4 mr-2" /> WhatsApp
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { setHistoryContact(contact); setHistoryOpen(true); }}>
-                  <ShoppingCart className="h-4 w-4 mr-2" /> Pedidos
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { setTimelineContact(contact); setTimelineOpen(true); }}>
-                  <History className="h-4 w-4 mr-2" /> Histórico
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => { setActivitiesContact(contact); setActivitiesOpen(true); }}>
-                  <CalendarClock className="h-4 w-4 mr-2" /> Atividades
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger>
-                    <Thermometer className="h-4 w-4 mr-2" /> Temperatura
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent>
-                    {Object.entries(TEMP_CONFIG).map(([key, cfg]) => {
-                      const Icon = cfg.icon;
-                      return (
-                        <DropdownMenuItem
-                          key={key}
-                          onClick={() => handleTempChange(contact, key)}
-                          className={contact.temperatura_lead === key ? 'font-bold' : ''}
-                        >
-                          <Icon className="h-4 w-4 mr-2" />
-                          {cfg.label}
-                        </DropdownMenuItem>
-                      );
-                    })}
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive" onClick={() => { setContactToDelete(contact); setDeleteDialogOpen(true); }}>
-                  <Trash2 className="h-4 w-4 mr-2" /> Excluir
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
-          {/* Badges: Prioridade + Classificação + Tipo + Temperatura + Sem Retorno */}
-          <div className="flex flex-wrap items-center gap-1 mt-2">
-            <span className={cn('inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold', urgencyCfg.className)}>
-              {urgencyCfg.emoji} {urgencyCfg.label}
-            </span>
-            {hasOrders(contact.id) && (
-              <span className="inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold bg-green-100 text-green-800 border-green-300 dark:bg-green-950/40 dark:text-green-400 dark:border-green-700">
-                <ShoppingCart className="h-2.5 w-2.5" />
-                Cliente
-              </span>
-            )}
-            {contact.client_classification && CLIENT_CLASSIFICATION_CONFIG[contact.client_classification] && (
-              <span className={cn('inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold', CLIENT_CLASSIFICATION_CONFIG[contact.client_classification].className)}>
-                {CLIENT_CLASSIFICATION_CONFIG[contact.client_classification].emoji} {CLIENT_CLASSIFICATION_CONFIG[contact.client_classification].label}
-              </span>
-            )}
-            {subtypeCfg && (
-              <span className={cn('inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold', subtypeCfg.className)}>
-                {subtypeCfg.label}
-              </span>
-            )}
-            <TempBadge temp={contact.temperatura_lead} />
-            {semRetorno && (
-              <span className="inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold bg-red-100 text-red-700 border-red-300 dark:bg-red-950/40 dark:text-red-400 dark:border-red-700">
-                <Clock className="h-2.5 w-2.5" />
-                Sem retorno
-              </span>
-            )}
-            {leadEsfriando && (
-              <span className="inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold bg-orange-100 text-orange-700 border-orange-300 dark:bg-orange-950/40 dark:text-orange-400 dark:border-orange-700">
-                🔥 Lead esfriando
-              </span>
-            )}
-            {followUpNecessario && (
-              <span className="inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-700">
-                ⚠ Follow-up necessário
-              </span>
-            )}
-            {noResponseInfo && (
-              <span className={cn(
-                'inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold',
-                noResponseInfo.status === 'follow_up_urgente' && 'bg-red-100 text-red-700 border-red-300 dark:bg-red-950/40 dark:text-red-400 dark:border-red-700',
-                noResponseInfo.status === 'sem_resposta' && 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-700',
-                noResponseInfo.status === 'lead_esfriando' && 'bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-950/40 dark:text-sky-400 dark:border-sky-700',
-              )}>
-                {noResponseInfo.emoji} {noResponseInfo.label} há {noResponseInfo.daysSince}d
-              </span>
-            )}
-          </div>
-
-          {/* Lead Score */}
-          <div className="mt-1.5 flex items-center">
-            <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-bold', scoreInfo.className)}>
-              {scoreInfo.emoji} Score: {scoreInfo.score} ({scoreInfo.label})
-            </span>
-          </div>
-
-          {/* Checklist de execução */}
-          {(() => {
-            const cl = checklistMap[contact.id];
-            if (!cl) return null;
-            const items = [
-              { label: 'Mensagem enviada', done: cl.messageSent },
-              { label: 'Resposta recebida', done: cl.responseReceived },
-              { label: 'Follow-up feito', done: cl.followUpDone },
-              { label: 'Tentativa concluída', done: cl.attemptConcluded },
-            ];
-            const doneCount = items.filter(i => i.done).length;
-            return (
-              <div className="mt-1.5 flex items-center gap-1.5 text-[10px]">
-                <span className="text-muted-foreground font-medium">{doneCount}/4</span>
-                {items.map((item) => (
-                  <span
-                    key={item.label}
-                    title={item.label}
-                    className={cn(
-                      'inline-flex items-center gap-0.5 rounded px-1 py-0.5 font-medium border',
-                      item.done
-                        ? 'bg-green-100 text-green-700 border-green-300 dark:bg-green-950/40 dark:text-green-400 dark:border-green-700'
-                        : 'bg-muted/50 text-muted-foreground border-border'
-                    )}
-                  >
-                    {item.done ? '✔' : '⏳'}
-                  </span>
-                ))}
-              </div>
-            );
-          })()}
-
-          {noResponseInfo && (
-            <div className="mt-2 rounded-md border border-amber-200 bg-amber-50/60 dark:border-amber-800 dark:bg-amber-950/20 px-2 py-1.5">
-              <div className="flex items-center gap-1 text-[10px] font-semibold text-amber-700 dark:text-amber-400 mb-1">
-                <Lightbulb className="h-3 w-3" />
-                Sugestão pronta
-              </div>
-              <p className="text-[10px] text-muted-foreground line-clamp-2 whitespace-pre-wrap leading-relaxed">
-                {noResponseInfo.suggestedMessage}
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-1.5 h-6 text-[10px] gap-1 w-full border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-900/40"
-                disabled={!(contact.whatsapp || contact.mobile || contact.phone)}
-                onClick={async (e) => {
-                  e.stopPropagation();
-                  const phone = contact.whatsapp || contact.mobile || contact.phone;
-                  if (!phone) return;
-                  const clean = phone.replace(/\D/g, '');
-                  const full = clean.startsWith('55') ? clean : `55${clean}`;
-                  const now = new Date().toISOString();
-                  const encoded = encodeURIComponent(noResponseInfo.suggestedMessage);
-                  await addEntry(contact.id, 'whatsapp', `💬 Follow-up enviado automaticamente (sugerido pelo sistema · ${noResponseInfo.suggestedLabel})`, now);
-                  window.open(`https://wa.me/${full}?text=${encoded}`, '_blank');
-                  setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);
-                }}
-              >
-                <Send className="h-2.5 w-2.5" />
-                Enviar mensagem
-              </Button>
-            </div>
-          )}
-
-          {(contact.next_action_text || contact.next_action_date) && (
-            <div className={cn(
-              "rounded-md px-2 py-1.5 text-[11px] border mt-2",
-              overdue ? "bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800" : "bg-muted/50 border-border"
-            )}>
-              {contact.next_action_text && (
-                <p className={cn("font-medium leading-tight", overdue ? "text-red-700 dark:text-red-400" : "text-foreground")}>
-                  {contact.next_action_text}
-                </p>
-              )}
-              {nextActionFormatted && (
-                <p className={cn("text-[10px] mt-0.5", overdue ? "text-red-600 dark:text-red-400 font-semibold" : "text-muted-foreground")}>
-                  {overdue && <AlertTriangle className="h-3 w-3 inline mr-0.5 -mt-0.5" />}
-                  {overdue ? 'Atrasado · ' : ''}{nextActionFormatted}
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Próximo Contato */}
-          {contact.next_contact_date && (() => {
-            const ncs = getNextContactStatus(contact.next_contact_date);
-            if (!ncs) return null;
-            const timeStr = (() => { try { return format(parseISO(contact.next_contact_date), "dd/MM HH:mm"); } catch { return ''; } })();
-            return (
-              <div className={cn(
-                "rounded-md px-2 py-1.5 text-[11px] border mt-2 flex items-center gap-1.5",
-                ncs.isOverdue ? "bg-red-50 border-red-200 dark:bg-red-950/30 dark:border-red-800" :
-                ncs.isToday ? "bg-amber-50 border-amber-200 dark:bg-amber-950/30 dark:border-amber-800" :
-                "bg-blue-50/50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800"
-              )}>
-                <Phone className="h-3 w-3 shrink-0" />
-                <div>
-                  <p className={cn("font-medium", ncs.isOverdue && "text-red-700 dark:text-red-400", ncs.isToday && "text-amber-700 dark:text-amber-400")}>
-                    {ncs.isOverdue && <AlertTriangle className="h-3 w-3 inline mr-0.5 -mt-0.5" />}
-                    Próx. contato: {timeStr}
-                  </p>
-                  {(ncs.isOverdue || ncs.isToday) && (
-                    <span className={cn("text-[10px] font-semibold", ncs.isOverdue ? "text-red-600" : "text-amber-600")}>
-                      {ncs.label}
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-          })()}
-
-          <div className="mt-2 flex gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-7 w-7 shrink-0"
-              disabled={!(contact.whatsapp || contact.mobile || contact.phone)}
-              onClick={(e) => {
-                e.stopPropagation();
-                void handleWhatsApp(contact);
-              }}
-              title={contact.whatsapp || contact.mobile || contact.phone ? 'Abrir WhatsApp' : 'Contato sem telefone'}
-              aria-label={contact.whatsapp || contact.mobile || contact.phone ? 'Abrir WhatsApp' : 'Contato sem telefone'}
-            >
-              <MessageCircle className="h-3.5 w-3.5" />
-            </Button>
-
-            {!showFollowUp ? (
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex-1 h-7 text-[11px] gap-1"
-                onClick={(e) => { e.stopPropagation(); setShowFollowUp(true); }}
-              >
-                <MessageCircle className="h-3 w-3" />
-                Registrar Follow-up
-              </Button>
-            ) : (
-              <div
-                className="flex-1 space-y-1.5 rounded-md border bg-muted/30 p-2"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Select value={followUpType} onValueChange={setFollowUpType}>
-                  <SelectTrigger className="h-7 text-[11px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="mensagem">💬 Mensagem</SelectItem>
-                    <SelectItem value="ligacao">📞 Ligação</SelectItem>
-                    <SelectItem value="whatsapp">📱 WhatsApp</SelectItem>
-                    <SelectItem value="reuniao">🤝 Reunião</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Input
-                  placeholder="Nota do contato..."
-                  value={followUpNote}
-                  onChange={(e) => setFollowUpNote(e.target.value)}
-                  className="h-7 text-[11px]"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey && followUpNote.trim()) {
-                      e.preventDefault();
-                      handleSaveFollowUp();
-                    }
-                  }}
-                />
-                <div className="flex gap-1">
-                  <Button
-                    size="sm"
-                    className="flex-1 h-6 text-[10px]"
-                    disabled={!followUpNote.trim() || savingFollowUp}
-                    onClick={handleSaveFollowUp}
-                  >
-                    {savingFollowUp ? 'Salvando...' : 'Salvar'}
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 text-[10px]"
-                    onClick={() => { setShowFollowUp(false); setFollowUpNote(''); }}
-                  >
-                    Cancelar
-                  </Button>
-                </div>
-              </div>
-            )}
-          </div>
-        </Card>
-      </motion.div>
+      <ContactCard
+        key={contact.id}
+        contact={contact}
+        urgencyLevel={getUrgencyLevel(contact)}
+        noResponseInfo={noResponseInfo}
+        hasOrders={hasOrders(contact.id)}
+        checklistData={checklistMap[contact.id]}
+        scoreInfo={scoreInfo}
+        isDragged={draggedContact?.id === contact.id}
+        hasPhone={!!phone}
+        onEdit={() => { setEditingContact(contact); setFormOpen(true); }}
+        onWhatsApp={() => handleWhatsApp(contact)}
+        onViewOrders={() => { setHistoryContact(contact); setHistoryOpen(true); }}
+        onViewHistory={() => { setTimelineContact(contact); setTimelineOpen(true); }}
+        onViewActivities={() => { setActivitiesContact(contact); setActivitiesOpen(true); }}
+        onDelete={() => { setContactToDelete(contact); setDeleteDialogOpen(true); }}
+        onTempChange={(temp) => handleTempChange(contact, temp)}
+        onDragStart={(e) => handleDragStart(e, contact)}
+        onFollowUp={async (type, note) => {
+          const now = new Date().toISOString();
+          const desc = `[${FOLLOW_UP_LABELS[type] || type}] ${note}`;
+          await addEntry(contact.id, type, desc, now);
+          setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);
+        }}
+        onSendSuggestion={async () => {
+          if (!phone || !noResponseInfo) return;
+          const clean = phone.replace(/\D/g, '');
+          const full = clean.startsWith('55') ? clean : `55${clean}`;
+          const now = new Date().toISOString();
+          const encoded = encodeURIComponent(noResponseInfo.suggestedMessage);
+          await addEntry(contact.id, 'whatsapp', `💬 Follow-up enviado automaticamente (sugerido pelo sistema · ${noResponseInfo.suggestedLabel})`, now);
+          window.open(`https://wa.me/${full}?text=${encoded}`, '_blank');
+          setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);
+        }}
+      />
     );
-  };
+  }, [getUrgencyLevel, getNoResponseInfo, getScore, hasOrders, checklistMap, draggedContact, handleWhatsApp, handleTempChange, addEntry, refreshNoResponse, refetchChecklists, refetchDaily]);
 
   const { tags } = useContactTags();
 
