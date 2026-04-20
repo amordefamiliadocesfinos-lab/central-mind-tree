@@ -47,76 +47,86 @@ interface OrderCardProps {
 export function OrderCard({ order, orderStatus, orderChannels, onStatusChange, onDelete, onClick }: OrderCardProps) {
   const statusInfo = orderStatus[order.status as keyof typeof orderStatus];
   const isStockOrder = order.order_type === 'stock';
-  
+
   return (
-    <Card 
-      className="touch-manipulation active:scale-[0.98] transition-transform cursor-pointer hover:bg-muted/50"
+    <Card
+      className="touch-manipulation active:scale-[0.99] transition-transform cursor-pointer hover:bg-muted/50"
       onClick={() => onClick?.(order)}
     >
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-3">
+      <CardContent className="p-3 md:p-4">
+        {/* Header row: number + price */}
+        <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-semibold text-base">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <h3 className="font-semibold text-sm md:text-base">
                 {order.order_number || `#${order.id.slice(0, 6)}`}
               </h3>
-              <Badge className={cn('text-xs', statusInfo?.color)}>
+              <Badge className={cn('text-[10px] md:text-xs px-1.5 py-0', statusInfo?.color)}>
                 {statusInfo?.label || order.status}
               </Badge>
               {isStockOrder ? (
-                <Badge variant="outline" className="text-xs gap-1 border-green-500 text-green-600">
+                <Badge variant="outline" className="text-[10px] md:text-xs gap-1 border-green-500 text-green-600 px-1.5 py-0">
                   <Package className="h-3 w-3" />
-                  Estoque
+                  <span className="hidden sm:inline">Estoque</span>
                 </Badge>
               ) : (
-                <Badge variant="outline" className="text-xs gap-1 border-amber-500 text-amber-600">
+                <Badge variant="outline" className="text-[10px] md:text-xs gap-1 border-amber-500 text-amber-600 px-1.5 py-0">
                   <Factory className="h-3 w-3" />
-                  Produção
+                  <span className="hidden sm:inline">Produção</span>
                 </Badge>
               )}
-              <OrderPriorityBadge dueDate={order.due_date} />
-              <LateProductionBadge dueDate={order.due_date} status={order.status} />
             </div>
-            <p className="text-sm text-muted-foreground mt-1 truncate">
+            <p className="text-xs md:text-sm text-muted-foreground mt-0.5 truncate">
               {order.customer_name || 'Cliente não informado'}
             </p>
-            <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-muted-foreground mt-1">
-              <span>{orderChannels[order.channel as keyof typeof orderChannels] || order.channel}</span>
-              <span>•</span>
-              <span>{formatDate(order.order_date)}</span>
-              {order.due_date && (
-                <>
-                  <span>•</span>
-                  <span className="text-amber-600 font-medium">Entrega: {formatDate(order.due_date)}</span>
-                </>
-              )}
-            </div>
-            {order.items && order.items.length > 0 && (
-              <p className="text-xs mt-2 text-muted-foreground line-clamp-2">
-                {order.items.map(item => 
-                  `${item.quantity}x ${item.product?.name || 'Produto'}`
-                ).join(', ')}
-              </p>
-            )}
           </div>
-          <div className="flex flex-col items-end gap-2 shrink-0">
-            <p className="font-bold text-lg">
+          <div className="text-right shrink-0">
+            <p className="font-bold text-base md:text-lg leading-tight">
               R$ {(order.total_value || 0).toFixed(2)}
             </p>
-            <Select
-              value={order.status}
-              onValueChange={(v) => onStatusChange(order, v)}
-            >
-              <SelectTrigger className="w-28 h-9 text-xs" onClick={(e) => e.stopPropagation()}>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(orderStatus).map(([key, { label }]) => (
-                  <SelectItem key={key} value={key}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <p className="text-[10px] text-muted-foreground">{formatDate(order.order_date)}</p>
           </div>
+        </div>
+
+        {/* Priority badges row */}
+        <div className="flex items-center gap-1.5 flex-wrap mb-2">
+          <OrderPriorityBadge dueDate={order.due_date} />
+          <LateProductionBadge dueDate={order.due_date} status={order.status} />
+          {order.due_date && (
+            <span className="text-[11px] text-amber-600 font-medium">
+              Entrega: {formatDate(order.due_date)}
+            </span>
+          )}
+        </div>
+
+        {/* Items preview */}
+        {order.items && order.items.length > 0 && (
+          <p className="text-[11px] md:text-xs text-muted-foreground line-clamp-2 mb-2">
+            {order.items.map(item =>
+              `${item.quantity}x ${item.product?.name || 'Produto'}`
+            ).join(', ')}
+          </p>
+        )}
+
+        {/* Status selector — full width on mobile, inline on desktop */}
+        <div className="flex items-center gap-2 pt-1">
+          <span className="text-[11px] text-muted-foreground shrink-0">Status:</span>
+          <Select
+            value={order.status}
+            onValueChange={(v) => onStatusChange(order, v)}
+          >
+            <SelectTrigger
+              className="flex-1 h-9 text-xs"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(orderStatus).map(([key, { label }]) => (
+                <SelectItem key={key} value={key}>{label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </CardContent>
     </Card>

@@ -500,8 +500,8 @@ export function GlobalFooterBar() {
   const isActive = (path: string) => location.pathname === path;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-[9999] h-12 bg-background border-t border-border shadow-lg">
-      <div className="h-full flex items-center justify-between px-2 md:px-4 gap-1 md:gap-4">
+    <div className="fixed bottom-0 left-0 right-0 z-[9999] bg-background border-t border-border shadow-lg pb-safe-bottom">
+      <div className="h-12 flex items-center justify-between px-1.5 md:px-4 gap-1 md:gap-4">
         {/* Left: Task status counters + Lines mode (only when showTaskBar is true) */}
         {showTaskBar && tasks.length > 0 ? (
           <div className="flex items-center gap-1">
@@ -637,7 +637,7 @@ export function GlobalFooterBar() {
         )}
 
         {/* Center: Navigation */}
-        <div className="flex items-center gap-0.5 md:gap-1">
+        <div className="flex items-center gap-0.5 md:gap-1 overflow-x-auto flex-1 justify-start md:justify-center" style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button

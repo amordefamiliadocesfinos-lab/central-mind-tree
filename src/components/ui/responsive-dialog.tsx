@@ -6,14 +6,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogClose,
 } from "@/components/ui/dialog";
 import {
   Drawer,
   DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-  DrawerDescription,
   DrawerClose,
 } from "@/components/ui/drawer";
 import { X } from "lucide-react";
@@ -27,6 +23,11 @@ interface ResponsiveDialogProps {
   title?: string;
   description?: string;
   className?: string;
+  /**
+   * Optional sticky footer node (e.g. action buttons). On mobile renders as a
+   * fixed bottom bar with safe-area padding. On desktop renders below content.
+   */
+  footer?: React.ReactNode;
 }
 
 export function ResponsiveDialog({
@@ -36,24 +37,52 @@ export function ResponsiveDialog({
   title,
   description,
   className,
+  footer,
 }: ResponsiveDialogProps) {
   const isMobile = useIsMobile();
 
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className={cn("max-h-[96vh]", className)}>
-          {(title || description) && (
-            <DrawerHeader className="text-left px-4 pb-2">
-              {title && <DrawerTitle className="text-lg">{title}</DrawerTitle>}
-              {description && (
-                <DrawerDescription>{description}</DrawerDescription>
-              )}
-            </DrawerHeader>
+        <DrawerContent
+          className={cn(
+            "max-h-[96vh] flex flex-col p-0",
+            className
           )}
-          <div className="overflow-y-auto flex-1 px-4 pb-safe-bottom">
-            {children}
-          </div>
+        >
+          {/* Sticky header */}
+          {(title || description) && (
+            <div className="sticky top-0 z-10 flex items-start justify-between gap-3 border-b bg-background/95 backdrop-blur px-4 py-3 safe-area-pt">
+              <div className="flex-1 min-w-0">
+                {title && (
+                  <h2 className="text-base font-semibold leading-tight">
+                    {title}
+                  </h2>
+                )}
+                {description && (
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {description}
+                  </p>
+                )}
+              </div>
+              <DrawerClose asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9 -mr-2 shrink-0"
+                  aria-label="Fechar"
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </DrawerClose>
+            </div>
+          )}
+          <div className="overflow-y-auto flex-1 px-4 py-3">{children}</div>
+          {footer && (
+            <div className="sticky bottom-0 z-10 border-t bg-background/95 backdrop-blur px-4 py-3 pb-safe-bottom">
+              {footer}
+            </div>
+          )}
         </DrawerContent>
       </Drawer>
     );
@@ -69,6 +98,7 @@ export function ResponsiveDialog({
           </DialogHeader>
         )}
         {children}
+        {footer && <div className="pt-3 border-t mt-3">{footer}</div>}
       </DialogContent>
     </Dialog>
   );
@@ -80,7 +110,11 @@ interface FullScreenDialogProps {
   onOpenChange: (open: boolean) => void;
   children: React.ReactNode;
   title?: string;
+  description?: string;
   className?: string;
+  footer?: React.ReactNode;
+  /** Optional actions in the header (e.g. Save button) */
+  headerActions?: React.ReactNode;
 }
 
 export function FullScreenDialog({
@@ -88,32 +122,60 @@ export function FullScreenDialog({
   onOpenChange,
   children,
   title,
+  description,
   className,
+  footer,
+  headerActions,
 }: FullScreenDialogProps) {
   const isMobile = useIsMobile();
 
   if (isMobile) {
     return (
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent 
+        <DrawerContent
           className={cn(
-            "h-[100dvh] max-h-[100dvh] rounded-none", 
+            "h-[100dvh] max-h-[100dvh] rounded-none flex flex-col p-0",
             className
           )}
         >
-          <div className="flex items-center justify-between px-4 py-3 border-b safe-area-pt">
-            {title && (
-              <h2 className="text-lg font-semibold">{title}</h2>
-            )}
+          {/* Sticky mobile header with safe area */}
+          <div className="sticky top-0 z-20 flex items-center gap-2 border-b bg-background/95 backdrop-blur px-3 py-2 safe-area-pt">
             <DrawerClose asChild>
-              <Button variant="ghost" size="icon" className="h-10 w-10">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 shrink-0"
+                aria-label="Fechar"
+              >
                 <X className="h-5 w-5" />
               </Button>
             </DrawerClose>
+            <div className="flex-1 min-w-0">
+              {title && (
+                <h2 className="text-base font-semibold leading-tight truncate">
+                  {title}
+                </h2>
+              )}
+              {description && (
+                <p className="text-[11px] text-muted-foreground truncate">
+                  {description}
+                </p>
+              )}
+            </div>
+            {headerActions && (
+              <div className="flex items-center gap-1 shrink-0">{headerActions}</div>
+            )}
           </div>
-          <div className="flex-1 overflow-y-auto pb-safe-bottom">
-            {children}
-          </div>
+
+          {/* Scrollable content */}
+          <div className="flex-1 overflow-y-auto">{children}</div>
+
+          {/* Sticky footer */}
+          {footer && (
+            <div className="sticky bottom-0 z-20 border-t bg-background/95 backdrop-blur px-4 py-3 pb-safe-bottom">
+              {footer}
+            </div>
+          )}
         </DrawerContent>
       </Drawer>
     );
@@ -121,13 +183,17 @@ export function FullScreenDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn("sm:max-w-2xl max-h-[85vh] overflow-y-auto", className)}>
-        {title && (
+      <DialogContent
+        className={cn("sm:max-w-2xl max-h-[85vh] flex flex-col", className)}
+      >
+        {(title || description) && (
           <DialogHeader>
-            <DialogTitle>{title}</DialogTitle>
+            {title && <DialogTitle>{title}</DialogTitle>}
+            {description && <DialogDescription>{description}</DialogDescription>}
           </DialogHeader>
         )}
-        {children}
+        <div className="flex-1 overflow-y-auto -mx-6 px-6">{children}</div>
+        {footer && <div className="pt-3 border-t mt-2">{footer}</div>}
       </DialogContent>
     </Dialog>
   );
