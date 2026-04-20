@@ -516,7 +516,13 @@ export function GlobalFooterBar() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[9999] bg-background border-t border-border shadow-lg pb-safe-bottom">
-      <div className="h-12 flex items-center justify-between px-1.5 md:px-4 gap-1 md:gap-4">
+      {/* Mobile: 2 rows. Desktop: single row */}
+      <div className={cn(
+        "flex px-1.5 md:px-4 gap-1 md:gap-4",
+        "flex-col md:flex-row md:items-center md:justify-between md:h-12"
+      )}>
+        {/* Row 1 (mobile): counters + timer | Desktop: counters on left */}
+        <div className="flex items-center justify-between gap-1 h-11 md:h-auto md:contents">
         {/* Left: Task status counters + Lines mode (only when showTaskBar is true) */}
         {showTaskBar && tasks.length > 0 ? (
           <div className="flex items-center gap-1">
