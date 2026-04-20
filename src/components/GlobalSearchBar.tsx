@@ -273,13 +273,18 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
     [onNodeSelect, navigate, nodes]
   );
 
+  const isMobileViewport = typeof window !== 'undefined' && window.innerWidth < 768;
+  const collapsedWidth = isMobileViewport ? 140 : 160;
+  const expandedWidth = isMobileViewport ? Math.min(window.innerWidth - 24, 320) : 320;
+
   return (
     <div
       ref={containerRef}
       style={{
         left: position.x,
         top: position.y,
-        width: isFocused ? 320 : 160,
+        width: isFocused ? expandedWidth : collapsedWidth,
+        maxWidth: 'calc(100vw - 16px)',
       }}
       className={`fixed z-50 transition-[width] duration-200 ${isDragging ? 'cursor-grabbing' : ''}`}
     >
