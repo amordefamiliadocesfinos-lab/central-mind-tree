@@ -427,7 +427,7 @@ const Index = () => {
     <>
       <div
         ref={containerRef}
-        className="w-screen h-screen overflow-hidden bg-background canvas-grid touch-none"
+        className="w-screen h-screen overflow-hidden bg-background canvas-grid touch-pan-y"
         onWheel={isDialogOpen ? undefined : handleWheel}
         onMouseDown={isDialogOpen ? undefined : handleMouseDown}
         onMouseMove={isDialogOpen ? undefined : handleMouseMove}
