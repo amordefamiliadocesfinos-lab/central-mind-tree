@@ -236,7 +236,8 @@ export function GlobalFooterBar() {
   };
 
   // Load timer state from DB and subscribe to realtime changes
-  const isLocalUpdate = useRef(false);
+  // Track local saves to ignore echo events from our own writes
+  const lastLocalSaveAt = useRef(0);
 
   useEffect(() => {
     loadTimerState();
@@ -251,6 +252,8 @@ export function GlobalFooterBar() {
           table: 'timer_state',
         },
         (payload) => {
+          // Ignore echoes of our own writes (within 2s of last local save)
+          if (Date.now() - lastLocalSaveAt.current < 2000) return;
           // Skip realtime events while timer is running or paused locally
           // The local countdown is the source of truth during execution
           if (statusRef.current === 'running' || statusRef.current === 'paused') {
@@ -421,7 +424,7 @@ export function GlobalFooterBar() {
 
   const saveTimerState = async () => {
     if (!stateId) return;
-
+    lastLocalSaveAt.current = Date.now();
     await supabase
       .from("timer_state")
       .update({
@@ -484,9 +487,21 @@ export function GlobalFooterBar() {
       return;
     }
 
-    handleStop();
+    setStatus("stopped");
     setRemainingSeconds(totalSeconds);
     setIsEditing(false);
+    // Persist immediately so the configured time survives reloads
+    if (stateId) {
+      lastLocalSaveAt.current = Date.now();
+      supabase
+        .from("timer_state")
+        .update({
+          remaining_seconds: totalSeconds,
+          status: "stopped",
+          last_update: new Date().toISOString(),
+        })
+        .eq("id", stateId);
+    }
     toast({ title: "Tempo definido" });
   };
 
@@ -894,24 +909,29 @@ export function GlobalFooterBar() {
                 )}
 
                 {status === "running" && (
-                  <Button onClick={handlePause} size="sm" variant="ghost" className="h-7 w-7 p-0">
-                    <Pause className="h-3.5 w-3.5" />
-                  </Button>
+                  <>
+                    <Button onClick={handlePause} size="sm" variant="ghost" className="h-7 w-7 p-0" title="Pausar">
+                      <Pause className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button onClick={handleStop} size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" title="Parar">
+                      ■
+                    </Button>
+                  </>
                 )}
 
                 {status === "paused" && (
                   <>
-                    <Button onClick={handleResume} size="sm" variant="ghost" className="h-7 w-7 p-0">
+                    <Button onClick={handleResume} size="sm" variant="ghost" className="h-7 w-7 p-0" title="Retomar">
                       <Play className="h-3.5 w-3.5" />
                     </Button>
-                    <Button onClick={handleStop} size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive">
+                    <Button onClick={handleStop} size="sm" variant="ghost" className="h-7 w-7 p-0 text-destructive" title="Parar">
                       ■
                     </Button>
                   </>
                 )}
 
                 {(status === "running" || status === "paused") && (
-                  <Button onClick={handleReset} size="sm" variant="ghost" className="h-7 w-7 p-0">
+                  <Button onClick={handleReset} size="sm" variant="ghost" className="h-7 w-7 p-0" title="Zerar">
                     <RotateCcw className="h-3.5 w-3.5" />
                   </Button>
                 )}
