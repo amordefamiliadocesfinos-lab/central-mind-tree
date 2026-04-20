@@ -657,8 +657,11 @@ export function GlobalFooterBar() {
           </div>
         )}
 
-        {/* Center: Navigation */}
-        <div className="flex items-center gap-0.5 md:gap-1 overflow-x-auto flex-1 justify-start md:justify-center" style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}>
+        {/* End row-1 wrapper (mobile only) - timer rendered after nav, will be portaled here on desktop via 'contents' */}
+        </div>
+
+        {/* Center: Navigation - on mobile this is row 2 (full width scrollable) */}
+        <div className="flex items-center gap-0.5 md:gap-1 overflow-x-auto w-full md:w-auto md:flex-1 justify-start md:justify-center h-11 md:h-auto border-t md:border-t-0 border-border md:border-0" style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
