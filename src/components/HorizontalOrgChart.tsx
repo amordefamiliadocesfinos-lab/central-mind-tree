@@ -258,7 +258,7 @@ export function HorizontalOrgChart({ onClose, onNodeClick }: HorizontalOrgChartP
   return (
     <div
       ref={containerRef}
-      className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm touch-none overflow-hidden"
+      className="fixed inset-0 z-50 bg-background/95 backdrop-blur-sm touch-pan-y overflow-auto"
       onWheel={handleWheel}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
