@@ -8,7 +8,7 @@ import {
   Play, Pause, RotateCcw, Clock, Focus, Calendar, Timer, 
   ShoppingCart, FileText, Undo2, Redo2, Home, FileSpreadsheet,
   Users, User, UsersRound, DollarSign, Brain, LayoutDashboard,
-  UserPlus,
+  UserPlus, MoreHorizontal,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +23,24 @@ interface Task {
   id: string;
   status: "estrutural" | "andamento" | "pendente" | "concluído";
 }
+
+const NAV_ITEMS = [
+  { path: "/", label: "Árvore", shortLabel: "Árvore", icon: Home },
+  { path: "/dashboard", label: "Dashboard", shortLabel: "Painel", icon: LayoutDashboard },
+  { path: "/foco", label: "Foco", shortLabel: "Foco", icon: Focus },
+  { path: "/calendario", label: "Calendário", shortLabel: "Agenda", icon: Calendar },
+  { path: "/rotina", label: "Rotina", shortLabel: "Rotina", icon: Timer },
+  { path: "/operacoes", label: "Operações", shortLabel: "Ops", icon: ShoppingCart },
+  { path: "/digital", label: "Digital", shortLabel: "Digital", icon: FileText },
+  { path: "/planilhas", label: "Planilhas", shortLabel: "Planilhas", icon: FileSpreadsheet },
+  { path: "/reunioes", label: "Reuniões", shortLabel: "Reuniões", icon: Users },
+  { path: "/minha-area", label: "Minha Área", shortLabel: "Minha", icon: User },
+  { path: "/contatos", label: "Contatos", shortLabel: "CRM", icon: UserPlus },
+  { path: "/financeiro", label: "Financeiro", shortLabel: "Financeiro", icon: DollarSign },
+] as const;
+
+const MOBILE_PRIMARY_PATHS = ["/", "/dashboard", "/foco", "/operacoes"] as const;
+const MOBILE_FALLBACK_PATH = "/calendario";
 
 // Request notification permission on component mount
 function requestNotificationPermission() {
