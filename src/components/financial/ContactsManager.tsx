@@ -43,6 +43,7 @@ import { ContactOrderHistory } from './ContactOrderHistory';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
+import { openWhatsApp } from '@/lib/whatsapp';
 import { useEffect } from 'react';
 import {
   AlertDialog,
@@ -146,14 +147,23 @@ export function ContactsManager() {
     }
   };
 
-  const handleWhatsAppSend = (message: string, _templateLabel: string) => {
+  const handleWhatsAppSend = async (message: string, templateLabel: string) => {
     if (!whatsAppContact) return;
     const phone = whatsAppContact.whatsapp || whatsAppContact.mobile || whatsAppContact.phone;
     if (phone) {
-      const cleanPhone = phone.replace(/\D/g, '');
-      const fullPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
-      const encoded = encodeURIComponent(message);
-      window.open(`https://wa.me/${fullPhone}?text=${encoded}`, '_blank');
+      // Registrar no histórico do contato
+      try {
+        await supabase.from('contact_history').insert({
+          contact_id: whatsAppContact.id,
+          event_type: 'whatsapp',
+          interaction_type: 'whatsapp',
+          description: `💬 Mensagem iniciada via WhatsApp (${templateLabel})`,
+          interaction_date: new Date().toISOString(),
+        });
+      } catch (e) {
+        console.error('Erro ao registrar histórico:', e);
+      }
+      openWhatsApp(phone, message);
     }
     setWhatsAppContact(undefined);
   };
