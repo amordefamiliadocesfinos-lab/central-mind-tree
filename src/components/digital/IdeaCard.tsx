@@ -177,8 +177,7 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
             className="flex-1 h-8 text-xs gap-1.5"
             onClick={(e) => {
               e.stopPropagation();
-              const text = encodeURIComponent(idea.key_message || idea.title);
-              window.open(`https://wa.me/?text=${text}`, '_blank');
+              openWhatsAppBroadcast(idea.key_message || idea.title);
             }}
           >
             <MessageCircle className="h-3.5 w-3.5" />

@@ -227,13 +227,10 @@ export function ContactFormDialog({
   const handleWhatsAppSend = async (message: string, templateLabel: string) => {
     const phone = form.whatsapp || form.mobile || form.phone;
     if (phone) {
-      const cleanPhone = phone.replace(/\D/g, '');
-      const fullPhone = cleanPhone.startsWith('55') ? cleanPhone : `55${cleanPhone}`;
-      const encoded = encodeURIComponent(message);
       if (contact?.id) {
         await addEntry(contact.id, 'whatsapp', `💬 Mensagem iniciada via WhatsApp (${templateLabel})`, new Date().toISOString());
       }
-      window.open(`https://wa.me/${fullPhone}?text=${encoded}`, '_blank');
+      openWhatsApp(phone, message);
     }
   };
 
