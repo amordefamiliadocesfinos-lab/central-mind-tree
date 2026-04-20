@@ -4,11 +4,19 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
   Play, Pause, RotateCcw, Clock, Focus, Calendar, Timer, 
   ShoppingCart, FileText, Undo2, Redo2, Home, FileSpreadsheet,
   Users, User, UsersRound, DollarSign, Brain, LayoutDashboard,
-  UserPlus,
+  UserPlus, MoreHorizontal,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +31,24 @@ interface Task {
   id: string;
   status: "estrutural" | "andamento" | "pendente" | "concluído";
 }
+
+const NAV_ITEMS = [
+  { path: "/", label: "Árvore", shortLabel: "Árvore", icon: Home },
+  { path: "/dashboard", label: "Dashboard", shortLabel: "Painel", icon: LayoutDashboard },
+  { path: "/foco", label: "Foco", shortLabel: "Foco", icon: Focus },
+  { path: "/calendario", label: "Calendário", shortLabel: "Agenda", icon: Calendar },
+  { path: "/rotina", label: "Rotina", shortLabel: "Rotina", icon: Timer },
+  { path: "/operacoes", label: "Operações", shortLabel: "Ops", icon: ShoppingCart },
+  { path: "/digital", label: "Digital", shortLabel: "Digital", icon: FileText },
+  { path: "/planilhas", label: "Planilhas", shortLabel: "Planilhas", icon: FileSpreadsheet },
+  { path: "/reunioes", label: "Reuniões", shortLabel: "Reuniões", icon: Users },
+  { path: "/minha-area", label: "Minha Área", shortLabel: "Minha", icon: User },
+  { path: "/contatos", label: "Contatos", shortLabel: "CRM", icon: UserPlus },
+  { path: "/financeiro", label: "Financeiro", shortLabel: "Financeiro", icon: DollarSign },
+] as const;
+
+const MOBILE_PRIMARY_PATHS = ["/", "/dashboard", "/foco", "/operacoes"] as const;
+const MOBILE_FALLBACK_PATH = "/calendario";
 
 // Request notification permission on component mount
 function requestNotificationPermission() {
@@ -190,6 +216,13 @@ export function GlobalFooterBar() {
   const { notify, requestPermission, permission } = useNotifications();
   const isMobile = useIsMobile();
   const { linesMode, setLinesMode, showTaskBar } = useLinesMode();
+  const isActive = (path: string) => location.pathname === path;
+  const activeMobileItem = NAV_ITEMS.find((item) => isActive(item.path));
+  const mobilePrimaryItems = NAV_ITEMS.filter((item) => MOBILE_PRIMARY_PATHS.includes(item.path as (typeof MOBILE_PRIMARY_PATHS)[number]));
+  const mobileOverflowItems = NAV_ITEMS.filter((item) => !MOBILE_PRIMARY_PATHS.includes(item.path as (typeof MOBILE_PRIMARY_PATHS)[number]));
+  const mobileMoreItem = activeMobileItem && !MOBILE_PRIMARY_PATHS.includes(activeMobileItem.path as (typeof MOBILE_PRIMARY_PATHS)[number])
+    ? activeMobileItem
+    : NAV_ITEMS.find((item) => item.path === MOBILE_FALLBACK_PATH) ?? mobileOverflowItems[0];
 
   // Fetch tasks for status counters
   useEffect(() => {
@@ -512,8 +545,6 @@ export function GlobalFooterBar() {
     return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   };
 
-  const isActive = (path: string) => location.pathname === path;
-
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[9999] bg-background border-t border-border shadow-lg pb-safe-bottom">
       {/* Mobile: 2 rows via flex-wrap. Desktop: single row */}
@@ -652,191 +683,124 @@ export function GlobalFooterBar() {
           </div>
         )}
 
-        {/* Center: Navigation - on mobile this becomes row 2 (full width, scrollable) via flex-wrap + order */}
-        <div className="flex items-center gap-0.5 md:gap-1 overflow-x-auto basis-full md:basis-auto order-last md:order-none w-full md:w-auto md:flex-1 justify-start md:justify-center h-11 md:h-auto border-t md:border-t-0 border-border md:border-0" style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                asChild
-                size="sm"
-                variant={isActive('/') ? 'secondary' : 'ghost'}
-                className={cn("h-8 w-8 p-0", isActive('/') && "bg-secondary")}
-              >
-                <Link to="/">
-                  <Home className="h-4 w-4" />
-                </Link>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Árvore</TooltipContent>
-          </Tooltip>
+        {/* Center: Navigation */}
+        <div className="basis-full md:basis-auto order-last md:order-none w-full md:w-auto md:flex-1 border-t md:border-t-0 border-border md:border-0">
+          {isMobile ? (
+            <div className="grid grid-cols-5 gap-0.5 h-12 items-stretch">
+              {mobilePrimaryItems.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.path);
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                asChild
-                size="sm"
-                variant={isActive('/dashboard') ? 'secondary' : 'ghost'}
-                className={cn("h-8 w-8 md:w-auto md:px-3 p-0 md:p-2 text-xs", isActive('/dashboard') && "bg-secondary")}
-              >
-                <Link to="/dashboard">
-                  <LayoutDashboard className="h-4 w-4" />
-                  <span className="hidden md:inline ml-1">Dashboard</span>
-                </Link>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Dashboard</TooltipContent>
-          </Tooltip>
+                return (
+                  <Button
+                    key={item.path}
+                    asChild
+                    size="sm"
+                    variant={active ? "secondary" : "ghost"}
+                    className={cn(
+                      "h-full min-w-0 rounded-none flex flex-col items-center justify-center gap-0.5 px-1 no-touch-min",
+                      active && "bg-secondary"
+                    )}
+                  >
+                    <Link to={item.path} aria-label={item.label}>
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <span className="text-[10px] leading-none truncate max-w-full">{item.shortLabel}</span>
+                    </Link>
+                  </Button>
+                );
+              })}
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                asChild
-                size="sm"
-                variant={isActive('/foco') ? 'secondary' : 'ghost'}
-                className={cn("h-8 w-8 md:w-auto md:px-3 p-0 md:p-2 text-xs", isActive('/foco') && "bg-secondary")}
-              >
-                <Link to="/foco">
-                  <Focus className="h-4 w-4" />
-                  <span className="hidden md:inline ml-1">FOCO</span>
-                </Link>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Alt+2</TooltipContent>
-          </Tooltip>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant={mobileMoreItem && isActive(mobileMoreItem.path) ? "secondary" : "ghost"}
+                    className={cn(
+                      "h-full min-w-0 rounded-none flex flex-col items-center justify-center gap-0.5 px-1 no-touch-min",
+                      mobileMoreItem && isActive(mobileMoreItem.path) && "bg-secondary"
+                    )}
+                    aria-label="Mais funcionalidades"
+                  >
+                    {mobileMoreItem ? <mobileMoreItem.icon className="h-4 w-4 shrink-0" /> : <MoreHorizontal className="h-4 w-4 shrink-0" />}
+                    <span className="text-[10px] leading-none truncate max-w-full">
+                      {mobileMoreItem && isActive(mobileMoreItem.path) ? mobileMoreItem.shortLabel : "Mais"}
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" side="top" className="w-56 mb-2">
+                  <DropdownMenuLabel>Mais funcionalidades</DropdownMenuLabel>
+                  {mobileOverflowItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <DropdownMenuItem key={item.path} asChild>
+                        <Link to={item.path} className="flex items-center gap-2 w-full">
+                          <Icon className="h-4 w-4" />
+                          <span>{item.label}</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/assistente" className="flex items-center gap-2 w-full">
+                      <Brain className="h-4 w-4" />
+                      <span>Assistente IA</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setCollaboratorsOpen(true)} className="flex items-center gap-2">
+                    <UsersRound className="h-4 w-4" />
+                    <span>Colaboradores</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ) : (
+            <div className="flex items-center gap-0.5 md:gap-1 overflow-x-auto w-full md:flex-1 justify-start md:justify-center h-11 md:h-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}>
+              {NAV_ITEMS.map((item) => {
+                const Icon = item.icon;
+                const active = isActive(item.path);
+                const compact = ["/", "/operacoes", "/digital", "/planilhas", "/reunioes", "/minha-area", "/contatos", "/financeiro"].includes(item.path);
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                asChild
-                size="sm"
-                variant={isActive('/calendario') ? 'secondary' : 'ghost'}
-                className={cn("h-8 w-8 md:w-auto md:px-3 p-0 md:p-2 text-xs", isActive('/calendario') && "bg-secondary")}
-              >
-                <Link to="/calendario">
-                  <Calendar className="h-4 w-4" />
-                  <span className="hidden md:inline ml-1">CAL</span>
-                </Link>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Alt+3</TooltipContent>
-          </Tooltip>
+                return (
+                  <Tooltip key={item.path}>
+                    <TooltipTrigger asChild>
+                      <Button
+                        asChild
+                        size="sm"
+                        variant={active ? "secondary" : "ghost"}
+                        className={cn(
+                          compact ? "h-8 w-8 p-0" : "h-8 w-8 md:w-auto md:px-3 p-0 md:p-2 text-xs",
+                          active && "bg-secondary"
+                        )}
+                      >
+                        <Link to={item.path}>
+                          <Icon className="h-4 w-4" />
+                          {!compact && <span className="hidden md:inline ml-1">{item.label}</span>}
+                        </Link>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>{item.label}</TooltipContent>
+                  </Tooltip>
+                );
+              })}
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                asChild
-                size="sm"
-                variant={isActive('/rotina') ? 'secondary' : 'ghost'}
-                className={cn("h-8 w-8 md:w-auto md:px-3 p-0 md:p-2 text-xs", isActive('/rotina') && "bg-secondary")}
-              >
-                <Link to="/rotina">
-                  <Timer className="h-4 w-4" />
-                  <span className="hidden md:inline ml-1">ROTINA</span>
-                </Link>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Alt+4</TooltipContent>
-          </Tooltip>
+              <AIAssistantButton isActive={isActive} />
 
-          <Button
-            asChild
-            size="sm"
-            variant={isActive('/operacoes') ? 'secondary' : 'ghost'}
-            className={cn("h-8 w-8 p-0", isActive('/operacoes') && "bg-secondary")}
-          >
-            <Link to="/operacoes">
-              <ShoppingCart className="h-4 w-4" />
-            </Link>
-          </Button>
-
-          <Button
-            asChild
-            size="sm"
-            variant={isActive('/digital') ? 'secondary' : 'ghost'}
-            className={cn("h-8 w-8 p-0", isActive('/digital') && "bg-secondary")}
-          >
-            <Link to="/digital">
-              <FileText className="h-4 w-4" />
-            </Link>
-          </Button>
-
-          <Button
-            asChild
-            size="sm"
-            variant={isActive('/planilhas') ? 'secondary' : 'ghost'}
-            className={cn("h-8 w-8 p-0", isActive('/planilhas') && "bg-secondary")}
-          >
-            <Link to="/planilhas">
-              <FileSpreadsheet className="h-4 w-4" />
-            </Link>
-          </Button>
-
-          <Button
-            asChild
-            size="sm"
-            variant={isActive('/reunioes') ? 'secondary' : 'ghost'}
-            className={cn("h-8 w-8 p-0", isActive('/reunioes') && "bg-secondary")}
-          >
-            <Link to="/reunioes">
-              <Users className="h-4 w-4" />
-            </Link>
-          </Button>
-
-          <Button
-            asChild
-            size="sm"
-            variant={isActive('/minha-area') ? 'secondary' : 'ghost'}
-            className={cn("h-8 w-8 p-0", isActive('/minha-area') && "bg-secondary")}
-          >
-            <Link to="/minha-area">
-              <User className="h-4 w-4" />
-            </Link>
-          </Button>
-
-          <Button
-            asChild
-            size="sm"
-            variant={isActive('/contatos') ? 'secondary' : 'ghost'}
-            className={cn("h-8 w-8 p-0", isActive('/contatos') && "bg-secondary")}
-          >
-            <Link to="/contatos">
-              <UserPlus className="h-4 w-4" />
-            </Link>
-          </Button>
-
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                asChild
-                size="sm"
-                variant={isActive('/financeiro') ? 'secondary' : 'ghost'}
-                className={cn("h-8 w-8 p-0", isActive('/financeiro') && "bg-secondary")}
-              >
-                <Link to="/financeiro">
-                  <DollarSign className="h-4 w-4" />
-                </Link>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Financeiro</TooltipContent>
-          </Tooltip>
-
-          {/* AI Assistant button */}
-          <AIAssistantButton isActive={isActive} />
-
-          {/* Collaborators button */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                size="sm"
-                variant={collaboratorsOpen ? 'secondary' : 'ghost'}
-                className={cn("h-8 w-8 p-0", collaboratorsOpen && "bg-secondary")}
-                onClick={() => setCollaboratorsOpen(true)}
-              >
-                <UsersRound className="h-4 w-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Colaboradores</TooltipContent>
-          </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant={collaboratorsOpen ? 'secondary' : 'ghost'}
+                    className={cn("h-8 w-8 p-0", collaboratorsOpen && "bg-secondary")}
+                    onClick={() => setCollaboratorsOpen(true)}
+                  >
+                    <UsersRound className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Colaboradores</TooltipContent>
+              </Tooltip>
+            </div>
+          )}
         </div>
 
         {/* Collaborators Panel */}
