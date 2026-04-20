@@ -149,12 +149,14 @@ export function HorizontalOrgChart({ onClose, onNodeClick }: HorizontalOrgChartP
     setIsDragging(false);
   };
 
-  // Touch handlers
+  // Touch handlers — 1 finger = native scroll; 2 fingers = pan + pinch zoom
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length === 1) {
-      setTouchStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
-      setDragStart({ x: e.touches[0].clientX - position.x, y: e.touches[0].clientY - position.y });
-    } else if (e.touches.length === 2) {
+    if (e.touches.length === 2) {
+      const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      setTouchStart({ x: midX, y: midY });
+      setDragStart({ x: midX - position.x, y: midY - position.y });
+
       const distance = Math.hypot(
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY
@@ -164,12 +166,9 @@ export function HorizontalOrgChart({ onClose, onNodeClick }: HorizontalOrgChartP
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (e.touches.length === 1 && touchStart) {
-      setPosition({
-        x: e.touches[0].clientX - dragStart.x,
-        y: e.touches[0].clientY - dragStart.y,
-      });
-    } else if (e.touches.length === 2 && lastTouchDistance) {
+    if (e.touches.length === 2 && lastTouchDistance !== null) {
+      e.preventDefault();
+
       const distance = Math.hypot(
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY
@@ -177,6 +176,13 @@ export function HorizontalOrgChart({ onClose, onNodeClick }: HorizontalOrgChartP
       const delta = distance / lastTouchDistance;
       setScale(prev => Math.min(Math.max(prev * delta, 0.2), 2));
       setLastTouchDistance(distance);
+
+      const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      setPosition({
+        x: midX - dragStart.x,
+        y: midY - dragStart.y,
+      });
     }
   };
 
