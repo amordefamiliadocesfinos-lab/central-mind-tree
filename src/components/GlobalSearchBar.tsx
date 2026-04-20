@@ -60,15 +60,24 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
   const [showTasks, setShowTasks] = useState(true);
   const [showHidden, setShowHidden] = useState(false);
   const [position, setPosition] = useState(() => {
+    const isMobileViewport = typeof window !== 'undefined' && window.innerWidth < 768;
+    const defaultWidth = isMobileViewport ? 140 : 180;
     const saved = localStorage.getItem(POSITION_KEY);
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        // Clamp to current viewport so it never sits off-screen
+        const maxX = Math.max(0, window.innerWidth - defaultWidth);
+        const maxY = Math.max(0, window.innerHeight - 60);
+        return {
+          x: Math.min(Math.max(0, parsed.x ?? 0), maxX),
+          y: Math.min(Math.max(0, parsed.y ?? 0), maxY),
+        };
       } catch {
-        return { x: window.innerWidth - 180, y: 16 };
+        return { x: window.innerWidth - defaultWidth, y: 12 };
       }
     }
-    return { x: window.innerWidth - 180, y: 16 };
+    return { x: window.innerWidth - defaultWidth, y: 12 };
   });
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
