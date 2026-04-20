@@ -4,6 +4,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
   Play, Pause, RotateCcw, Clock, Focus, Calendar, Timer, 
   ShoppingCart, FileText, Undo2, Redo2, Home, FileSpreadsheet,
@@ -208,6 +216,7 @@ export function GlobalFooterBar() {
   const { notify, requestPermission, permission } = useNotifications();
   const isMobile = useIsMobile();
   const { linesMode, setLinesMode, showTaskBar } = useLinesMode();
+  const isActive = (path: string) => location.pathname === path;
   const activeMobileItem = NAV_ITEMS.find((item) => isActive(item.path));
   const mobilePrimaryItems = NAV_ITEMS.filter((item) => MOBILE_PRIMARY_PATHS.includes(item.path as (typeof MOBILE_PRIMARY_PATHS)[number]));
   const mobileOverflowItems = NAV_ITEMS.filter((item) => !MOBILE_PRIMARY_PATHS.includes(item.path as (typeof MOBILE_PRIMARY_PATHS)[number]));
@@ -535,8 +544,6 @@ export function GlobalFooterBar() {
     const s = seconds % 60;
     return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   };
-
-  const isActive = (path: string) => location.pathname === path;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[9999] bg-background border-t border-border shadow-lg pb-safe-bottom">
