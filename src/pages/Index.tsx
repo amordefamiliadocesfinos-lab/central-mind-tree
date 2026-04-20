@@ -363,32 +363,35 @@ const Index = () => {
   };
 
   // Touch handlers for mobile
+  // 1 finger = native page scroll (browser default)
+  // 2 fingers = pan + pinch zoom on the tree canvas
   const handleTouchStart = (e: React.TouchEvent) => {
     if (isDialogOpen) return;
-    
-    if (e.touches.length === 1) {
-      setTouchStart({ x: e.touches[0].clientX, y: e.touches[0].clientY });
-      setDragStart({ x: e.touches[0].clientX - position.x, y: e.touches[0].clientY - position.y });
-    } else if (e.touches.length === 2) {
+
+    if (e.touches.length === 2) {
+      // Midpoint of both fingers becomes the pan anchor
+      const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      setTouchStart({ x: midX, y: midY });
+      setDragStart({ x: midX - position.x, y: midY - position.y });
+
       const distance = Math.hypot(
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY
       );
       setLastTouchDistance(distance);
     }
+    // 1-finger touch: do nothing → browser handles native vertical scroll
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (isDialogOpen) return;
-    
-    if (e.touches.length === 1 && touchStart) {
-      // Pan
-      setPosition({
-        x: e.touches[0].clientX - dragStart.x,
-        y: e.touches[0].clientY - dragStart.y,
-      });
-    } else if (e.touches.length === 2 && lastTouchDistance) {
-      // Pinch to zoom
+
+    if (e.touches.length === 2 && lastTouchDistance !== null) {
+      // Prevent native scroll only during the 2-finger gesture
+      e.preventDefault();
+
+      // Pinch zoom
       const distance = Math.hypot(
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY
@@ -396,6 +399,14 @@ const Index = () => {
       const delta = distance / lastTouchDistance;
       setScale((prev) => Math.min(Math.max(prev * delta, 0.2), 3));
       setLastTouchDistance(distance);
+
+      // Two-finger pan (move the canvas)
+      const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      setPosition({
+        x: midX - dragStart.x,
+        y: midY - dragStart.y,
+      });
     }
   };
 
@@ -416,7 +427,7 @@ const Index = () => {
     <>
       <div
         ref={containerRef}
-        className="w-screen h-screen overflow-hidden bg-background canvas-grid touch-none"
+        className="w-screen h-screen overflow-hidden bg-background canvas-grid touch-pan-y"
         onWheel={isDialogOpen ? undefined : handleWheel}
         onMouseDown={isDialogOpen ? undefined : handleMouseDown}
         onMouseMove={isDialogOpen ? undefined : handleMouseMove}
