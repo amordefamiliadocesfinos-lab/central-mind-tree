@@ -466,12 +466,9 @@ export default function Contatos() {
     if (!whatsAppContact) return;
     const phone = whatsAppContact.whatsapp || whatsAppContact.mobile || whatsAppContact.phone;
     if (phone) {
-      const clean = phone.replace(/\D/g, '');
-      const full = clean.startsWith('55') ? clean : `55${clean}`;
       const now = new Date().toISOString();
-      const encoded = encodeURIComponent(message);
       await addEntry(whatsAppContact.id, 'whatsapp', `💬 Mensagem iniciada via WhatsApp (${templateLabel})`, now);
-      window.open(`https://wa.me/${full}?text=${encoded}`, '_blank');
+      openWhatsApp(phone, message);
       setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);
     }
     setWhatsAppContact(null);
@@ -595,8 +592,6 @@ export default function Contatos() {
     if (!phone) return;
 
     const { message, approach } = getSmartMessage(contact);
-    const clean = phone.replace(/\D/g, '');
-    const full = clean.startsWith('55') ? clean : `55${clean}`;
     const now = new Date().toISOString();
 
     // Log to timeline
@@ -605,8 +600,8 @@ export default function Contatos() {
     // Update último contato
     await updateContact(contact.id, { ultimo_contato: now.split('T')[0] });
 
-    // Open WhatsApp
-    window.open(`https://wa.me/${full}?text=${encodeURIComponent(message)}`, '_blank');
+    // Open WhatsApp (helper detecta mobile/desktop)
+    openWhatsApp(phone, message);
 
     // Refresh data
     setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);
@@ -645,12 +640,9 @@ export default function Contatos() {
         }}
         onSendSuggestion={async () => {
           if (!phone || !noResponseInfo) return;
-          const clean = phone.replace(/\D/g, '');
-          const full = clean.startsWith('55') ? clean : `55${clean}`;
           const now = new Date().toISOString();
-          const encoded = encodeURIComponent(noResponseInfo.suggestedMessage);
           await addEntry(contact.id, 'whatsapp', `💬 Follow-up enviado automaticamente (sugerido pelo sistema · ${noResponseInfo.suggestedLabel})`, now);
-          window.open(`https://wa.me/${full}?text=${encoded}`, '_blank');
+          openWhatsApp(phone, noResponseInfo.suggestedMessage);
           setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);
         }}
         onSmartAttend={async () => handleSmartAttend(contact)}
@@ -1203,12 +1195,9 @@ export default function Contatos() {
                                       e.stopPropagation();
                                       const phone = contact.whatsapp || contact.mobile || contact.phone;
                                       if (!phone) return;
-                                      const clean = phone.replace(/\D/g, '');
-                                      const full = clean.startsWith('55') ? clean : `55${clean}`;
                                       const now = new Date().toISOString();
-                                      const encoded = encodeURIComponent(nrInfo.suggestedMessage);
                                       await addEntry(contact.id, 'whatsapp', `💬 Follow-up enviado automaticamente (sugerido pelo sistema · ${nrInfo.suggestedLabel})`, now);
-                                      window.open(`https://wa.me/${full}?text=${encoded}`, '_blank');
+                                      openWhatsApp(phone, nrInfo.suggestedMessage);
                                       setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);
                                     }}
                                   >
