@@ -18,6 +18,10 @@ interface FollowUpTask {
 }
 
 export const FollowUpBanner = () => {
+  // Banner desativado — só aparece quando o usuário solicitar manualmente em outro lugar.
+  return null;
+
+  // eslint-disable-next-line no-unreachable
   const navigate = useNavigate();
   const { getTodayFollowUps } = useOnHold();
   const [followUps, setFollowUps] = useState<FollowUpTask[]>([]);
