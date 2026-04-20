@@ -22,7 +22,7 @@ export const FollowUpBanner = () => {
   const { getTodayFollowUps } = useOnHold();
   const [followUps, setFollowUps] = useState<FollowUpTask[]>([]);
   const [dismissed, setDismissed] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
 
   useEffect(() => {
     const loadFollowUps = async () => {
