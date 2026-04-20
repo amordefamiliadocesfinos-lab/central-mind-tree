@@ -32,6 +32,7 @@ import { useContactHistory } from '@/hooks/useContactHistory';
 import { useContactsWithOrders } from '@/hooks/useContactsWithOrders';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { openWhatsApp } from '@/lib/whatsapp';
 
 interface ContactFormDialogProps {
   open: boolean;

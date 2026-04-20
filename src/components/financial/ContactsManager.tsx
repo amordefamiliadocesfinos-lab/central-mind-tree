@@ -43,6 +43,7 @@ import { ContactOrderHistory } from './ContactOrderHistory';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
+import { openWhatsApp } from '@/lib/whatsapp';
 import { useEffect } from 'react';
 import {
   AlertDialog,
