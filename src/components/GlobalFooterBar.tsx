@@ -516,7 +516,8 @@ export function GlobalFooterBar() {
 
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[9999] bg-background border-t border-border shadow-lg pb-safe-bottom">
-      <div className="h-12 flex items-center justify-between px-1.5 md:px-4 gap-1 md:gap-4">
+      {/* Mobile: 2 rows via flex-wrap. Desktop: single row */}
+      <div className="flex flex-wrap md:flex-nowrap items-center justify-between md:h-12 px-1.5 md:px-4 gap-1 md:gap-4">
         {/* Left: Task status counters + Lines mode (only when showTaskBar is true) */}
         {showTaskBar && tasks.length > 0 ? (
           <div className="flex items-center gap-1">
@@ -651,8 +652,8 @@ export function GlobalFooterBar() {
           </div>
         )}
 
-        {/* Center: Navigation */}
-        <div className="flex items-center gap-0.5 md:gap-1 overflow-x-auto flex-1 justify-start md:justify-center" style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}>
+        {/* Center: Navigation - on mobile this becomes row 2 (full width, scrollable) via flex-wrap + order */}
+        <div className="flex items-center gap-0.5 md:gap-1 overflow-x-auto basis-full md:basis-auto order-last md:order-none w-full md:w-auto md:flex-1 justify-start md:justify-center h-11 md:h-auto border-t md:border-t-0 border-border md:border-0" style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
