@@ -136,9 +136,9 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
-    overscroll-behavior: none;
+    /* Allow native vertical scrolling on mobile (no overscroll lock) */
   }
-  
+
   /* Prevent horizontal overflow on mobile */
   html, body, #root {
     overflow-x: hidden;
