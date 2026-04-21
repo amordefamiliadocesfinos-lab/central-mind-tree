@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -663,6 +664,13 @@ export default function Contatos() {
             Contatos
           </h1>
           <div className="flex items-center gap-2">
+            <Link to="/contatos/inbox">
+              <Button variant="outline" size="sm" className="gap-1">
+                <MessageCircle className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Caixa de entrada</span>
+                <span className="sm:hidden">Inbox</span>
+              </Button>
+            </Link>
             <Button variant="outline" size="sm" onClick={() => setTagsManagerOpen(true)}>
               <Tag className="h-3.5 w-3.5 mr-1" />
               Tags

@@ -28,7 +28,9 @@ import MinhaArea from "./pages/MinhaArea";
 import Financeiro from "./pages/Financeiro";
 import Assistente from "./pages/Assistente";
 import Contatos from "./pages/Contatos";
+import ContatosInbox from "./pages/ContatosInbox";
 import NotFound from "./pages/NotFound";
+import { QuickConversationFAB } from "@/components/crm/QuickConversationFAB";
 import { useScheduledTaskPromotion } from "./hooks/useScheduledTaskPromotion";
 
 const queryClient = new QueryClient();
@@ -84,6 +86,7 @@ function AnimatedRoutes() {
           <Route path="/financeiro" element={<Financeiro />} />
           <Route path="/assistente" element={<Assistente />} />
           <Route path="/contatos" element={<Contatos />} />
+          <Route path="/contatos/inbox" element={<ContatosInbox />} />
           <Route path="/task/:id" element={<TaskEdit />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
@@ -106,6 +109,7 @@ function AppContent() {
         <AnimatedRoutes />
       </SwipeNavigationWrapper>
       <GlobalFooterBar />
+      <QuickConversationFAB />
       <StockCheckAlert />
       <StockCheckWizard />
     </BrowserRouter>

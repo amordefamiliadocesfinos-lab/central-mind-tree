@@ -2,11 +2,14 @@ import { useEffect, useState } from 'react';
 import { useContactHistory, INTERACTION_TYPES } from '@/hooks/useContactHistory';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { UserPlus, MessageCircle, Phone, FileText, Handshake, DollarSign, StickyNote, Clock, ArrowRightLeft, Trophy, Plus, X, Send, CalendarClock, Thermometer, Filter } from 'lucide-react';
+import { UserPlus, MessageCircle, Phone, FileText, Handshake, DollarSign, StickyNote, Clock, ArrowRightLeft, Trophy, Plus, X, Send, CalendarClock, Thermometer, Filter, Sparkles, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import ReactMarkdown from 'react-markdown';
 
 type FilterType = 'all' | 'notas' | 'etapas' | 'temperatura' | 'follow_ups';
 
@@ -50,10 +53,37 @@ export function ContactTimeline({ contactId, createdAt }: Props) {
   const [noteText, setNoteText] = useState('');
   const [saving, setSaving] = useState(false);
   const [filter, setFilter] = useState<FilterType>('all');
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSummary, setAiSummary] = useState('');
 
   useEffect(() => {
     if (contactId) fetchHistory(contactId);
   }, [contactId, fetchHistory]);
+
+  const handleSummarize = async () => {
+    setAiLoading(true);
+    setAiSummary('');
+    setAiOpen(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('contact-summary', {
+        body: { contact_id: contactId },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) {
+        toast.error((data as any).error);
+        setAiOpen(false);
+        return;
+      }
+      setAiSummary((data as any)?.summary || 'Sem resumo gerado.');
+    } catch (e) {
+      console.error(e);
+      toast.error('Erro ao gerar resumo. Verifique seus créditos de IA.');
+      setAiOpen(false);
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const handleAddNote = async () => {
     if (!noteText.trim()) return;
@@ -113,6 +143,18 @@ export function ContactTimeline({ contactId, createdAt }: Props) {
 
   return (
     <div className="space-y-3">
+      {/* AI Summary button */}
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full text-xs gap-1.5 border-primary/30 hover:bg-primary/5"
+        onClick={handleSummarize}
+        disabled={aiLoading}
+      >
+        {aiLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 text-primary" />}
+        Resumir contato com IA
+      </Button>
+
       {/* Filters */}
       <div className="flex flex-wrap gap-1.5">
         {FILTERS.map(f => (
@@ -129,6 +171,39 @@ export function ContactTimeline({ contactId, createdAt }: Props) {
           </Badge>
         ))}
       </div>
+
+      {/* AI Summary modal */}
+      {aiOpen && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => !aiLoading && setAiOpen(false)}
+        >
+          <div
+            className="max-w-lg w-full max-h-[80vh] overflow-auto bg-card border rounded-lg p-5 shadow-xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <h2 className="font-semibold">Briefing do contato</h2>
+            </div>
+            {aiLoading ? (
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+                Analisando histórico...
+              </div>
+            ) : (
+              <div className="prose prose-sm max-w-none dark:prose-invert">
+                <ReactMarkdown>{aiSummary}</ReactMarkdown>
+              </div>
+            )}
+            <div className="flex justify-end mt-4">
+              <Button size="sm" variant="outline" onClick={() => setAiOpen(false)} disabled={aiLoading}>
+                Fechar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add Note Button / Input */}
       {!showNoteInput ? (
