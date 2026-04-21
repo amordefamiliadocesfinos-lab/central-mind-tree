@@ -150,12 +150,17 @@ export function ContactCard({
     >
       <Card
         className={cn(
-          'transition-all cursor-grab active:cursor-grabbing border-l-[3px] overflow-hidden',
+          'transition-all cursor-grab active:cursor-grabbing border-l-[3px] overflow-hidden select-none',
           isDragged && 'opacity-50 scale-95',
           urgencyCfg.borderColor,
         )}
         draggable
         onDragStart={onDragStart}
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+          onEdit();
+        }}
+        title="Duplo clique para editar"
       >
         {/* ═══════ TOP — Always visible ═══════ */}
         <div className="p-3 space-y-2">
