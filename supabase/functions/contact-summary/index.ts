@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
         .select("order_number,status,total_value,order_date,due_date")
         .eq("contact_id", contact_id)
         .order("order_date", { ascending: false })
-        .limit: 20 as any,
+        .limit(20),
     ]);
 
     if (!contact) {
