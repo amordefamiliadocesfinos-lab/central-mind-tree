@@ -2,11 +2,14 @@ import { useEffect, useState } from 'react';
 import { useContactHistory, INTERACTION_TYPES } from '@/hooks/useContactHistory';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { UserPlus, MessageCircle, Phone, FileText, Handshake, DollarSign, StickyNote, Clock, ArrowRightLeft, Trophy, Plus, X, Send, CalendarClock, Thermometer, Filter } from 'lucide-react';
+import { UserPlus, MessageCircle, Phone, FileText, Handshake, DollarSign, StickyNote, Clock, ArrowRightLeft, Trophy, Plus, X, Send, CalendarClock, Thermometer, Filter, Sparkles, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import ReactMarkdown from 'react-markdown';
 
 type FilterType = 'all' | 'notas' | 'etapas' | 'temperatura' | 'follow_ups';
 
@@ -50,10 +53,37 @@ export function ContactTimeline({ contactId, createdAt }: Props) {
   const [noteText, setNoteText] = useState('');
   const [saving, setSaving] = useState(false);
   const [filter, setFilter] = useState<FilterType>('all');
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSummary, setAiSummary] = useState('');
 
   useEffect(() => {
     if (contactId) fetchHistory(contactId);
   }, [contactId, fetchHistory]);
+
+  const handleSummarize = async () => {
+    setAiLoading(true);
+    setAiSummary('');
+    setAiOpen(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('contact-summary', {
+        body: { contact_id: contactId },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) {
+        toast.error((data as any).error);
+        setAiOpen(false);
+        return;
+      }
+      setAiSummary((data as any)?.summary || 'Sem resumo gerado.');
+    } catch (e) {
+      console.error(e);
+      toast.error('Erro ao gerar resumo. Verifique seus créditos de IA.');
+      setAiOpen(false);
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const handleAddNote = async () => {
     if (!noteText.trim()) return;
