@@ -468,14 +468,16 @@ const Index = () => {
         </div>
       </div>
 
-      {/* Ação rápida para forçar refetch e recentralizar (útil quando o layout muda por updates/realtime) */}
-      <div className="fixed right-3 bottom-20 z-40 flex flex-col gap-2">
-        {/* Botão Organograma Horizontal */}
+      <div className="fixed right-3 bottom-20 z-40 rounded-lg border bg-background/95 p-2 shadow-lg backdrop-blur">
+        <div className="mb-1.5 px-1 text-[10px] font-semibold uppercase leading-none text-muted-foreground">
+          Mapa
+        </div>
+        <div className="grid grid-cols-2 gap-1.5">
         <Button
           type="button"
           variant="secondary"
           size="icon"
-          className="rounded-full shadow"
+          className="h-9 w-9 rounded-md shadow-none"
           onClick={() => setShowHorizontalOrgChart(true)}
           disabled={isDialogOpen}
           aria-label="Organograma Horizontal"
@@ -490,7 +492,7 @@ const Index = () => {
               type="button"
               variant={linesMode !== "off" ? "default" : "secondary"}
               size="icon"
-              className="rounded-full shadow"
+              className="h-9 w-9 rounded-md shadow-none"
               disabled={isDialogOpen}
               aria-label="Modo de visualização"
               title="Modo CEO"
@@ -531,7 +533,7 @@ const Index = () => {
           type="button"
           variant="secondary"
           size="icon"
-          className="rounded-full shadow"
+          className="h-9 w-9 rounded-md shadow-none"
           onClick={handleRefreshAndCenter}
           disabled={isDialogOpen}
           aria-label="Atualizar e centralizar árvore"
@@ -543,7 +545,7 @@ const Index = () => {
           type="button"
           variant="secondary"
           size="icon"
-          className="rounded-full shadow"
+          className="h-9 w-9 rounded-md shadow-none"
           onClick={centerAndEmphasizeTree}
           disabled={isDialogOpen}
           aria-label="Centralizar árvore"
@@ -551,6 +553,7 @@ const Index = () => {
         >
           <Crosshair className="h-4 w-4" />
         </Button>
+        </div>
       </div>
 
       {tasksDialogState && (
