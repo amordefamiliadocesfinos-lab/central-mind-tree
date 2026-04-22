@@ -552,7 +552,7 @@ export function GlobalFooterBar() {
   return (
     <div className="fixed bottom-0 left-0 right-0 z-[9999] bg-background border-t border-border shadow-lg pb-safe-bottom">
       {/* Mobile: 2 rows via flex-wrap. Desktop: single row */}
-      <div className="flex flex-wrap md:flex-nowrap items-center justify-between md:h-12 px-1.5 md:px-4 gap-1 md:gap-4">
+      <div className="flex flex-wrap md:flex-nowrap items-center justify-between md:h-12 px-2 md:px-4 gap-1.5 md:gap-3">
         {/* Left: Task status counters + Lines mode (only when showTaskBar is true) */}
         {showTaskBar && tasks.length > 0 ? (
           <div className="flex items-center gap-1">
@@ -688,7 +688,7 @@ export function GlobalFooterBar() {
         )}
 
         {/* Center: Navigation */}
-        <div className="basis-full md:basis-auto order-last md:order-none w-full md:w-auto md:flex-1 border-t md:border-t-0 border-border md:border-0">
+          <div className="basis-full md:basis-auto order-last md:order-none w-full md:w-auto md:flex-1 border-t md:border-t-0 border-border md:border-0">
           {isMobile ? (
             <div className="grid grid-cols-5 gap-0.5 h-12 items-stretch">
               {mobilePrimaryItems.map((item) => {
@@ -759,7 +759,7 @@ export function GlobalFooterBar() {
               </DropdownMenu>
             </div>
           ) : (
-            <div className="flex items-center gap-1 overflow-x-auto w-full md:flex-1 justify-center h-11 md:h-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}>
+            <div className="flex items-center gap-1.5 overflow-x-auto w-full md:flex-1 justify-center h-11 md:h-auto px-1" style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}>
               {desktopPrimaryItems.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.path);
@@ -772,13 +772,13 @@ export function GlobalFooterBar() {
                         size="sm"
                         variant={active ? "secondary" : "ghost"}
                         className={cn(
-                          "h-8 w-auto px-2.5 text-xs",
+                          "h-8 w-auto px-2.5 text-[11px] font-medium leading-none",
                           active && "bg-secondary"
                         )}
                       >
                         <Link to={item.path}>
                           <Icon className="h-4 w-4" />
-                          <span className="ml-1">{item.shortLabel}</span>
+                          <span className="ml-1.5">{item.shortLabel}</span>
                         </Link>
                       </Button>
                     </TooltipTrigger>
@@ -794,10 +794,10 @@ export function GlobalFooterBar() {
                       <Button
                         size="sm"
                         variant={hasActiveDesktopOverflow ? "secondary" : "ghost"}
-                        className={cn("h-8 px-2.5 text-xs", hasActiveDesktopOverflow && "bg-secondary")}
+                        className={cn("h-8 px-2.5 text-[11px] font-medium leading-none", hasActiveDesktopOverflow && "bg-secondary")}
                       >
                         <MoreHorizontal className="h-4 w-4" />
-                        <span className="ml-1">Mais</span>
+                        <span className="ml-1.5">Mais</span>
                       </Button>
                     </DropdownMenuTrigger>
                   </TooltipTrigger>
