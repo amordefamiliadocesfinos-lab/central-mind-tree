@@ -50,6 +50,7 @@ const NAV_ITEMS = [
 const MOBILE_PRIMARY_PATHS = ["/", "/dashboard", "/foco", "/operacoes"] as const;
 const MOBILE_FALLBACK_PATH = "/calendario";
 const DESKTOP_PRIMARY_PATHS = ["/", "/dashboard", "/foco", "/operacoes", "/contatos", "/financeiro"] as const;
+const FOOTER_NAV_LABEL_CLASS = "text-[11px] font-medium leading-none";
 
 // Request notification permission on component mount
 function requestNotificationPermission() {
@@ -702,13 +703,13 @@ export function GlobalFooterBar() {
                     size="sm"
                     variant={active ? "secondary" : "ghost"}
                     className={cn(
-                      "h-full min-w-0 rounded-none flex flex-col items-center justify-center gap-0.5 px-1 no-touch-min",
+                       "h-full min-w-0 rounded-none flex flex-col items-center justify-center gap-0.5 px-1 no-touch-min",
                       active && "bg-secondary"
                     )}
                   >
                     <Link to={item.path} aria-label={item.label}>
                       <Icon className="h-4 w-4 shrink-0" />
-                      <span className="text-[10px] leading-none truncate max-w-full">{item.shortLabel}</span>
+                       <span className={cn(FOOTER_NAV_LABEL_CLASS, "truncate max-w-full")}>{item.shortLabel}</span>
                     </Link>
                   </Button>
                 );
@@ -726,7 +727,7 @@ export function GlobalFooterBar() {
                     aria-label="Mais funcionalidades"
                   >
                     {mobileMoreItem ? <mobileMoreItem.icon className="h-4 w-4 shrink-0" /> : <MoreHorizontal className="h-4 w-4 shrink-0" />}
-                    <span className="text-[10px] leading-none truncate max-w-full">
+                    <span className={cn(FOOTER_NAV_LABEL_CLASS, "truncate max-w-full")}>
                       {mobileMoreItem && isActive(mobileMoreItem.path) ? mobileMoreItem.shortLabel : "Mais"}
                     </span>
                   </Button>
@@ -772,13 +773,13 @@ export function GlobalFooterBar() {
                         size="sm"
                         variant={active ? "secondary" : "ghost"}
                         className={cn(
-                          "h-8 w-auto px-2.5 text-[11px] font-medium leading-none",
+                          "h-8 w-auto px-2.5",
                           active && "bg-secondary"
                         )}
                       >
                         <Link to={item.path}>
                           <Icon className="h-4 w-4" />
-                          <span className="ml-1.5">{item.shortLabel}</span>
+                          <span className={cn(FOOTER_NAV_LABEL_CLASS, "ml-1.5")}>{item.shortLabel}</span>
                         </Link>
                       </Button>
                     </TooltipTrigger>
@@ -794,10 +795,10 @@ export function GlobalFooterBar() {
                       <Button
                         size="sm"
                         variant={hasActiveDesktopOverflow ? "secondary" : "ghost"}
-                        className={cn("h-8 px-2.5 text-[11px] font-medium leading-none", hasActiveDesktopOverflow && "bg-secondary")}
+                        className={cn("h-8 px-2.5", hasActiveDesktopOverflow && "bg-secondary")}
                       >
                         <MoreHorizontal className="h-4 w-4" />
-                        <span className="ml-1.5">Mais</span>
+                        <span className={cn(FOOTER_NAV_LABEL_CLASS, "ml-1.5")}>Mais</span>
                       </Button>
                     </DropdownMenuTrigger>
                   </TooltipTrigger>
