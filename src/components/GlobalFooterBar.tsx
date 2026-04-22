@@ -49,6 +49,7 @@ const NAV_ITEMS = [
 
 const MOBILE_PRIMARY_PATHS = ["/", "/dashboard", "/foco", "/operacoes"] as const;
 const MOBILE_FALLBACK_PATH = "/calendario";
+const DESKTOP_PRIMARY_PATHS = ["/", "/dashboard", "/foco", "/operacoes", "/contatos", "/financeiro"] as const;
 
 // Request notification permission on component mount
 function requestNotificationPermission() {
@@ -223,6 +224,9 @@ export function GlobalFooterBar() {
   const mobileMoreItem = activeMobileItem && !MOBILE_PRIMARY_PATHS.includes(activeMobileItem.path as (typeof MOBILE_PRIMARY_PATHS)[number])
     ? activeMobileItem
     : NAV_ITEMS.find((item) => item.path === MOBILE_FALLBACK_PATH) ?? mobileOverflowItems[0];
+  const desktopPrimaryItems = NAV_ITEMS.filter((item) => DESKTOP_PRIMARY_PATHS.includes(item.path as (typeof DESKTOP_PRIMARY_PATHS)[number]));
+  const desktopOverflowItems = NAV_ITEMS.filter((item) => !DESKTOP_PRIMARY_PATHS.includes(item.path as (typeof DESKTOP_PRIMARY_PATHS)[number]));
+  const hasActiveDesktopOverflow = desktopOverflowItems.some((item) => isActive(item.path));
 
   // Fetch tasks for status counters
   useEffect(() => {
@@ -755,11 +759,10 @@ export function GlobalFooterBar() {
               </DropdownMenu>
             </div>
           ) : (
-            <div className="flex items-center gap-0.5 md:gap-1 overflow-x-auto w-full md:flex-1 justify-start md:justify-center h-11 md:h-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}>
-              {NAV_ITEMS.map((item) => {
+            <div className="flex items-center gap-1 overflow-x-auto w-full md:flex-1 justify-center h-11 md:h-auto" style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as React.CSSProperties}>
+              {desktopPrimaryItems.map((item) => {
                 const Icon = item.icon;
                 const active = isActive(item.path);
-                const compact = ["/", "/operacoes", "/digital", "/planilhas", "/reunioes", "/minha-area", "/contatos", "/financeiro"].includes(item.path);
 
                 return (
                   <Tooltip key={item.path}>
@@ -769,13 +772,13 @@ export function GlobalFooterBar() {
                         size="sm"
                         variant={active ? "secondary" : "ghost"}
                         className={cn(
-                          compact ? "h-8 w-8 p-0" : "h-8 w-8 md:w-auto md:px-3 p-0 md:p-2 text-xs",
+                          "h-8 w-auto px-2.5 text-xs",
                           active && "bg-secondary"
                         )}
                       >
                         <Link to={item.path}>
                           <Icon className="h-4 w-4" />
-                          {!compact && <span className="hidden md:inline ml-1">{item.label}</span>}
+                          <span className="ml-1">{item.shortLabel}</span>
                         </Link>
                       </Button>
                     </TooltipTrigger>
@@ -783,6 +786,38 @@ export function GlobalFooterBar() {
                   </Tooltip>
                 );
               })}
+
+              <DropdownMenu>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant={hasActiveDesktopOverflow ? "secondary" : "ghost"}
+                        className={cn("h-8 px-2.5 text-xs", hasActiveDesktopOverflow && "bg-secondary")}
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                        <span className="ml-1">Mais</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                  </TooltipTrigger>
+                  <TooltipContent>Mais módulos</TooltipContent>
+                </Tooltip>
+                <DropdownMenuContent align="center" side="top" className="w-56 mb-2">
+                  <DropdownMenuLabel>Outros módulos</DropdownMenuLabel>
+                  {desktopOverflowItems.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <DropdownMenuItem key={item.path} asChild>
+                        <Link to={item.path} className="flex items-center gap-2 w-full">
+                          <Icon className="h-4 w-4" />
+                          <span>{item.label}</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
 
               <AIAssistantButton isActive={isActive} />
 
