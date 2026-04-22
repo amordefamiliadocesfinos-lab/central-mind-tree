@@ -818,24 +818,19 @@ export function GlobalFooterBar() {
                       </DropdownMenuItem>
                     );
                   })}
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link to="/assistente" className="flex items-center gap-2 w-full">
+                      <Brain className="h-4 w-4" />
+                      <span>Assistente IA</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setCollaboratorsOpen(true)} className="flex items-center gap-2">
+                    <UsersRound className="h-4 w-4" />
+                    <span>Colaboradores</span>
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-
-              <AIAssistantButton isActive={isActive} />
-
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    size="sm"
-                    variant={collaboratorsOpen ? 'secondary' : 'ghost'}
-                    className={cn("h-8 w-8 p-0", collaboratorsOpen && "bg-secondary")}
-                    onClick={() => setCollaboratorsOpen(true)}
-                  >
-                    <UsersRound className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Colaboradores</TooltipContent>
-              </Tooltip>
             </div>
           )}
         </div>
