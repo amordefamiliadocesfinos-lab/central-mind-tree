@@ -31,9 +31,9 @@ export function QuickConversationFAB() {
             size="icon"
             onClick={() => setOpen(true)}
             className={cn(
-              'fixed z-40 rounded-full shadow-lg',
+              'fixed z-[10000] rounded-full shadow-lg',
               'h-12 w-12 bg-primary hover:bg-primary/90',
-              'bottom-20 right-3 md:bottom-24 md:right-6',
+              'bottom-[calc(5rem+env(safe-area-inset-bottom,0px))] right-3 md:bottom-[calc(5.5rem+env(safe-area-inset-bottom,0px))] md:right-6',
               'transition-transform hover:scale-105',
             )}
             aria-label="Registrar conversa"
