@@ -60,6 +60,20 @@ This project is built with:
 - shadcn-ui
 - Tailwind CSS
 
+## Roteiro manual: rótulos da barra inferior no mobile
+
+Use este checklist sempre que alterar a navegação inferior:
+
+1. Abrir o preview e alternar para larguras móveis pequenas: **320px**, **360px**, **375px** e **390px**.
+2. Conferir a barra inferior na rota inicial `/`.
+3. Validar que os rótulos visíveis (`Árvore`, `Painel`, `Foco`, `Ops`, `Mais`) aparecem em **uma única linha**.
+4. Validar que nenhum rótulo aumenta a altura da barra, empurra ícones ou quebra para duas linhas.
+5. Abrir o menu **Mais** e navegar para um módulo secundário, como `Calendário` ou `Digital`.
+6. Conferir que o botão **Mais** continua com rótulo em uma linha quando mostra o módulo ativo.
+7. Repetir nas larguras **320px** e **360px**, que são os casos mais críticos.
+
+Critério de aprovação: todos os rótulos devem permanecer centralizados, truncados quando necessário e sem quebra de linha em qualquer largura móvel testada.
+
 ## How can I deploy this project?
 
 Simply open [Lovable](https://lovable.dev/projects/1720a410-34cd-4410-995c-8c92c7edf16b) and click on Share -> Publish.
