@@ -468,7 +468,7 @@ const Index = () => {
         </div>
       </div>
 
-      <div className="fixed right-3 bottom-20 z-40 rounded-lg border bg-background/95 p-2 shadow-lg backdrop-blur">
+      <div className="fixed right-3 bottom-36 z-40 rounded-lg border bg-background/95 p-2 shadow-lg backdrop-blur md:right-6 md:bottom-40">
         <div className="mb-1.5 px-1 text-[10px] font-semibold uppercase leading-none text-muted-foreground">
           Mapa
         </div>
