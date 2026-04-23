@@ -64,17 +64,16 @@ export function OrderCard({ order, orderStatus, orderChannels, onStatusChange, o
               <Badge className={cn('text-[10px] md:text-xs px-1.5 py-0', statusInfo?.color)}>
                 {statusInfo?.label || order.status}
               </Badge>
-              {isStockOrder ? (
-                <Badge variant="outline" className="text-[10px] md:text-xs gap-1 border-green-500 text-green-600 px-1.5 py-0">
-                  <Package className="h-3 w-3" />
-                  <span className="hidden sm:inline">Estoque</span>
-                </Badge>
-              ) : (
-                <Badge variant="outline" className="text-[10px] md:text-xs gap-1 border-amber-500 text-amber-600 px-1.5 py-0">
-                  <Factory className="h-3 w-3" />
-                  <span className="hidden sm:inline">Produção</span>
-                </Badge>
-              )}
+              <span
+                className={cn(
+                  'inline-flex items-center gap-1 text-[10px] md:text-xs',
+                  isStockOrder ? 'text-emerald-600' : 'text-amber-600'
+                )}
+                title={isStockOrder ? 'Venda de estoque' : 'Produção sob demanda'}
+              >
+                {isStockOrder ? <Package className="h-3 w-3" /> : <Factory className="h-3 w-3" />}
+                <span className="hidden sm:inline">{isStockOrder ? 'Estoque' : 'Produção'}</span>
+              </span>
             </div>
             <p className="text-xs md:text-sm text-muted-foreground mt-0.5 truncate">
               {order.customer_name || 'Cliente não informado'}

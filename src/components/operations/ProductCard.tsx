@@ -1,6 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Image, AlertTriangle, ArrowUpDown, History, Edit } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { Product } from '@/hooks/useOrders';
@@ -49,7 +50,15 @@ export function ProductCard({
                 <p className="text-xs text-muted-foreground">SKU: {product.sku}</p>
               </div>
               {isLow && (
-                <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <AlertTriangle
+                      className="h-4 w-4 text-amber-500 shrink-0"
+                      aria-label="Estoque baixo"
+                    />
+                  </TooltipTrigger>
+                  <TooltipContent side="top">Estoque abaixo do mínimo</TooltipContent>
+                </Tooltip>
               )}
             </div>
             
@@ -96,31 +105,42 @@ export function ProductCard({
               <ArrowUpDown className="h-4 w-4 mr-1" />
               Movimentar
             </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-10"
-              onClick={(e) => {
-                e.stopPropagation();
-                console.log('History button clicked for product:', product.id, 'onHistory function exists:', !!onHistory);
-                if (onHistory) {
-                  onHistory(product.id);
-                }
-              }}
-            >
-              <History className="h-4 w-4" />
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-10"
-              onClick={(e) => {
-                e.stopPropagation();
-                onEdit(product);
-              }}
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-10"
+                  aria-label="Histórico do produto"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (onHistory) {
+                      onHistory(product.id);
+                    }
+                  }}
+                >
+                  <History className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Histórico</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-10"
+                  aria-label="Editar produto"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(product);
+                  }}
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">Editar</TooltipContent>
+            </Tooltip>
           </div>
         )}
       </CardContent>

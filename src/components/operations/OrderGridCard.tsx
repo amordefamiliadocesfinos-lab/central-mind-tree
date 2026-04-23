@@ -70,22 +70,20 @@ export function OrderGridCard({ order, orderStatus, orderChannels, onStatusChang
           {order.customer_name || order.order_number || `#${order.id.slice(0, 6)}`}
         </h3>
 
-        {/* Line 2 - Status badges */}
+        {/* Line 2 - Status + type (consolidated) */}
         <div className="flex items-center gap-1.5 flex-wrap">
           <Badge className={cn('text-xs', statusInfo?.color)}>
             {statusInfo?.label || order.status}
           </Badge>
-          {isStockOrder ? (
-            <Badge variant="outline" className="text-xs gap-1 border-green-500 text-green-600">
-              <Package className="h-3 w-3" />
-              Estoque
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="text-xs gap-1 border-amber-500 text-amber-600">
-              <Factory className="h-3 w-3" />
-              Produção
-            </Badge>
-          )}
+          <span
+            className={cn(
+              'inline-flex items-center gap-1 text-[11px]',
+              isStockOrder ? 'text-emerald-600' : 'text-amber-600'
+            )}
+          >
+            {isStockOrder ? <Package className="h-3 w-3" /> : <Factory className="h-3 w-3" />}
+            {isStockOrder ? 'Estoque' : 'Produção'}
+          </span>
         </div>
 
         {/* Line 3 - Info + Priority */}
