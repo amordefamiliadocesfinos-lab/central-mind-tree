@@ -598,21 +598,35 @@ export function useRoutine(options: UseRoutineOptions = {}) {
     };
   }, [blocks, daysInRange, getBlocksByDay]);
 
-  // Initialize
+  // Initialize: carrega templates e prefs uma vez, e mantém realtime estável
   useEffect(() => {
+    let mounted = true;
     setLoading(true);
-    Promise.all([fetchBlocks(), fetchTemplates(), fetchPrefs(), fetchStats()])
-      .finally(() => setLoading(false));
+    Promise.all([fetchTemplates(), fetchPrefs()])
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
 
     const channel = supabase
       .channel('routine-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'routine_blocks' }, fetchBlocks)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'routine_blocks' }, () => {
+        // Refetch usando a referência mais recente via state setter
+        fetchBlocksRef.current?.();
+      })
       .subscribe();
 
     return () => {
+      mounted = false;
       supabase.removeChannel(channel);
     };
-  }, [fetchBlocks, fetchTemplates, fetchPrefs, fetchStats]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Mantém ref atualizada ao fetchBlocks mais recente para uso no realtime
+  const fetchBlocksRef = useRef<typeof fetchBlocks | null>(null);
+  useEffect(() => {
+    fetchBlocksRef.current = fetchBlocks;
+  }, [fetchBlocks]);
 
   // Refetch when date range changes
   useEffect(() => {
