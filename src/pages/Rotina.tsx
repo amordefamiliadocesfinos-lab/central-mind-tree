@@ -160,24 +160,16 @@ export default function Rotina() {
           <div className="flex gap-1">
             {!isToday(selectedDate) && (
               <Button 
-                variant="ghost" 
+                variant="outline" 
                 size="sm" 
                 onClick={goToToday}
-                className="text-xs"
+                className="text-xs h-10"
+                title="Voltar para hoje"
               >
                 Hoje
               </Button>
             )}
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={() => autoPlanDay()}
-              title="Gerar Dia"
-              className="h-10 w-10"
-            >
-              <Sparkles className="h-4 w-4" />
-            </Button>
-            {isToday(selectedDate) && currentDayBlocks.length > 0 && (
+            {isToday(selectedDate) && currentDayBlocks.length > 0 && viewMode === 'day' && (
               <Button 
                 variant="outline" 
                 size="icon" 
