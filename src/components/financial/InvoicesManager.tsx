@@ -485,7 +485,15 @@ export function InvoicesManager() {
                     const orderNum = inv.orders?.order_number || (inv.order_id ? '—' : '—');
                     const clientName = inv.contacts?.name || inv.customer_name || inv.orders?.customer_name || '—';
                     return (
-                      <TableRow key={inv.id} className="cursor-pointer" onClick={() => openEdit(inv)}>
+                      <TableRow
+                        key={inv.id}
+                        className="cursor-pointer"
+                        onClick={() =>
+                          inv.status === 'emitida'
+                            ? (setDetailsInvoice(inv as any), setDetailsOpen(true))
+                            : openEdit(inv)
+                        }
+                      >
                         <TableCell className="font-mono text-xs">
                           {inv.invoice_number || <span className="text-muted-foreground">—</span>}
                         </TableCell>
@@ -518,17 +526,55 @@ export function InvoicesManager() {
                               </Button>
                             )}
                             {inv.status === 'emitida' && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => cancelInvoice(inv)}
-                                className="gap-1 h-8 text-red-600 hover:text-red-700"
-                              >
-                                <Ban className="h-3 w-3" />
-                                Cancelar
-                              </Button>
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="default"
+                                  onClick={() => {
+                                    setDetailsInvoice(inv as any);
+                                    setDetailsOpen(true);
+                                  }}
+                                  className="gap-1 h-8"
+                                >
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  Ver nota
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  title="Baixar DANFE"
+                                  onClick={() => {
+                                    setDetailsInvoice(inv as any);
+                                    setDetailsOpen(true);
+                                  }}
+                                  className="h-8 w-8"
+                                >
+                                  <Download className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  size="icon"
+                                  variant="ghost"
+                                  title="Enviar para cliente"
+                                  onClick={() => {
+                                    setDetailsInvoice(inv as any);
+                                    setDetailsOpen(true);
+                                  }}
+                                  className="h-8 w-8"
+                                >
+                                  <Mail className="h-3.5 w-3.5" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => cancelInvoice(inv)}
+                                  className="gap-1 h-8 text-red-600 hover:text-red-700"
+                                >
+                                  <Ban className="h-3 w-3" />
+                                  Cancelar
+                                </Button>
+                              </>
                             )}
-                            {inv.pdf_url && (
+                            {inv.pdf_url && inv.status !== 'emitida' && (
                               <Button size="icon" variant="ghost" asChild className="h-8 w-8">
                                 <a href={inv.pdf_url} target="_blank" rel="noreferrer">
                                   <ExternalLink className="h-3.5 w-3.5" />
