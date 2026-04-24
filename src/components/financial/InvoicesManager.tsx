@@ -22,6 +22,7 @@ import {
 } from '@/lib/invoiceValidation';
 import { InvoiceValidationDialog } from './InvoiceValidationDialog';
 import { IssuedInvoiceDetails, type IssuedInvoice } from './IssuedInvoiceDetails';
+import { syncInvoiceIssued, buildSyncSummary } from '@/lib/invoiceSync';
 
 type InvoiceType = 'NFe' | 'NFCe' | 'NFSe';
 type InvoiceStatus = 'pendente' | 'pronta' | 'emitida' | 'cancelada';
@@ -315,13 +316,42 @@ export function InvoicesManager() {
       return;
     }
     toast({ title: '✅ Nota emitida', description: `Número: ${number}` });
+
+    // 🔄 Sincronização automática: Pedido → Faturado, Financeiro → Receita confirmada,
+    // CRM → Pedido concluído, Timeline → Nota fiscal emitida
+    const issueDate = new Date().toISOString().slice(0, 10);
+    try {
+      const sync = await syncInvoiceIssued({
+        invoiceId: inv.id,
+        invoiceNumber: number,
+        invoiceType: inv.invoice_type,
+        accessKey,
+        issueDate,
+        value: Number(inv.value),
+        orderId: inv.order_id,
+        contactId: inv.contact_id,
+        customerName: inv.customer_name,
+      });
+      if (sync.errors.length === 0) {
+        toast({ title: '🔄 Sistema sincronizado', description: buildSyncSummary(sync) });
+      } else {
+        toast({
+          title: '⚠ Sincronização parcial',
+          description: sync.errors.join(' · '),
+          variant: 'destructive',
+        });
+      }
+    } catch (e: any) {
+      toast({ title: 'Erro na sincronização', description: e?.message || 'Erro inesperado', variant: 'destructive' });
+    }
+
     // Abrir o painel de detalhes pós-emissão automaticamente
     setDetailsInvoice({
       ...inv,
       status: 'emitida',
       invoice_number: number,
       access_key: accessKey,
-      issue_date: new Date().toISOString().slice(0, 10),
+      issue_date: issueDate,
     } as any);
     setDetailsOpen(true);
     load();
