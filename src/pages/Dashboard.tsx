@@ -35,6 +35,7 @@ import { DailySummary } from '@/components/dashboard/DailySummary';
 import { DailyPriorities } from '@/components/dashboard/DailyPriorities';
 import { DailyPerformance } from '@/components/dashboard/DailyPerformance';
 import { QuickFinance } from '@/components/dashboard/QuickFinance';
+import { CampaignResults } from '@/components/dashboard/CampaignResults';
 
 interface DashboardData {
   // Foco
