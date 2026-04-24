@@ -45,7 +45,7 @@ interface Invoice {
   operation_nature: string | null;
   created_at: string;
   orders?: { order_number: string | null; customer_name: string | null; total_value: number | null } | null;
-  contacts?: { name: string } | null;
+  contacts?: { name: string; email?: string | null; whatsapp?: string | null; phone?: string | null } | null;
 }
 
 interface OrderOption {
