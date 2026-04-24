@@ -365,6 +365,9 @@ export default function Dashboard() {
         {/* Performance de Hoje */}
         <DailyPerformance />
 
+        {/* Financeiro Rápido */}
+        <QuickFinance />
+
         {/* Quick stats banner */}
         <div className="grid grid-cols-4 gap-2">
           <div className="bg-primary/10 rounded-lg p-3 text-center">
