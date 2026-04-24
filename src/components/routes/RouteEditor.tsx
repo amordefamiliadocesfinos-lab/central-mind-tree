@@ -20,10 +20,11 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Navigation, Trash2, ChevronLeft, MapPin } from 'lucide-react';
+import { Plus, Navigation, Trash2, ChevronLeft, MapPin, Search } from 'lucide-react';
 import { StopSortableItem } from './StopSortableItem';
 import { AddStopDialog } from './AddStopDialog';
 import { DeliveryProofDialog } from './DeliveryProofDialog';
+import { ContactAddressPicker, type ContactAddress } from './ContactAddressPicker';
 import { useDeliveryRoutes, type DeliveryRoute, type DeliveryStop } from '@/hooks/useDeliveryRoutes';
 
 interface Props {
