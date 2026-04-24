@@ -305,7 +305,17 @@ export function useRoutine(options: UseRoutineOptions = {}) {
     }
 
     setActiveBlock(null);
-    toast.success('Bloco concluído! ✓');
+    const endTime = format(new Date(), 'HH:mm');
+    let actualMinutes = block?.duration_minutes ?? 0;
+    if (block?.actual_start) {
+      actualMinutes = Math.max(1, Math.round((Date.now() - new Date(block.actual_start).getTime()) / 60000));
+    }
+    const diff = block ? actualMinutes - block.duration_minutes : 0;
+    const diffLabel = diff === 0 ? 'no tempo previsto' : diff > 0 ? `+${diff} min além do previsto` : `${Math.abs(diff)} min antes do previsto`;
+    toast.success(`✅ "${block?.title ?? 'Bloco'}" concluído`, {
+      description: `Status: Em andamento → Concluído · Finalizado às ${endTime} · ${actualMinutes} min trabalhados (${diffLabel})`,
+      duration: 5000,
+    });
     fetchBlocks();
     fetchStats();
   }, [blocks, fetchBlocks, fetchStats]);
