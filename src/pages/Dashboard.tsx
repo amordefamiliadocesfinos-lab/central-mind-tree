@@ -33,6 +33,7 @@ import { useAppStore } from '@/stores/appStore';
 import { FOCUS_TYPES, FocusType } from '@/hooks/useRoutine';
 import { DailySummary } from '@/components/dashboard/DailySummary';
 import { DailyPriorities } from '@/components/dashboard/DailyPriorities';
+import { DailyPerformance } from '@/components/dashboard/DailyPerformance';
 
 interface DashboardData {
   // Foco
@@ -359,6 +360,9 @@ export default function Dashboard() {
 
         {/* Prioridades do Dia */}
         <DailyPriorities />
+
+        {/* Performance de Hoje */}
+        <DailyPerformance />
 
         {/* Quick stats banner */}
         <div className="grid grid-cols-4 gap-2">
