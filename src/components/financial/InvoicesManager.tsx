@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,9 +11,16 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { FileText, Plus, Send, Ban, Search, Trash2, ExternalLink } from 'lucide-react';
+import { FileText, Plus, Send, Ban, Search, Trash2, ExternalLink, ShieldCheck } from 'lucide-react';
 import { formatDisplayDate } from '@/lib/dateUtils';
 import { cn } from '@/lib/utils';
+import {
+  validateInvoiceForIssue,
+  OPERATION_NATURE_SUGGESTIONS,
+  type FiscalValidationResult,
+  type FiscalIssue,
+} from '@/lib/invoiceValidation';
+import { InvoiceValidationDialog } from './InvoiceValidationDialog';
 
 type InvoiceType = 'NFe' | 'NFCe' | 'NFSe';
 type InvoiceStatus = 'pendente' | 'pronta' | 'emitida' | 'cancelada';
@@ -33,6 +41,7 @@ interface Invoice {
   notes: string | null;
   cancellation_reason: string | null;
   cancelled_at: string | null;
+  operation_nature: string | null;
   created_at: string;
   orders?: { order_number: string | null; customer_name: string | null; total_value: number | null } | null;
   contacts?: { name: string } | null;
@@ -64,6 +73,7 @@ const formatBRL = (n: number) =>
 
 export function InvoicesManager() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [orders, setOrders] = useState<OrderOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,6 +82,11 @@ export function InvoicesManager() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Invoice | null>(null);
   const [issuingId, setIssuingId] = useState<string | null>(null);
+
+  // Validation dialog state
+  const [validationOpen, setValidationOpen] = useState(false);
+  const [validationResult, setValidationResult] = useState<FiscalValidationResult | null>(null);
+  const [pendingIssueInvoice, setPendingIssueInvoice] = useState<Invoice | null>(null);
 
   // Form state
   const [form, setForm] = useState({
@@ -82,6 +97,7 @@ export function InvoicesManager() {
     invoice_type: 'NFe' as InvoiceType,
     status: 'pendente' as InvoiceStatus,
     invoice_number: '',
+    operation_nature: '',
     notes: '',
   });
 
@@ -153,6 +169,7 @@ export function InvoicesManager() {
       invoice_type: 'NFe',
       status: 'pendente',
       invoice_number: '',
+      operation_nature: '',
       notes: '',
     });
     setEditing(null);
@@ -173,6 +190,7 @@ export function InvoicesManager() {
       invoice_type: inv.invoice_type,
       status: inv.status,
       invoice_number: inv.invoice_number || '',
+      operation_nature: inv.operation_nature || '',
       notes: inv.notes || '',
     });
     setDialogOpen(true);
@@ -202,6 +220,7 @@ export function InvoicesManager() {
       invoice_type: form.invoice_type,
       status: form.status,
       invoice_number: form.invoice_number || null,
+      operation_nature: form.operation_nature || null,
       notes: form.notes || null,
     };
     const res = editing
@@ -217,9 +236,60 @@ export function InvoicesManager() {
     load();
   };
 
-  const issueInvoice = async (inv: Invoice) => {
+  /** Busca dados completos do contato + pedido para validação fiscal */
+  const fetchValidationContext = async (inv: Invoice) => {
+    const [contactRes, orderRes, itemsRes] = await Promise.all([
+      inv.contact_id
+        ? supabase
+            .from('contacts')
+            .select('id, name, document, person_type, email, phone, whatsapp, zip_code, state, city, address, address_number, neighborhood')
+            .eq('id', inv.contact_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null } as any),
+      inv.order_id
+        ? supabase.from('orders').select('id, total_value').eq('id', inv.order_id).maybeSingle()
+        : Promise.resolve({ data: null, error: null } as any),
+      inv.order_id
+        ? supabase
+            .from('order_items')
+            .select('product_id, quantity, unit_price')
+            .eq('order_id', inv.order_id)
+        : Promise.resolve({ data: [], error: null } as any),
+    ]);
+    return {
+      contact: contactRes.data || null,
+      order: orderRes.data ? { ...orderRes.data, items: itemsRes.data || [] } : null,
+    };
+  };
+
+  /** Pré-validação ao clicar em Emitir */
+  const handleIssueClick = async (inv: Invoice) => {
     setIssuingId(inv.id);
-    // Gera um número fictício (pode ser integrado a uma SEFAZ no futuro)
+    const ctx = await fetchValidationContext(inv);
+    const result = validateInvoiceForIssue({
+      invoice: {
+        id: inv.id,
+        invoice_type: inv.invoice_type,
+        value: inv.value,
+        operation_nature: inv.operation_nature,
+        order_id: inv.order_id,
+        contact_id: inv.contact_id,
+        customer_name: inv.customer_name,
+      },
+      contact: ctx.contact,
+      order: ctx.order,
+    });
+    setIssuingId(null);
+    setPendingIssueInvoice(inv);
+    setValidationResult(result);
+    setValidationOpen(true);
+  };
+
+  /** Confirma emissão após validação aprovada */
+  const confirmIssue = async () => {
+    if (!pendingIssueInvoice) return;
+    const inv = pendingIssueInvoice;
+    setIssuingId(inv.id);
     const number = inv.invoice_number || `${inv.invoice_type}-${Date.now().toString().slice(-8)}`;
     const accessKey = `${Math.floor(Math.random() * 1e44).toString().padStart(44, '0')}`;
     const { error } = await supabase
@@ -232,12 +302,28 @@ export function InvoicesManager() {
       })
       .eq('id', inv.id);
     setIssuingId(null);
+    setValidationOpen(false);
+    setPendingIssueInvoice(null);
+    setValidationResult(null);
     if (error) {
       toast({ title: 'Erro ao emitir', description: error.message, variant: 'destructive' });
       return;
     }
     toast({ title: '✅ Nota emitida', description: `Número: ${number}` });
     load();
+  };
+
+  /** Navega para a área correta para corrigir o problema */
+  const handleFix = (issue: FiscalIssue) => {
+    setValidationOpen(false);
+    if (issue.fixTarget === 'contact' && issue.fixId) {
+      navigate(`/contatos?focus=${issue.fixId}`);
+    } else if (issue.fixTarget === 'order' && issue.fixId) {
+      navigate(`/operacoes?order=${issue.fixId}`);
+    } else if (issue.fixTarget === 'invoice' && pendingIssueInvoice) {
+      // Abre o dialog de edição da própria nota
+      openEdit(pendingIssueInvoice);
+    }
   };
 
   const cancelInvoice = async (inv: Invoice) => {
@@ -410,7 +496,7 @@ export function InvoicesManager() {
                                 size="sm"
                                 variant="default"
                                 disabled={issuingId === inv.id}
-                                onClick={() => issueInvoice(inv)}
+                                onClick={() => handleIssueClick(inv)}
                                 className="gap-1 h-8"
                               >
                                 <Send className="h-3 w-3" />
@@ -525,6 +611,26 @@ export function InvoicesManager() {
             </div>
 
             <div>
+              <Label>
+                Natureza da operação <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                value={form.operation_nature}
+                onChange={(e) => setForm({ ...form, operation_nature: e.target.value })}
+                placeholder="Ex.: Venda de mercadoria"
+                list="operation-nature-suggestions"
+              />
+              <datalist id="operation-nature-suggestions">
+                {OPERATION_NATURE_SUGGESTIONS.map((s) => (
+                  <option key={s} value={s} />
+                ))}
+              </datalist>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Obrigatório para emissão fiscal. Ex.: Venda, Serviço, Devolução.
+              </p>
+            </div>
+
+            <div>
               <Label>Número da nota (se já houver)</Label>
               <Input
                 value={form.invoice_number}
@@ -548,6 +654,16 @@ export function InvoicesManager() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog de validação fiscal */}
+      <InvoiceValidationDialog
+        open={validationOpen}
+        onOpenChange={setValidationOpen}
+        result={validationResult}
+        onFix={handleFix}
+        onConfirmIssue={confirmIssue}
+        loading={!!issuingId}
+      />
     </div>
   );
 }

@@ -1802,6 +1802,7 @@ export type Database = {
           invoice_type: string
           issue_date: string | null
           notes: string | null
+          operation_nature: string | null
           order_id: string | null
           pdf_url: string | null
           status: string
@@ -1821,6 +1822,7 @@ export type Database = {
           invoice_type?: string
           issue_date?: string | null
           notes?: string | null
+          operation_nature?: string | null
           order_id?: string | null
           pdf_url?: string | null
           status?: string
@@ -1840,6 +1842,7 @@ export type Database = {
           invoice_type?: string
           issue_date?: string | null
           notes?: string | null
+          operation_nature?: string | null
           order_id?: string | null
           pdf_url?: string | null
           status?: string
