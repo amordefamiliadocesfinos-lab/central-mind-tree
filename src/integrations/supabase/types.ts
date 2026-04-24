@@ -678,6 +678,152 @@ export type Database = {
           },
         ]
       }
+      delivery_routes: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          driver_name: string | null
+          id: string
+          name: string
+          notes: string | null
+          origin_address: string | null
+          route_type: string
+          scheduled_date: string | null
+          started_at: string | null
+          status: string
+          updated_at: string
+          vehicle: string | null
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          driver_name?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          origin_address?: string | null
+          route_type?: string
+          scheduled_date?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          vehicle?: string | null
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          driver_name?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          origin_address?: string | null
+          route_type?: string
+          scheduled_date?: string | null
+          started_at?: string | null
+          status?: string
+          updated_at?: string
+          vehicle?: string | null
+        }
+        Relationships: []
+      }
+      delivery_stops: {
+        Row: {
+          address: string
+          address_number: string | null
+          city: string | null
+          complement: string | null
+          contact_id: string | null
+          created_at: string
+          customer_name: string | null
+          delivered_at: string | null
+          delivery_notes: string | null
+          failure_reason: string | null
+          id: string
+          latitude: number | null
+          longitude: number | null
+          neighborhood: string | null
+          notes: string | null
+          order_id: string | null
+          order_index: number
+          phone: string | null
+          photo_url: string | null
+          reference_point: string | null
+          route_id: string
+          signature_url: string | null
+          state: string | null
+          status: string
+          updated_at: string
+          zip_code: string | null
+        }
+        Insert: {
+          address: string
+          address_number?: string | null
+          city?: string | null
+          complement?: string | null
+          contact_id?: string | null
+          created_at?: string
+          customer_name?: string | null
+          delivered_at?: string | null
+          delivery_notes?: string | null
+          failure_reason?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          neighborhood?: string | null
+          notes?: string | null
+          order_id?: string | null
+          order_index?: number
+          phone?: string | null
+          photo_url?: string | null
+          reference_point?: string | null
+          route_id: string
+          signature_url?: string | null
+          state?: string | null
+          status?: string
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Update: {
+          address?: string
+          address_number?: string | null
+          city?: string | null
+          complement?: string | null
+          contact_id?: string | null
+          created_at?: string
+          customer_name?: string | null
+          delivered_at?: string | null
+          delivery_notes?: string | null
+          failure_reason?: string | null
+          id?: string
+          latitude?: number | null
+          longitude?: number | null
+          neighborhood?: string | null
+          notes?: string | null
+          order_id?: string | null
+          order_index?: number
+          phone?: string | null
+          photo_url?: string | null
+          reference_point?: string | null
+          route_id?: string
+          signature_url?: string | null
+          state?: string | null
+          status?: string
+          updated_at?: string
+          zip_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "delivery_stops_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "delivery_routes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       digital_idea_types: {
         Row: {
           color: string
