@@ -34,6 +34,7 @@ import { FOCUS_TYPES, FocusType } from '@/hooks/useRoutine';
 import { DailySummary } from '@/components/dashboard/DailySummary';
 import { DailyPriorities } from '@/components/dashboard/DailyPriorities';
 import { DailyPerformance } from '@/components/dashboard/DailyPerformance';
+import { QuickFinance } from '@/components/dashboard/QuickFinance';
 
 interface DashboardData {
   // Foco
@@ -363,6 +364,9 @@ export default function Dashboard() {
 
         {/* Performance de Hoje */}
         <DailyPerformance />
+
+        {/* Financeiro Rápido */}
+        <QuickFinance />
 
         {/* Quick stats banner */}
         <div className="grid grid-cols-4 gap-2">
