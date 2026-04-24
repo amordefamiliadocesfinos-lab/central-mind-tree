@@ -32,6 +32,7 @@ import { useKPIsSelector, useStockValueSelector } from '@/stores/selectors';
 import { useAppStore } from '@/stores/appStore';
 import { FOCUS_TYPES, FocusType } from '@/hooks/useRoutine';
 import { DailySummary } from '@/components/dashboard/DailySummary';
+import { DailyPriorities } from '@/components/dashboard/DailyPriorities';
 
 interface DashboardData {
   // Foco
@@ -355,6 +356,9 @@ export default function Dashboard() {
         <div className="sticky top-14 z-20 -mx-4 px-4 py-2 bg-background/95 backdrop-blur-sm">
           <DailySummary />
         </div>
+
+        {/* Prioridades do Dia */}
+        <DailyPriorities />
 
         {/* Quick stats banner */}
         <div className="grid grid-cols-4 gap-2">
