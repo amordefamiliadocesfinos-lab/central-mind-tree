@@ -245,7 +245,11 @@ export function useRoutine(options: UseRoutineOptions = {}) {
       { body: 'Hora do próximo bloco!' }
     );
 
-    toast.success('Bloco iniciado!');
+    const startTime = format(new Date(), 'HH:mm');
+    toast.success(`▶️ "${block.title}" em andamento`, {
+      description: `Status: Pendente → Em andamento · Iniciado às ${startTime} · Duração prevista: ${block.duration_minutes} min`,
+      duration: 4000,
+    });
     fetchBlocks();
   }, [blocks, fetchBlocks, requestPermission, scheduleNotification]);
 
