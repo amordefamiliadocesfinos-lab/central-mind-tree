@@ -169,6 +169,7 @@ export function InvoicesManager() {
       invoice_type: 'NFe',
       status: 'pendente',
       invoice_number: '',
+      operation_nature: '',
       notes: '',
     });
     setEditing(null);
@@ -189,6 +190,7 @@ export function InvoicesManager() {
       invoice_type: inv.invoice_type,
       status: inv.status,
       invoice_number: inv.invoice_number || '',
+      operation_nature: inv.operation_nature || '',
       notes: inv.notes || '',
     });
     setDialogOpen(true);
