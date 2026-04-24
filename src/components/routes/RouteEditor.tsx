@@ -141,13 +141,14 @@ export function RouteEditor({ route, onBack }: Props) {
               <Label>Veículo</Label>
               <Input value={vehicle} onChange={(e) => setVehicle(e.target.value)} onBlur={saveHeader} placeholder="Placa, modelo..." />
             </div>
-            <div>
+            <div className="md:col-span-2">
               <Label>Endereço de origem</Label>
-              <Input
+              <OriginAddressField
                 value={origin}
-                onChange={(e) => setOrigin(e.target.value)}
-                onBlur={saveHeader}
-                placeholder="Padrão: primeira parada"
+                onChange={(v) => {
+                  setOrigin(v);
+                  updateRoute(route.id, { origin_address: v || null });
+                }}
               />
             </div>
           </div>
