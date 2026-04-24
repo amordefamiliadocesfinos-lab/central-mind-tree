@@ -1789,6 +1789,81 @@ export type Database = {
           },
         ]
       }
+      invoices: {
+        Row: {
+          access_key: string | null
+          cancellation_reason: string | null
+          cancelled_at: string | null
+          contact_id: string | null
+          created_at: string
+          customer_name: string | null
+          id: string
+          invoice_number: string | null
+          invoice_type: string
+          issue_date: string | null
+          notes: string | null
+          order_id: string | null
+          pdf_url: string | null
+          status: string
+          updated_at: string
+          value: number
+          xml_url: string | null
+        }
+        Insert: {
+          access_key?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          contact_id?: string | null
+          created_at?: string
+          customer_name?: string | null
+          id?: string
+          invoice_number?: string | null
+          invoice_type?: string
+          issue_date?: string | null
+          notes?: string | null
+          order_id?: string | null
+          pdf_url?: string | null
+          status?: string
+          updated_at?: string
+          value?: number
+          xml_url?: string | null
+        }
+        Update: {
+          access_key?: string | null
+          cancellation_reason?: string | null
+          cancelled_at?: string | null
+          contact_id?: string | null
+          created_at?: string
+          customer_name?: string | null
+          id?: string
+          invoice_number?: string | null
+          invoice_type?: string
+          issue_date?: string | null
+          notes?: string | null
+          order_id?: string | null
+          pdf_url?: string | null
+          status?: string
+          updated_at?: string
+          value?: number
+          xml_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meeting_items: {
         Row: {
           created_at: string
