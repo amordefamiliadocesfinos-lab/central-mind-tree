@@ -111,7 +111,7 @@ export function InvoicesManager() {
     const [invRes, ordRes] = await Promise.all([
       supabase
         .from('invoices')
-        .select('*, orders(order_number, customer_name, total_value), contacts(name)')
+        .select('*, orders(order_number, customer_name, total_value), contacts(name, email, whatsapp, phone)')
         .order('created_at', { ascending: false }),
       supabase
         .from('orders')
