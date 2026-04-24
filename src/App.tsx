@@ -29,6 +29,7 @@ import Financeiro from "./pages/Financeiro";
 import Assistente from "./pages/Assistente";
 import Contatos from "./pages/Contatos";
 import ContatosInbox from "./pages/ContatosInbox";
+import Rotas from "./pages/Rotas";
 import NotFound from "./pages/NotFound";
 import { QuickConversationFAB } from "@/components/crm/QuickConversationFAB";
 import { useScheduledTaskPromotion } from "./hooks/useScheduledTaskPromotion";
