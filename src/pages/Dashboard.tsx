@@ -34,6 +34,7 @@ import { FOCUS_TYPES, FocusType } from '@/hooks/useRoutine';
 import { DailySummary } from '@/components/dashboard/DailySummary';
 import { DailyPriorities } from '@/components/dashboard/DailyPriorities';
 import { DailyPerformance } from '@/components/dashboard/DailyPerformance';
+import { QuickFinance } from '@/components/dashboard/QuickFinance';
 
 interface DashboardData {
   // Foco
