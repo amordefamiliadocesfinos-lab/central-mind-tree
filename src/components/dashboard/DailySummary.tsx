@@ -80,7 +80,7 @@ export function DailySummary() {
   useEffect(() => {
     async function load() {
       const today = format(new Date(), 'yyyy-MM-dd');
-      const cutoff30 = format(subDays(new Date(), 30), 'yyyy-MM-dd');
+      const cutoff15 = format(subDays(new Date(), 15), 'yyyy-MM-dd');
 
       try {
         const [leads, production, payments, reactivation, campaigns] = await Promise.all([
@@ -113,7 +113,7 @@ export function DailySummary() {
             .from('contacts')
             .select('id', { count: 'exact', head: true })
             .eq('is_active', true)
-            .lt('ultimo_contato', cutoff30),
+            .lt('ultimo_contato', cutoff15),
 
           // 📣 Campanhas ativas: ideias com tipo campanha em andamento
           supabase
