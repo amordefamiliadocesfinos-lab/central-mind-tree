@@ -724,6 +724,13 @@ export function InvoicesManager() {
         onConfirmIssue={confirmIssue}
         loading={!!issuingId}
       />
+
+      {/* Dialog de detalhes da nota emitida */}
+      <IssuedInvoiceDetails
+        open={detailsOpen}
+        onOpenChange={setDetailsOpen}
+        invoice={detailsInvoice}
+      />
     </div>
   );
 }
