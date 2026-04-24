@@ -496,7 +496,7 @@ export function InvoicesManager() {
                                 size="sm"
                                 variant="default"
                                 disabled={issuingId === inv.id}
-                                onClick={() => issueInvoice(inv)}
+                                onClick={() => handleIssueClick(inv)}
                                 className="gap-1 h-8"
                               >
                                 <Send className="h-3 w-3" />
