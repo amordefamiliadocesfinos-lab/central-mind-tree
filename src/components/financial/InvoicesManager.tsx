@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,9 +11,16 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { FileText, Plus, Send, Ban, Search, Trash2, ExternalLink } from 'lucide-react';
+import { FileText, Plus, Send, Ban, Search, Trash2, ExternalLink, ShieldCheck } from 'lucide-react';
 import { formatDisplayDate } from '@/lib/dateUtils';
 import { cn } from '@/lib/utils';
+import {
+  validateInvoiceForIssue,
+  OPERATION_NATURE_SUGGESTIONS,
+  type FiscalValidationResult,
+  type FiscalIssue,
+} from '@/lib/invoiceValidation';
+import { InvoiceValidationDialog } from './InvoiceValidationDialog';
 
 type InvoiceType = 'NFe' | 'NFCe' | 'NFSe';
 type InvoiceStatus = 'pendente' | 'pronta' | 'emitida' | 'cancelada';
@@ -33,6 +41,7 @@ interface Invoice {
   notes: string | null;
   cancellation_reason: string | null;
   cancelled_at: string | null;
+  operation_nature: string | null;
   created_at: string;
   orders?: { order_number: string | null; customer_name: string | null; total_value: number | null } | null;
   contacts?: { name: string } | null;
@@ -64,6 +73,7 @@ const formatBRL = (n: number) =>
 
 export function InvoicesManager() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [orders, setOrders] = useState<OrderOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,6 +82,11 @@ export function InvoicesManager() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Invoice | null>(null);
   const [issuingId, setIssuingId] = useState<string | null>(null);
+
+  // Validation dialog state
+  const [validationOpen, setValidationOpen] = useState(false);
+  const [validationResult, setValidationResult] = useState<FiscalValidationResult | null>(null);
+  const [pendingIssueInvoice, setPendingIssueInvoice] = useState<Invoice | null>(null);
 
   // Form state
   const [form, setForm] = useState({
@@ -82,6 +97,7 @@ export function InvoicesManager() {
     invoice_type: 'NFe' as InvoiceType,
     status: 'pendente' as InvoiceStatus,
     invoice_number: '',
+    operation_nature: '',
     notes: '',
   });
 
