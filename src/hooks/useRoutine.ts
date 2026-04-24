@@ -245,7 +245,11 @@ export function useRoutine(options: UseRoutineOptions = {}) {
       { body: 'Hora do próximo bloco!' }
     );
 
-    toast.success('Bloco iniciado!');
+    const startTime = format(new Date(), 'HH:mm');
+    toast.success(`▶️ "${block.title}" em andamento`, {
+      description: `Status: Pendente → Em andamento · Iniciado às ${startTime} · Duração prevista: ${block.duration_minutes} min`,
+      duration: 4000,
+    });
     fetchBlocks();
   }, [blocks, fetchBlocks, requestPermission, scheduleNotification]);
 
@@ -301,12 +305,25 @@ export function useRoutine(options: UseRoutineOptions = {}) {
     }
 
     setActiveBlock(null);
-    toast.success('Bloco concluído! ✓');
+    const endTime = format(new Date(), 'HH:mm');
+    let actualMinutes = block?.duration_minutes ?? 0;
+    if (block?.actual_start) {
+      actualMinutes = Math.max(1, Math.round((Date.now() - new Date(block.actual_start).getTime()) / 60000));
+    }
+    const diff = block ? actualMinutes - block.duration_minutes : 0;
+    const diffLabel = diff === 0 ? 'no tempo previsto' : diff > 0 ? `+${diff} min além do previsto` : `${Math.abs(diff)} min antes do previsto`;
+    toast.success(`✅ "${block?.title ?? 'Bloco'}" concluído`, {
+      description: `Status: Em andamento → Concluído · Finalizado às ${endTime} · ${actualMinutes} min trabalhados (${diffLabel})`,
+      duration: 5000,
+    });
     fetchBlocks();
     fetchStats();
   }, [blocks, fetchBlocks, fetchStats]);
 
   const skipBlock = useCallback(async (blockId: string) => {
+    const block = blocks.find(b => b.id === blockId);
+    const previousStatus = block?.status === 'andamento' ? 'Em andamento' : 'Pendente';
+
     const { error } = await supabase
       .from('routine_blocks')
       .update({ status: 'pulado' })
@@ -317,9 +334,12 @@ export function useRoutine(options: UseRoutineOptions = {}) {
       return;
     }
 
-    toast.info('Bloco pulado');
+    toast.info(`⏭️ "${block?.title ?? 'Bloco'}" pulado`, {
+      description: `Status: ${previousStatus} → Pulado · Não contabilizado nas estatísticas do dia`,
+      duration: 4000,
+    });
     fetchBlocks();
-  }, [fetchBlocks]);
+  }, [blocks, fetchBlocks]);
 
   const addBlock = useCallback(async (block: Partial<RoutineBlock>) => {
     const dateStr = block.date || format(selectedDate, 'yyyy-MM-dd');
