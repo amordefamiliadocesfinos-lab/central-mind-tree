@@ -369,6 +369,9 @@ export default function Dashboard() {
         {/* Financeiro Rápido */}
         <QuickFinance />
 
+        {/* Resultado das Campanhas */}
+        <CampaignResults />
+
         {/* Quick stats banner */}
         <div className="grid grid-cols-4 gap-2">
           <div className="bg-primary/10 rounded-lg p-3 text-center">
