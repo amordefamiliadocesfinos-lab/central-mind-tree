@@ -611,6 +611,26 @@ export function InvoicesManager() {
             </div>
 
             <div>
+              <Label>
+                Natureza da operação <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                value={form.operation_nature}
+                onChange={(e) => setForm({ ...form, operation_nature: e.target.value })}
+                placeholder="Ex.: Venda de mercadoria"
+                list="operation-nature-suggestions"
+              />
+              <datalist id="operation-nature-suggestions">
+                {OPERATION_NATURE_SUGGESTIONS.map((s) => (
+                  <option key={s} value={s} />
+                ))}
+              </datalist>
+              <p className="text-[11px] text-muted-foreground mt-1">
+                Obrigatório para emissão fiscal. Ex.: Venda, Serviço, Devolução.
+              </p>
+            </div>
+
+            <div>
               <Label>Número da nota (se já houver)</Label>
               <Input
                 value={form.invoice_number}
@@ -634,6 +654,16 @@ export function InvoicesManager() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Dialog de validação fiscal */}
+      <InvoiceValidationDialog
+        open={validationOpen}
+        onOpenChange={setValidationOpen}
+        result={validationResult}
+        onFix={handleFix}
+        onConfirmIssue={confirmIssue}
+        loading={!!issuingId}
+      />
     </div>
   );
 }
