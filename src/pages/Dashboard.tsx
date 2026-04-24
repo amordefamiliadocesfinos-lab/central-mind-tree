@@ -33,6 +33,7 @@ import { useAppStore } from '@/stores/appStore';
 import { FOCUS_TYPES, FocusType } from '@/hooks/useRoutine';
 import { DailySummary } from '@/components/dashboard/DailySummary';
 import { DailyPriorities } from '@/components/dashboard/DailyPriorities';
+import { DailyPerformance } from '@/components/dashboard/DailyPerformance';
 
 interface DashboardData {
   // Foco
