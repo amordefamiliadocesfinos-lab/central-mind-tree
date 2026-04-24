@@ -220,6 +220,7 @@ export function InvoicesManager() {
       invoice_type: form.invoice_type,
       status: form.status,
       invoice_number: form.invoice_number || null,
+      operation_nature: form.operation_nature || null,
       notes: form.notes || null,
     };
     const res = editing
@@ -235,9 +236,60 @@ export function InvoicesManager() {
     load();
   };
 
-  const issueInvoice = async (inv: Invoice) => {
+  /** Busca dados completos do contato + pedido para validação fiscal */
+  const fetchValidationContext = async (inv: Invoice) => {
+    const [contactRes, orderRes, itemsRes] = await Promise.all([
+      inv.contact_id
+        ? supabase
+            .from('contacts')
+            .select('id, name, document, person_type, email, phone, whatsapp, zip_code, state, city, address, address_number, neighborhood')
+            .eq('id', inv.contact_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null, error: null } as any),
+      inv.order_id
+        ? supabase.from('orders').select('id, total_value').eq('id', inv.order_id).maybeSingle()
+        : Promise.resolve({ data: null, error: null } as any),
+      inv.order_id
+        ? supabase
+            .from('order_items')
+            .select('product_id, quantity, unit_price')
+            .eq('order_id', inv.order_id)
+        : Promise.resolve({ data: [], error: null } as any),
+    ]);
+    return {
+      contact: contactRes.data || null,
+      order: orderRes.data ? { ...orderRes.data, items: itemsRes.data || [] } : null,
+    };
+  };
+
+  /** Pré-validação ao clicar em Emitir */
+  const handleIssueClick = async (inv: Invoice) => {
     setIssuingId(inv.id);
-    // Gera um número fictício (pode ser integrado a uma SEFAZ no futuro)
+    const ctx = await fetchValidationContext(inv);
+    const result = validateInvoiceForIssue({
+      invoice: {
+        id: inv.id,
+        invoice_type: inv.invoice_type,
+        value: inv.value,
+        operation_nature: inv.operation_nature,
+        order_id: inv.order_id,
+        contact_id: inv.contact_id,
+        customer_name: inv.customer_name,
+      },
+      contact: ctx.contact,
+      order: ctx.order,
+    });
+    setIssuingId(null);
+    setPendingIssueInvoice(inv);
+    setValidationResult(result);
+    setValidationOpen(true);
+  };
+
+  /** Confirma emissão após validação aprovada */
+  const confirmIssue = async () => {
+    if (!pendingIssueInvoice) return;
+    const inv = pendingIssueInvoice;
+    setIssuingId(inv.id);
     const number = inv.invoice_number || `${inv.invoice_type}-${Date.now().toString().slice(-8)}`;
     const accessKey = `${Math.floor(Math.random() * 1e44).toString().padStart(44, '0')}`;
     const { error } = await supabase
@@ -250,12 +302,28 @@ export function InvoicesManager() {
       })
       .eq('id', inv.id);
     setIssuingId(null);
+    setValidationOpen(false);
+    setPendingIssueInvoice(null);
+    setValidationResult(null);
     if (error) {
       toast({ title: 'Erro ao emitir', description: error.message, variant: 'destructive' });
       return;
     }
     toast({ title: '✅ Nota emitida', description: `Número: ${number}` });
     load();
+  };
+
+  /** Navega para a área correta para corrigir o problema */
+  const handleFix = (issue: FiscalIssue) => {
+    setValidationOpen(false);
+    if (issue.fixTarget === 'contact' && issue.fixId) {
+      navigate(`/contatos?focus=${issue.fixId}`);
+    } else if (issue.fixTarget === 'order' && issue.fixId) {
+      navigate(`/operacoes?order=${issue.fixId}`);
+    } else if (issue.fixTarget === 'invoice' && pendingIssueInvoice) {
+      // Abre o dialog de edição da própria nota
+      openEdit(pendingIssueInvoice);
+    }
   };
 
   const cancelInvoice = async (inv: Invoice) => {
