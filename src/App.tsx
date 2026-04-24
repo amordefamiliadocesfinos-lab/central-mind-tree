@@ -88,6 +88,7 @@ function AnimatedRoutes() {
           <Route path="/assistente" element={<Assistente />} />
           <Route path="/contatos" element={<Contatos />} />
           <Route path="/contatos/inbox" element={<ContatosInbox />} />
+          <Route path="/rotas" element={<Rotas />} />
           <Route path="/task/:id" element={<TaskEdit />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
