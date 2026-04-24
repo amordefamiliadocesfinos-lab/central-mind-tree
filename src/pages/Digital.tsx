@@ -16,7 +16,9 @@ import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, ArrowLeft, Search, LayoutGrid, Columns3, Image, BarChart3, Link2, Settings2, TrendingUp, MessageCircle, Book, Calendar, Headset } from 'lucide-react';
+import { Plus, ArrowLeft, Search, LayoutGrid, Columns3, Image, BarChart3, Link2, Settings2, TrendingUp, MessageCircle, Book, Calendar, Headset, X, SlidersHorizontal, Sparkles } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Separator } from '@/components/ui/separator';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
@@ -132,27 +134,100 @@ export default function Digital() {
     );
   }
 
+  // Active filter chips for visibility
+  const activeFilterChips: { key: string; label: string; clear: () => void }[] = [];
+  if (statusFilter !== 'all') {
+    const cfg = (DIGITAL_STATUS as any)[statusFilter];
+    activeFilterChips.push({ key: 'status', label: `Status: ${cfg?.label ?? statusFilter}`, clear: () => setStatusFilter('all') });
+  }
+  if (platformFilter !== 'all') {
+    const all = Object.values(groupedPlatforms || {}).flat();
+    const p = all.find((x: any) => x.id === platformFilter);
+    activeFilterChips.push({ key: 'platform', label: `Canal: ${p?.name ?? platformFilter}`, clear: () => setPlatformFilter('all') });
+  }
+  if (typeFilter !== 'all') {
+    const t = ideaTypes.find(x => x.key === typeFilter);
+    activeFilterChips.push({ key: 'type', label: `Tipo: ${t?.label ?? typeFilter}`, clear: () => setTypeFilter('all') });
+  }
+  if (nodeFilter !== 'all') {
+    const n = nodes.find(x => x.id === nodeFilter);
+    activeFilterChips.push({ key: 'node', label: `Vínculo: ${n?.title ?? nodeFilter}`, clear: () => setNodeFilter('all') });
+  }
+  if (productFilter !== 'all') {
+    const p = products.find(x => x.id === productFilter);
+    activeFilterChips.push({ key: 'product', label: `Produto: ${p?.name ?? productFilter}`, clear: () => setProductFilter('all') });
+  }
+  if (periodFilter !== 'all') {
+    const map: Record<string, string> = { esta_semana: 'Esta semana', este_mes: 'Este mês', proximo_mes: 'Próximo mês', sem_data: 'Sem data' };
+    activeFilterChips.push({ key: 'period', label: `Período: ${map[periodFilter] ?? periodFilter}`, clear: () => setPeriodFilter('all') });
+  }
+  const clearAllFilters = () => {
+    setStatusFilter('all'); setPlatformFilter('all'); setTypeFilter('all');
+    setNodeFilter('all'); setProductFilter('all'); setPeriodFilter('all');
+    setSearchQuery('');
+  };
+
+  // Tab groups for clearer navigation
+  const tabGroups: { label: string; tabs: { value: typeof activeTab; label: string; icon: any }[] }[] = [
+    {
+      label: 'Conteúdo',
+      tabs: [
+        { value: 'ideias', label: 'Ideias', icon: LayoutGrid },
+        { value: 'calendario', label: 'Calendário', icon: Calendar },
+        { value: 'midia', label: 'Mídia', icon: Image },
+      ],
+    },
+    {
+      label: 'Engajamento',
+      tabs: [
+        { value: 'atendimento', label: 'Atendimento', icon: Headset },
+        { value: 'engajamento', label: 'Engajar', icon: MessageCircle },
+        { value: 'tendencias', label: 'Tendências', icon: TrendingUp },
+        { value: 'faq', label: 'FAQ', icon: Book },
+      ],
+    },
+    {
+      label: 'Insights',
+      tabs: [
+        { value: 'metricas', label: 'Métricas', icon: BarChart3 },
+        { value: 'plataformas', label: 'Canais', icon: Settings2 },
+      ],
+    },
+  ];
+  const totalIdeas = ideas.length;
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b safe-area-pt">
-        <div className="flex items-center justify-between px-4 h-14">
+      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/75 border-b safe-area-pt">
+        {/* Title row */}
+        <div className="flex items-center justify-between gap-3 px-4 h-14">
           <div className="flex items-center gap-3 min-w-0">
-            <Link to="/">
+            <Link to="/" aria-label="Voltar para o início">
               <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0">
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
-            <h1 className="text-lg font-bold truncate">Digital</h1>
+            <div className="min-w-0 flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary shrink-0" aria-hidden />
+              <h1 className="text-lg font-bold truncate tracking-tight">Digital</h1>
+              {!selectedIdea && (
+                <span className="hidden sm:inline text-xs text-muted-foreground tabular-nums">
+                  · {totalIdeas} {totalIdeas === 1 ? 'ideia' : 'ideias'}
+                </span>
+              )}
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             {activeTab === 'ideias' && !selectedIdea && (
-              <>
+              <div className="hidden sm:flex items-center rounded-md border bg-muted/40 p-0.5" role="group" aria-label="Modo de visualização">
                 <Button
                   variant={viewMode === 'list' ? 'secondary' : 'ghost'}
                   size="icon"
-                  className="h-9 w-9"
+                  className="h-8 w-8"
+                  aria-label="Visualizar em lista"
+                  aria-pressed={viewMode === 'list'}
                   onClick={() => setViewMode('list')}
                 >
                   <LayoutGrid className="h-4 w-4" />
@@ -160,216 +235,311 @@ export default function Digital() {
                 <Button
                   variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
                   size="icon"
-                  className="h-9 w-9"
+                  className="h-8 w-8"
+                  aria-label="Visualizar em kanban"
+                  aria-pressed={viewMode === 'kanban'}
                   onClick={() => setViewMode('kanban')}
                 >
                   <Columns3 className="h-4 w-4" />
                 </Button>
-              </>
+              </div>
             )}
-            
+
             <Button
               onClick={() => setShowCreateDialog(true)}
               size={isMobile ? 'icon' : 'default'}
-              className="h-10 shrink-0"
+              className="h-10 shrink-0 shadow-sm"
+              aria-label="Criar nova ideia"
             >
               <Plus className="h-5 w-5" />
-              {!isMobile && <span className="ml-2">Nova Ideia</span>}
+              {!isMobile && <span className="ml-2 font-medium">Nova Ideia</span>}
             </Button>
           </div>
         </div>
 
-        {/* Tabs */}
+        {/* Tabs grouped */}
         {!selectedIdea && (
-          <div className="px-4 pb-2">
+          <div className="px-2 pb-2">
             <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-              <TabsList className="grid w-full grid-cols-9 h-9">
-                <TabsTrigger value="ideias" className="text-xs px-1">
-                  <LayoutGrid className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline ml-1">Ideias</span>
-                </TabsTrigger>
-                <TabsTrigger value="calendario" className="text-xs px-1">
-                  <Calendar className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline ml-1">Calendário</span>
-                </TabsTrigger>
-                <TabsTrigger value="atendimento" className="text-xs px-1">
-                  <Headset className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline ml-1">Atendimento</span>
-                </TabsTrigger>
-                <TabsTrigger value="tendencias" className="text-xs px-1">
-                  <TrendingUp className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline ml-1">Tendências</span>
-                </TabsTrigger>
-                <TabsTrigger value="engajamento" className="text-xs px-1">
-                  <MessageCircle className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline ml-1">Engajar</span>
-                </TabsTrigger>
-                <TabsTrigger value="faq" className="text-xs px-1">
-                  <Book className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline ml-1">FAQ</span>
-                </TabsTrigger>
-                <TabsTrigger value="midia" className="text-xs px-1">
-                  <Image className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline ml-1">Mídia</span>
-                </TabsTrigger>
-                <TabsTrigger value="metricas" className="text-xs px-1">
-                  <BarChart3 className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline ml-1">Métricas</span>
-                </TabsTrigger>
-                <TabsTrigger value="plataformas" className="text-xs px-1">
-                  <Settings2 className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline ml-1">Canais</span>
-                </TabsTrigger>
-              </TabsList>
+              <div className="flex items-stretch gap-1 overflow-x-auto scrollbar-none -mx-1 px-1">
+                {tabGroups.map((group, gi) => (
+                  <div key={group.label} className="flex items-center gap-1 shrink-0">
+                    <TabsList className="h-9 bg-muted/50 p-0.5 rounded-lg">
+                      {group.tabs.map(({ value, label, icon: Icon }) => (
+                        <TabsTrigger
+                          key={value}
+                          value={value}
+                          className="h-8 px-2.5 text-xs gap-1.5 data-[state=active]:shadow-sm rounded-md"
+                          aria-label={label}
+                        >
+                          <Icon className="h-4 w-4 shrink-0" />
+                          <span className="hidden md:inline font-medium">{label}</span>
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
+                    {gi < tabGroups.length - 1 && (
+                      <Separator orientation="vertical" className="h-6 mx-0.5 hidden sm:block" />
+                    )}
+                  </div>
+                ))}
+              </div>
             </Tabs>
           </div>
         )}
 
         {/* Search & Filters - only on ideas tab */}
         {!selectedIdea && activeTab === 'ideias' && (
-          <div className="px-4 pb-3 space-y-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Pesquisar..."
-                className="pl-9 h-10"
-              />
+          <div className="px-4 pb-3 space-y-2.5">
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1 min-w-0">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Pesquisar ideias, copy, KPI..."
+                  className="pl-9 pr-9 h-10"
+                  aria-label="Pesquisar ideias"
+                />
+                {searchQuery && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+                    onClick={() => setSearchQuery('')}
+                    aria-label="Limpar pesquisa"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="h-10 gap-2 shrink-0" aria-label="Abrir filtros">
+                    <SlidersHorizontal className="h-4 w-4" />
+                    <span className="hidden sm:inline">Filtros</span>
+                    {activeFilterChips.length > 0 && (
+                      <Badge variant="secondary" className="h-5 min-w-5 px-1.5 text-[10px] tabular-nums">
+                        {activeFilterChips.length}
+                      </Badge>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-80 p-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold">Filtros</h3>
+                    {activeFilterChips.length > 0 && (
+                      <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={clearAllFilters}>
+                        Limpar tudo
+                      </Button>
+                    )}
+                  </div>
+
+                  <div className="space-y-2.5">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Status</Label>
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="h-9"><SelectValue placeholder="Todos" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos</SelectItem>
+                          {Object.entries(DIGITAL_STATUS).map(([key, config]) => (
+                            <SelectItem key={key} value={key}>
+                              <div className="flex items-center gap-2">
+                                <div className={cn('w-2 h-2 rounded-full', config.color)} />
+                                {config.label}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Canal</Label>
+                      <Select value={platformFilter} onValueChange={setPlatformFilter}>
+                        <SelectTrigger className="h-9"><SelectValue placeholder="Todos" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos</SelectItem>
+                          {Object.entries(groupedPlatforms || {}).map(([_group, platforms]) => (
+                            platforms.map(platform => (
+                              <SelectItem key={platform.id} value={platform.id}>
+                                <div className="flex items-center gap-2">
+                                  <PlatformIcon icon={platform.icon} size="sm" />
+                                  {platform.name}
+                                </div>
+                              </SelectItem>
+                            ))
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Tipo</Label>
+                      <Select value={typeFilter} onValueChange={setTypeFilter}>
+                        <SelectTrigger className="h-9"><SelectValue placeholder="Todos" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos os tipos</SelectItem>
+                          {ideaTypes.map(t => (
+                            <SelectItem key={t.key} value={t.key}>
+                              <div className="flex items-center gap-2">
+                                <span>{t.icon}</span>{t.label}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {nodes.length > 0 && (
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Vínculo</Label>
+                        <Select value={nodeFilter} onValueChange={setNodeFilter}>
+                          <SelectTrigger className="h-9"><SelectValue placeholder="Todos" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todos os vínculos</SelectItem>
+                            {nodes.map(n => (
+                              <SelectItem key={n.id} value={n.id}>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: n.color }} />
+                                  {n.title}
+                                </div>
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {products.length > 0 && (
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Produto</Label>
+                        <Select value={productFilter} onValueChange={setProductFilter}>
+                          <SelectTrigger className="h-9"><SelectValue placeholder="Todos" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todos os produtos</SelectItem>
+                            {products.map(p => (
+                              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Período</Label>
+                      <Select value={periodFilter} onValueChange={setPeriodFilter}>
+                        <SelectTrigger className="h-9"><SelectValue placeholder="Todos" /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos os períodos</SelectItem>
+                          <SelectItem value="esta_semana">Esta semana</SelectItem>
+                          <SelectItem value="este_mes">Este mês</SelectItem>
+                          <SelectItem value="proximo_mes">Próximo mês</SelectItem>
+                          <SelectItem value="sem_data">Sem data</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {viewMode === 'kanban' && (
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Modo do Kanban</Label>
+                        <Select value={kanbanMode} onValueChange={(v) => setKanbanMode(v as any)}>
+                          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="ideas">Por Ideia</SelectItem>
+                            <SelectItem value="variations">Por Variação</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Mobile-only view toggle */}
+              {activeTab === 'ideias' && (
+                <div className="flex sm:hidden items-center rounded-md border bg-muted/40 p-0.5" role="group" aria-label="Modo de visualização">
+                  <Button
+                    variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                    size="icon"
+                    className="h-8 w-8"
+                    aria-label="Lista"
+                    aria-pressed={viewMode === 'list'}
+                    onClick={() => setViewMode('list')}
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
+                    size="icon"
+                    className="h-8 w-8"
+                    aria-label="Kanban"
+                    aria-pressed={viewMode === 'kanban'}
+                    onClick={() => setViewMode('kanban')}
+                  >
+                    <Columns3 className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
             </div>
 
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="h-8 w-auto min-w-[100px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {Object.entries(DIGITAL_STATUS).map(([key, config]) => (
-                    <SelectItem key={key} value={key}>
-                      <div className="flex items-center gap-2">
-                        <div className={cn('w-2 h-2 rounded-full', config.color)} />
-                        {config.label}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            {/* Active filter chips */}
+            {activeFilterChips.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {activeFilterChips.map(chip => (
+                  <Badge
+                    key={chip.key}
+                    variant="secondary"
+                    className="h-7 pl-2.5 pr-1 gap-1 text-xs font-normal"
+                  >
+                    {chip.label}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5 hover:bg-background/60"
+                      onClick={chip.clear}
+                      aria-label={`Remover filtro ${chip.label}`}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </Badge>
+                ))}
+                <Button variant="ghost" size="sm" className="h-7 text-xs text-muted-foreground" onClick={clearAllFilters}>
+                  Limpar
+                </Button>
+              </div>
+            )}
 
-              <Select value={platformFilter} onValueChange={setPlatformFilter}>
-                <SelectTrigger className="h-8 w-auto min-w-[120px]">
-                  <SelectValue placeholder="Plataforma" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
-                  {Object.entries(groupedPlatforms || {}).map(([group, platforms]) => (
-                    platforms.map(platform => (
-                      <SelectItem key={platform.id} value={platform.id}>
-                        <div className="flex items-center gap-2">
-                          <PlatformIcon icon={platform.icon} size="sm" />
-                          {platform.name}
-                        </div>
-                      </SelectItem>
-                    ))
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="h-8 w-auto min-w-[100px]">
-                  <SelectValue placeholder="Tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os Tipos</SelectItem>
-                  {ideaTypes.map(t => (
-                    <SelectItem key={t.key} value={t.key}>
-                      <div className="flex items-center gap-2">
-                        <span>{t.icon}</span>
-                        {t.label}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {nodes.length > 0 && (
-                <Select value={nodeFilter} onValueChange={setNodeFilter}>
-                  <SelectTrigger className="h-8 w-auto min-w-[110px]">
-                    <SelectValue placeholder="Vínculo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos Vínculos</SelectItem>
-                    {nodes.map(n => (
-                      <SelectItem key={n.id} value={n.id}>
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: n.color }} />
-                          {n.title}
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-
-              {products.length > 0 && (
-                <Select value={productFilter} onValueChange={setProductFilter}>
-                  <SelectTrigger className="h-8 w-auto min-w-[110px]">
-                    <SelectValue placeholder="Produto" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos Produtos</SelectItem>
-                    {products.map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-
-              <Select value={periodFilter} onValueChange={setPeriodFilter}>
-                <SelectTrigger className="h-8 w-auto min-w-[110px]">
-                  <SelectValue placeholder="Período" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os Períodos</SelectItem>
-                  <SelectItem value="esta_semana">Esta Semana</SelectItem>
-                  <SelectItem value="este_mes">Este Mês</SelectItem>
-                  <SelectItem value="proximo_mes">Próximo Mês</SelectItem>
-                  <SelectItem value="sem_data">Sem Data</SelectItem>
-                </SelectContent>
-              </Select>
-
-              {viewMode === 'kanban' && (
-                <Select value={kanbanMode} onValueChange={(v) => setKanbanMode(v as any)}>
-                  <SelectTrigger className="h-8 w-auto min-w-[100px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ideas">Por Ideia</SelectItem>
-                    <SelectItem value="variations">Por Variação</SelectItem>
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-
-            {/* Stats */}
-            <div className="flex gap-2 overflow-x-auto">
-              {Object.entries(DIGITAL_STATUS).map(([key, config]) => (
-                <Badge
-                  key={key}
-                  variant="secondary"
-                  className={cn(
-                    'cursor-pointer transition-all',
-                    statusFilter === key ? config.color + ' text-white' : 'opacity-70'
-                  )}
-                  onClick={() => setStatusFilter(statusFilter === key ? 'all' : key)}
-                >
-                  {config.label}: {stats.byStatus[key] || 0}
-                </Badge>
-              ))}
+            {/* Status quick stats — clickable */}
+            <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-none -mx-1 px-1">
+              {Object.entries(DIGITAL_STATUS).map(([key, config]) => {
+                const active = statusFilter === key;
+                const count = stats.byStatus[key] || 0;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setStatusFilter(active ? 'all' : key)}
+                    aria-pressed={active}
+                    aria-label={`Filtrar por status ${config.label}, ${count} ideias`}
+                    className={cn(
+                      'shrink-0 inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full text-xs font-medium border transition-all',
+                      'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                      active
+                        ? 'bg-foreground text-background border-foreground shadow-sm'
+                        : 'bg-background text-foreground border-border hover:bg-muted'
+                    )}
+                  >
+                    <span className={cn('w-1.5 h-1.5 rounded-full', config.color)} />
+                    <span>{config.label}</span>
+                    <span className="tabular-nums opacity-70">{count}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
       </header>
+
 
       {/* Media Tab - Full Height */}
       {!selectedIdeaData && activeTab === 'midia' ? (

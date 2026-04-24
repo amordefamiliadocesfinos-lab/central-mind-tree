@@ -342,3 +342,12 @@ All colors MUST be HSL.
     margin: 0 !important;
   }
 }
+
+/* Hide scrollbar while keeping scroll capability — used in horizontal tabs/chips */
+.scrollbar-none {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}

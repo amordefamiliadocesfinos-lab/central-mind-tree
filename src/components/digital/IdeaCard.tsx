@@ -92,11 +92,16 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
   return (
     <Card
       className={cn(
-        'cursor-pointer hover:shadow-md transition-all touch-manipulation active:scale-[0.99] overflow-hidden',
-        'border-l-4',
+        'group cursor-pointer transition-all touch-manipulation active:scale-[0.99] overflow-hidden',
+        'border-l-4 hover:shadow-lg hover:-translate-y-0.5',
+        'focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
         statusConfig.color.replace('bg-', 'border-l-')
       )}
       onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } }}
+      aria-label={`Abrir ideia ${idea.title}`}
     >
       {/* ═══════ PREVIEW IMAGE ═══════ */}
       {previewUrl ? (
@@ -104,17 +109,17 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
           <img
             src={previewUrl}
             alt={idea.title}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
             loading="lazy"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
           {/* Status badge over image */}
-          <Badge className={cn('absolute top-2 right-2 text-[10px] text-white shadow-sm', statusConfig.color)}>
+          <Badge className={cn('absolute top-2 right-2 text-[10px] font-semibold text-white shadow-md backdrop-blur-sm', statusConfig.color)}>
             {statusConfig.label}
           </Badge>
           {/* Platform icons over image */}
           {uniquePlatforms.size > 0 && (
-            <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/40 rounded-full px-2 py-1">
+            <div className="absolute top-2 left-2 flex items-center gap-1 bg-black/50 backdrop-blur-sm rounded-full px-2 py-1 shadow-sm">
               {Array.from(uniquePlatforms.values()).slice(0, 4).map(p => (
                 <Tooltip key={p.id}>
                   <TooltipTrigger asChild>
@@ -127,17 +132,17 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
           )}
         </div>
       ) : (
-        <div className="relative w-full aspect-[3/1] bg-muted/60 flex items-center justify-center">
+        <div className="relative w-full aspect-[3/1] bg-gradient-to-br from-muted/40 to-muted/70 flex items-center justify-center">
           <Image className="h-8 w-8 text-muted-foreground/30" />
-          <Badge className={cn('absolute top-2 right-2 text-[10px] text-white shadow-sm', statusConfig.color)}>
+          <Badge className={cn('absolute top-2 right-2 text-[10px] font-semibold text-white shadow-md', statusConfig.color)}>
             {statusConfig.label}
           </Badge>
         </div>
       )}
 
-      <div className="p-3 space-y-2.5">
+      <div className="p-3.5 space-y-3">
         {/* ═══════ TITLE ═══════ */}
-        <h3 className="font-semibold text-sm leading-snug break-words">{idea.title}</h3>
+        <h3 className="font-semibold text-[15px] leading-snug break-words tracking-tight">{idea.title}</h3>
 
         {/* ═══════ QUICK ID — Type + Objective + Progress ═══════ */}
         <div className="flex items-center flex-wrap gap-1.5">
@@ -151,9 +156,9 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
             </Badge>
           )}
           {variations.length > 0 && (
-            <div className="flex items-center gap-1 ml-auto">
+            <div className="flex items-center gap-1.5 ml-auto" aria-label={`${completedVariations} de ${variations.length} variações concluídas`}>
               <span className="text-[10px] text-muted-foreground tabular-nums font-medium">{completedVariations}/{variations.length}</span>
-              <Progress value={progress} className="w-10 h-1.5" />
+              <Progress value={progress} className="w-12 h-1.5" />
             </div>
           )}
         </div>
@@ -162,24 +167,25 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
         {actionTags.length > 0 && (
           <div className="flex items-center gap-1 flex-wrap">
             {actionTags.includes('campanha_ativa') && (
-              <Badge className="text-[10px] bg-emerald-500/15 text-emerald-700 border-emerald-500/30 border">📣 Campanha</Badge>
+              <Badge className="text-[10px] bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 border">📣 Campanha</Badge>
             )}
             {actionTags.includes('venda_ativa') && (
-              <Badge className="text-[10px] bg-blue-500/15 text-blue-700 border-blue-500/30 border">💰 Venda</Badge>
+              <Badge className="text-[10px] bg-blue-500/15 text-blue-700 dark:text-blue-400 border-blue-500/30 border">💰 Venda</Badge>
             )}
           </div>
         )}
 
         {/* ═══════ ACTIONS ═══════ */}
-        <div className="flex items-center gap-2 pt-0.5">
+        <div className="flex items-center gap-2">
           <Button
             size="sm"
             variant="outline"
-            className="flex-1 h-8 text-xs gap-1.5"
+            className="flex-1 h-9 text-xs gap-1.5 font-medium"
             onClick={(e) => {
               e.stopPropagation();
               openWhatsAppBroadcast(idea.key_message || idea.title);
             }}
+            aria-label="Enviar via WhatsApp"
           >
             <MessageCircle className="h-3.5 w-3.5" />
             WhatsApp
@@ -187,12 +193,12 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
           <Button
             size="sm"
             variant="outline"
-            className="flex-1 h-8 text-xs gap-1.5"
+            className="flex-1 h-9 text-xs gap-1.5 font-medium"
             onClick={(e) => {
               e.stopPropagation();
-              // Navigate to CRM with campaign link
               window.location.href = `/contatos?campaign=${idea.id}`;
             }}
+            aria-label="Enviar para CRM"
           >
             <UserPlus className="h-3.5 w-3.5" />
             Enviar p/ CRM
