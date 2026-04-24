@@ -504,20 +504,21 @@ export function useRoutine(options: UseRoutineOptions = {}) {
       .filter(b => b.date === todayStr && b.status === 'pendente')
       .sort((a, b) => (a.planned_start || '').localeCompare(b.planned_start || ''));
 
-    for (const block of pendingBlocks) {
-      if (block.planned_start) {
-        const [hours, mins] = block.planned_start.split(':').map(Number);
-        const newMins = mins + minutes;
-        const newHours = hours + Math.floor(newMins / 60);
-        const finalMins = newMins % 60;
+    const updates = pendingBlocks
+      .filter(b => b.planned_start)
+      .map((block) => {
+        const [hours, mins] = block.planned_start!.split(':').map(Number);
+        const totalMins = Math.min(hours * 60 + mins + minutes, 23 * 60 + 59);
+        const newHours = Math.floor(totalMins / 60);
+        const finalMins = totalMins % 60;
         const newTime = `${String(newHours).padStart(2, '0')}:${String(finalMins).padStart(2, '0')}`;
-        
-        await supabase
+        return supabase
           .from('routine_blocks')
           .update({ planned_start: newTime })
           .eq('id', block.id);
-      }
-    }
+      });
+
+    await Promise.all(updates);
 
     toast.success(`Blocos empurrados +${minutes}min`);
     fetchBlocks();
