@@ -22,6 +22,7 @@ import {
 } from '@/lib/invoiceValidation';
 import { InvoiceValidationDialog } from './InvoiceValidationDialog';
 import { IssuedInvoiceDetails, type IssuedInvoice } from './IssuedInvoiceDetails';
+import { syncInvoiceIssued, buildSyncSummary } from '@/lib/invoiceSync';
 
 type InvoiceType = 'NFe' | 'NFCe' | 'NFSe';
 type InvoiceStatus = 'pendente' | 'pronta' | 'emitida' | 'cancelada';
