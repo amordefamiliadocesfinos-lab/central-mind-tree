@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { FileText, Plus, Send, Ban, Search, Trash2, ExternalLink, ShieldCheck } from 'lucide-react';
+import { FileText, Plus, Send, Ban, Search, Trash2, ExternalLink, ShieldCheck, Download, Mail, CheckCircle2 } from 'lucide-react';
 import { formatDisplayDate } from '@/lib/dateUtils';
 import { cn } from '@/lib/utils';
 import {
