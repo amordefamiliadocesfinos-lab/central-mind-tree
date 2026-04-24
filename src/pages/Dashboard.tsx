@@ -32,6 +32,7 @@ import { useKPIsSelector, useStockValueSelector } from '@/stores/selectors';
 import { useAppStore } from '@/stores/appStore';
 import { FOCUS_TYPES, FocusType } from '@/hooks/useRoutine';
 import { DailySummary } from '@/components/dashboard/DailySummary';
+import { DailyPriorities } from '@/components/dashboard/DailyPriorities';
 
 interface DashboardData {
   // Foco
