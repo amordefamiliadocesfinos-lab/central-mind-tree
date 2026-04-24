@@ -21,6 +21,7 @@ import {
   type FiscalIssue,
 } from '@/lib/invoiceValidation';
 import { InvoiceValidationDialog } from './InvoiceValidationDialog';
+import { IssuedInvoiceDetails, type IssuedInvoice } from './IssuedInvoiceDetails';
 
 type InvoiceType = 'NFe' | 'NFCe' | 'NFSe';
 type InvoiceStatus = 'pendente' | 'pronta' | 'emitida' | 'cancelada';
