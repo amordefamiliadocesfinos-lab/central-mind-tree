@@ -89,6 +89,10 @@ export function InvoicesManager() {
   const [validationResult, setValidationResult] = useState<FiscalValidationResult | null>(null);
   const [pendingIssueInvoice, setPendingIssueInvoice] = useState<Invoice | null>(null);
 
+  // Issued details dialog
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsInvoice, setDetailsInvoice] = useState<IssuedInvoice | null>(null);
+
   // Form state
   const [form, setForm] = useState({
     order_id: '',
