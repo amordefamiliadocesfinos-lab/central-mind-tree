@@ -11,9 +11,10 @@ import {
   CategoriesManager,
   ContactsManager,
   PricingManagerV2,
+  InvoicesManager,
 } from '@/components/financial';
 import { useFinancial, EntryStatus } from '@/hooks/useFinancial';
-import { Users, DollarSign } from 'lucide-react';
+import { Users, DollarSign, FileText } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, LayoutDashboard, TrendingDown, TrendingUp, Wallet, Tag } from 'lucide-react';
@@ -105,7 +106,7 @@ export default function Financeiro() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className={cn("grid w-full", isMobile ? "grid-cols-3" : "grid-cols-7")}>
+          <TabsList className={cn("grid w-full", isMobile ? "grid-cols-3" : "grid-cols-8")}>
             <TabsTrigger value="dashboard" className="gap-2">
               <LayoutDashboard className="h-4 w-4" />
               {!isMobile && "Dashboard"}
@@ -120,6 +121,10 @@ export default function Financeiro() {
             </TabsTrigger>
             {!isMobile && (
               <>
+                <TabsTrigger value="notas" className="gap-2">
+                  <FileText className="h-4 w-4" />
+                  Nota Fiscal
+                </TabsTrigger>
                 <TabsTrigger value="contas" className="gap-2">
                   <Wallet className="h-4 w-4" />
                   Caixas/Bancos
@@ -141,7 +146,10 @@ export default function Financeiro() {
           </TabsList>
 
           {isMobile && (
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
+              <TabsTrigger value="notas" className="gap-2">
+                <FileText className="h-4 w-4" />
+              </TabsTrigger>
               <TabsTrigger value="contas" className="gap-2">
                 <Wallet className="h-4 w-4" />
               </TabsTrigger>
@@ -218,6 +226,10 @@ export default function Financeiro() {
 
           <TabsContent value="valores">
             <PricingManagerV2 />
+          </TabsContent>
+
+          <TabsContent value="notas">
+            <InvoicesManager />
           </TabsContent>
         </Tabs>
       </div>
