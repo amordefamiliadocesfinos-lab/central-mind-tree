@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNotifications } from './useNotifications';
 import { toast } from 'sonner';
@@ -131,14 +131,12 @@ export function useRoutine(options: UseRoutineOptions = {}) {
       return;
     }
 
-    setBlocks((data as RoutineBlock[]) || []);
-    
-    const active = (data as RoutineBlock[])?.find(b => b.status === 'andamento');
-    if (active) {
-      setActiveBlock(active);
-    }
-    
-    setLoading(false);
+    const list = (data as RoutineBlock[]) || [];
+    setBlocks(list);
+
+    // Mantém activeBlock somente se ainda existir e estiver "andamento"
+    const active = list.find((b) => b.status === 'andamento');
+    setActiveBlock(active || null);
   }, [dateRange]);
 
   // Fetch templates
@@ -383,20 +381,24 @@ export function useRoutine(options: UseRoutineOptions = {}) {
   }, [fetchBlocks]);
 
   const reorderBlocks = useCallback(async (reorderedBlocks: RoutineBlock[]) => {
-    // Update order based on new positions
-    const updates = reorderedBlocks.map((block, index) => {
-      const newStartTime = calculateNewStartTime(index, reorderedBlocks);
-      return {
-        id: block.id,
-        planned_start: newStartTime,
-      };
-    });
+    // Update order based on new positions (paralelizado)
+    const updates = reorderedBlocks.map((block, index) => ({
+      id: block.id,
+      planned_start: calculateNewStartTime(index, reorderedBlocks),
+    }));
 
-    for (const update of updates) {
-      await supabase
-        .from('routine_blocks')
-        .update({ planned_start: update.planned_start })
-        .eq('id', update.id);
+    const results = await Promise.all(
+      updates.map((u) =>
+        supabase
+          .from('routine_blocks')
+          .update({ planned_start: u.planned_start })
+          .eq('id', u.id)
+      )
+    );
+
+    const failed = results.filter((r) => r.error).length;
+    if (failed > 0) {
+      toast.error(`Falha ao reordenar ${failed} bloco(s)`);
     }
 
     fetchBlocks();
@@ -502,20 +504,21 @@ export function useRoutine(options: UseRoutineOptions = {}) {
       .filter(b => b.date === todayStr && b.status === 'pendente')
       .sort((a, b) => (a.planned_start || '').localeCompare(b.planned_start || ''));
 
-    for (const block of pendingBlocks) {
-      if (block.planned_start) {
-        const [hours, mins] = block.planned_start.split(':').map(Number);
-        const newMins = mins + minutes;
-        const newHours = hours + Math.floor(newMins / 60);
-        const finalMins = newMins % 60;
+    const updates = pendingBlocks
+      .filter(b => b.planned_start)
+      .map((block) => {
+        const [hours, mins] = block.planned_start!.split(':').map(Number);
+        const totalMins = Math.min(hours * 60 + mins + minutes, 23 * 60 + 59);
+        const newHours = Math.floor(totalMins / 60);
+        const finalMins = totalMins % 60;
         const newTime = `${String(newHours).padStart(2, '0')}:${String(finalMins).padStart(2, '0')}`;
-        
-        await supabase
+        return supabase
           .from('routine_blocks')
           .update({ planned_start: newTime })
           .eq('id', block.id);
-      }
-    }
+      });
+
+    await Promise.all(updates);
 
     toast.success(`Blocos empurrados +${minutes}min`);
     fetchBlocks();
@@ -595,21 +598,35 @@ export function useRoutine(options: UseRoutineOptions = {}) {
     };
   }, [blocks, daysInRange, getBlocksByDay]);
 
-  // Initialize
+  // Initialize: carrega templates e prefs uma vez, e mantém realtime estável
   useEffect(() => {
+    let mounted = true;
     setLoading(true);
-    Promise.all([fetchBlocks(), fetchTemplates(), fetchPrefs(), fetchStats()])
-      .finally(() => setLoading(false));
+    Promise.all([fetchTemplates(), fetchPrefs()])
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
 
     const channel = supabase
       .channel('routine-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'routine_blocks' }, fetchBlocks)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'routine_blocks' }, () => {
+        // Refetch usando a referência mais recente via state setter
+        fetchBlocksRef.current?.();
+      })
       .subscribe();
 
     return () => {
+      mounted = false;
       supabase.removeChannel(channel);
     };
-  }, [fetchBlocks, fetchTemplates, fetchPrefs, fetchStats]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Mantém ref atualizada ao fetchBlocks mais recente para uso no realtime
+  const fetchBlocksRef = useRef<typeof fetchBlocks | null>(null);
+  useEffect(() => {
+    fetchBlocksRef.current = fetchBlocks;
+  }, [fetchBlocks]);
 
   // Refetch when date range changes
   useEffect(() => {

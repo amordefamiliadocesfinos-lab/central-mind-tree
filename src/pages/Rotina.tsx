@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   ArrowLeft, ChevronLeft, ChevronRight, Calendar, 
-  CalendarDays, CalendarRange, Sparkles, Clock, 
+  CalendarDays, CalendarRange, Clock, 
   RotateCcw
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -77,17 +77,37 @@ export default function Rotina() {
   };
 
   const handleQuickAdd = async (duration: number) => {
-    const now = new Date();
-    const hours = now.getHours().toString().padStart(2, '0');
-    const mins = Math.ceil(now.getMinutes() / 5) * 5;
-    const adjustedMins = mins >= 60 ? '00' : mins.toString().padStart(2, '0');
-    const adjustedHours = mins >= 60 ? (now.getHours() + 1).toString().padStart(2, '0') : hours;
-    
+    const isViewingToday = format(selectedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+    let startHHMM = '08:00';
+
+    if (isViewingToday) {
+      const now = new Date();
+      // Arredonda para o próximo múltiplo de 5 minutos
+      const totalMins = now.getHours() * 60 + Math.ceil(now.getMinutes() / 5) * 5;
+      const clamped = Math.min(totalMins, 23 * 60 + 55);
+      const h = Math.floor(clamped / 60);
+      const m = clamped % 60;
+      startHHMM = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+    } else {
+      // Para datas futuras: pega o último bloco existente do dia + sua duração, ou 08:00
+      const dayBlocks = getBlocksByDay(selectedDate)
+        .filter(b => b.planned_start)
+        .sort((a, b) => (a.planned_start || '').localeCompare(b.planned_start || ''));
+      const last = dayBlocks[dayBlocks.length - 1];
+      if (last?.planned_start) {
+        const [h, m] = last.planned_start.split(':').map(Number);
+        const totalMins = Math.min(h * 60 + m + last.duration_minutes, 23 * 60 + 55);
+        const newH = Math.floor(totalMins / 60);
+        const newM = totalMins % 60;
+        startHHMM = `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
+      }
+    }
+
     await addBlock({
       title: `Bloco ${duration}min`,
       focus: 'trabalho_profundo',
       duration_minutes: duration,
-      planned_start: `${adjustedHours}:${adjustedMins}`,
+      planned_start: startHHMM,
       date: format(selectedDate, 'yyyy-MM-dd'),
     });
   };
@@ -140,24 +160,16 @@ export default function Rotina() {
           <div className="flex gap-1">
             {!isToday(selectedDate) && (
               <Button 
-                variant="ghost" 
+                variant="outline" 
                 size="sm" 
                 onClick={goToToday}
-                className="text-xs"
+                className="text-xs h-10"
+                title="Voltar para hoje"
               >
                 Hoje
               </Button>
             )}
-            <Button 
-              variant="outline" 
-              size="icon" 
-              onClick={() => autoPlanDay()}
-              title="Gerar Dia"
-              className="h-10 w-10"
-            >
-              <Sparkles className="h-4 w-4" />
-            </Button>
-            {isToday(selectedDate) && currentDayBlocks.length > 0 && (
+            {isToday(selectedDate) && currentDayBlocks.length > 0 && viewMode === 'day' && (
               <Button 
                 variant="outline" 
                 size="icon" 
