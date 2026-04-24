@@ -76,6 +76,14 @@ export function RoutineDayView({
   kpis,
 }: RoutineDayViewProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [, setTick] = useState(0);
+
+  // Tick a cada 30s para atualizar a barra de progresso do bloco ativo
+  useEffect(() => {
+    if (!activeBlock) return;
+    const interval = setInterval(() => setTick((t) => t + 1), 30_000);
+    return () => clearInterval(interval);
+  }, [activeBlock]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
