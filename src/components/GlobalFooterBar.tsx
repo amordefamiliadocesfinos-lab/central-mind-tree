@@ -16,7 +16,7 @@ import {
   Play, Pause, RotateCcw, Clock, Focus, Calendar, Timer, 
   ShoppingCart, FileText, Undo2, Redo2, Home, FileSpreadsheet,
   Users, User, UsersRound, DollarSign, Brain, LayoutDashboard,
-  UserPlus, MoreHorizontal,
+  UserPlus, MoreHorizontal, Truck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -44,6 +44,7 @@ const NAV_ITEMS = [
   { path: "/reunioes", label: "Reuniões", shortLabel: "Reuniões", icon: Users },
   { path: "/minha-area", label: "Minha Área", shortLabel: "Minha", icon: User },
   { path: "/contatos", label: "Contatos", shortLabel: "CRM", icon: UserPlus },
+  { path: "/rotas", label: "Rotas", shortLabel: "Rotas", icon: Truck },
   { path: "/financeiro", label: "Financeiro", shortLabel: "Financeiro", icon: DollarSign },
 ] as const;
 
