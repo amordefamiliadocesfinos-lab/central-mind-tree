@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   ArrowLeft, ChevronLeft, ChevronRight, Calendar, 
-  CalendarDays, CalendarRange, Sparkles, Clock, 
+  CalendarDays, CalendarRange, Clock, 
   RotateCcw
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
