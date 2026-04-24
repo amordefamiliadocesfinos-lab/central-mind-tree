@@ -113,7 +113,7 @@ export function DailySummary() {
             .from('contacts')
             .select('id', { count: 'exact', head: true })
             .eq('is_active', true)
-            .lt('ultimo_contato', cutoff30),
+            .lt('ultimo_contato', cutoff15),
 
           // 📣 Campanhas ativas: ideias com tipo campanha em andamento
           supabase
