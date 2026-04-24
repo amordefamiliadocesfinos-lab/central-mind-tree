@@ -31,6 +31,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useKPIsSelector, useStockValueSelector } from '@/stores/selectors';
 import { useAppStore } from '@/stores/appStore';
 import { FOCUS_TYPES, FocusType } from '@/hooks/useRoutine';
+import { DailySummary } from '@/components/dashboard/DailySummary';
 
 interface DashboardData {
   // Foco
@@ -348,6 +349,11 @@ export default function Dashboard() {
             <Activity className="h-4 w-4 mr-1" />
             Atualizar
           </Button>
+        </div>
+
+        {/* Resumo do Dia - Sticky no topo */}
+        <div className="sticky top-14 z-20 -mx-4 px-4 py-2 bg-background/95 backdrop-blur-sm">
+          <DailySummary />
         </div>
 
         {/* Quick stats banner */}
