@@ -361,6 +361,9 @@ export default function Dashboard() {
         {/* Prioridades do Dia */}
         <DailyPriorities />
 
+        {/* Performance de Hoje */}
+        <DailyPerformance />
+
         {/* Quick stats banner */}
         <div className="grid grid-cols-4 gap-2">
           <div className="bg-primary/10 rounded-lg p-3 text-center">
