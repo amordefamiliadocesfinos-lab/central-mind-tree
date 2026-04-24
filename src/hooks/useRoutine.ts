@@ -381,20 +381,24 @@ export function useRoutine(options: UseRoutineOptions = {}) {
   }, [fetchBlocks]);
 
   const reorderBlocks = useCallback(async (reorderedBlocks: RoutineBlock[]) => {
-    // Update order based on new positions
-    const updates = reorderedBlocks.map((block, index) => {
-      const newStartTime = calculateNewStartTime(index, reorderedBlocks);
-      return {
-        id: block.id,
-        planned_start: newStartTime,
-      };
-    });
+    // Update order based on new positions (paralelizado)
+    const updates = reorderedBlocks.map((block, index) => ({
+      id: block.id,
+      planned_start: calculateNewStartTime(index, reorderedBlocks),
+    }));
 
-    for (const update of updates) {
-      await supabase
-        .from('routine_blocks')
-        .update({ planned_start: update.planned_start })
-        .eq('id', update.id);
+    const results = await Promise.all(
+      updates.map((u) =>
+        supabase
+          .from('routine_blocks')
+          .update({ planned_start: u.planned_start })
+          .eq('id', u.id)
+      )
+    );
+
+    const failed = results.filter((r) => r.error).length;
+    if (failed > 0) {
+      toast.error(`Falha ao reordenar ${failed} bloco(s)`);
     }
 
     fetchBlocks();
