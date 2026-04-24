@@ -20,10 +20,11 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Navigation, Trash2, ChevronLeft, MapPin } from 'lucide-react';
+import { Plus, Navigation, Trash2, ChevronLeft, MapPin, Search } from 'lucide-react';
 import { StopSortableItem } from './StopSortableItem';
 import { AddStopDialog } from './AddStopDialog';
 import { DeliveryProofDialog } from './DeliveryProofDialog';
+import { ContactAddressPicker, type ContactAddress } from './ContactAddressPicker';
 import { useDeliveryRoutes, type DeliveryRoute, type DeliveryStop } from '@/hooks/useDeliveryRoutes';
 
 interface Props {
@@ -140,13 +141,14 @@ export function RouteEditor({ route, onBack }: Props) {
               <Label>Veículo</Label>
               <Input value={vehicle} onChange={(e) => setVehicle(e.target.value)} onBlur={saveHeader} placeholder="Placa, modelo..." />
             </div>
-            <div>
+            <div className="md:col-span-2">
               <Label>Endereço de origem</Label>
-              <Input
+              <OriginAddressField
                 value={origin}
-                onChange={(e) => setOrigin(e.target.value)}
-                onBlur={saveHeader}
-                placeholder="Padrão: primeira parada"
+                onChange={(v) => {
+                  setOrigin(v);
+                  updateRoute(route.id, { origin_address: v || null });
+                }}
               />
             </div>
           </div>
@@ -207,6 +209,71 @@ export function RouteEditor({ route, onBack }: Props) {
           stop={proofStop}
           onConfirm={(payload) => completeStopWithProof(proofStop.id, payload)}
         />
+      )}
+    </div>
+  );
+}
+
+/**
+ * Campo de endereço de origem que aceita digitação livre OU
+ * busca um cliente cadastrado.
+ */
+function OriginAddressField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [mode, setMode] = useState<'manual' | 'cliente'>('manual');
+  const [contact, setContact] = useState<ContactAddress | null>(null);
+
+  const handlePickContact = (c: ContactAddress | null) => {
+    setContact(c);
+    if (c) {
+      const addr = [c.address, c.address_number, c.neighborhood, c.city, c.state]
+        .filter(Boolean)
+        .join(', ');
+      onChange(addr);
+    } else {
+      onChange('');
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-1">
+        <Button
+          type="button"
+          size="sm"
+          variant={mode === 'manual' ? 'secondary' : 'ghost'}
+          className="h-7 text-xs"
+          onClick={() => {
+            setMode('manual');
+            setContact(null);
+          }}
+        >
+          Digitar endereço
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={mode === 'cliente' ? 'secondary' : 'ghost'}
+          className="h-7 text-xs"
+          onClick={() => setMode('cliente')}
+        >
+          <Search className="h-3 w-3 mr-1" /> Buscar cliente
+        </Button>
+      </div>
+
+      {mode === 'manual' ? (
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Padrão: primeira parada"
+        />
+      ) : (
+        <ContactAddressPicker value={contact} onSelect={handlePickContact} />
       )}
     </div>
   );

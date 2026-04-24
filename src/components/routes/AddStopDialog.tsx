@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ContactAutocomplete } from '@/components/operations/ContactAutocomplete';
+import { ContactAddressPicker, type ContactAddress } from './ContactAddressPicker';
 import type { DeliveryStop } from '@/hooks/useDeliveryRoutes';
 
 interface Props {
@@ -14,177 +14,198 @@ interface Props {
   onAdd: (data: Partial<DeliveryStop>) => Promise<void> | void;
 }
 
+const emptyForm = {
+  customer_name: '',
+  phone: '',
+  address: '',
+  address_number: '',
+  neighborhood: '',
+  city: '',
+  state: '',
+  zip_code: '',
+  complement: '',
+  reference_point: '',
+  notes: '',
+};
+
 export function AddStopDialog({ open, onOpenChange, onAdd }: Props) {
   const [tab, setTab] = useState<'cliente' | 'manual'>('cliente');
-  const [contact, setContact] = useState<any>(null);
-  const [form, setForm] = useState({
-    customer_name: '',
-    phone: '',
-    address: '',
-    address_number: '',
-    neighborhood: '',
-    city: '',
-    state: '',
-    zip_code: '',
-    complement: '',
-    reference_point: '',
-    notes: '',
-  });
+  const [contact, setContact] = useState<ContactAddress | null>(null);
+  const [form, setForm] = useState(emptyForm);
+
+  // Quando seleciona um cliente, pré-preenche os campos do formulário
+  useEffect(() => {
+    if (contact) {
+      setForm((prev) => ({
+        ...prev,
+        customer_name: contact.name || '',
+        phone: contact.whatsapp || contact.phone || '',
+        address: contact.address || '',
+        address_number: contact.address_number || '',
+        neighborhood: contact.neighborhood || '',
+        city: contact.city || '',
+        state: contact.state || '',
+        zip_code: contact.zip_code || '',
+        complement: contact.address_complement || '',
+      }));
+    }
+  }, [contact]);
 
   const reset = () => {
     setContact(null);
-    setForm({
-      customer_name: '', phone: '', address: '', address_number: '', neighborhood: '',
-      city: '', state: '', zip_code: '', complement: '', reference_point: '', notes: '',
-    });
+    setForm(emptyForm);
+    setTab('cliente');
   };
 
   const handleAdd = async () => {
-    if (tab === 'cliente' && contact) {
-      await onAdd({
-        contact_id: contact.id,
-        customer_name: contact.name,
-        phone: contact.whatsapp || contact.phone || null,
-        address: contact.address || form.address || 'Endereço não informado',
-        address_number: contact.address_number || null,
-        neighborhood: contact.neighborhood || null,
-        city: contact.city || null,
-        state: contact.state || null,
-        zip_code: contact.zip_code || null,
-        complement: contact.address_complement || null,
-        reference_point: form.reference_point || null,
-        notes: form.notes || null,
-      });
-    } else {
-      if (!form.address.trim()) return;
-      await onAdd({
-        customer_name: form.customer_name || null,
-        phone: form.phone || null,
-        address: form.address,
-        address_number: form.address_number || null,
-        neighborhood: form.neighborhood || null,
-        city: form.city || null,
-        state: form.state || null,
-        zip_code: form.zip_code || null,
-        complement: form.complement || null,
-        reference_point: form.reference_point || null,
-        notes: form.notes || null,
-      });
-    }
+    if (!form.address.trim()) return;
+    await onAdd({
+      contact_id: contact?.id || null,
+      customer_name: form.customer_name || null,
+      phone: form.phone || null,
+      address: form.address,
+      address_number: form.address_number || null,
+      neighborhood: form.neighborhood || null,
+      city: form.city || null,
+      state: form.state || null,
+      zip_code: form.zip_code || null,
+      complement: form.complement || null,
+      reference_point: form.reference_point || null,
+      notes: form.notes || null,
+    });
     reset();
     onOpenChange(false);
   };
 
+  const update = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setForm({ ...form, [k]: e.target.value });
+
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) reset();
+        onOpenChange(o);
+      }}
+    >
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Adicionar parada</DialogTitle>
         </DialogHeader>
 
-        <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
+        <Tabs
+          value={tab}
+          onValueChange={(v) => {
+            setTab(v as any);
+            if (v === 'manual') setContact(null);
+            if (v === 'cliente') setForm(emptyForm);
+          }}
+        >
           <TabsList className="grid grid-cols-2">
             <TabsTrigger value="cliente">Cliente cadastrado</TabsTrigger>
             <TabsTrigger value="manual">Endereço avulso</TabsTrigger>
           </TabsList>
 
           <TabsContent value="cliente" className="space-y-3 pt-3">
-            <ContactAutocomplete
-              onSelect={(c) => setContact(c)}
-              placeholder="Buscar cliente pelo nome, CPF/CNPJ..."
-            />
+            <div>
+              <Label className="mb-1.5 block">Cliente</Label>
+              <ContactAddressPicker value={contact} onSelect={setContact} />
+            </div>
+
             {contact && (
-              <div className="text-xs text-muted-foreground space-y-0.5 p-3 rounded-md bg-muted">
-                <p><span className="font-medium text-foreground">Endereço:</span> {contact.address || '—'}</p>
-                <p><span className="font-medium text-foreground">Cidade:</span> {contact.city || '—'} / {contact.state || '—'}</p>
-                <p><span className="font-medium text-foreground">Telefone:</span> {contact.whatsapp || contact.phone || '—'}</p>
-                {!contact.address && (
-                  <p className="text-amber-600 dark:text-amber-400 mt-2">⚠️ Cliente sem endereço cadastrado. Use a aba Manual.</p>
-                )}
-              </div>
+              <AddressFields form={form} update={update} prefilled />
             )}
-            <div>
-              <Label>Ponto de referência</Label>
-              <Input
-                value={form.reference_point}
-                onChange={(e) => setForm({ ...form, reference_point: e.target.value })}
-                placeholder="Ex: ao lado da padaria"
-              />
-            </div>
-            <div>
-              <Label>Observação</Label>
-              <Textarea
-                value={form.notes}
-                onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                rows={2}
-              />
-            </div>
           </TabsContent>
 
           <TabsContent value="manual" className="space-y-3 pt-3">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="col-span-2">
-                <Label>Nome do destinatário</Label>
-                <Input value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} />
-              </div>
-              <div>
-                <Label>Telefone</Label>
-                <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-              </div>
-              <div>
-                <Label>CEP</Label>
-                <Input value={form.zip_code} onChange={(e) => setForm({ ...form, zip_code: e.target.value })} />
-              </div>
-              <div className="col-span-2">
-                <Label>Endereço *</Label>
-                <Input
-                  value={form.address}
-                  onChange={(e) => setForm({ ...form, address: e.target.value })}
-                  placeholder="Rua, avenida..."
-                />
-              </div>
-              <div>
-                <Label>Número</Label>
-                <Input value={form.address_number} onChange={(e) => setForm({ ...form, address_number: e.target.value })} />
-              </div>
-              <div>
-                <Label>Complemento</Label>
-                <Input value={form.complement} onChange={(e) => setForm({ ...form, complement: e.target.value })} />
-              </div>
-              <div>
-                <Label>Bairro</Label>
-                <Input value={form.neighborhood} onChange={(e) => setForm({ ...form, neighborhood: e.target.value })} />
-              </div>
-              <div>
-                <Label>Cidade</Label>
-                <Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} />
-              </div>
-              <div>
-                <Label>Estado</Label>
-                <Input value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} maxLength={2} />
-              </div>
-              <div className="col-span-2">
-                <Label>Ponto de referência</Label>
-                <Input value={form.reference_point} onChange={(e) => setForm({ ...form, reference_point: e.target.value })} />
-              </div>
-              <div className="col-span-2">
-                <Label>Observação</Label>
-                <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
-              </div>
-            </div>
+            <AddressFields form={form} update={update} showCustomerName />
           </TabsContent>
         </Tabs>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
           <Button
             onClick={handleAdd}
-            disabled={(tab === 'cliente' && !contact) || (tab === 'manual' && !form.address.trim())}
+            disabled={!form.address.trim() || (tab === 'cliente' && !contact)}
           >
             Adicionar parada
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function AddressFields({
+  form,
+  update,
+  showCustomerName = false,
+  prefilled = false,
+}: {
+  form: typeof emptyForm;
+  update: (k: keyof typeof emptyForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  showCustomerName?: boolean;
+  prefilled?: boolean;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      {prefilled && (
+        <p className="col-span-2 text-[11px] text-muted-foreground">
+          Campos preenchidos automaticamente a partir do cadastro. Você pode editar se precisar.
+        </p>
+      )}
+      {showCustomerName && (
+        <div className="col-span-2">
+          <Label>Nome do destinatário</Label>
+          <Input value={form.customer_name} onChange={update('customer_name')} />
+        </div>
+      )}
+      <div>
+        <Label>Telefone</Label>
+        <Input value={form.phone} onChange={update('phone')} placeholder="(11) 99999-9999" />
+      </div>
+      <div>
+        <Label>CEP</Label>
+        <Input value={form.zip_code} onChange={update('zip_code')} placeholder="00000-000" />
+      </div>
+      <div className="col-span-2">
+        <Label>Endereço *</Label>
+        <Input value={form.address} onChange={update('address')} placeholder="Rua, avenida..." />
+      </div>
+      <div>
+        <Label>Número</Label>
+        <Input value={form.address_number} onChange={update('address_number')} />
+      </div>
+      <div>
+        <Label>Complemento</Label>
+        <Input value={form.complement} onChange={update('complement')} placeholder="Apto, sala..." />
+      </div>
+      <div>
+        <Label>Bairro</Label>
+        <Input value={form.neighborhood} onChange={update('neighborhood')} />
+      </div>
+      <div>
+        <Label>Cidade</Label>
+        <Input value={form.city} onChange={update('city')} />
+      </div>
+      <div>
+        <Label>Estado</Label>
+        <Input value={form.state} onChange={update('state')} maxLength={2} placeholder="SP" />
+      </div>
+      <div className="col-span-2">
+        <Label>Ponto de referência</Label>
+        <Input
+          value={form.reference_point}
+          onChange={update('reference_point')}
+          placeholder="Ex: ao lado da padaria"
+        />
+      </div>
+      <div className="col-span-2">
+        <Label>Observação</Label>
+        <Textarea value={form.notes} onChange={update('notes')} rows={2} />
+      </div>
+    </div>
   );
 }
