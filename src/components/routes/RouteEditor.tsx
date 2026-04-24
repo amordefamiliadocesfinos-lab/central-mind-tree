@@ -213,3 +213,68 @@ export function RouteEditor({ route, onBack }: Props) {
     </div>
   );
 }
+
+/**
+ * Campo de endereço de origem que aceita digitação livre OU
+ * busca um cliente cadastrado.
+ */
+function OriginAddressField({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const [mode, setMode] = useState<'manual' | 'cliente'>('manual');
+  const [contact, setContact] = useState<ContactAddress | null>(null);
+
+  const handlePickContact = (c: ContactAddress | null) => {
+    setContact(c);
+    if (c) {
+      const addr = [c.address, c.address_number, c.neighborhood, c.city, c.state]
+        .filter(Boolean)
+        .join(', ');
+      onChange(addr);
+    } else {
+      onChange('');
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-1">
+        <Button
+          type="button"
+          size="sm"
+          variant={mode === 'manual' ? 'secondary' : 'ghost'}
+          className="h-7 text-xs"
+          onClick={() => {
+            setMode('manual');
+            setContact(null);
+          }}
+        >
+          Digitar endereço
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={mode === 'cliente' ? 'secondary' : 'ghost'}
+          className="h-7 text-xs"
+          onClick={() => setMode('cliente')}
+        >
+          <Search className="h-3 w-3 mr-1" /> Buscar cliente
+        </Button>
+      </div>
+
+      {mode === 'manual' ? (
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Padrão: primeira parada"
+        />
+      ) : (
+        <ContactAddressPicker value={contact} onSelect={handlePickContact} />
+      )}
+    </div>
+  );
+}
