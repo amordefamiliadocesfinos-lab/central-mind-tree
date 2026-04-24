@@ -131,14 +131,12 @@ export function useRoutine(options: UseRoutineOptions = {}) {
       return;
     }
 
-    setBlocks((data as RoutineBlock[]) || []);
-    
-    const active = (data as RoutineBlock[])?.find(b => b.status === 'andamento');
-    if (active) {
-      setActiveBlock(active);
-    }
-    
-    setLoading(false);
+    const list = (data as RoutineBlock[]) || [];
+    setBlocks(list);
+
+    // Mantém activeBlock somente se ainda existir e estiver "andamento"
+    const active = list.find((b) => b.status === 'andamento');
+    setActiveBlock(active || null);
   }, [dateRange]);
 
   // Fetch templates
