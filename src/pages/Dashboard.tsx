@@ -31,6 +31,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useKPIsSelector, useStockValueSelector } from '@/stores/selectors';
 import { useAppStore } from '@/stores/appStore';
 import { FOCUS_TYPES, FocusType } from '@/hooks/useRoutine';
+import { DailySummary } from '@/components/dashboard/DailySummary';
 
 interface DashboardData {
   // Foco
