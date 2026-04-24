@@ -315,6 +315,15 @@ export function InvoicesManager() {
       return;
     }
     toast({ title: '✅ Nota emitida', description: `Número: ${number}` });
+    // Abrir o painel de detalhes pós-emissão automaticamente
+    setDetailsInvoice({
+      ...inv,
+      status: 'emitida',
+      invoice_number: number,
+      access_key: accessKey,
+      issue_date: new Date().toISOString().slice(0, 10),
+    } as any);
+    setDetailsOpen(true);
     load();
   };
 
