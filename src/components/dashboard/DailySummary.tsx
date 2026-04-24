@@ -80,7 +80,7 @@ export function DailySummary() {
   useEffect(() => {
     async function load() {
       const today = format(new Date(), 'yyyy-MM-dd');
-      const cutoff30 = format(subDays(new Date(), 30), 'yyyy-MM-dd');
+      const cutoff15 = format(subDays(new Date(), 15), 'yyyy-MM-dd');
 
       try {
         const [leads, production, payments, reactivation, campaigns] = await Promise.all([
