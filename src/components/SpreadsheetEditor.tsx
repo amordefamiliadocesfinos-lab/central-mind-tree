@@ -72,12 +72,12 @@ function inSelection(row: number, col: number, sel: Selection | null): boolean {
   return row >= n.startRow && row <= n.endRow && col >= n.startCol && col <= n.endCol;
 }
 
-export function SpreadsheetEditor({ sheetId, readOnly = false }: SpreadsheetEditorProps) {
+function SpreadsheetGrid({ sheetId, tabId, readOnly = false }: SpreadsheetGridProps) {
   const {
     sheet, cells, computedCells, isLoading,
     updateCell, updateCellsBatch, deleteCells, updateSheetMeta,
     undo, redo, canUndo, canRedo,
-  } = useSpreadsheet(sheetId);
+  } = useSpreadsheet(sheetId, tabId);
 
   const [activeCell, setActiveCell] = useState<{ row: number; col: number }>({ row: 0, col: 0 });
   const [selection, setSelection] = useState<Selection | null>(null);
