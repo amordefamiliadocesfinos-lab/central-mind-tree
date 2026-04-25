@@ -252,6 +252,33 @@ export function useSpreadsheet(sheetId?: string) {
     [sheetId, cells, updateCellsMutation]
   );
 
+  // Delete cells (clear value+formula, keep format)
+  const deleteCells = useCallback(
+    async (positions: { row: number; col: number }[]) => {
+      if (!sheetId || positions.length === 0) return;
+      const updates: CellUpdate[] = positions.map((p) => {
+        const existing = cells.find((c) => c.row_index === p.row && c.col_index === p.col);
+        return { row: p.row, col: p.col, value: null, formula: undefined, format: existing?.format };
+      });
+      await updateCellsBatch(updates);
+    },
+    [sheetId, cells, updateCellsBatch]
+  );
+
+  // Update sheet metadata (frozen rows/cols, col widths, row heights)
+  const updateSheetMeta = useCallback(
+    async (patch: Partial<Pick<Sheet, 'frozen_rows' | 'frozen_cols' | 'col_widths' | 'row_heights' | 'title'>>) => {
+      if (!sheetId) return;
+      const { error } = await supabase.from('sheets').update(patch).eq('id', sheetId);
+      if (error) {
+        toast.error('Erro ao atualizar planilha');
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ['sheet', sheetId] });
+    },
+    [sheetId, queryClient]
+  );
+
   // Undo
   const undo = useCallback(async () => {
     const now = Date.now();
@@ -318,6 +345,8 @@ export function useSpreadsheet(sheetId?: string) {
     isLoading: sheetLoading || cellsLoading,
     updateCell,
     updateCellsBatch,
+    deleteCells,
+    updateSheetMeta,
     undo,
     redo,
     canUndo: undoStack.filter((a) => Date.now() - a.timestamp < UNDO_EXPIRY_MS).length > 0,
