@@ -121,7 +121,15 @@ export function SheetList({ taskId, nodeId }: SheetListProps) {
 
       {/* Sheet Editor Dialog */}
       <Dialog open={!!selectedSheetId} onOpenChange={(open) => !open && setSelectedSheetId(null)}>
-        <DialogContent className="max-w-none w-screen h-screen sm:h-[100dvh] p-0 gap-0 flex flex-col rounded-none border-0 sm:rounded-none">
+        <DialogContent
+          className="max-w-none w-screen h-[calc(100dvh-3.5rem)] sm:h-[calc(100dvh-3.5rem)] top-0 translate-y-0 left-0 translate-x-0 p-0 gap-0 flex flex-col rounded-none border-0 sm:rounded-none"
+          onInteractOutside={(e) => {
+            const target = e.target as HTMLElement | null;
+            if (target?.closest?.('[data-global-footer="true"]')) {
+              e.preventDefault();
+            }
+          }}
+        >
           <DialogHeader className="px-4 py-2 border-b shrink-0">
             <DialogTitle className="text-base">
               {sheets.find((s) => s.id === selectedSheetId)?.title || 'Planilha'}

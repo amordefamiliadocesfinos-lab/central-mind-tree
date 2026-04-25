@@ -553,7 +553,7 @@ export function GlobalFooterBar() {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-[9999] bg-background border-t border-border shadow-lg pb-safe-bottom">
+    <div data-global-footer="true" className="fixed bottom-0 left-0 right-0 z-[9999] bg-background border-t border-border shadow-lg pb-safe-bottom">
       {/* Mobile: 2 rows via flex-wrap. Desktop: single row */}
       <div className="flex flex-wrap md:flex-nowrap items-center justify-between md:h-12 px-2 md:px-4 gap-1.5 md:gap-3">
         {/* Left: Task status counters + Lines mode (only when showTaskBar is true) */}
