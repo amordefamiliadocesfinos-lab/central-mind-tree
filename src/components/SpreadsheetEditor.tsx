@@ -1125,6 +1125,8 @@ export function SpreadsheetEditor({ sheetId, readOnly = false }: SpreadsheetEdit
     </div>
   );
 }
+
+function Separator() {
   return <div className="h-5 w-px bg-border mx-1" />;
 }
 
