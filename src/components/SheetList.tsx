@@ -120,14 +120,18 @@ export function SheetList({ taskId, nodeId }: SheetListProps) {
       )}
 
       {/* Sheet Editor Dialog */}
-      <Dialog open={!!selectedSheetId} onOpenChange={(open) => !open && setSelectedSheetId(null)}>
+      <Dialog
+        open={!!selectedSheetId}
+        onOpenChange={(open) => !open && setSelectedSheetId(null)}
+        modal={false}
+      >
         <DialogContent
           className="max-w-none w-screen h-[calc(100dvh-3.5rem)] sm:h-[calc(100dvh-3.5rem)] top-0 translate-y-0 left-0 translate-x-0 p-0 gap-0 flex flex-col rounded-none border-0 sm:rounded-none"
           onInteractOutside={(e) => {
-            const target = e.target as HTMLElement | null;
-            if (target?.closest?.('[data-global-footer="true"]')) {
-              e.preventDefault();
-            }
+            e.preventDefault();
+          }}
+          onPointerDownOutside={(e) => {
+            e.preventDefault();
           }}
         >
           <DialogHeader className="px-4 py-2 border-b shrink-0">
