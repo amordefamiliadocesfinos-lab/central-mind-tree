@@ -3498,6 +3498,7 @@ export type Database = {
           id: string
           row_index: number
           sheet_id: string
+          tab_id: string | null
           updated_at: string
           value: string | null
         }
@@ -3510,6 +3511,7 @@ export type Database = {
           id?: string
           row_index: number
           sheet_id: string
+          tab_id?: string | null
           updated_at?: string
           value?: string | null
         }
@@ -3522,12 +3524,67 @@ export type Database = {
           id?: string
           row_index?: number
           sheet_id?: string
+          tab_id?: string | null
           updated_at?: string
           value?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "sheet_cells_sheet_id_fkey"
+            columns: ["sheet_id"]
+            isOneToOne: false
+            referencedRelation: "sheets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sheet_cells_tab_id_fkey"
+            columns: ["tab_id"]
+            isOneToOne: false
+            referencedRelation: "sheet_tabs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sheet_tabs: {
+        Row: {
+          col_widths: Json | null
+          created_at: string
+          frozen_cols: number
+          frozen_rows: number
+          id: string
+          order_index: number
+          row_heights: Json | null
+          sheet_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          col_widths?: Json | null
+          created_at?: string
+          frozen_cols?: number
+          frozen_rows?: number
+          id?: string
+          order_index?: number
+          row_heights?: Json | null
+          sheet_id: string
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          col_widths?: Json | null
+          created_at?: string
+          frozen_cols?: number
+          frozen_rows?: number
+          id?: string
+          order_index?: number
+          row_heights?: Json | null
+          sheet_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sheet_tabs_sheet_id_fkey"
             columns: ["sheet_id"]
             isOneToOne: false
             referencedRelation: "sheets"

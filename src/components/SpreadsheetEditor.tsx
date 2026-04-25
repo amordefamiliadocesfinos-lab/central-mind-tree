@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo, KeyboardEvent } from 'react';
-import { useSpreadsheet, CellUpdate, SheetCell } from '@/hooks/useSpreadsheet';
+import { useSpreadsheet, useSheetTabs, CellUpdate, SheetCell } from '@/hooks/useSpreadsheet';
+import { SheetTabsBar } from '@/components/SheetTabsBar';
 import {
   cellKey,
   colIndexToLetter,
@@ -29,6 +30,12 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 
 interface SpreadsheetEditorProps {
   sheetId: string;
+  readOnly?: boolean;
+}
+
+interface SpreadsheetGridProps {
+  sheetId: string;
+  tabId: string;
   readOnly?: boolean;
 }
 
@@ -65,12 +72,12 @@ function inSelection(row: number, col: number, sel: Selection | null): boolean {
   return row >= n.startRow && row <= n.endRow && col >= n.startCol && col <= n.endCol;
 }
 
-export function SpreadsheetEditor({ sheetId, readOnly = false }: SpreadsheetEditorProps) {
+function SpreadsheetGrid({ sheetId, tabId, readOnly = false }: SpreadsheetGridProps) {
   const {
     sheet, cells, computedCells, isLoading,
     updateCell, updateCellsBatch, deleteCells, updateSheetMeta,
     undo, redo, canUndo, canRedo,
-  } = useSpreadsheet(sheetId);
+  } = useSpreadsheet(sheetId, tabId);
 
   const [activeCell, setActiveCell] = useState<{ row: number; col: number }>({ row: 0, col: 0 });
   const [selection, setSelection] = useState<Selection | null>(null);
@@ -1076,6 +1083,45 @@ export function SpreadsheetEditor({ sheetId, readOnly = false }: SpreadsheetEdit
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * Top-level spreadsheet editor with multi-tab support.
+ * Manages active tab state and renders the grid + tab bar.
+ */
+export function SpreadsheetEditor({ sheetId, readOnly = false }: SpreadsheetEditorProps) {
+  const { tabs, isLoading: tabsLoading } = useSheetTabs(sheetId);
+  const [activeTabId, setActiveTabId] = useState<string | null>(null);
+
+  // Pick first tab on load / when tabs change
+  useEffect(() => {
+    if (tabs.length === 0) {
+      setActiveTabId(null);
+      return;
+    }
+    if (!activeTabId || !tabs.find((t) => t.id === activeTabId)) {
+      setActiveTabId(tabs[0].id);
+    }
+  }, [tabs, activeTabId]);
+
+  if (tabsLoading) {
+    return <div className="flex items-center justify-center h-full text-muted-foreground">Carregando planilha...</div>;
+  }
+
+  return (
+    <div className="flex flex-col h-full min-h-0">
+      <div className="flex-1 min-h-0 overflow-hidden">
+        {activeTabId ? (
+          <SpreadsheetGrid key={activeTabId} sheetId={sheetId} tabId={activeTabId} readOnly={readOnly} />
+        ) : (
+          <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+            Esta planilha não tem abas. Crie uma para começar.
+          </div>
+        )}
+      </div>
+      <SheetTabsBar sheetId={sheetId} activeTabId={activeTabId} onTabChange={setActiveTabId} />
     </div>
   );
 }

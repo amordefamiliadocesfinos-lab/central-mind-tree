@@ -18,9 +18,23 @@ export interface Sheet {
   row_heights: Record<number, number>;
 }
 
+export interface SheetTab {
+  id: string;
+  sheet_id: string;
+  title: string;
+  order_index: number;
+  frozen_rows: number;
+  frozen_cols: number;
+  col_widths: Record<number, number>;
+  row_heights: Record<number, number>;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface SheetCell {
   id: string;
   sheet_id: string;
+  tab_id: string | null;
   row_index: number;
   col_index: number;
   value: string | null;
@@ -45,10 +59,10 @@ export interface CellUpdate {
   format?: SheetCell['format'];
 }
 
-// Undo/Redo action types
 interface UndoAction {
   type: 'cell_update';
   sheetId: string;
+  tabId: string;
   changes: {
     row: number;
     col: number;
@@ -58,9 +72,13 @@ interface UndoAction {
   timestamp: number;
 }
 
-const UNDO_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
+const UNDO_EXPIRY_MS = 5 * 60 * 1000;
 
-export function useSpreadsheet(sheetId?: string) {
+/**
+ * Spreadsheet hook scoped to a single tab inside a sheet.
+ * If `tabId` is omitted, falls back to legacy single-sheet behaviour.
+ */
+export function useSpreadsheet(sheetId?: string, tabId?: string) {
   const queryClient = useQueryClient();
   const [undoStack, setUndoStack] = useState<UndoAction[]>([]);
   const [redoStack, setRedoStack] = useState<UndoAction[]>([]);
@@ -82,24 +100,46 @@ export function useSpreadsheet(sheetId?: string) {
     enabled: !!sheetId,
   });
 
-  // Fetch cells
+  // Fetch active tab metadata (for frozen rows/cols, col widths)
+  const { data: tab } = useQuery({
+    queryKey: ['sheet_tab', tabId],
+    queryFn: async () => {
+      if (!tabId) return null;
+      const { data, error } = await supabase
+        .from('sheet_tabs')
+        .select('*')
+        .eq('id', tabId)
+        .single();
+      if (error) throw error;
+      return data as SheetTab;
+    },
+    enabled: !!tabId,
+  });
+
+  // Fetch cells for this tab (or fall back to whole sheet when tabId omitted)
   const { data: cells = [], isLoading: cellsLoading } = useQuery({
-    queryKey: ['sheet_cells', sheetId],
+    queryKey: ['sheet_cells', sheetId, tabId],
     queryFn: async () => {
       if (!sheetId) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from('sheet_cells')
         .select('*')
-        .eq('sheet_id', sheetId)
         .order('row_index')
         .order('col_index');
+
+      if (tabId) {
+        query = query.eq('tab_id', tabId);
+      } else {
+        query = query.eq('sheet_id', sheetId);
+      }
+
+      const { data, error } = await query;
       if (error) throw error;
       return data as SheetCell[];
     },
     enabled: !!sheetId,
   });
 
-  // Build cell data map for formula evaluation
   const buildCellDataMap = useCallback((): CellData => {
     const map: CellData = new Map();
     for (const cell of cells) {
@@ -112,7 +152,6 @@ export function useSpreadsheet(sheetId?: string) {
     return map;
   }, [cells]);
 
-  // Calculate computed values (with formulas evaluated)
   const computedCells = useCallback(() => {
     const cellMap = buildCellDataMap();
     const result: Map<string, CellValue> = new Map();
@@ -130,14 +169,13 @@ export function useSpreadsheet(sheetId?: string) {
     return result;
   }, [cells, buildCellDataMap]);
 
-  // Update cells mutation
   const updateCellsMutation = useMutation({
     mutationFn: async (updates: CellUpdate[]) => {
       if (!sheetId) throw new Error('No sheet ID');
 
-      // Prepare upsert data
       const upsertData = updates.map((u) => ({
         sheet_id: sheetId,
+        tab_id: tabId || null,
         row_index: u.row,
         col_index: u.col,
         value: u.formula ? null : String(u.value ?? ''),
@@ -146,14 +184,19 @@ export function useSpreadsheet(sheetId?: string) {
         format: u.format || {},
       }));
 
+      // When we have a tab, conflict target is (tab_id,row,col). Otherwise legacy (sheet,row,col).
+      const onConflict = tabId
+        ? 'tab_id,row_index,col_index'
+        : 'sheet_id,row_index,col_index';
+
       const { error } = await supabase
         .from('sheet_cells')
-        .upsert(upsertData, { onConflict: 'sheet_id,row_index,col_index' });
+        .upsert(upsertData, { onConflict });
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sheet_cells', sheetId] });
+      queryClient.invalidateQueries({ queryKey: ['sheet_cells', sheetId, tabId] });
     },
     onError: (error) => {
       toast.error('Erro ao atualizar célula');
@@ -161,12 +204,10 @@ export function useSpreadsheet(sheetId?: string) {
     },
   });
 
-  // Update cell with undo support
   const updateCell = useCallback(
     async (update: CellUpdate) => {
       if (!sheetId) return;
 
-      // Check for circular reference if formula
       if (update.formula) {
         const cellMap = buildCellDataMap();
         const key = cellKey(update.row, update.col);
@@ -176,7 +217,6 @@ export function useSpreadsheet(sheetId?: string) {
         }
       }
 
-      // Find existing cell for undo
       const existingCell = cells.find(
         (c) => c.row_index === update.row && c.col_index === update.col
       );
@@ -184,6 +224,7 @@ export function useSpreadsheet(sheetId?: string) {
       const undoAction: UndoAction = {
         type: 'cell_update',
         sheetId,
+        tabId: tabId || '',
         changes: [
           {
             row: update.row,
@@ -208,15 +249,13 @@ export function useSpreadsheet(sheetId?: string) {
 
       await updateCellsMutation.mutateAsync([update]);
     },
-    [sheetId, cells, buildCellDataMap, updateCellsMutation]
+    [sheetId, tabId, cells, buildCellDataMap, updateCellsMutation]
   );
 
-  // Batch update cells
   const updateCellsBatch = useCallback(
     async (updates: CellUpdate[]) => {
       if (!sheetId || updates.length === 0) return;
 
-      // Build undo action
       const changes = updates.map((update) => {
         const existingCell = cells.find(
           (c) => c.row_index === update.row && c.col_index === update.col
@@ -240,6 +279,7 @@ export function useSpreadsheet(sheetId?: string) {
       const undoAction: UndoAction = {
         type: 'cell_update',
         sheetId,
+        tabId: tabId || '',
         changes,
         timestamp: Date.now(),
       };
@@ -249,10 +289,9 @@ export function useSpreadsheet(sheetId?: string) {
 
       await updateCellsMutation.mutateAsync(updates);
     },
-    [sheetId, cells, updateCellsMutation]
+    [sheetId, tabId, cells, updateCellsMutation]
   );
 
-  // Delete cells (clear value+formula, keep format)
   const deleteCells = useCallback(
     async (positions: { row: number; col: number }[]) => {
       if (!sheetId || positions.length === 0) return;
@@ -265,9 +304,19 @@ export function useSpreadsheet(sheetId?: string) {
     [sheetId, cells, updateCellsBatch]
   );
 
-  // Update sheet metadata (frozen rows/cols, col widths, row heights)
+  // Update tab metadata when present, otherwise fall back to sheet metadata
   const updateSheetMeta = useCallback(
-    async (patch: Partial<Pick<Sheet, 'frozen_rows' | 'frozen_cols' | 'col_widths' | 'row_heights' | 'title'>>) => {
+    async (patch: Partial<Pick<SheetTab, 'frozen_rows' | 'frozen_cols' | 'col_widths' | 'row_heights' | 'title'>>) => {
+      if (tabId) {
+        const { error } = await supabase.from('sheet_tabs').update(patch).eq('id', tabId);
+        if (error) {
+          toast.error('Erro ao atualizar aba');
+          return;
+        }
+        queryClient.invalidateQueries({ queryKey: ['sheet_tab', tabId] });
+        queryClient.invalidateQueries({ queryKey: ['sheet_tabs', sheetId] });
+        return;
+      }
       if (!sheetId) return;
       const { error } = await supabase.from('sheets').update(patch).eq('id', sheetId);
       if (error) {
@@ -276,14 +325,13 @@ export function useSpreadsheet(sheetId?: string) {
       }
       queryClient.invalidateQueries({ queryKey: ['sheet', sheetId] });
     },
-    [sheetId, queryClient]
+    [sheetId, tabId, queryClient]
   );
 
-  // Undo
   const undo = useCallback(async () => {
     const now = Date.now();
     const validActions = undoStack.filter((a) => now - a.timestamp < UNDO_EXPIRY_MS);
-    
+
     if (validActions.length === 0) {
       toast.info('Nenhuma ação para desfazer');
       return;
@@ -305,7 +353,6 @@ export function useSpreadsheet(sheetId?: string) {
     toast.success('Desfeito');
   }, [undoStack, updateCellsMutation]);
 
-  // Redo
   const redo = useCallback(async () => {
     if (redoStack.length === 0) {
       toast.info('Nenhuma ação para refazer');
@@ -328,18 +375,23 @@ export function useSpreadsheet(sheetId?: string) {
     toast.success('Refeito');
   }, [redoStack, updateCellsMutation]);
 
-  // Clean up expired undo actions
   useEffect(() => {
     const interval = setInterval(() => {
       const now = Date.now();
       setUndoStack((prev) => prev.filter((a) => now - a.timestamp < UNDO_EXPIRY_MS));
-    }, 60000); // Check every minute
+    }, 60000);
 
     return () => clearInterval(interval);
   }, []);
 
+  // Effective layout meta: prefer tab values when a tab is active
+  const effectiveSheet = (tab
+    ? { ...sheet, frozen_rows: tab.frozen_rows, frozen_cols: tab.frozen_cols, col_widths: tab.col_widths, row_heights: tab.row_heights }
+    : sheet) as Sheet | null;
+
   return {
-    sheet,
+    sheet: effectiveSheet,
+    tab,
     cells,
     computedCells: computedCells(),
     isLoading: sheetLoading || cellsLoading,
@@ -354,7 +406,135 @@ export function useSpreadsheet(sheetId?: string) {
   };
 }
 
-// Hook for listing sheets
+// ─── Tabs hook ──────────────────────────────────────────────────────────────
+export function useSheetTabs(sheetId?: string) {
+  const queryClient = useQueryClient();
+
+  const { data: tabs = [], isLoading } = useQuery({
+    queryKey: ['sheet_tabs', sheetId],
+    queryFn: async () => {
+      if (!sheetId) return [];
+      const { data, error } = await supabase
+        .from('sheet_tabs')
+        .select('*')
+        .eq('sheet_id', sheetId)
+        .order('order_index', { ascending: true });
+      if (error) throw error;
+      return data as SheetTab[];
+    },
+    enabled: !!sheetId,
+  });
+
+  const createTab = useCallback(
+    async (title?: string) => {
+      if (!sheetId) throw new Error('No sheet ID');
+      const nextOrder = tabs.length > 0 ? Math.max(...tabs.map((t) => t.order_index)) + 1 : 0;
+      const newTitle = title?.trim() || `Planilha${tabs.length + 1}`;
+      const { data, error } = await supabase
+        .from('sheet_tabs')
+        .insert({ sheet_id: sheetId, title: newTitle, order_index: nextOrder })
+        .select()
+        .single();
+      if (error) {
+        toast.error('Erro ao criar aba');
+        throw error;
+      }
+      queryClient.invalidateQueries({ queryKey: ['sheet_tabs', sheetId] });
+      toast.success('Aba criada');
+      return data as SheetTab;
+    },
+    [sheetId, tabs, queryClient]
+  );
+
+  const renameTab = useCallback(
+    async (tabId: string, title: string) => {
+      const trimmed = title.trim();
+      if (!trimmed) return;
+      const { error } = await supabase
+        .from('sheet_tabs')
+        .update({ title: trimmed })
+        .eq('id', tabId);
+      if (error) {
+        toast.error('Erro ao renomear aba');
+        throw error;
+      }
+      queryClient.invalidateQueries({ queryKey: ['sheet_tabs', sheetId] });
+      queryClient.invalidateQueries({ queryKey: ['sheet_tab', tabId] });
+    },
+    [sheetId, queryClient]
+  );
+
+  const deleteTab = useCallback(
+    async (tabId: string) => {
+      if (tabs.length <= 1) {
+        toast.error('A planilha precisa ter pelo menos uma aba');
+        return;
+      }
+      const { error } = await supabase.from('sheet_tabs').delete().eq('id', tabId);
+      if (error) {
+        toast.error('Erro ao excluir aba');
+        throw error;
+      }
+      queryClient.invalidateQueries({ queryKey: ['sheet_tabs', sheetId] });
+      toast.success('Aba excluída');
+    },
+    [sheetId, tabs.length, queryClient]
+  );
+
+  const duplicateTab = useCallback(
+    async (sourceTabId: string) => {
+      if (!sheetId) throw new Error('No sheet ID');
+      const source = tabs.find((t) => t.id === sourceTabId);
+      if (!source) return;
+      const nextOrder = Math.max(...tabs.map((t) => t.order_index)) + 1;
+      const { data: newTab, error: insertErr } = await supabase
+        .from('sheet_tabs')
+        .insert({
+          sheet_id: sheetId,
+          title: `${source.title} (cópia)`,
+          order_index: nextOrder,
+          frozen_rows: source.frozen_rows,
+          frozen_cols: source.frozen_cols,
+          col_widths: source.col_widths,
+          row_heights: source.row_heights,
+        })
+        .select()
+        .single();
+      if (insertErr || !newTab) {
+        toast.error('Erro ao duplicar aba');
+        return;
+      }
+
+      // Copy cells
+      const { data: srcCells } = await supabase
+        .from('sheet_cells')
+        .select('*')
+        .eq('tab_id', sourceTabId);
+
+      if (srcCells && srcCells.length > 0) {
+        const cloned = srcCells.map((c: any) => ({
+          sheet_id: sheetId,
+          tab_id: newTab.id,
+          row_index: c.row_index,
+          col_index: c.col_index,
+          value: c.value,
+          formula: c.formula,
+          cell_type: c.cell_type,
+          format: c.format,
+        }));
+        await supabase.from('sheet_cells').insert(cloned);
+      }
+
+      queryClient.invalidateQueries({ queryKey: ['sheet_tabs', sheetId] });
+      toast.success('Aba duplicada');
+      return newTab as SheetTab;
+    },
+    [sheetId, tabs, queryClient]
+  );
+
+  return { tabs, isLoading, createTab, renameTab, deleteTab, duplicateTab };
+}
+
 export function useSheets(options?: { taskId?: string; nodeId?: string }) {
   const queryClient = useQueryClient();
 
@@ -380,7 +560,6 @@ export function useSheets(options?: { taskId?: string; nodeId?: string }) {
     },
   });
 
-  // Create sheet
   const createSheet = useCallback(
     async (data: { title?: string; task_id?: string; node_id?: string }) => {
       const { data: newSheet, error } = await supabase
@@ -405,7 +584,6 @@ export function useSheets(options?: { taskId?: string; nodeId?: string }) {
     [queryClient]
   );
 
-  // Delete sheet (soft delete)
   const deleteSheet = useCallback(
     async (id: string) => {
       const { error } = await supabase
@@ -424,7 +602,6 @@ export function useSheets(options?: { taskId?: string; nodeId?: string }) {
     [queryClient]
   );
 
-  // Update sheet metadata
   const updateSheet = useCallback(
     async (id: string, data: Partial<Sheet>) => {
       const { error } = await supabase
@@ -443,11 +620,10 @@ export function useSheets(options?: { taskId?: string; nodeId?: string }) {
     [queryClient]
   );
 
-  // Link/unlink sheet to task or node
   const linkSheet = useCallback(
     async (sheetId: string, linkType: 'task' | 'node', linkId: string | null) => {
-      const update = linkType === 'task' 
-        ? { task_id: linkId } 
+      const update = linkType === 'task'
+        ? { task_id: linkId }
         : { node_id: linkId };
 
       const { error } = await supabase
