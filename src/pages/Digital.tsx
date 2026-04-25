@@ -315,7 +315,7 @@ export default function Digital() {
 
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="h-10 gap-2 shrink-0" aria-label="Abrir filtros">
+                  <Button variant="outline" size="icon" className="h-10 w-10 sm:w-auto sm:px-3 gap-2 shrink-0 touch-manipulation" aria-label="Abrir filtros">
                     <SlidersHorizontal className="h-4 w-4" />
                     <span className="hidden sm:inline">Filtros</span>
                     {activeFilterChips.length > 0 && (
