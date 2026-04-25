@@ -1087,7 +1087,44 @@ function SpreadsheetGrid({ sheetId, tabId, readOnly = false }: SpreadsheetGridPr
   );
 }
 
-function Separator() {
+/**
+ * Top-level spreadsheet editor with multi-tab support.
+ * Manages active tab state and renders the grid + tab bar.
+ */
+export function SpreadsheetEditor({ sheetId, readOnly = false }: SpreadsheetEditorProps) {
+  const { tabs, isLoading: tabsLoading } = useSheetTabs(sheetId);
+  const [activeTabId, setActiveTabId] = useState<string | null>(null);
+
+  // Pick first tab on load / when tabs change
+  useEffect(() => {
+    if (tabs.length === 0) {
+      setActiveTabId(null);
+      return;
+    }
+    if (!activeTabId || !tabs.find((t) => t.id === activeTabId)) {
+      setActiveTabId(tabs[0].id);
+    }
+  }, [tabs, activeTabId]);
+
+  if (tabsLoading) {
+    return <div className="flex items-center justify-center h-full text-muted-foreground">Carregando planilha...</div>;
+  }
+
+  return (
+    <div className="flex flex-col h-full min-h-0">
+      <div className="flex-1 min-h-0 overflow-hidden">
+        {activeTabId ? (
+          <SpreadsheetGrid key={activeTabId} sheetId={sheetId} tabId={activeTabId} readOnly={readOnly} />
+        ) : (
+          <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
+            Esta planilha não tem abas. Crie uma para começar.
+          </div>
+        )}
+      </div>
+      <SheetTabsBar sheetId={sheetId} activeTabId={activeTabId} onTabChange={setActiveTabId} />
+    </div>
+  );
+}
   return <div className="h-5 w-px bg-border mx-1" />;
 }
 
