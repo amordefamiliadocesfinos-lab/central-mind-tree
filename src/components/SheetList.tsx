@@ -121,13 +121,13 @@ export function SheetList({ taskId, nodeId }: SheetListProps) {
 
       {/* Sheet Editor Dialog */}
       <Dialog open={!!selectedSheetId} onOpenChange={(open) => !open && setSelectedSheetId(null)}>
-        <DialogContent className="max-w-[95vw] w-[1200px] h-[80vh] flex flex-col">
-          <DialogHeader>
-            <DialogTitle>
+        <DialogContent className="max-w-none w-screen h-screen sm:h-[100dvh] p-0 gap-0 flex flex-col rounded-none border-0 sm:rounded-none">
+          <DialogHeader className="px-4 py-2 border-b shrink-0">
+            <DialogTitle className="text-base">
               {sheets.find((s) => s.id === selectedSheetId)?.title || 'Planilha'}
             </DialogTitle>
           </DialogHeader>
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1 min-h-0 overflow-hidden">
             {selectedSheetId && <SpreadsheetEditor sheetId={selectedSheetId} />}
           </div>
         </DialogContent>
