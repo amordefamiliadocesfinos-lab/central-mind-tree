@@ -304,7 +304,7 @@ export default function Digital() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9 touch-manipulation"
                     onClick={() => setSearchQuery('')}
                     aria-label="Limpar pesquisa"
                   >
