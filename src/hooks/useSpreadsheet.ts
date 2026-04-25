@@ -345,6 +345,8 @@ export function useSpreadsheet(sheetId?: string) {
     isLoading: sheetLoading || cellsLoading,
     updateCell,
     updateCellsBatch,
+    deleteCells,
+    updateSheetMeta,
     undo,
     redo,
     canUndo: undoStack.filter((a) => Date.now() - a.timestamp < UNDO_EXPIRY_MS).length > 0,
