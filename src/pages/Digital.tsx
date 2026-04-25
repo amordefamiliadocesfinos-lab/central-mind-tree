@@ -304,7 +304,7 @@ export default function Digital() {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-9 w-9 touch-manipulation"
                     onClick={() => setSearchQuery('')}
                     aria-label="Limpar pesquisa"
                   >
@@ -315,7 +315,7 @@ export default function Digital() {
 
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className="h-10 gap-2 shrink-0" aria-label="Abrir filtros">
+                  <Button variant="outline" size="icon" className="h-10 w-10 sm:w-auto sm:px-3 gap-2 shrink-0 touch-manipulation" aria-label="Abrir filtros">
                     <SlidersHorizontal className="h-4 w-4" />
                     <span className="hidden sm:inline">Filtros</span>
                     {activeFilterChips.length > 0 && (
@@ -456,13 +456,13 @@ export default function Digital() {
                 </PopoverContent>
               </Popover>
 
-              {/* Mobile-only view toggle */}
+              {/* Mobile-only view toggle - always visible on ideas tab */}
               {activeTab === 'ideias' && (
-                <div className="flex sm:hidden items-center rounded-md border bg-muted/40 p-0.5" role="group" aria-label="Modo de visualização">
+                <div className="flex sm:hidden items-center rounded-lg border bg-muted/40 p-0.5 shrink-0" role="group" aria-label="Modo de visualização">
                   <Button
                     variant={viewMode === 'list' ? 'secondary' : 'ghost'}
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-9 w-9 touch-manipulation"
                     aria-label="Lista"
                     aria-pressed={viewMode === 'list'}
                     onClick={() => setViewMode('list')}
@@ -472,7 +472,7 @@ export default function Digital() {
                   <Button
                     variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-9 w-9 touch-manipulation"
                     aria-label="Kanban"
                     aria-pressed={viewMode === 'kanban'}
                     onClick={() => setViewMode('kanban')}
