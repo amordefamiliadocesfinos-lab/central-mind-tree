@@ -456,13 +456,13 @@ export default function Digital() {
                 </PopoverContent>
               </Popover>
 
-              {/* Mobile-only view toggle */}
+              {/* Mobile-only view toggle - always visible on ideas tab */}
               {activeTab === 'ideias' && (
-                <div className="flex sm:hidden items-center rounded-md border bg-muted/40 p-0.5" role="group" aria-label="Modo de visualização">
+                <div className="flex sm:hidden items-center rounded-lg border bg-muted/40 p-0.5 shrink-0" role="group" aria-label="Modo de visualização">
                   <Button
                     variant={viewMode === 'list' ? 'secondary' : 'ghost'}
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-9 w-9 touch-manipulation"
                     aria-label="Lista"
                     aria-pressed={viewMode === 'list'}
                     onClick={() => setViewMode('list')}
@@ -472,7 +472,7 @@ export default function Digital() {
                   <Button
                     variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-9 w-9 touch-manipulation"
                     aria-label="Kanban"
                     aria-pressed={viewMode === 'kanban'}
                     onClick={() => setViewMode('kanban')}
