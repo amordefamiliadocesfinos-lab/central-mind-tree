@@ -33,6 +33,12 @@ interface SpreadsheetEditorProps {
   readOnly?: boolean;
 }
 
+interface SpreadsheetGridProps {
+  sheetId: string;
+  tabId: string;
+  readOnly?: boolean;
+}
+
 const DEFAULT_ROWS = 100;
 const DEFAULT_COLS = 26;
 const DEFAULT_COL_WIDTH = 96;
