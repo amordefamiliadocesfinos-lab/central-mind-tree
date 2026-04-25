@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo, KeyboardEvent } from 'react';
-import { useSpreadsheet, CellUpdate, SheetCell } from '@/hooks/useSpreadsheet';
+import { useSpreadsheet, useSheetTabs, CellUpdate, SheetCell } from '@/hooks/useSpreadsheet';
+import { SheetTabsBar } from '@/components/SheetTabsBar';
 import {
   cellKey,
   colIndexToLetter,
