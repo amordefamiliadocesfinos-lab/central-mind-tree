@@ -144,6 +144,29 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
     return () => document.removeEventListener("click", handleClickOutside);
   }, []);
 
+  // Reclamp position on viewport resize/rotation so the bar never sits off-screen
+  useEffect(() => {
+    const handleResize = () => {
+      setPosition((prev) => {
+        const isMobileViewport = window.innerWidth < 768;
+        const collapsedWidth = isMobileViewport ? 140 : 160;
+        const margin = 8;
+        const maxX = Math.max(margin, window.innerWidth - collapsedWidth - margin);
+        const maxY = Math.max(0, window.innerHeight - 60);
+        return {
+          x: Math.min(Math.max(margin, prev.x), maxX),
+          y: Math.min(Math.max(0, prev.y), maxY),
+        };
+      });
+    };
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
+  }, []);
+
   const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (containerRef.current) {
       const rect = containerRef.current.getBoundingClientRect();
