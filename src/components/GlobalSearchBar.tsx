@@ -52,6 +52,7 @@ function matchesQuery(queryTokens: string[], ...fields: (string | null)[]): bool
 const POSITION_KEY = "pc.searchbar.position";
 
 export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
+  const isMobile = useIsMobile();
   const [query, setQuery] = useState("");
   const [nodes, setNodes] = useState<NodeItem[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
