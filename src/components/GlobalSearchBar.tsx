@@ -3,6 +3,7 @@ import { Search, FileText, Box, X, GripVertical, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface NodeItem {
   id: string;
