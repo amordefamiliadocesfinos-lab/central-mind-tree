@@ -298,7 +298,8 @@ export default function Digital() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Pesquisar ideias, copy, KPI..."
                   className="pl-9 pr-9 h-10 w-full text-ellipsis placeholder:truncate"
-                  aria-label="Pesquisar ideias"
+                  aria-label="Pesquisar ideias, copy ou KPI"
+                  title="Pesquisar ideias, copy ou KPI"
                 />
                 {searchQuery && (
                   <Button
