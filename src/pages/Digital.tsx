@@ -75,6 +75,7 @@ export default function Digital() {
   const [nodeFilter, setNodeFilter] = useState<string>('all');
   const [productFilter, setProductFilter] = useState<string>('all');
   const [periodFilter, setPeriodFilter] = useState<string>('all');
+  const [searchFocused, setSearchFocused] = useState(false);
 
   // Fetch nodes for linking
   useEffect(() => {
