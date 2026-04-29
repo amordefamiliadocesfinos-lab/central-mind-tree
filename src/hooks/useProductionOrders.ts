@@ -44,6 +44,7 @@ export interface ProductionOrder {
   consolidated_quantity: number;
   status: string;
   notes: string | null;
+  source_order_id: string | null;
   created_at: string;
   updated_at: string;
   completed_at: string | null;
@@ -371,9 +372,51 @@ export function useProductionOrders() {
       })
       .eq('id', orderId);
 
+    // Sync linked sales order: bump status to 'produzido' and append note
+    let linkedOrderSynced = false;
+    if (order.source_order_id) {
+      const { data: linkedOrder } = await supabase
+        .from('orders')
+        .select('id, order_number, status, notes')
+        .eq('id', order.source_order_id)
+        .maybeSingle();
+
+      if (linkedOrder) {
+        const STATUS_RANK: Record<string, number> = {
+          rascunho: 0, confirmado: 1, producao: 2,
+          produzido: 3, pronto: 4, enviado: 5, concluido: 6, cancelado: 7,
+        };
+        const currentRank = STATUS_RANK[linkedOrder.status] ?? -1;
+        const targetRank = STATUS_RANK['produzido'];
+        const noteLine = `[${new Date().toLocaleString('pt-BR')}] OP ${order.order_number} concluída — ${consolidatedQty} un. creditadas em ${location}`;
+        const newNotes = linkedOrder.notes
+          ? `${linkedOrder.notes}\n${noteLine}`
+          : noteLine;
+
+        const updates: Record<string, unknown> = {
+          notes: newNotes,
+          updated_at: new Date().toISOString(),
+        };
+        // Only advance status if current is earlier than 'produzido' and not terminal
+        if (currentRank < targetRank && linkedOrder.status !== 'cancelado' && linkedOrder.status !== 'concluido') {
+          updates.status = 'produzido';
+        }
+
+        const { error: linkErr } = await supabase
+          .from('orders')
+          .update(updates)
+          .eq('id', linkedOrder.id);
+
+        if (!linkErr) {
+          linkedOrderSynced = true;
+          toast.success(`Pedido ${linkedOrder.order_number || linkedOrder.id.slice(0, 8)} atualizado → Produzido`);
+        }
+      }
+    }
+
     toast.success(`OP concluída! ${consolidatedQty} unidades produzidas em ${location}`);
     fetchOrders();
-    return { success: true, shortages: [] };
+    return { success: true, shortages: [], linkedOrderSynced };
   }, [orders, calculateConsolidation, calculateBOM, fetchOrders]);
 
   // Get payment summary by employee
