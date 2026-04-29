@@ -291,13 +291,13 @@ export default function Digital() {
         {!selectedIdea && activeTab === 'ideias' && (
           <div className="px-4 pb-3 space-y-2.5">
             <div className="flex items-center gap-2">
-              <div className="relative flex-1 min-w-0">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden />
+              <div className="relative flex-1 min-w-0 overflow-hidden">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" aria-hidden />
                 <Input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Pesquisar ideias, copy, KPI..."
-                  className="pl-9 pr-9 h-10"
+                  className="pl-9 pr-9 h-10 w-full text-ellipsis placeholder:truncate"
                   aria-label="Pesquisar ideias"
                 />
                 {searchQuery && (
