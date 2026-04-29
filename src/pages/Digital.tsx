@@ -294,10 +294,9 @@ export default function Digital() {
             <div className="relative flex items-center gap-2">
               <div
                 className={cn(
-                  "relative min-w-0 overflow-hidden transition-all duration-200 ease-out",
-                  isMobile && searchFocused && !searchQuery
-                    ? "absolute inset-0 z-20 flex-1 bg-background"
-                    : "flex-1"
+                  "relative flex-1 min-w-0 overflow-hidden",
+                  "transition-[margin] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[margin]",
+                  isMobile && searchFocused && !searchQuery && "-mr-[3.25rem]"
                 )}
               >
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" aria-hidden />
@@ -326,7 +325,16 @@ export default function Digital() {
 
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" size="icon" className="h-10 w-10 sm:w-auto sm:px-3 gap-2 shrink-0 touch-manipulation" aria-label="Abrir filtros">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className={cn(
+                      "h-10 w-10 sm:w-auto sm:px-3 gap-2 shrink-0 touch-manipulation",
+                      "transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] will-change-[opacity,transform]",
+                      isMobile && searchFocused && !searchQuery && "opacity-0 scale-95 pointer-events-none"
+                    )}
+                    aria-label="Abrir filtros"
+                  >
                     <SlidersHorizontal className="h-4 w-4" />
                     <span className="hidden sm:inline">Filtros</span>
                     {activeFilterChips.length > 0 && (
