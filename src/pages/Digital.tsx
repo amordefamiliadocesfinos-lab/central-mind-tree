@@ -291,12 +291,21 @@ export default function Digital() {
         {/* Search & Filters - only on ideas tab */}
         {!selectedIdea && activeTab === 'ideias' && (
           <div className="px-4 pb-3 space-y-2.5">
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1 min-w-0 overflow-hidden">
+            <div className="relative flex items-center gap-2">
+              <div
+                className={cn(
+                  "relative min-w-0 overflow-hidden transition-all duration-200 ease-out",
+                  isMobile && searchFocused && !searchQuery
+                    ? "absolute inset-0 z-20 flex-1 bg-background"
+                    : "flex-1"
+                )}
+              >
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" aria-hidden />
                 <Input
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onFocus={() => setSearchFocused(true)}
+                  onBlur={() => setSearchFocused(false)}
                   placeholder="Pesquisar ideias, copy, KPI..."
                   className="pl-9 pr-9 h-10 w-full text-ellipsis placeholder:truncate placeholder:text-muted-foreground/80 dark:placeholder:text-muted-foreground/90 text-foreground"
                   aria-label="Pesquisar ideias, copy ou KPI"
