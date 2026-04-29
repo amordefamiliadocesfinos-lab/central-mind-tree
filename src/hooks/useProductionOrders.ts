@@ -44,6 +44,7 @@ export interface ProductionOrder {
   consolidated_quantity: number;
   status: string;
   notes: string | null;
+  source_order_id: string | null;
   created_at: string;
   updated_at: string;
   completed_at: string | null;
