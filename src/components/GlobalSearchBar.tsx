@@ -303,6 +303,9 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
   const collapsedWidth = isMobileViewport ? 140 : 160;
   const expandedWidth = isMobileViewport ? Math.min(window.innerWidth - 24, 320) : 320;
 
+  // Hide on mobile to avoid overlapping page headers; mobile users have bottom nav + per-page search
+  if (isMobile) return null;
+
   return (
     <div
       ref={containerRef}
