@@ -3,6 +3,7 @@ import { Search, FileText, Box, X, GripVertical, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface NodeItem {
   id: string;
@@ -51,6 +52,7 @@ function matchesQuery(queryTokens: string[], ...fields: (string | null)[]): bool
 const POSITION_KEY = "pc.searchbar.position";
 
 export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
+  const isMobile = useIsMobile();
   const [query, setQuery] = useState("");
   const [nodes, setNodes] = useState<NodeItem[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -61,23 +63,24 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
   const [showHidden, setShowHidden] = useState(false);
   const [position, setPosition] = useState(() => {
     const isMobileViewport = typeof window !== 'undefined' && window.innerWidth < 768;
-    const defaultWidth = isMobileViewport ? 140 : 180;
+    const collapsedWidth = isMobileViewport ? 140 : 160;
+    const margin = 8;
+    const maxX = Math.max(margin, window.innerWidth - collapsedWidth - margin);
+    const defaultX = maxX;
     const saved = localStorage.getItem(POSITION_KEY);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        // Clamp to current viewport so it never sits off-screen
-        const maxX = Math.max(0, window.innerWidth - defaultWidth);
         const maxY = Math.max(0, window.innerHeight - 60);
         return {
-          x: Math.min(Math.max(0, parsed.x ?? 0), maxX),
-          y: Math.min(Math.max(0, parsed.y ?? 0), maxY),
+          x: Math.min(Math.max(margin, parsed.x ?? defaultX), maxX),
+          y: Math.min(Math.max(0, parsed.y ?? 12), maxY),
         };
       } catch {
-        return { x: window.innerWidth - defaultWidth, y: 12 };
+        return { x: defaultX, y: 12 };
       }
     }
-    return { x: window.innerWidth - defaultWidth, y: 12 };
+    return { x: defaultX, y: 12 };
   });
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -141,6 +144,29 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
     };
     document.addEventListener("click", handleClickOutside);
     return () => document.removeEventListener("click", handleClickOutside);
+  }, []);
+
+  // Reclamp position on viewport resize/rotation so the bar never sits off-screen
+  useEffect(() => {
+    const handleResize = () => {
+      setPosition((prev) => {
+        const isMobileViewport = window.innerWidth < 768;
+        const collapsedWidth = isMobileViewport ? 140 : 160;
+        const margin = 8;
+        const maxX = Math.max(margin, window.innerWidth - collapsedWidth - margin);
+        const maxY = Math.max(0, window.innerHeight - 60);
+        return {
+          x: Math.min(Math.max(margin, prev.x), maxX),
+          y: Math.min(Math.max(0, prev.y), maxY),
+        };
+      });
+    };
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
   }, []);
 
   const handleDragStart = useCallback((e: React.MouseEvent | React.TouchEvent) => {
@@ -276,6 +302,9 @@ export function GlobalSearchBar({ onNodeSelect }: GlobalSearchBarProps) {
   const isMobileViewport = typeof window !== 'undefined' && window.innerWidth < 768;
   const collapsedWidth = isMobileViewport ? 140 : 160;
   const expandedWidth = isMobileViewport ? Math.min(window.innerWidth - 24, 320) : 320;
+
+  // Hide on mobile to avoid overlapping page headers; mobile users have bottom nav + per-page search
+  if (isMobile) return null;
 
   return (
     <div
