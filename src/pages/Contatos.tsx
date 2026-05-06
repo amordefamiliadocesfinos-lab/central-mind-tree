@@ -611,6 +611,19 @@ export default function Contatos() {
     toast.success(`⚡ Atendimento inteligente: ${approach}`);
   }, [getSmartMessage, addEntry, updateContact, refreshNoResponse, refetchChecklists, refetchDaily]);
 
+  const handleCreateOrder = useCallback((contact: Contact) => {
+    const params = new URLSearchParams({
+      tab: 'orders',
+      newOrder: 'true',
+      contactId: contact.id,
+      contactName: contact.name || '',
+      contactPhone: contact.phone || contact.whatsapp || contact.mobile || '',
+      contactEmail: contact.email || '',
+      ...(contact.notes ? { contactNotes: contact.notes } : {}),
+    });
+    navigate(`/operacoes?${params.toString()}`);
+  }, [navigate]);
+
   const renderContactCard = useCallback((contact: Contact) => {
     const noResponseInfo = getNoResponseInfo(contact.id);
     const scoreInfo = getScore(contact.id);
