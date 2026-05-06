@@ -63,14 +63,14 @@ export function resolveDateRange(v: OrdersDateFilterValue): { from: Date; to: Da
   }
 }
 
-export function filterOrdersByDate<T extends Record<string, unknown>>(
+export function filterOrdersByDate<T>(
   orders: T[],
   value: OrdersDateFilterValue,
 ): T[] {
   const interval = resolveDateRange(value);
   if (!interval) return orders;
   return orders.filter((o) => {
-    const raw = o[value.field] as string | null | undefined;
+    const raw = (o as Record<string, unknown>)[value.field] as string | null | undefined;
     if (!raw) return false;
     try {
       const d = typeof raw === 'string' && raw.length === 10 ? parseISO(raw) : new Date(raw);
