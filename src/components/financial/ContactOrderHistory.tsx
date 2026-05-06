@@ -98,6 +98,7 @@ export function ContactOrderHistory({ open, onOpenChange, contact }: ContactOrde
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('resumo');
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (open && contact) {
