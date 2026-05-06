@@ -236,6 +236,52 @@ export function ContactFormDialog({
     }
   };
 
+  const aiFileRef = useRef<HTMLInputElement>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const handleAIMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+
+    setAiLoading(true);
+    const toastId = toast.loading('🤖 Analisando mídia com IA...');
+    try {
+      const ext = file.name.split('.').pop() || 'bin';
+      const path = `ai-extract/${crypto.randomUUID()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from('media').upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+      const { data: urlData } = supabase.storage.from('media').getPublicUrl(path);
+
+      const { data, error } = await supabase.functions.invoke('contact-from-media', {
+        body: { mediaUrl: urlData.publicUrl, mimeType: file.type },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+
+      const extracted = data.contact || {};
+      setForm(prev => {
+        const merged: any = { ...prev };
+        Object.entries(extracted).forEach(([k, v]) => {
+          if (k === 'confidence') return;
+          if (v === undefined || v === null || v === '') return;
+          // Não sobrescreve campos já preenchidos
+          if (!merged[k] || merged[k] === '') {
+            merged[k] = v;
+          }
+        });
+        return merged;
+      });
+      setShowDetails(true);
+      toast.success(`✨ Dados extraídos! Revise e salve.`, { id: toastId });
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Erro ao analisar mídia', { id: toastId });
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -250,7 +296,33 @@ export function ContactFormDialog({
             )}
           </DialogTitle>
           <div className="flex items-center gap-2">
+            <input
+              ref={aiFileRef}
+              type="file"
+              accept="image/*,video/*"
+              className="hidden"
+              onChange={handleAIMediaUpload}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1 border-purple-300 text-purple-700 hover:bg-purple-50 dark:border-purple-700 dark:text-purple-300 dark:hover:bg-purple-950/30"
+              onClick={() => aiFileRef.current?.click()}
+              disabled={aiLoading}
+              type="button"
+            >
+              {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              IA: Extrair de mídia
+            </Button>
             {contact && (
+              <Button
+                variant="outline"
+                className="gap-1 border-primary/30 text-primary hover:bg-primary/10"
+                onClick={() => {
+                  const params = new URLSearchParams({
+                    tab: 'orders',
+                    newOrder: 'true',
+                    contactId: contact.id,
               <Button
                 variant="outline"
                 className="gap-1 border-primary/30 text-primary hover:bg-primary/10"
