@@ -23,6 +23,7 @@ import { ProductMovementHistory } from '@/components/ProductMovementHistory';
 import { BOMEditor } from '@/components/BOMEditor';
 import { OperationsTab, OperationsBottomNav } from '@/components/operations/OperationsBottomNav';
 import { OperationsSearchBar } from '@/components/operations/OperationsSearchBar';
+import { OrdersDateFilter, filterOrdersByDate, type OrdersDateFilterValue } from '@/components/operations/OrdersDateFilter';
 import { OperationsTopTabs } from '@/components/operations/OperationsTopTabs';
 import { OrderCard } from '@/components/operations/OrderCard';
 import { OrderGridCard } from '@/components/operations/OrderGridCard';
@@ -174,8 +175,16 @@ export default function Operacoes() {
   const kpis = useKPIsSelector();
   const stockValue = useStockValueSelector();
 
+  // Date filter state for orders
+  const [ordersDateFilter, setOrdersDateFilter] = useState<OrdersDateFilterValue>({
+    preset: 'all',
+    field: 'due_date',
+  });
+
   // Filtered and sorted data
-  const filteredOrders = sortOrdersByStatus(useFilteredOrders());
+  const filteredOrders = sortOrdersByStatus(
+    filterOrdersByDate(useFilteredOrders(), ordersDateFilter)
+  );
   const filteredProducts = sortProductsByCategory(useFilteredProducts());
 
   // Dialog states (local)
@@ -466,6 +475,8 @@ export default function Operacoes() {
               placeholder="Buscar pedidos..."
               showCategoryFilter={false}
             />
+
+            <OrdersDateFilter value={ordersDateFilter} onChange={setOrdersDateFilter} />
             
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-semibold">Pedidos ({filteredOrders.length})</h2>
