@@ -86,6 +86,8 @@ IMPORTANTE - FOTO DE PERFIL:
                 birth_date: { type: "string", description: "YYYY-MM-DD" },
                 gender: { type: "string", enum: ["masculino", "feminino", "outro"] },
                 notes: { type: "string", description: "Observações e contexto da mídia" },
+                has_profile_photo: { type: "boolean", description: "True se a mídia contém uma foto de perfil clara da pessoa" },
+                photo_description: { type: "string", description: "Onde a foto de perfil aparece na mídia" },
                 confidence: { type: "number", description: "Confiança 0-1 nos dados extraídos" },
               },
               required: ["name"],
