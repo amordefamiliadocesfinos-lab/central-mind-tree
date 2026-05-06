@@ -74,7 +74,7 @@ export function filterOrdersByDate<T extends Record<string, unknown>>(
     if (!raw) return false;
     try {
       const d = typeof raw === 'string' && raw.length === 10 ? parseISO(raw) : new Date(raw);
-      return isWithinInterval(d, interval);
+      return isWithinInterval(d, { start: interval.from, end: interval.to });
     } catch {
       return false;
     }
