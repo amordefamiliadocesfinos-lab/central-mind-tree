@@ -249,7 +249,7 @@ export function ContactFormDialog({
             )}
           </DialogTitle>
           <div className="flex items-center gap-2">
-            {contact && ['negociacao', 'proposta_enviada', 'contato_realizado'].includes(contact.funnel_status) && (
+            {contact && (
               <Button
                 variant="outline"
                 className="gap-1 border-primary/30 text-primary hover:bg-primary/10"
@@ -268,7 +268,7 @@ export function ContactFormDialog({
                 }}
               >
                 <ShoppingCart className="h-4 w-4" />
-                Converter em Pedido
+                Novo Pedido
               </Button>
             )}
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
