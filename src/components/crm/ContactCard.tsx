@@ -111,6 +111,7 @@ export function ContactCard({
   onViewOrders,
   onViewHistory,
   onViewActivities,
+  onCreateOrder,
   onDelete,
   onTempChange,
   onDragStart,
