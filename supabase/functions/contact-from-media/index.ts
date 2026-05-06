@@ -28,11 +28,17 @@ Para telefones brasileiros, normalize para apenas dígitos (com DDD). Para Whats
 Se identificar uma empresa (CNPJ, Razão Social), defina person_type = 'juridica'. Caso contrário 'fisica'.
 Inclua um resumo em 'notes' descrevendo o contexto da mídia (ex: "Extraído de cartão de visita", "Print do WhatsApp em DD/MM").
 
-IMPORTANTE - FOTO DE PERFIL:
-- Se a mídia contém uma foto de perfil clara da pessoa (ex: avatar do WhatsApp, foto em rede social, selfie, retrato), defina has_profile_photo = true.
-- Em prints do WhatsApp/Instagram/Facebook, considere o avatar circular no topo como foto de perfil válida (has_profile_photo = true).
-- Se for cartão de visita SEM foto da pessoa, ou apenas texto/documento, has_profile_photo = false.
-- Em 'photo_description' descreva brevemente onde a foto aparece (ex: "Avatar circular no topo do print do WhatsApp").`;
+REGRA CRÍTICA - NOME:
+- O 'name' DEVE ser EXATAMENTE o nome/título exibido no cabeçalho do print (ex: topo da conversa do WhatsApp, nome do contato salvo, @username do Instagram).
+- Preserve maiúsculas, números, emojis e formatação. Ex: se o print mostra "Y2 Z GTI ISABELA", o name deve ser "Y2 Z GTI ISABELA" — NÃO normalize, NÃO traduza, NÃO invente.
+- NÃO use o número de telefone como nome quando há um nome textual visível no topo.
+
+REGRA CRÍTICA - FOTO DE PERFIL (BOUNDING BOX):
+- Se a mídia contém um avatar/foto de perfil claro da pessoa (ex: avatar circular do WhatsApp no topo, foto de perfil do Instagram), defina has_profile_photo = true.
+- Forneça em 'profile_photo_bbox' as coordenadas NORMALIZADAS (0.0 a 1.0) APENAS do avatar/foto da pessoa — NÃO inclua o nome, texto, ícones, status ou qualquer área ao redor.
+- Formato: { x, y, width, height } onde x,y é o canto superior-esquerdo do avatar e width/height são as dimensões — todos relativos ao tamanho da imagem completa.
+- Seja preciso: o recorte deve conter SOMENTE o rosto/avatar, descartando todo o resto do print.
+- Se for cartão de visita SEM foto da pessoa, ou apenas texto/documento, has_profile_photo = false e NÃO retorne bbox.`;
 
     const userContent: any[] = [
       { type: "text", text: "Extraia os dados de contato desta mídia." },
