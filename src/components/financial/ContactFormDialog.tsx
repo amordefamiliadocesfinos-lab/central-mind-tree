@@ -249,28 +249,71 @@ export function ContactFormDialog({
         try {
           const W = img.naturalWidth;
           const H = img.naturalHeight;
-          // Clamp + pequena margem para não cortar borda do avatar
-          const pad = 0.02;
-          const x = Math.max(0, (bbox.x - pad)) * W;
-          const y = Math.max(0, (bbox.y - pad)) * H;
-          const w = Math.min(1 - bbox.x, bbox.width + pad * 2) * W;
-          const h = Math.min(1 - bbox.y, bbox.height + pad * 2) * H;
-          // Usa o lado maior para gerar quadrado centralizado (avatar)
-          const side = Math.max(w, h);
-          const cx = x + w / 2;
-          const cy = y + h / 2;
-          const sx = Math.max(0, cx - side / 2);
-          const sy = Math.max(0, cy - side / 2);
-          const sw = Math.min(W - sx, side);
-          const sh = Math.min(H - sy, side);
+          const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
+          const rawX1 = clamp01(bbox.x);
+          const rawY1 = clamp01(bbox.y);
+          const rawX2 = clamp01(bbox.x + bbox.width);
+          const rawY2 = clamp01(bbox.y + bbox.height);
+
+          if (rawX2 <= rawX1 || rawY2 <= rawY1) {
+            resolve(null);
+            return;
+          }
+
+          const boxW = rawX2 - rawX1;
+          const boxH = rawY2 - rawY1;
+          const shrinkRatio = 0.06;
+          const minShrink = 0.0025;
+
+          const shrinkX = Math.min(boxW * shrinkRatio, Math.max(minShrink, boxW * 0.18));
+          const shrinkY = Math.min(boxH * shrinkRatio, Math.max(minShrink, boxH * 0.18));
+
+          let x1 = clamp01(rawX1 + shrinkX / 2);
+          let y1 = clamp01(rawY1 + shrinkY / 2);
+          let x2 = clamp01(rawX2 - shrinkX / 2);
+          let y2 = clamp01(rawY2 - shrinkY / 2);
+
+          const tightenedW = x2 - x1;
+          const tightenedH = y2 - y1;
+          if (tightenedW <= 0 || tightenedH <= 0) {
+            resolve(null);
+            return;
+          }
+
+          const sideNorm = Math.min(1, Math.max(tightenedW, tightenedH));
+          const cx = (x1 + x2) / 2;
+          const cy = (y1 + y2) / 2;
+
+          x1 = clamp01(cx - sideNorm / 2);
+          y1 = clamp01(cy - sideNorm / 2);
+          x2 = clamp01(cx + sideNorm / 2);
+          y2 = clamp01(cy + sideNorm / 2);
+
+          if (x2 - x1 < sideNorm) {
+            if (x1 === 0) x2 = Math.min(1, sideNorm);
+            else if (x2 === 1) x1 = Math.max(0, 1 - sideNorm);
+          }
+
+          if (y2 - y1 < sideNorm) {
+            if (y1 === 0) y2 = Math.min(1, sideNorm);
+            else if (y2 === 1) y1 = Math.max(0, 1 - sideNorm);
+          }
+
+          const sx = Math.round(x1 * W);
+          const sy = Math.round(y1 * H);
+          const sw = Math.max(1, Math.round((x2 - x1) * W));
+          const sh = Math.max(1, Math.round((y2 - y1) * H));
+
           const canvas = document.createElement('canvas');
-          const out = 512;
+          const out = 1920;
           canvas.width = out;
           canvas.height = out;
           const ctx = canvas.getContext('2d');
           if (!ctx) return resolve(null);
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
           ctx.drawImage(img, sx, sy, sw, sh, 0, 0, out, out);
-          canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.92);
+          canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.95);
         } catch {
           resolve(null);
         }
@@ -317,7 +360,7 @@ export function ContactFormDialog({
           const avatarPath = `ai-extract/avatar-${crypto.randomUUID()}.jpg`;
           const { error: avErr } = await supabase.storage
             .from('media')
-            .upload(avatarPath, cropped, { upsert: true, contentType: 'image/jpeg' });
+            .upload(avatarPath, cropped, { upsert: true, contentType: 'image/jpeg', cacheControl: '3600' });
           if (!avErr) {
             const { data: avUrl } = supabase.storage.from('media').getPublicUrl(avatarPath);
             croppedAvatarUrl = avUrl.publicUrl;
