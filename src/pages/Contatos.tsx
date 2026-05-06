@@ -1294,6 +1294,10 @@ export default function Contatos() {
                                 <ShoppingCart className="h-3.5 w-3.5 mr-2" />
                                 Pedidos
                               </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleCreateOrder(contact)} className="text-green-700 dark:text-green-500 font-medium">
+                                <ShoppingCart className="h-3.5 w-3.5 mr-2" />
+                                Novo Pedido
+                              </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Temperatura</div>
                               {Object.entries(TEMP_CONFIG).filter(([key]) => key !== contact.temperatura_lead).map(([key, cfg]) => {
