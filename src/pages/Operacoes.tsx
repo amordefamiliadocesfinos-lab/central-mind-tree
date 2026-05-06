@@ -497,7 +497,7 @@ export default function Operacoes() {
                       Novo
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+                  <DialogContent className="max-w-lg max-h-[90vh] sm:max-h-[85vh] overflow-y-auto p-4 sm:p-6 pb-8">
                     <DialogHeader>
                       <DialogTitle>Novo Pedido</DialogTitle>
                     </DialogHeader>
