@@ -645,6 +645,7 @@ export default function Contatos() {
         onViewOrders={() => { setHistoryContact(contact); setHistoryOpen(true); }}
         onViewHistory={() => { setTimelineContact(contact); setTimelineOpen(true); }}
         onViewActivities={() => { setActivitiesContact(contact); setActivitiesOpen(true); }}
+        onCreateOrder={() => handleCreateOrder(contact)}
         onDelete={() => { setContactToDelete(contact); setDeleteDialogOpen(true); }}
         onTempChange={(temp) => handleTempChange(contact, temp)}
         onDragStart={(e) => handleDragStart(e, contact)}
