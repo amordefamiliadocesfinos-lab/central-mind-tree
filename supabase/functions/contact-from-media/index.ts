@@ -35,9 +35,11 @@ REGRA CRÍTICA - NOME:
 
 REGRA CRÍTICA - FOTO DE PERFIL (BOUNDING BOX):
 - Se a mídia contém um avatar/foto de perfil claro da pessoa (ex: avatar circular do WhatsApp no topo, foto de perfil do Instagram), defina has_profile_photo = true.
-- Forneça em 'profile_photo_bbox' as coordenadas NORMALIZADAS (0.0 a 1.0) APENAS do avatar/foto da pessoa — NÃO inclua o nome, texto, ícones, status ou qualquer área ao redor.
+- Forneça em 'profile_photo_bbox' as coordenadas NORMALIZADAS (0.0 a 1.0) APENAS da área visível da foto do perfil — NÃO inclua o nome, texto, ícones, status, bordas do app, barras, fundo do cabeçalho ou qualquer área ao redor.
 - Formato: { x, y, width, height } onde x,y é o canto superior-esquerdo do avatar e width/height são as dimensões — todos relativos ao tamanho da imagem completa.
-- Seja preciso: o recorte deve conter SOMENTE o rosto/avatar, descartando todo o resto do print.
+- Se o avatar for circular, o bbox deve encostar na borda externa do círculo da foto, como um quadrado tangente ao círculo, sem folga.
+- Se o avatar for quadrado/retangular, o bbox deve encostar exatamente nas bordas da foto visível.
+- Seja extremamente preciso: o recorte deve conter SOMENTE a imagem da foto do perfil, descartando todo o resto do print.
 - Se for cartão de visita SEM foto da pessoa, ou apenas texto/documento, has_profile_photo = false e NÃO retorne bbox.`;
 
     const userContent: any[] = [
@@ -95,7 +97,7 @@ REGRA CRÍTICA - FOTO DE PERFIL (BOUNDING BOX):
                 has_profile_photo: { type: "boolean", description: "True se a mídia contém um avatar/foto de perfil clara da pessoa" },
                 profile_photo_bbox: {
                   type: "object",
-                  description: "Coordenadas normalizadas (0-1) APENAS do avatar/foto da pessoa, sem texto ao redor",
+                  description: "Coordenadas normalizadas (0-1) APENAS da foto visível do perfil, sem texto, moldura do app ou área extra ao redor",
                   properties: {
                     x: { type: "number", description: "Canto superior-esquerdo X (0-1)" },
                     y: { type: "number", description: "Canto superior-esquerdo Y (0-1)" },
