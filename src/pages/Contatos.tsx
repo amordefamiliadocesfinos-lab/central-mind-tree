@@ -181,6 +181,7 @@ type SortField = 'name' | 'valor_estimado' | 'ultimo_contato' | 'created_at' | '
 type SortDir = 'asc' | 'desc';
 
 export default function Contatos() {
+  const navigate = useNavigate();
   const { contacts, loading, createContact, updateContact, deleteContact } = useContacts();
   const { addEntry } = useContactHistory();
   const { getTagsForContact } = useContactTags();
