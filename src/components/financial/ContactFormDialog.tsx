@@ -239,6 +239,47 @@ export function ContactFormDialog({
   const aiFileRef = useRef<HTMLInputElement>(null);
   const [aiLoading, setAiLoading] = useState(false);
 
+  const cropImageByBbox = async (
+    file: File,
+    bbox: { x: number; y: number; width: number; height: number }
+  ): Promise<Blob | null> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const W = img.naturalWidth;
+          const H = img.naturalHeight;
+          // Clamp + pequena margem para não cortar borda do avatar
+          const pad = 0.02;
+          const x = Math.max(0, (bbox.x - pad)) * W;
+          const y = Math.max(0, (bbox.y - pad)) * H;
+          const w = Math.min(1 - bbox.x, bbox.width + pad * 2) * W;
+          const h = Math.min(1 - bbox.y, bbox.height + pad * 2) * H;
+          // Usa o lado maior para gerar quadrado centralizado (avatar)
+          const side = Math.max(w, h);
+          const cx = x + w / 2;
+          const cy = y + h / 2;
+          const sx = Math.max(0, cx - side / 2);
+          const sy = Math.max(0, cy - side / 2);
+          const sw = Math.min(W - sx, side);
+          const sh = Math.min(H - sy, side);
+          const canvas = document.createElement('canvas');
+          const out = 512;
+          canvas.width = out;
+          canvas.height = out;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return resolve(null);
+          ctx.drawImage(img, sx, sy, sw, sh, 0, 0, out, out);
+          canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.92);
+        } catch {
+          resolve(null);
+        }
+      };
+      img.onerror = () => resolve(null);
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
   const handleAIMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -261,24 +302,51 @@ export function ContactFormDialog({
 
       const extracted = data.contact || {};
       const hasProfilePhoto = extracted.has_profile_photo === true;
+      const bbox = extracted.profile_photo_bbox;
+
+      // Se a IA detectou avatar com bbox, recorta SOMENTE essa região e sobe como foto
+      let croppedAvatarUrl: string | null = null;
+      if (
+        hasProfilePhoto &&
+        bbox &&
+        typeof bbox.x === 'number' &&
+        file.type.startsWith('image/')
+      ) {
+        const cropped = await cropImageByBbox(file, bbox);
+        if (cropped) {
+          const avatarPath = `ai-extract/avatar-${crypto.randomUUID()}.jpg`;
+          const { error: avErr } = await supabase.storage
+            .from('media')
+            .upload(avatarPath, cropped, { upsert: true, contentType: 'image/jpeg' });
+          if (!avErr) {
+            const { data: avUrl } = supabase.storage.from('media').getPublicUrl(avatarPath);
+            croppedAvatarUrl = avUrl.publicUrl;
+          }
+        }
+      }
+
       setForm(prev => {
         const merged: any = { ...prev };
         Object.entries(extracted).forEach(([k, v]) => {
-          if (['confidence', 'has_profile_photo', 'photo_description'].includes(k)) return;
+          if (['confidence', 'has_profile_photo', 'profile_photo_bbox'].includes(k)) return;
           if (v === undefined || v === null || v === '') return;
-          // Não sobrescreve campos já preenchidos
+          // Nome: sempre sobrescreve com o que a IA leu do print
+          if (k === 'name') {
+            merged.name = v;
+            return;
+          }
+          // Demais campos: não sobrescreve preenchidos
           if (!merged[k] || merged[k] === '') {
             merged[k] = v;
           }
         });
-        // Se a IA detectou foto de perfil e o contato ainda não tem foto, usa a mídia como foto
-        if (hasProfilePhoto && !merged.photo_url && file.type.startsWith('image/')) {
-          merged.photo_url = urlData.publicUrl;
+        if (croppedAvatarUrl && !merged.photo_url) {
+          merged.photo_url = croppedAvatarUrl;
         }
         return merged;
       });
       setShowDetails(true);
-      const photoMsg = hasProfilePhoto && file.type.startsWith('image/') ? ' Foto de perfil aplicada.' : '';
+      const photoMsg = croppedAvatarUrl ? ' Avatar recortado e aplicado.' : '';
       toast.success(`✨ Dados extraídos!${photoMsg} Revise e salve.`, { id: toastId });
     } catch (err: any) {
       console.error(err);
@@ -287,6 +355,7 @@ export function ContactFormDialog({
       setAiLoading(false);
     }
   };
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
