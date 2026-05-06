@@ -88,6 +88,7 @@ interface ContactCardProps {
   onViewOrders: () => void;
   onViewHistory: () => void;
   onViewActivities: () => void;
+  onCreateOrder: () => void;
   onDelete: () => void;
   onTempChange: (temp: string) => void;
   onDragStart: (e: React.DragEvent) => void;
