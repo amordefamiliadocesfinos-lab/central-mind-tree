@@ -497,11 +497,12 @@ export default function Operacoes() {
                       Novo
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-lg max-h-[90vh] sm:max-h-[85vh] overflow-y-auto p-4 sm:p-6 pb-8">
-                    <DialogHeader>
+                  <DialogContent className="w-[calc(100vw-1rem)] max-w-lg max-h-[calc(100dvh-1rem)] sm:max-h-[85vh] flex flex-col gap-0 overflow-hidden p-0">
+                    <DialogHeader className="shrink-0 border-b px-4 py-4 sm:px-6">
                       <DialogTitle>Novo Pedido</DialogTitle>
                     </DialogHeader>
-                    <div className="space-y-4">
+                    <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-6">
+                      <div className="space-y-4 pb-4">
                       <div>
                         <Label>Cliente</Label>
                         <ContactAutocomplete
@@ -629,6 +630,9 @@ export default function Operacoes() {
                         ))}
                       </div>
 
+                      </div>
+                    </div>
+                    <div className="shrink-0 border-t bg-background px-4 py-3 pb-safe-bottom sm:px-6">
                       <Button onClick={handleAddOrder} className="w-full h-12 text-base">
                         Criar Pedido
                       </Button>
