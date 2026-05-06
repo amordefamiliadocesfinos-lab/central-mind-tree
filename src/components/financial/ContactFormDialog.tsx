@@ -323,14 +323,6 @@ export function ContactFormDialog({
                     tab: 'orders',
                     newOrder: 'true',
                     contactId: contact.id,
-              <Button
-                variant="outline"
-                className="gap-1 border-primary/30 text-primary hover:bg-primary/10"
-                onClick={() => {
-                  const params = new URLSearchParams({
-                    tab: 'orders',
-                    newOrder: 'true',
-                    contactId: contact.id,
                     contactName: contact.name || '',
                     contactPhone: contact.phone || contact.whatsapp || contact.mobile || '',
                     contactEmail: contact.email || '',
