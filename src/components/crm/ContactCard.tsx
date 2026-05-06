@@ -88,6 +88,7 @@ interface ContactCardProps {
   onViewOrders: () => void;
   onViewHistory: () => void;
   onViewActivities: () => void;
+  onCreateOrder: () => void;
   onDelete: () => void;
   onTempChange: (temp: string) => void;
   onDragStart: (e: React.DragEvent) => void;
@@ -110,6 +111,7 @@ export function ContactCard({
   onViewOrders,
   onViewHistory,
   onViewActivities,
+  onCreateOrder,
   onDelete,
   onTempChange,
   onDragStart,
@@ -193,6 +195,7 @@ export function ContactCard({
                 <DropdownMenuItem onClick={onEdit}><Edit className="h-4 w-4 mr-2" /> Editar</DropdownMenuItem>
                 <DropdownMenuItem onClick={onWhatsApp}><MessageCircle className="h-4 w-4 mr-2" /> WhatsApp</DropdownMenuItem>
                 <DropdownMenuItem onClick={onViewOrders}><ShoppingCart className="h-4 w-4 mr-2" /> Pedidos</DropdownMenuItem>
+                <DropdownMenuItem onClick={onCreateOrder} className="text-green-700 dark:text-green-500 font-medium"><ShoppingCart className="h-4 w-4 mr-2" /> Novo Pedido</DropdownMenuItem>
                 <DropdownMenuItem onClick={onViewHistory}><History className="h-4 w-4 mr-2" /> Histórico</DropdownMenuItem>
                 <DropdownMenuItem onClick={onViewActivities}><CalendarClock className="h-4 w-4 mr-2" /> Atividades</DropdownMenuItem>
                 <DropdownMenuSeparator />

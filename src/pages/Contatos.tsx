@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
@@ -181,6 +181,7 @@ type SortField = 'name' | 'valor_estimado' | 'ultimo_contato' | 'created_at' | '
 type SortDir = 'asc' | 'desc';
 
 export default function Contatos() {
+  const navigate = useNavigate();
   const { contacts, loading, createContact, updateContact, deleteContact } = useContacts();
   const { addEntry } = useContactHistory();
   const { getTagsForContact } = useContactTags();
@@ -610,6 +611,19 @@ export default function Contatos() {
     toast.success(`⚡ Atendimento inteligente: ${approach}`);
   }, [getSmartMessage, addEntry, updateContact, refreshNoResponse, refetchChecklists, refetchDaily]);
 
+  const handleCreateOrder = useCallback((contact: Contact) => {
+    const params = new URLSearchParams({
+      tab: 'orders',
+      newOrder: 'true',
+      contactId: contact.id,
+      contactName: contact.name || '',
+      contactPhone: contact.phone || contact.whatsapp || contact.mobile || '',
+      contactEmail: contact.email || '',
+      ...(contact.notes ? { contactNotes: contact.notes } : {}),
+    });
+    navigate(`/operacoes?${params.toString()}`);
+  }, [navigate]);
+
   const renderContactCard = useCallback((contact: Contact) => {
     const noResponseInfo = getNoResponseInfo(contact.id);
     const scoreInfo = getScore(contact.id);
@@ -631,6 +645,7 @@ export default function Contatos() {
         onViewOrders={() => { setHistoryContact(contact); setHistoryOpen(true); }}
         onViewHistory={() => { setTimelineContact(contact); setTimelineOpen(true); }}
         onViewActivities={() => { setActivitiesContact(contact); setActivitiesOpen(true); }}
+        onCreateOrder={() => handleCreateOrder(contact)}
         onDelete={() => { setContactToDelete(contact); setDeleteDialogOpen(true); }}
         onTempChange={(temp) => handleTempChange(contact, temp)}
         onDragStart={(e) => handleDragStart(e, contact)}
@@ -650,7 +665,7 @@ export default function Contatos() {
         onSmartAttend={async () => handleSmartAttend(contact)}
       />
     );
-  }, [getUrgencyLevel, getNoResponseInfo, getScore, hasOrders, checklistMap, draggedContact, handleWhatsApp, handleTempChange, addEntry, refreshNoResponse, refetchChecklists, refetchDaily, handleSmartAttend]);
+  }, [getUrgencyLevel, getNoResponseInfo, getScore, hasOrders, checklistMap, draggedContact, handleWhatsApp, handleTempChange, addEntry, refreshNoResponse, refetchChecklists, refetchDaily, handleSmartAttend, handleCreateOrder]);
 
   const { tags } = useContactTags();
 
@@ -1278,6 +1293,10 @@ export default function Contatos() {
                               <DropdownMenuItem onClick={() => { setHistoryContact(contact); setHistoryOpen(true); }}>
                                 <ShoppingCart className="h-3.5 w-3.5 mr-2" />
                                 Pedidos
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleCreateOrder(contact)} className="text-green-700 dark:text-green-500 font-medium">
+                                <ShoppingCart className="h-3.5 w-3.5 mr-2" />
+                                Novo Pedido
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
                               <div className="px-2 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Temperatura</div>
