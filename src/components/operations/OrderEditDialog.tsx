@@ -72,6 +72,7 @@ export function OrderEditDialog({
         contact_id: order.contact_id,
         channel: order.channel,
         status: order.status,
+        order_date: order.order_date,
         due_date: order.due_date,
         notes: order.notes,
       });
