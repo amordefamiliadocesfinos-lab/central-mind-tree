@@ -175,8 +175,16 @@ export default function Operacoes() {
   const kpis = useKPIsSelector();
   const stockValue = useStockValueSelector();
 
+  // Date filter state for orders
+  const [ordersDateFilter, setOrdersDateFilter] = useState<OrdersDateFilterValue>({
+    preset: 'all',
+    field: 'due_date',
+  });
+
   // Filtered and sorted data
-  const filteredOrders = sortOrdersByStatus(useFilteredOrders());
+  const filteredOrders = sortOrdersByStatus(
+    filterOrdersByDate(useFilteredOrders(), ordersDateFilter)
+  );
   const filteredProducts = sortProductsByCategory(useFilteredProducts());
 
   // Dialog states (local)
