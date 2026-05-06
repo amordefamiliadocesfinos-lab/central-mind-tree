@@ -72,6 +72,7 @@ export function OrderEditDialog({
         contact_id: order.contact_id,
         channel: order.channel,
         status: order.status,
+        order_date: order.order_date,
         due_date: order.due_date,
         notes: order.notes,
       });
@@ -239,17 +240,34 @@ export function OrderEditDialog({
             </div>
           </div>
 
-          <div>
-            <Label className="flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              Prazo de Entrega
-            </Label>
-            <Input
-              type="date"
-              className="h-12"
-              value={formData.due_date || ''}
-              onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Data do Pedido
+              </Label>
+              <Input
+                type="date"
+                className="h-12"
+                value={formData.order_date || ''}
+                onChange={(e) => setFormData({ ...formData, order_date: e.target.value })}
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Data real do movimento (retroativa permitida)
+              </p>
+            </div>
+            <div>
+              <Label className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Prazo de Entrega
+              </Label>
+              <Input
+                type="date"
+                className="h-12"
+                value={formData.due_date || ''}
+                onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+              />
+            </div>
           </div>
 
           <div>
