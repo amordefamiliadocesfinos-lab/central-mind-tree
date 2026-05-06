@@ -260,20 +260,26 @@ export function ContactFormDialog({
       if (data?.error) throw new Error(data.error);
 
       const extracted = data.contact || {};
+      const hasProfilePhoto = extracted.has_profile_photo === true;
       setForm(prev => {
         const merged: any = { ...prev };
         Object.entries(extracted).forEach(([k, v]) => {
-          if (k === 'confidence') return;
+          if (['confidence', 'has_profile_photo', 'photo_description'].includes(k)) return;
           if (v === undefined || v === null || v === '') return;
           // Não sobrescreve campos já preenchidos
           if (!merged[k] || merged[k] === '') {
             merged[k] = v;
           }
         });
+        // Se a IA detectou foto de perfil e o contato ainda não tem foto, usa a mídia como foto
+        if (hasProfilePhoto && !merged.photo_url && file.type.startsWith('image/')) {
+          merged.photo_url = urlData.publicUrl;
+        }
         return merged;
       });
       setShowDetails(true);
-      toast.success(`✨ Dados extraídos! Revise e salve.`, { id: toastId });
+      const photoMsg = hasProfilePhoto && file.type.startsWith('image/') ? ' Foto de perfil aplicada.' : '';
+      toast.success(`✨ Dados extraídos!${photoMsg} Revise e salve.`, { id: toastId });
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || 'Erro ao analisar mídia', { id: toastId });

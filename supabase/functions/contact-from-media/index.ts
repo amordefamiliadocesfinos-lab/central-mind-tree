@@ -26,7 +26,13 @@ Analise a mídia fornecida (cartão de visita, foto de tela do WhatsApp, perfil 
 e extraia todas as informações de contato visíveis. Retorne APENAS os campos que conseguir identificar com confiança. 
 Para telefones brasileiros, normalize para apenas dígitos (com DDD). Para WhatsApp, inclua o código do país 55 quando aplicável.
 Se identificar uma empresa (CNPJ, Razão Social), defina person_type = 'juridica'. Caso contrário 'fisica'.
-Inclua um resumo em 'notes' descrevendo o contexto da mídia (ex: "Extraído de cartão de visita", "Print do WhatsApp em DD/MM").`;
+Inclua um resumo em 'notes' descrevendo o contexto da mídia (ex: "Extraído de cartão de visita", "Print do WhatsApp em DD/MM").
+
+IMPORTANTE - FOTO DE PERFIL:
+- Se a mídia contém uma foto de perfil clara da pessoa (ex: avatar do WhatsApp, foto em rede social, selfie, retrato), defina has_profile_photo = true.
+- Em prints do WhatsApp/Instagram/Facebook, considere o avatar circular no topo como foto de perfil válida (has_profile_photo = true).
+- Se for cartão de visita SEM foto da pessoa, ou apenas texto/documento, has_profile_photo = false.
+- Em 'photo_description' descreva brevemente onde a foto aparece (ex: "Avatar circular no topo do print do WhatsApp").`;
 
     const userContent: any[] = [
       { type: "text", text: "Extraia os dados de contato desta mídia." },
@@ -80,6 +86,8 @@ Inclua um resumo em 'notes' descrevendo o contexto da mídia (ex: "Extraído de 
                 birth_date: { type: "string", description: "YYYY-MM-DD" },
                 gender: { type: "string", enum: ["masculino", "feminino", "outro"] },
                 notes: { type: "string", description: "Observações e contexto da mídia" },
+                has_profile_photo: { type: "boolean", description: "True se a mídia contém uma foto de perfil clara da pessoa" },
+                photo_description: { type: "string", description: "Onde a foto de perfil aparece na mídia" },
                 confidence: { type: "number", description: "Confiança 0-1 nos dados extraídos" },
               },
               required: ["name"],
