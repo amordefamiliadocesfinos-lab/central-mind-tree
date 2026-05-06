@@ -475,6 +475,8 @@ export default function Operacoes() {
               placeholder="Buscar pedidos..."
               showCategoryFilter={false}
             />
+
+            <OrdersDateFilter value={ordersDateFilter} onChange={setOrdersDateFilter} />
             
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-semibold">Pedidos ({filteredOrders.length})</h2>
