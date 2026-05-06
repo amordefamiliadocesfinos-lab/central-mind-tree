@@ -261,15 +261,39 @@ export function ContactOrderHistory({ open, onOpenChange, contact }: ContactOrde
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <DialogTitle className="flex items-center gap-2">
               <ShoppingCart className="h-5 w-5" />
               {contact?.name}
             </DialogTitle>
-            <Badge className={CLASSIFICATION_CONFIG[metrics.classification].color}>
-              <ClassificationIcon className="h-3 w-3 mr-1" />
-              {CLASSIFICATION_CONFIG[metrics.classification].label}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge className={CLASSIFICATION_CONFIG[metrics.classification].color}>
+                <ClassificationIcon className="h-3 w-3 mr-1" />
+                {CLASSIFICATION_CONFIG[metrics.classification].label}
+              </Badge>
+              {contact && (
+                <Button
+                  size="sm"
+                  className="gap-1 bg-green-600 hover:bg-green-700"
+                  onClick={() => {
+                    const params = new URLSearchParams({
+                      tab: 'orders',
+                      newOrder: 'true',
+                      contactId: contact.id,
+                      contactName: contact.name || '',
+                      contactPhone: contact.phone || contact.whatsapp || contact.mobile || '',
+                      contactEmail: contact.email || '',
+                      ...(contact.notes ? { contactNotes: contact.notes } : {}),
+                    });
+                    onOpenChange(false);
+                    navigate(`/operacoes?${params.toString()}`);
+                  }}
+                >
+                  <ShoppingCart className="h-4 w-4" />
+                  Novo Pedido
+                </Button>
+              )}
+            </div>
           </div>
         </DialogHeader>
 
