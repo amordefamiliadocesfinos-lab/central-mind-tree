@@ -100,27 +100,93 @@ export function AvatarCropEditor({ sourceBlob, initialBbox, onConfirm, onCancel 
     dragRef.current = null;
   };
 
+  const [enhancing, setEnhancing] = useState(false);
+  const [enhancedDataUrl, setEnhancedDataUrl] = useState<string | null>(null);
+
+  const buildCroppedBlob = async (): Promise<Blob | null> => {
+    if (!crop) return null;
+    const img = imgRef.current!;
+    const out = 1080;
+    const canvas = document.createElement('canvas');
+    canvas.width = out;
+    canvas.height = out;
+    const ctx = canvas.getContext('2d')!;
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(out / 2, out / 2, out / 2, 0, Math.PI * 2);
+    ctx.closePath();
+    ctx.clip();
+    ctx.drawImage(img, crop.x, crop.y, crop.size, crop.size, 0, 0, out, out);
+    ctx.restore();
+    return await new Promise((res) => canvas.toBlob((b) => res(b), 'image/png', 0.95));
+  };
+
+  const dataUrlToBlob = async (dataUrl: string): Promise<Blob> => {
+    const r = await fetch(dataUrl);
+    return await r.blob();
+  };
+
+  const enhance = async () => {
+    if (!crop) return;
+    setEnhancing(true);
+    setEnhancedDataUrl(null);
+    const tid = toast.loading('✨ Melhorando resolução com IA...');
+    try {
+      const cropped = await buildCroppedBlob();
+      if (!cropped) throw new Error('Falha ao gerar recorte');
+      // upload temporário para gerar URL pública (Gemini precisa de URL/base64)
+      const tmpPath = `ai-extract/enhance-src-${crypto.randomUUID()}.png`;
+      const { error: upErr } = await supabase.storage.from('media').upload(tmpPath, cropped, { upsert: true, contentType: 'image/png', cacheControl: '60' });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from('media').getPublicUrl(tmpPath);
+      const { data, error } = await supabase.functions.invoke('enhance-image', { body: { imageUrl: pub.publicUrl } });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (!data?.imageDataUrl) throw new Error('IA não retornou imagem');
+      setEnhancedDataUrl(data.imageDataUrl);
+      toast.success('Resolução melhorada! Confirme para aplicar.', { id: tid });
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao melhorar', { id: tid });
+    } finally {
+      setEnhancing(false);
+    }
+  };
+
   const confirm = async () => {
     if (!crop) return;
     setSaving(true);
     try {
-      const img = imgRef.current!;
-      const out = 1080;
-      const canvas = document.createElement('canvas');
-      canvas.width = out;
-      canvas.height = out;
-      const ctx = canvas.getContext('2d')!;
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = 'high';
-      // máscara circular para combinar com avatar
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(out / 2, out / 2, out / 2, 0, Math.PI * 2);
-      ctx.closePath();
-      ctx.clip();
-      ctx.drawImage(img, crop.x, crop.y, crop.size, crop.size, 0, 0, out, out);
-      ctx.restore();
-      const blob: Blob | null = await new Promise((res) => canvas.toBlob((b) => res(b), 'image/png', 0.95));
+      let blob: Blob | null;
+      if (enhancedDataUrl) {
+        // Aplica máscara circular sobre a imagem melhorada
+        const enhBlob = await dataUrlToBlob(enhancedDataUrl);
+        const enhImg = new Image();
+        const u = URL.createObjectURL(enhBlob);
+        await new Promise<void>((res, rej) => { enhImg.onload = () => res(); enhImg.onerror = () => rej(new Error('img')); enhImg.src = u; });
+        const out = 1080;
+        const c = document.createElement('canvas');
+        c.width = out; c.height = out;
+        const ctx = c.getContext('2d')!;
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(out / 2, out / 2, out / 2, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+        // cobre o quadrado mantendo proporção
+        const s = Math.min(enhImg.naturalWidth, enhImg.naturalHeight);
+        const sx = (enhImg.naturalWidth - s) / 2;
+        const sy = (enhImg.naturalHeight - s) / 2;
+        ctx.drawImage(enhImg, sx, sy, s, s, 0, 0, out, out);
+        ctx.restore();
+        URL.revokeObjectURL(u);
+        blob = await new Promise((res) => c.toBlob((b) => res(b), 'image/png', 0.95));
+      } else {
+        blob = await buildCroppedBlob();
+      }
       if (!blob) throw new Error('Falha ao gerar imagem');
       const path = `ai-extract/avatar-${crypto.randomUUID()}.png`;
       const { error } = await supabase.storage.from('media').upload(path, blob, { upsert: true, contentType: 'image/png', cacheControl: '3600' });
@@ -158,14 +224,12 @@ export function AvatarCropEditor({ sourceBlob, initialBbox, onConfirm, onCancel 
         )}
         {crop && imgSize.w > 0 && (
           <>
-            {/* overlay escurecido */}
             <div
               className="absolute inset-0 pointer-events-none"
               style={{
                 background: `radial-gradient(circle at ${(crop.x + crop.size / 2) * scale}px ${(crop.y + crop.size / 2) * scale}px, transparent ${(crop.size / 2) * scale - 1}px, rgba(0,0,0,0.55) ${(crop.size / 2) * scale}px)`,
               }}
             />
-            {/* área móvel */}
             <div
               onPointerDown={(e) => onPointerDown(e, 'move')}
               onPointerMove={onPointerMove}
@@ -178,7 +242,6 @@ export function AvatarCropEditor({ sourceBlob, initialBbox, onConfirm, onCancel 
                 height: crop.size * scale,
               }}
             >
-              {/* handle de resize */}
               <div
                 onPointerDown={(e) => onPointerDown(e, 'resize')}
                 onPointerMove={onPointerMove}
@@ -192,14 +255,37 @@ export function AvatarCropEditor({ sourceBlob, initialBbox, onConfirm, onCancel 
         )}
       </div>
 
-      <div className="flex items-center justify-end gap-2">
-        <Button variant="outline" size="sm" type="button" onClick={onCancel} disabled={saving}>
-          Cancelar
+      {enhancedDataUrl && (
+        <div className="flex items-center gap-3 p-2 rounded border border-purple-200 dark:border-purple-800 bg-background">
+          <div className="text-xs font-medium text-purple-700 dark:text-purple-300">Preview melhorado:</div>
+          <img src={enhancedDataUrl} alt="Melhorada" className="h-20 w-20 rounded-full object-cover border-2 border-green-500" />
+          <Button size="sm" variant="ghost" type="button" onClick={() => setEnhancedDataUrl(null)} className="ml-auto text-xs">
+            Descartar
+          </Button>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <Button
+          size="sm"
+          variant="outline"
+          type="button"
+          onClick={enhance}
+          disabled={enhancing || saving || !crop}
+          className="border-purple-300 text-purple-700 hover:bg-purple-50 dark:border-purple-700 dark:text-purple-300"
+        >
+          {enhancing ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Sparkles className="h-4 w-4 mr-1" />}
+          Melhorar resolução (IA)
         </Button>
-        <Button size="sm" type="button" onClick={confirm} disabled={saving || !crop} className="bg-purple-600 hover:bg-purple-700">
-          {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Check className="h-4 w-4 mr-1" />}
-          Usar como foto
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" type="button" onClick={onCancel} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button size="sm" type="button" onClick={confirm} disabled={saving || !crop} className="bg-purple-600 hover:bg-purple-700">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : <Check className="h-4 w-4 mr-1" />}
+            {enhancedDataUrl ? 'Usar versão melhorada' : 'Usar como foto'}
+          </Button>
+        </div>
       </div>
     </div>
   );
