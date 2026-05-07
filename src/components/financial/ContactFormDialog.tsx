@@ -323,6 +323,39 @@ export function ContactFormDialog({
     });
   };
 
+  const extractVideoFrame = (file: File): Promise<Blob | null> => {
+    return new Promise((resolve) => {
+      try {
+        const video = document.createElement('video');
+        video.preload = 'auto';
+        video.muted = true;
+        video.playsInline = true;
+        video.src = URL.createObjectURL(file);
+        video.onloadeddata = () => {
+          // Tenta um frame perto do início (1s ou 10% da duração)
+          const t = Math.min(1, (video.duration || 1) * 0.1);
+          video.currentTime = isFinite(t) ? t : 0;
+        };
+        video.onseeked = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth || 720;
+            canvas.height = video.videoHeight || 1280;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return resolve(null);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.92);
+          } catch {
+            resolve(null);
+          }
+        };
+        video.onerror = () => resolve(null);
+      } catch {
+        resolve(null);
+      }
+    });
+  };
+
   const handleAIMediaUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -331,14 +364,28 @@ export function ContactFormDialog({
     setAiLoading(true);
     const toastId = toast.loading('🤖 Analisando mídia com IA...');
     try {
-      const ext = file.name.split('.').pop() || 'bin';
-      const path = `ai-extract/${crypto.randomUUID()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from('media').upload(path, file, { upsert: true });
+      let uploadFile: Blob = file;
+      let uploadExt = file.name.split('.').pop() || 'bin';
+      let uploadMime = file.type;
+
+      // Se for vídeo, extrai um frame como JPEG (Gemini não aceita vídeo via URL)
+      if ((file.type || '').startsWith('video/')) {
+        toast.loading('🎞️ Extraindo frame do vídeo...', { id: toastId });
+        const frame = await extractVideoFrame(file);
+        if (!frame) throw new Error('Não foi possível extrair um frame do vídeo. Tente uma imagem.');
+        uploadFile = frame;
+        uploadExt = 'jpg';
+        uploadMime = 'image/jpeg';
+        toast.loading('🤖 Analisando mídia com IA...', { id: toastId });
+      }
+
+      const path = `ai-extract/${crypto.randomUUID()}.${uploadExt}`;
+      const { error: upErr } = await supabase.storage.from('media').upload(path, uploadFile, { upsert: true, contentType: uploadMime });
       if (upErr) throw upErr;
       const { data: urlData } = supabase.storage.from('media').getPublicUrl(path);
 
       const { data, error } = await supabase.functions.invoke('contact-from-media', {
-        body: { mediaUrl: urlData.publicUrl, mimeType: file.type },
+        body: { mediaUrl: urlData.publicUrl, mimeType: uploadMime },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
