@@ -240,12 +240,12 @@ export function GlobalFooterBar() {
     document.documentElement.style.setProperty("--footer-icon", `${Math.max(12, Math.round(footerHeight * 0.5))}px`);
     document.documentElement.style.setProperty("--footer-font", `${Math.max(10, Math.round(footerHeight * 0.36))}px`);
     if (window.matchMedia("(min-width: 768px)").matches) {
-      document.body.style.paddingBottom = `${footerHeight}px`;
+      document.body.style.paddingBottom = footerHidden ? "0px" : `${footerHeight}px`;
     }
     return () => {
       // do not clear; user expects persistence across renders
     };
-  }, [footerHeight]);
+  }, [footerHeight, footerHidden]);
   const location = useLocation();
   const { toast } = useToast();
   const { undo, redo, canUndo, canRedo } = useUndoRedoContext();
