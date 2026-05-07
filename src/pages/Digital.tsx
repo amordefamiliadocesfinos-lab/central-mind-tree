@@ -131,6 +131,16 @@ export default function Digital() {
     return true;
   });
 
+  // Scope variations within each idea to the active platform filter so Kanban "Por Variação"
+  // and per-platform expansions don't show variations from non-selected channels.
+  const scopedIdeas = displayedIdeas.map(idea => {
+    if (platformFilter === 'all') return idea;
+    return {
+      ...idea,
+      variations: (idea.variations || []).filter(v => v.platform === platformFilter),
+    };
+  });
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -593,7 +603,7 @@ export default function Digital() {
           ) : activeTab === 'ideias' ? (
             viewMode === 'kanban' ? (
               <KanbanBoard
-                ideas={displayedIdeas}
+                ideas={scopedIdeas}
                 onUpdateIdea={updateIdea}
                 onUpdateVariation={updateVariation}
                 onSelectIdea={setSelectedIdea}
@@ -605,7 +615,7 @@ export default function Digital() {
               />
             ) : (
               <div className="space-y-3">
-                {displayedIdeas.length === 0 ? (
+                {scopedIdeas.length === 0 ? (
                   <Card className="p-8 text-center">
                     <p className="text-muted-foreground">Nenhuma ideia encontrada.</p>
                     <Button className="mt-4" onClick={() => setShowCreateDialog(true)}>
@@ -614,7 +624,7 @@ export default function Digital() {
                     </Button>
                   </Card>
                 ) : (
-                  displayedIdeas.flatMap((idea) => {
+                  scopedIdeas.flatMap((idea) => {
                     const isExpanded = expandedByPlatforms.has(idea.id);
                     const ideaPlatformIds = Array.from(new Set((idea.variations || []).map(v => v.platform).filter(Boolean)));
                     const ideaPlatforms = ideaPlatformIds
