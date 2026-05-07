@@ -16,7 +16,8 @@ import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, ArrowLeft, Search, LayoutGrid, Columns3, Image, BarChart3, Link2, Settings2, TrendingUp, MessageCircle, Book, Calendar, Headset, X, SlidersHorizontal, Sparkles } from 'lucide-react';
+import { Plus, ArrowLeft, Search, LayoutGrid, Columns3, Image, BarChart3, Link2, Settings2, TrendingUp, MessageCircle, Book, Calendar, Headset, X, SlidersHorizontal, Sparkles, Layers } from 'lucide-react';
+import { HierarchicalPlatformSelector } from '@/components/digital/HierarchicalPlatformSelector';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { Link } from 'react-router-dom';
@@ -64,6 +65,8 @@ export default function Digital() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedIdea, setSelectedIdea] = useState<string | null>(null);
   const [newIdea, setNewIdea] = useState({ title: '', objective: '', node_id: '', idea_type: 'conteudo', product_id: '' });
+  const [newIdeaPlatformIds, setNewIdeaPlatformIds] = useState<string[]>([]);
+  const [showNewIdeaPlatformPicker, setShowNewIdeaPlatformPicker] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [activeTab, setActiveTab] = useState<'ideias' | 'calendario' | 'midia' | 'metricas' | 'plataformas' | 'tendencias' | 'engajamento' | 'faq' | 'atendimento'>('ideias');
   const [kanbanMode, setKanbanMode] = useState<'ideas' | 'variations'>('ideas');
@@ -94,8 +97,12 @@ export default function Digital() {
       idea_type: (newIdea.idea_type as any) || 'conteudo',
     });
     if (idea) {
+      if (newIdeaPlatformIds.length > 0) {
+        await batchCreateVariations(idea.id, newIdeaPlatformIds);
+      }
       setShowCreateDialog(false);
       setNewIdea({ title: '', objective: '', node_id: '', idea_type: 'conteudo', product_id: '' });
+      setNewIdeaPlatformIds([]);
       setSelectedIdea(idea.id);
     }
   };
@@ -741,6 +748,46 @@ export default function Digital() {
               label="Vincular Produto (opcional)"
             />
           )}
+          {/* Platforms selection */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Layers className="h-4 w-4" />
+              Plataformas (opcional)
+            </Label>
+            {newIdeaPlatformIds.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {newIdeaPlatformIds.map(pid => {
+                  const p = activePlatforms.find((pl: any) => pl.id === pid);
+                  if (!p) return null;
+                  return (
+                    <Badge key={pid} variant="secondary" className="gap-1.5 pr-1">
+                      <PlatformIcon icon={p.icon} size="sm" />
+                      <span>{p.name}</span>
+                      <button
+                        type="button"
+                        className="ml-0.5 rounded hover:bg-muted-foreground/20 p-0.5"
+                        onClick={() => setNewIdeaPlatformIds(prev => prev.filter(id => id !== pid))}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  );
+                })}
+              </div>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-11 justify-start gap-2"
+              onClick={() => setShowNewIdeaPlatformPicker(true)}
+            >
+              <Plus className="h-4 w-4" />
+              {newIdeaPlatformIds.length > 0 ? 'Adicionar mais plataformas' : 'Selecionar plataformas'}
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Cria automaticamente uma variação por plataforma selecionada.
+            </p>
+          </div>
           <div className="flex gap-3 pt-2">
             <Button variant="outline" className="flex-1 h-12" onClick={() => setShowCreateDialog(false)}>
               Cancelar
@@ -750,6 +797,29 @@ export default function Digital() {
             </Button>
           </div>
         </div>
+      </ResponsiveDialog>
+
+      {/* Platform picker for new idea */}
+      <ResponsiveDialog
+        open={showNewIdeaPlatformPicker}
+        onOpenChange={setShowNewIdeaPlatformPicker}
+        title="Selecionar Plataformas"
+      >
+        <HierarchicalPlatformSelector
+          platforms={activePlatforms as any}
+          excludedPlatformIds={newIdeaPlatformIds}
+          multiSelect
+          selectedIds={newIdeaPlatformIds}
+          onMultiSelect={(ids) => {
+            setNewIdeaPlatformIds(prev => Array.from(new Set([...prev, ...ids])));
+            setShowNewIdeaPlatformPicker(false);
+          }}
+          onSelect={(id) => {
+            setNewIdeaPlatformIds(prev => prev.includes(id) ? prev : [...prev, id]);
+            setShowNewIdeaPlatformPicker(false);
+          }}
+          onCancel={() => setShowNewIdeaPlatformPicker(false)}
+        />
       </ResponsiveDialog>
     </div>
   );
