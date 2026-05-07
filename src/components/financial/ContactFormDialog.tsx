@@ -367,7 +367,7 @@ export function ContactFormDialog({
 
           const contentWidth = trimRight - trimLeft + 1;
           const contentHeight = trimBottom - trimTop + 1;
-          const side = Math.max(contentWidth, contentHeight);
+          const side = Math.min(Math.max(contentWidth, contentHeight), sw, sh);
           let squareLeft = Math.round(trimLeft - (side - contentWidth) / 2);
           let squareTop = Math.round(trimTop - (side - contentHeight) / 2);
           squareLeft = Math.max(0, Math.min(sw - side, squareLeft));
