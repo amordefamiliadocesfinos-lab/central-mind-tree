@@ -929,6 +929,21 @@ export function GlobalFooterBar() {
 
         {/* Right: Footer height adjuster + Timer */}
         <div className="flex items-center gap-1 md:gap-2">
+          {/* Hide footer button */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 w-7 p-0"
+                onClick={() => setFooterHidden(true)}
+                aria-label="Ocultar barra inferior"
+              >
+                <EyeOff className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Ocultar barra</TooltipContent>
+          </Tooltip>
           {/* Height adjuster (desktop only) */}
           <Popover>
             <PopoverTrigger asChild>
