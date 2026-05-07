@@ -523,6 +523,58 @@ export function ContactFormDialog({
     });
   };
 
+  const cropImageByBboxSimple = async (
+    source: Blob,
+    bbox: { x: number; y: number; width: number; height: number }
+  ): Promise<Blob | null> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(source);
+      img.onload = () => {
+        try {
+          const W = img.naturalWidth;
+          const H = img.naturalHeight;
+          const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+          const x1 = clamp01(bbox.x);
+          const y1 = clamp01(bbox.y);
+          const x2 = clamp01(bbox.x + bbox.width);
+          const y2 = clamp01(bbox.y + bbox.height);
+          const sx = Math.round(x1 * W);
+          const sy = Math.round(y1 * H);
+          const sw = Math.max(1, Math.round((x2 - x1) * W));
+          const sh = Math.max(1, Math.round((y2 - y1) * H));
+          const side = Math.min(Math.max(sw, sh), W, H);
+          const squareX = Math.max(0, Math.min(W - side, Math.round(sx - (side - sw) / 2)));
+          const squareY = Math.max(0, Math.min(H - side, Math.round(sy - (side - sh) / 2)));
+
+          const canvas = document.createElement('canvas');
+          canvas.width = 1920;
+          canvas.height = 1920;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            URL.revokeObjectURL(objectUrl);
+            return resolve(null);
+          }
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, squareX, squareY, side, side, 0, 0, 1920, 1920);
+          canvas.toBlob((b) => {
+            URL.revokeObjectURL(objectUrl);
+            resolve(b);
+          }, 'image/png');
+        } catch {
+          URL.revokeObjectURL(objectUrl);
+          resolve(null);
+        }
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve(null);
+      };
+      img.src = objectUrl;
+    });
+  };
+
   const extractVideoFrame = (file: File): Promise<Blob | null> => {
     return new Promise((resolve) => {
       try {
@@ -599,7 +651,7 @@ export function ContactFormDialog({
       let avatarUrl: string | null = null;
       if (extracted.has_profile_photo && bbox && typeof bbox.x === 'number') {
         try {
-          const cropped = await cropImageByBbox(uploadFile, bbox);
+            const cropped = await cropImageByBbox(uploadFile, bbox) || await cropImageByBboxSimple(uploadFile, bbox);
           if (cropped) {
             const avatarPath = `ai-extract/avatar-${crypto.randomUUID()}.png`;
             const { error: avErr } = await supabase.storage
