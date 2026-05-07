@@ -53,6 +53,11 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
 
   const getPlatform = (platformId: string) => platforms.find(p => p.id === platformId);
 
+  const allVariations = idea.variations || [];
+  const variations = singlePlatform
+    ? allVariations.filter(v => v.platform === singlePlatform.id)
+    : allVariations;
+
   const completedVariations = variations.filter(v => v.status === 'concluido').length;
   const progress = variations.length > 0 ? (completedVariations / variations.length) * 100 : 0;
 
@@ -64,19 +69,28 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
   const linkedProduct = idea.product_id ? products.find(p => p.id === idea.product_id) : null;
 
   const uniquePlatforms = new Map<string, Platform>();
-  variations.forEach(v => {
-    const p = getPlatform(v.platform);
-    if (p && !uniquePlatforms.has(p.id)) {
-      uniquePlatforms.set(p.id, p);
-    }
-  });
+  if (singlePlatform) {
+    uniquePlatforms.set(singlePlatform.id, singlePlatform);
+  } else {
+    allVariations.forEach(v => {
+      const p = getPlatform(v.platform);
+      if (p && !uniquePlatforms.has(p.id)) {
+        uniquePlatforms.set(p.id, p);
+      }
+    });
+  }
 
   const actionTags = (idea as any).action_tags || [];
 
-  // Get preview image from idea media or first variation media
+  // Get preview image scoped to platform when applicable
   const ideaMedia = (idea.media_urls as string[] | null) || [];
   const variationMedia = variations.flatMap(v => (v.media_urls as string[] | null) || []);
-  const previewUrl = ideaMedia[0] || variationMedia[0] || null;
+  const previewUrl = singlePlatform
+    ? (variationMedia[0] || ideaMedia[0] || null)
+    : (ideaMedia[0] || variationMedia[0] || null);
+
+  const displayTitle = singlePlatform ? `${idea.title} — ${singlePlatform.name}` : idea.title;
+  const platformCount = new Set(allVariations.map(v => v.platform).filter(Boolean)).size;
 
   const objectiveInfo = idea.objective ? OBJECTIVE_MAP[idea.objective] : null;
 
