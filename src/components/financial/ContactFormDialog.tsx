@@ -403,7 +403,13 @@ export function ContactFormDialog({
                 }
               }
 
-              if (area >= Math.max(20, Math.round(sw * sh * 0.01))) {
+              const compWidth = maxX - minX + 1;
+              const compHeight = maxY - minY + 1;
+              const aspect = compWidth / Math.max(1, compHeight);
+              const minArea = Math.max(24, Math.round(sw * sh * 0.008));
+              const isReasonableAvatarShape = aspect >= 0.6 && aspect <= 1.45;
+
+              if (area >= minArea && isReasonableAvatarShape) {
                 components.push({
                   area,
                   minX,
