@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { openWhatsAppBroadcast } from '@/lib/whatsapp';
-import { ChevronDown, Eye, MessageCircle, UserPlus, LinkIcon, Package, Target, Users, Calendar, Image } from 'lucide-react';
+import { ChevronDown, Eye, MessageCircle, UserPlus, LinkIcon, Package, Target, Users, Calendar, Image, Layers, Minimize2 } from 'lucide-react';
 
 const DEFAULT_TYPE = { label: 'Outro', icon: '📄', color: 'bg-muted text-muted-foreground border-border' };
 
@@ -40,14 +40,23 @@ interface IdeaCardProps {
   nodes?: Node[];
   products?: ProductListItem[];
   ideaTypes?: IdeaType[];
+  singlePlatform?: Platform;
+  onExpandPlatforms?: () => void;
+  onCollapsePlatforms?: () => void;
+  isExpandedByPlatforms?: boolean;
 }
 
-export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products = [], ideaTypes = [] }: IdeaCardProps) {
+export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products = [], ideaTypes = [], singlePlatform, onExpandPlatforms, onCollapsePlatforms, isExpandedByPlatforms }: IdeaCardProps) {
   const [expanded, setExpanded] = useState(false);
   const statusConfig = DIGITAL_STATUS[idea.status];
-  const variations = idea.variations || [];
+  
 
   const getPlatform = (platformId: string) => platforms.find(p => p.id === platformId);
+
+  const allVariations = idea.variations || [];
+  const variations = singlePlatform
+    ? allVariations.filter(v => v.platform === singlePlatform.id)
+    : allVariations;
 
   const completedVariations = variations.filter(v => v.status === 'concluido').length;
   const progress = variations.length > 0 ? (completedVariations / variations.length) * 100 : 0;
@@ -60,19 +69,28 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
   const linkedProduct = idea.product_id ? products.find(p => p.id === idea.product_id) : null;
 
   const uniquePlatforms = new Map<string, Platform>();
-  variations.forEach(v => {
-    const p = getPlatform(v.platform);
-    if (p && !uniquePlatforms.has(p.id)) {
-      uniquePlatforms.set(p.id, p);
-    }
-  });
+  if (singlePlatform) {
+    uniquePlatforms.set(singlePlatform.id, singlePlatform);
+  } else {
+    allVariations.forEach(v => {
+      const p = getPlatform(v.platform);
+      if (p && !uniquePlatforms.has(p.id)) {
+        uniquePlatforms.set(p.id, p);
+      }
+    });
+  }
 
   const actionTags = (idea as any).action_tags || [];
 
-  // Get preview image from idea media or first variation media
+  // Get preview image scoped to platform when applicable
   const ideaMedia = (idea.media_urls as string[] | null) || [];
   const variationMedia = variations.flatMap(v => (v.media_urls as string[] | null) || []);
-  const previewUrl = ideaMedia[0] || variationMedia[0] || null;
+  const previewUrl = singlePlatform
+    ? (variationMedia[0] || ideaMedia[0] || null)
+    : (ideaMedia[0] || variationMedia[0] || null);
+
+  const displayTitle = singlePlatform ? `${idea.title} — ${singlePlatform.name}` : idea.title;
+  const platformCount = new Set(allVariations.map(v => v.platform).filter(Boolean)).size;
 
   const objectiveInfo = idea.objective ? OBJECTIVE_MAP[idea.objective] : null;
 
@@ -142,7 +160,7 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
 
       <div className="p-3.5 space-y-3">
         {/* ═══════ TITLE ═══════ */}
-        <h3 className="font-semibold text-[15px] leading-snug break-words tracking-tight">{idea.title}</h3>
+        <h3 className="font-semibold text-[15px] leading-snug break-words tracking-tight">{displayTitle}</h3>
 
         {/* ═══════ QUICK ID — Type + Objective + Progress ═══════ */}
         <div className="flex items-center flex-wrap gap-1.5">
@@ -204,6 +222,26 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
             Enviar p/ CRM
           </Button>
         </div>
+
+        {/* Plataformas — expandir em cards por plataforma */}
+        {!singlePlatform && platformCount > 1 && onExpandPlatforms && (
+          <Button
+            size="sm"
+            variant={isExpandedByPlatforms ? 'secondary' : 'outline'}
+            className="w-full h-9 text-xs gap-1.5 font-medium"
+            onClick={(e) => {
+              e.stopPropagation();
+              isExpandedByPlatforms ? onCollapsePlatforms?.() : onExpandPlatforms();
+            }}
+            aria-label="Expandir por plataforma"
+          >
+            {isExpandedByPlatforms ? (
+              <><Minimize2 className="h-3.5 w-3.5" /> Recolher plataformas</>
+            ) : (
+              <><Layers className="h-3.5 w-3.5" /> Plataformas ({platformCount})</>
+            )}
+          </Button>
+        )}
 
         {/* ═══════ EXPANDABLE ═══════ */}
         <Collapsible open={expanded} onOpenChange={setExpanded}>
