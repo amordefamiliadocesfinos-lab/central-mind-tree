@@ -26,6 +26,7 @@ import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { ContactTimeline } from '@/components/crm/ContactTimeline';
 import { WhatsAppMessageSelector } from '@/components/crm/WhatsAppMessageSelector';
 import { ContactOrdersList } from '@/components/crm/ContactOrdersList';
+import { AvatarCropEditor } from './AvatarCropEditor';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Contact } from '@/hooks/useContacts';
@@ -238,7 +239,7 @@ export function ContactFormDialog({
 
   const aiFileRef = useRef<HTMLInputElement>(null);
   const [aiLoading, setAiLoading] = useState(false);
-  const [aiPreview, setAiPreview] = useState<{ refinedUrl: string | null; simpleUrl: string | null; usedKind: 'refined' | 'simple' | 'none' } | null>(null);
+  const [cropEditor, setCropEditor] = useState<{ blob: Blob; bbox: { x: number; y: number; width: number; height: number } | null } | null>(null);
 
   // Recorta os pixels REAIS da mídia original com base no bbox retornado pela IA.
   // Faz pós-processamento não-generativo para remover bordas/padding do print,
@@ -648,34 +649,9 @@ export function ContactFormDialog({
         | { x: number; y: number; width: number; height: number }
         | undefined;
 
-      // Recorta os pixels REAIS da mídia analisada (uploadFile já é JPEG/imagem).
-      let avatarUrl: string | null = null;
-      let refinedPreviewUrl: string | null = null;
-      let simplePreviewUrl: string | null = null;
-      let usedKind: 'refined' | 'simple' | 'none' = 'none';
-      if (extracted.has_profile_photo && bbox && typeof bbox.x === 'number') {
-        try {
-          const refined = await cropImageByBbox(uploadFile, bbox).catch(() => null);
-          const simple = await cropImageByBboxSimple(uploadFile, bbox).catch(() => null);
-          if (refined) refinedPreviewUrl = URL.createObjectURL(refined);
-          if (simple) simplePreviewUrl = URL.createObjectURL(simple);
-          const chosen = refined || simple;
-          usedKind = refined ? 'refined' : simple ? 'simple' : 'none';
-          if (chosen) {
-            const avatarPath = `ai-extract/avatar-${crypto.randomUUID()}.png`;
-            const { error: avErr } = await supabase.storage
-              .from('media')
-              .upload(avatarPath, chosen, { upsert: true, contentType: 'image/png', cacheControl: '3600' });
-            if (!avErr) {
-              const { data: avUrl } = supabase.storage.from('media').getPublicUrl(avatarPath);
-              avatarUrl = avUrl.publicUrl;
-            }
-          }
-        } catch (e) {
-          console.error('Erro ao recortar avatar:', e);
-        }
-      }
-      setAiPreview({ refinedUrl: refinedPreviewUrl, simpleUrl: simplePreviewUrl, usedKind });
+      // Abre o editor interativo de recorte com a imagem ORIGINAL e o bbox sugerido pela IA.
+      // O usuário ajusta manualmente até centralizar a foto de perfil exatamente onde quiser.
+      setCropEditor({ blob: uploadFile, bbox: (extracted.has_profile_photo && bbox && typeof bbox.x === 'number') ? bbox : null });
 
       setForm(prev => {
         const merged: any = { ...prev };
@@ -690,14 +666,10 @@ export function ContactFormDialog({
             merged[k] = v;
           }
         });
-        if (avatarUrl) {
-          merged.photo_url = avatarUrl;
-        }
         return merged;
       });
       setShowDetails(true);
-      const photoMsg = avatarUrl ? ' Foto de perfil extraída e aplicada.' : '';
-      toast.success(`✨ Dados extraídos!${photoMsg} Revise e salve.`, { id: toastId });
+      toast.success(`✨ Dados extraídos! Ajuste o recorte da foto e salve.`, { id: toastId });
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || 'Erro ao analisar mídia', { id: toastId });
@@ -770,45 +742,17 @@ export function ContactFormDialog({
         </DialogHeader>
 
         <div className="space-y-5">
-          {aiPreview && (aiPreview.refinedUrl || aiPreview.simpleUrl) && (
-            <div className="rounded-lg border border-purple-200 dark:border-purple-800 bg-purple-50/40 dark:bg-purple-950/20 p-3">
-              <div className="text-xs font-medium text-purple-700 dark:text-purple-300 mb-2">
-                Preview do recorte da IA — clique em uma opção para usar como foto
-              </div>
-              <div className="flex items-center gap-4">
-                {aiPreview.refinedUrl && (
-                  <button
-                    type="button"
-                    onClick={() => updateField('photo_url', aiPreview.refinedUrl!)}
-                    className="flex flex-col items-center gap-1 group"
-                  >
-                    <img
-                      src={aiPreview.refinedUrl}
-                      alt="Recorte refinado"
-                      className={`h-24 w-24 rounded-full object-cover border-2 ${aiPreview.usedKind === 'refined' ? 'border-green-500' : 'border-transparent'} group-hover:border-primary transition`}
-                    />
-                    <span className="text-[10px] text-muted-foreground">Refinado{aiPreview.usedKind === 'refined' ? ' (usado)' : ''}</span>
-                  </button>
-                )}
-                {aiPreview.simpleUrl && (
-                  <button
-                    type="button"
-                    onClick={() => updateField('photo_url', aiPreview.simpleUrl!)}
-                    className="flex flex-col items-center gap-1 group"
-                  >
-                    <img
-                      src={aiPreview.simpleUrl}
-                      alt="Recorte bruto do bbox"
-                      className={`h-24 w-24 rounded-lg object-cover border-2 ${aiPreview.usedKind === 'simple' ? 'border-green-500' : 'border-transparent'} group-hover:border-primary transition`}
-                    />
-                    <span className="text-[10px] text-muted-foreground">Bbox bruto{aiPreview.usedKind === 'simple' ? ' (usado)' : ''}</span>
-                  </button>
-                )}
-                <Button variant="ghost" size="sm" type="button" onClick={() => setAiPreview(null)} className="ml-auto">
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+          {cropEditor && (
+            <AvatarCropEditor
+              sourceBlob={cropEditor.blob}
+              initialBbox={cropEditor.bbox}
+              onConfirm={(url) => {
+                updateField('photo_url', url);
+                setCropEditor(null);
+                toast.success('Foto de perfil aplicada!');
+              }}
+              onCancel={() => setCropEditor(null)}
+            />
           )}
           {/* === ESSENCIAL === */}
           <section className="space-y-4">
