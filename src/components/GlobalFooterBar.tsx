@@ -156,7 +156,7 @@ function AIAssistantButton({ isActive }: { isActive: (path: string) => boolean }
           asChild
           size="sm"
           variant={isActive('/assistente') ? 'secondary' : 'ghost'}
-          className={cn("h-8 w-8 p-0 relative", isActive('/assistente') && "bg-secondary")}
+          className={cn("h-7 w-7 p-0 relative", isActive('/assistente') && "bg-secondary")}
         >
           <Link to="/assistente">
             <Brain className="h-4 w-4" />
@@ -666,7 +666,7 @@ export function GlobalFooterBar() {
                   disabled={!canUndo}
                   size="sm" 
                   variant="ghost" 
-                  className="h-8 w-8 p-0"
+                  className="h-7 w-7 p-0"
                 >
                   <Undo2 className="h-4 w-4" />
                 </Button>
@@ -680,7 +680,7 @@ export function GlobalFooterBar() {
                   disabled={!canRedo}
                   size="sm" 
                   variant="ghost" 
-                  className="h-8 w-8 p-0"
+                  className="h-7 w-7 p-0"
                 >
                   <Redo2 className="h-4 w-4" />
                 </Button>
@@ -775,7 +775,7 @@ export function GlobalFooterBar() {
                         size="sm"
                         variant={active ? "secondary" : "ghost"}
                         className={cn(
-                          "h-8 w-auto px-2.5",
+                          "h-7 w-auto px-2",
                           active && "bg-secondary"
                         )}
                       >
@@ -797,7 +797,7 @@ export function GlobalFooterBar() {
                       <Button
                         size="sm"
                         variant={hasActiveDesktopOverflow ? "secondary" : "ghost"}
-                        className={cn("h-8 px-2.5", hasActiveDesktopOverflow && "bg-secondary")}
+                        className={cn("h-7 px-2", hasActiveDesktopOverflow && "bg-secondary")}
                       >
                         <MoreHorizontal className="h-4 w-4" />
                         <span className={cn(FOOTER_NAV_LABEL_CLASS, "ml-1.5")}>Mais</span>
