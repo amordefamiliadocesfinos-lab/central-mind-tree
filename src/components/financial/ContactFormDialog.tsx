@@ -344,27 +344,24 @@ export function ContactFormDialog({
       if (data?.error) throw new Error(data.error);
 
       const extracted = data.contact || {};
-      const hasProfilePhoto = extracted.has_profile_photo === true;
-      const bbox = extracted.profile_photo_bbox;
+      const profilePhotoDataUrl: string | null = data.profilePhotoDataUrl || null;
 
-      // Se a IA detectou avatar com bbox, recorta SOMENTE essa região e sobe como foto
-      let croppedAvatarUrl: string | null = null;
-      if (
-        hasProfilePhoto &&
-        bbox &&
-        typeof bbox.x === 'number' &&
-        file.type.startsWith('image/')
-      ) {
-        const cropped = await cropImageByBbox(file, bbox);
-        if (cropped) {
-          const avatarPath = `ai-extract/avatar-${crypto.randomUUID()}.jpg`;
+      // Se a IA extraiu a foto de perfil isolada (via modelo de edição de imagem),
+      // sobe esse blob para o storage e usa como avatar — sem recorte por bbox.
+      let avatarUrl: string | null = null;
+      if (profilePhotoDataUrl) {
+        try {
+          const blob = await (await fetch(profilePhotoDataUrl)).blob();
+          const avatarPath = `ai-extract/avatar-${crypto.randomUUID()}.png`;
           const { error: avErr } = await supabase.storage
             .from('media')
-            .upload(avatarPath, cropped, { upsert: true, contentType: 'image/jpeg', cacheControl: '3600' });
+            .upload(avatarPath, blob, { upsert: true, contentType: blob.type || 'image/png', cacheControl: '3600' });
           if (!avErr) {
             const { data: avUrl } = supabase.storage.from('media').getPublicUrl(avatarPath);
-            croppedAvatarUrl = avUrl.publicUrl;
+            avatarUrl = avUrl.publicUrl;
           }
+        } catch (e) {
+          console.error('Erro ao subir avatar extraído:', e);
         }
       }
 
@@ -373,23 +370,21 @@ export function ContactFormDialog({
         Object.entries(extracted).forEach(([k, v]) => {
           if (['confidence', 'has_profile_photo', 'profile_photo_bbox'].includes(k)) return;
           if (v === undefined || v === null || v === '') return;
-          // Nome: sempre sobrescreve com o que a IA leu do print
           if (k === 'name') {
             merged.name = v;
             return;
           }
-          // Demais campos: não sobrescreve preenchidos
           if (!merged[k] || merged[k] === '') {
             merged[k] = v;
           }
         });
-        if (croppedAvatarUrl && !merged.photo_url) {
-          merged.photo_url = croppedAvatarUrl;
+        if (avatarUrl && !merged.photo_url) {
+          merged.photo_url = avatarUrl;
         }
         return merged;
       });
       setShowDetails(true);
-      const photoMsg = croppedAvatarUrl ? ' Avatar recortado e aplicado.' : '';
+      const photoMsg = avatarUrl ? ' Foto de perfil extraída e aplicada.' : '';
       toast.success(`✨ Dados extraídos!${photoMsg} Revise e salve.`, { id: toastId });
     } catch (err: any) {
       console.error(err);
