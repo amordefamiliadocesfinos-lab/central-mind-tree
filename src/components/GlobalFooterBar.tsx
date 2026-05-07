@@ -607,7 +607,7 @@ export function GlobalFooterBar() {
     <div data-global-footer="true" className="fixed bottom-0 left-0 right-0 z-[9999] bg-background/95 backdrop-blur-md border-t border-border shadow-[0_-1px_8px_rgba(0,0,0,0.08)] pb-safe-bottom">
       {/* Windows 11 style: full-width thin bar, content centered with auto width */}
       <div
-        className="flex flex-wrap md:flex-nowrap items-center md:items-end justify-between md:justify-center px-2 md:px-4 pb-0 md:pb-0.5 gap-1.5 md:gap-1.5 md:max-w-[1100px] md:mx-auto md:[height:var(--footer-h,30px)]"
+        className="flex flex-wrap md:flex-nowrap items-center justify-between md:justify-center px-2 md:px-4 gap-1.5 md:gap-1.5 md:max-w-[1100px] md:mx-auto md:[height:var(--footer-h,30px)]"
       >
         {/* Left: Task status counters + Lines mode (only when showTaskBar is true) */}
         {showTaskBar && tasks.length > 0 ? (
