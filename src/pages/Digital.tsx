@@ -97,8 +97,12 @@ export default function Digital() {
       idea_type: (newIdea.idea_type as any) || 'conteudo',
     });
     if (idea) {
+      if (newIdeaPlatformIds.length > 0) {
+        await batchCreateVariations(idea.id, newIdeaPlatformIds);
+      }
       setShowCreateDialog(false);
       setNewIdea({ title: '', objective: '', node_id: '', idea_type: 'conteudo', product_id: '' });
+      setNewIdeaPlatformIds([]);
       setSelectedIdea(idea.id);
     }
   };
