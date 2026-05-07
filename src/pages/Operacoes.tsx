@@ -1054,7 +1054,7 @@ export default function Operacoes() {
               </Dialog>
             </div>
 
-            <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
+            <div className="grid gap-3 grid-cols-1">
               {filteredProducts.length === 0 ? (
                 <Card className="p-8 text-center col-span-full">
                   <p className="text-muted-foreground">
