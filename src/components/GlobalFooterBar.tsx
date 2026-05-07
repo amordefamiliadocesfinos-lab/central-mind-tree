@@ -584,6 +584,28 @@ export function GlobalFooterBar() {
     return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   };
 
+  // When fully hidden, render only a tiny show handle
+  if (footerHidden) {
+    return (
+      <div data-global-footer="true" className="fixed bottom-1 right-2 z-[9999]">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-6 w-6 p-0 rounded-full shadow opacity-50 hover:opacity-100"
+              onClick={() => setFooterHidden(false)}
+              aria-label="Mostrar barra inferior"
+            >
+              <Eye className="h-3 w-3" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top">Mostrar barra inferior</TooltipContent>
+        </Tooltip>
+      </div>
+    );
+  }
+
   // When collapsed to 0 on desktop, render only a tiny restore handle
   const isDesktopCollapsed = footerHeight === 0 && typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches;
 
