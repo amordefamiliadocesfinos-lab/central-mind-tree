@@ -12,11 +12,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Slider } from "@/components/ui/slider";
 import { 
   Play, Pause, RotateCcw, Clock, Focus, Calendar, Timer, 
   ShoppingCart, FileText, Undo2, Redo2, Home, FileSpreadsheet,
   Users, User, UsersRound, DollarSign, Brain, LayoutDashboard,
-  UserPlus, MoreHorizontal, Truck,
+  UserPlus, MoreHorizontal, Truck, Settings2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -214,6 +216,26 @@ export function GlobalFooterBar() {
   const [stateId, setStateId] = useState<string | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [collaboratorsOpen, setCollaboratorsOpen] = useState(false);
+  const [footerHeight, setFooterHeight] = useState<number>(() => {
+    const saved = parseInt(localStorage.getItem("footerHeight") || "");
+    return Number.isFinite(saved) && saved >= 24 && saved <= 64 ? saved : 30;
+  });
+
+  // Persist + apply CSS variables so buttons scale proportionally and body padding follows
+  useEffect(() => {
+    localStorage.setItem("footerHeight", String(footerHeight));
+    document.documentElement.style.setProperty("--footer-h", `${footerHeight}px`);
+    // buttons ~ 92% of bar, icons ~ 50%
+    document.documentElement.style.setProperty("--footer-btn", `${Math.round(footerHeight * 0.92)}px`);
+    document.documentElement.style.setProperty("--footer-icon", `${Math.max(12, Math.round(footerHeight * 0.5))}px`);
+    document.documentElement.style.setProperty("--footer-font", `${Math.max(10, Math.round(footerHeight * 0.36))}px`);
+    if (window.matchMedia("(min-width: 768px)").matches) {
+      document.body.style.paddingBottom = `${footerHeight}px`;
+    }
+    return () => {
+      // do not clear; user expects persistence across renders
+    };
+  }, [footerHeight]);
   const location = useLocation();
   const { toast } = useToast();
   const { undo, redo, canUndo, canRedo } = useUndoRedoContext();
@@ -555,7 +577,9 @@ export function GlobalFooterBar() {
   return (
     <div data-global-footer="true" className="fixed bottom-0 left-0 right-0 z-[9999] bg-background/95 backdrop-blur-md border-t border-border shadow-[0_-1px_8px_rgba(0,0,0,0.08)] pb-safe-bottom">
       {/* Windows 11 style: full-width thin bar, content centered with auto width */}
-      <div className="flex flex-wrap md:flex-nowrap items-center justify-between md:justify-center md:h-[30px] px-2 md:px-4 gap-1.5 md:gap-1.5 md:max-w-[1100px] md:mx-auto">
+      <div
+        className="flex flex-wrap md:flex-nowrap items-center justify-between md:justify-center px-2 md:px-4 gap-1.5 md:gap-1.5 md:max-w-[1100px] md:mx-auto md:[height:var(--footer-h,30px)]"
+      >
         {/* Left: Task status counters + Lines mode (only when showTaskBar is true) */}
         {showTaskBar && tasks.length > 0 ? (
           <div className="flex items-center gap-1">
@@ -842,8 +866,48 @@ export function GlobalFooterBar() {
           onOpenChange={setCollaboratorsOpen} 
         />
 
-        {/* Right: Timer */}
+        {/* Right: Footer height adjuster + Timer */}
         <div className="flex items-center gap-1 md:gap-2">
+          {/* Height adjuster (desktop only) */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="hidden md:inline-flex h-7 w-7 p-0"
+                title="Ajustar altura da barra"
+              >
+                <Settings2 className="h-3.5 w-3.5" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent side="top" align="end" className="w-64 p-3">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs font-medium">
+                  <span>Altura da barra</span>
+                  <span className="text-muted-foreground">{footerHeight}px</span>
+                </div>
+                <Slider
+                  min={24}
+                  max={64}
+                  step={1}
+                  value={[footerHeight]}
+                  onValueChange={(v) => setFooterHeight(v[0])}
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>24</span><span>44</span><span>64</span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full h-7 text-xs"
+                  onClick={() => setFooterHeight(30)}
+                >
+                  Restaurar padrão (30px)
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+
           {isEditing ? (
             <div className="flex items-center gap-1">
               <Input
