@@ -238,7 +238,7 @@ export function ContactFormDialog({
 
   const aiFileRef = useRef<HTMLInputElement>(null);
   const [aiLoading, setAiLoading] = useState(false);
-  const [aiPreview, setAiPreview] = useState<{ refinedUrl: string | null; simpleUrl: string | null; usedKind: 'refined' | 'simple' | 'none' } | null>(null);
+  const [cropEditor, setCropEditor] = useState<{ blob: Blob; bbox: { x: number; y: number; width: number; height: number } | null } | null>(null);
 
   // Recorta os pixels REAIS da mídia original com base no bbox retornado pela IA.
   // Faz pós-processamento não-generativo para remover bordas/padding do print,
