@@ -79,6 +79,7 @@ export default function Digital() {
   const [productFilter, setProductFilter] = useState<string>('all');
   const [periodFilter, setPeriodFilter] = useState<string>('all');
   const [searchFocused, setSearchFocused] = useState(false);
+  const [expandedByPlatforms, setExpandedByPlatforms] = useState<Set<string>>(new Set());
 
   // Fetch nodes for linking
   useEffect(() => {
