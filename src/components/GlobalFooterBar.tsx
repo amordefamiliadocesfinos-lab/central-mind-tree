@@ -156,7 +156,7 @@ function AIAssistantButton({ isActive }: { isActive: (path: string) => boolean }
           asChild
           size="sm"
           variant={isActive('/assistente') ? 'secondary' : 'ghost'}
-          className={cn("h-8 w-8 p-0 relative", isActive('/assistente') && "bg-secondary")}
+          className={cn("h-7 w-7 p-0 relative", isActive('/assistente') && "bg-secondary")}
         >
           <Link to="/assistente">
             <Brain className="h-4 w-4" />
@@ -555,7 +555,7 @@ export function GlobalFooterBar() {
   return (
     <div data-global-footer="true" className="fixed bottom-0 left-0 right-0 z-[9999] bg-background/95 backdrop-blur-md border-t border-border shadow-[0_-1px_8px_rgba(0,0,0,0.08)] pb-safe-bottom">
       {/* Windows 11 style: full-width thin bar, content centered with auto width */}
-      <div className="flex flex-wrap md:flex-nowrap items-center justify-between md:justify-center md:h-12 px-2 md:px-4 gap-1.5 md:gap-2 md:max-w-[1100px] md:mx-auto">
+      <div className="flex flex-wrap md:flex-nowrap items-center justify-between md:justify-center md:h-[30px] px-2 md:px-4 gap-1.5 md:gap-1.5 md:max-w-[1100px] md:mx-auto">
         {/* Left: Task status counters + Lines mode (only when showTaskBar is true) */}
         {showTaskBar && tasks.length > 0 ? (
           <div className="flex items-center gap-1">
@@ -666,7 +666,7 @@ export function GlobalFooterBar() {
                   disabled={!canUndo}
                   size="sm" 
                   variant="ghost" 
-                  className="h-8 w-8 p-0"
+                  className="h-7 w-7 p-0"
                 >
                   <Undo2 className="h-4 w-4" />
                 </Button>
@@ -680,7 +680,7 @@ export function GlobalFooterBar() {
                   disabled={!canRedo}
                   size="sm" 
                   variant="ghost" 
-                  className="h-8 w-8 p-0"
+                  className="h-7 w-7 p-0"
                 >
                   <Redo2 className="h-4 w-4" />
                 </Button>
@@ -775,7 +775,7 @@ export function GlobalFooterBar() {
                         size="sm"
                         variant={active ? "secondary" : "ghost"}
                         className={cn(
-                          "h-8 w-auto px-2.5",
+                          "h-7 w-auto px-2",
                           active && "bg-secondary"
                         )}
                       >
@@ -797,7 +797,7 @@ export function GlobalFooterBar() {
                       <Button
                         size="sm"
                         variant={hasActiveDesktopOverflow ? "secondary" : "ghost"}
-                        className={cn("h-8 px-2.5", hasActiveDesktopOverflow && "bg-secondary")}
+                        className={cn("h-7 px-2", hasActiveDesktopOverflow && "bg-secondary")}
                       >
                         <MoreHorizontal className="h-4 w-4" />
                         <span className={cn(FOOTER_NAV_LABEL_CLASS, "ml-1.5")}>Mais</span>
