@@ -160,7 +160,7 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
 
       <div className="p-3.5 space-y-3">
         {/* ═══════ TITLE ═══════ */}
-        <h3 className="font-semibold text-[15px] leading-snug break-words tracking-tight">{idea.title}</h3>
+        <h3 className="font-semibold text-[15px] leading-snug break-words tracking-tight">{displayTitle}</h3>
 
         {/* ═══════ QUICK ID — Type + Objective + Progress ═══════ */}
         <div className="flex items-center flex-wrap gap-1.5">
