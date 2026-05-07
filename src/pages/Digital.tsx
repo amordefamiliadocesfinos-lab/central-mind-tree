@@ -614,17 +614,55 @@ export default function Digital() {
                     </Button>
                   </Card>
                 ) : (
-                  displayedIdeas.map((idea) => (
-                    <IdeaCard
-                      key={idea.id}
-                      idea={idea}
-                      onClick={() => setSelectedIdea(idea.id)}
-                      platforms={activePlatforms}
-                      nodes={nodes}
-                      products={products}
-                      ideaTypes={ideaTypes}
-                    />
-                  ))
+                  displayedIdeas.flatMap((idea) => {
+                    const isExpanded = expandedByPlatforms.has(idea.id);
+                    const ideaPlatformIds = Array.from(new Set((idea.variations || []).map(v => v.platform).filter(Boolean)));
+                    const ideaPlatforms = ideaPlatformIds
+                      .map(pid => activePlatforms.find(p => p.id === pid))
+                      .filter(Boolean) as typeof activePlatforms;
+
+                    if (isExpanded && ideaPlatforms.length > 1) {
+                      return ideaPlatforms.map((plat) => (
+                        <IdeaCard
+                          key={`${idea.id}-${plat.id}`}
+                          idea={idea}
+                          onClick={() => setSelectedIdea(idea.id)}
+                          platforms={activePlatforms}
+                          nodes={nodes}
+                          products={products}
+                          ideaTypes={ideaTypes}
+                          singlePlatform={plat}
+                          isExpandedByPlatforms
+                          onCollapsePlatforms={() => {
+                            setExpandedByPlatforms(prev => {
+                              const next = new Set(prev);
+                              next.delete(idea.id);
+                              return next;
+                            });
+                          }}
+                        />
+                      ));
+                    }
+
+                    return [
+                      <IdeaCard
+                        key={idea.id}
+                        idea={idea}
+                        onClick={() => setSelectedIdea(idea.id)}
+                        platforms={activePlatforms}
+                        nodes={nodes}
+                        products={products}
+                        ideaTypes={ideaTypes}
+                        onExpandPlatforms={() => {
+                          setExpandedByPlatforms(prev => {
+                            const next = new Set(prev);
+                            next.add(idea.id);
+                            return next;
+                          });
+                        }}
+                      />,
+                    ];
+                  })
                 )}
               </div>
             )
