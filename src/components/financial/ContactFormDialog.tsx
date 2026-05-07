@@ -650,14 +650,22 @@ export function ContactFormDialog({
 
       // Recorta os pixels REAIS da mídia analisada (uploadFile já é JPEG/imagem).
       let avatarUrl: string | null = null;
+      let refinedPreviewUrl: string | null = null;
+      let simplePreviewUrl: string | null = null;
+      let usedKind: 'refined' | 'simple' | 'none' = 'none';
       if (extracted.has_profile_photo && bbox && typeof bbox.x === 'number') {
         try {
-            const cropped = await cropImageByBbox(uploadFile, bbox) || await cropImageByBboxSimple(uploadFile, bbox);
-          if (cropped) {
+          const refined = await cropImageByBbox(uploadFile, bbox).catch(() => null);
+          const simple = await cropImageByBboxSimple(uploadFile, bbox).catch(() => null);
+          if (refined) refinedPreviewUrl = URL.createObjectURL(refined);
+          if (simple) simplePreviewUrl = URL.createObjectURL(simple);
+          const chosen = refined || simple;
+          usedKind = refined ? 'refined' : simple ? 'simple' : 'none';
+          if (chosen) {
             const avatarPath = `ai-extract/avatar-${crypto.randomUUID()}.png`;
             const { error: avErr } = await supabase.storage
               .from('media')
-              .upload(avatarPath, cropped, { upsert: true, contentType: 'image/png', cacheControl: '3600' });
+              .upload(avatarPath, chosen, { upsert: true, contentType: 'image/png', cacheControl: '3600' });
             if (!avErr) {
               const { data: avUrl } = supabase.storage.from('media').getPublicUrl(avatarPath);
               avatarUrl = avUrl.publicUrl;
@@ -667,6 +675,7 @@ export function ContactFormDialog({
           console.error('Erro ao recortar avatar:', e);
         }
       }
+      setAiPreview({ refinedUrl: refinedPreviewUrl, simpleUrl: simplePreviewUrl, usedKind });
 
       setForm(prev => {
         const merged: any = { ...prev };
