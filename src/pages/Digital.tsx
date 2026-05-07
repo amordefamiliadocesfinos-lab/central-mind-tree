@@ -748,6 +748,46 @@ export default function Digital() {
               label="Vincular Produto (opcional)"
             />
           )}
+          {/* Platforms selection */}
+          <div className="space-y-2">
+            <Label className="flex items-center gap-2">
+              <Layers className="h-4 w-4" />
+              Plataformas (opcional)
+            </Label>
+            {newIdeaPlatformIds.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {newIdeaPlatformIds.map(pid => {
+                  const p = activePlatforms.find((pl: any) => pl.id === pid);
+                  if (!p) return null;
+                  return (
+                    <Badge key={pid} variant="secondary" className="gap-1.5 pr-1">
+                      <PlatformIcon icon={p.icon} size="sm" />
+                      <span>{p.name}</span>
+                      <button
+                        type="button"
+                        className="ml-0.5 rounded hover:bg-muted-foreground/20 p-0.5"
+                        onClick={() => setNewIdeaPlatformIds(prev => prev.filter(id => id !== pid))}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  );
+                })}
+              </div>
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full h-11 justify-start gap-2"
+              onClick={() => setShowNewIdeaPlatformPicker(true)}
+            >
+              <Plus className="h-4 w-4" />
+              {newIdeaPlatformIds.length > 0 ? 'Adicionar mais plataformas' : 'Selecionar plataformas'}
+            </Button>
+            <p className="text-xs text-muted-foreground">
+              Cria automaticamente uma variação por plataforma selecionada.
+            </p>
+          </div>
           <div className="flex gap-3 pt-2">
             <Button variant="outline" className="flex-1 h-12" onClick={() => setShowCreateDialog(false)}>
               Cancelar
@@ -757,6 +797,29 @@ export default function Digital() {
             </Button>
           </div>
         </div>
+      </ResponsiveDialog>
+
+      {/* Platform picker for new idea */}
+      <ResponsiveDialog
+        open={showNewIdeaPlatformPicker}
+        onOpenChange={setShowNewIdeaPlatformPicker}
+        title="Selecionar Plataformas"
+      >
+        <HierarchicalPlatformSelector
+          platforms={activePlatforms as any}
+          excludedPlatformIds={newIdeaPlatformIds}
+          multiSelect
+          selectedIds={newIdeaPlatformIds}
+          onMultiSelect={(ids) => {
+            setNewIdeaPlatformIds(prev => Array.from(new Set([...prev, ...ids])));
+            setShowNewIdeaPlatformPicker(false);
+          }}
+          onSelect={(id) => {
+            setNewIdeaPlatformIds(prev => prev.includes(id) ? prev : [...prev, id]);
+            setShowNewIdeaPlatformPicker(false);
+          }}
+          onCancel={() => setShowNewIdeaPlatformPicker(false)}
+        />
       </ResponsiveDialog>
     </div>
   );
