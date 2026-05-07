@@ -1,16 +1,22 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Zap } from 'lucide-react';
 import { QuickConversationDialog } from './QuickConversationDialog';
 import { cn } from '@/lib/utils';
 
+// Rotas onde faz sentido registrar conversas (CRM/Contatos/Digital/etc.)
+const ALLOWED_PREFIXES = ['/contatos', '/crm', '/digital', '/rotas', '/atendimento'];
+
 /**
- * Botão flutuante global para registro rápido de conversas WhatsApp/CRM.
- * Atalho: Ctrl/Cmd + Shift + W
+ * Botão flutuante para registro rápido de conversas WhatsApp/CRM.
+ * Visível apenas em rotas pertinentes. Atalho: Ctrl/Cmd + Shift + W
  */
 export function QuickConversationFAB() {
   const [open, setOpen] = useState(false);
+  const location = useLocation();
+  const isAllowed = ALLOWED_PREFIXES.some((p) => location.pathname.startsWith(p));
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
