@@ -29,6 +29,8 @@ export function QuickConversationFAB() {
     return () => window.removeEventListener('keydown', handler);
   }, []);
 
+  if (!isAllowed) return null;
+
   return (
     <>
       <Tooltip>
