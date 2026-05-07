@@ -553,9 +553,9 @@ export function GlobalFooterBar() {
   };
 
   return (
-    <div data-global-footer="true" className="fixed bottom-0 left-0 right-0 z-[9999] bg-background border-t border-border shadow-lg pb-safe-bottom">
-      {/* Mobile: 2 rows via flex-wrap. Desktop: single row, centered with max width */}
-      <div className="flex flex-wrap md:flex-nowrap items-center justify-between md:h-11 px-2 md:px-4 gap-1.5 md:gap-3 md:max-w-[1100px] md:mx-auto">
+    <div data-global-footer="true" className="fixed bottom-0 left-0 right-0 z-[9999] md:bottom-3 md:left-1/2 md:right-auto md:-translate-x-1/2 md:w-max md:max-w-[96vw] bg-background border-t border-border md:border md:rounded-full shadow-lg pb-safe-bottom">
+      {/* Mobile: full width 2 rows. Desktop: floating pill, width = content */}
+      <div className="flex flex-wrap md:flex-nowrap items-center justify-between md:justify-start md:h-11 px-2 md:px-3 gap-1.5 md:gap-2">
         {/* Left: Task status counters + Lines mode (only when showTaskBar is true) */}
         {showTaskBar && tasks.length > 0 ? (
           <div className="flex items-center gap-1">
