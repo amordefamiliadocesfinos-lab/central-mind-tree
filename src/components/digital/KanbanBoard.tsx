@@ -131,12 +131,14 @@ function SortableIdeaCard({
               {uniquePlatforms.size > 0 ? (
                 <div className="flex items-center gap-1 flex-1 min-w-0 flex-wrap">
                   {Array.from(uniquePlatforms.values()).map(p => (
-                    <Tooltip key={p.id}>
-                      <TooltipTrigger asChild>
-                        <span><PlatformIcon icon={p.icon} size="sm" /></span>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom" className="text-xs">{p.name}</TooltipContent>
-                    </Tooltip>
+                    <Badge
+                      key={p.id}
+                      variant="secondary"
+                      className="gap-1 px-1.5 py-0 h-5 text-[10px] font-medium"
+                    >
+                      <PlatformIcon icon={p.icon} size="sm" />
+                      <span className="truncate max-w-[80px]">{p.name}</span>
+                    </Badge>
                   ))}
                 </div>
               ) : (
