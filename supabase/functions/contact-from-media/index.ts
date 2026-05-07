@@ -143,7 +143,54 @@ REGRA CRÍTICA - FOTO DE PERFIL (BOUNDING BOX):
     }
 
     const extracted = JSON.parse(toolCall.function.arguments);
-    return new Response(JSON.stringify({ contact: extracted }), {
+
+    // Se a IA detectou foto de perfil, usa Nano Banana (modelo de edição de imagem)
+    // para EXTRAIR apenas a foto do perfil em alta resolução, com fundo limpo —
+    // muito mais preciso do que tentar recortar por bounding box.
+    let profilePhotoDataUrl: string | null = null;
+    if (extracted.has_profile_photo === true && !isVideo) {
+      try {
+        const editPrompt = `Extract ONLY the person's profile picture/avatar from this image.
+Output a clean, square, high-resolution portrait of just the person's face/avatar — exactly as it appears in the source profile photo, with NO surrounding UI, NO text, NO app borders, NO status bars, NO chat header, NO icons, NO background from the screenshot.
+The output must contain ONLY the profile photo content (the person's face), centered and filling the frame.
+Preserve the original face/photo exactly — do not stylize, do not regenerate the face, do not add effects. If the original avatar is circular, output it as a square crop tangent to that circle. Keep the original colors, lighting, and identity intact.`;
+
+        const imgResp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${LOVABLE_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: "google/gemini-2.5-flash-image",
+            messages: [
+              {
+                role: "user",
+                content: [
+                  { type: "text", text: editPrompt },
+                  { type: "image_url", image_url: { url: mediaUrl } },
+                ],
+              },
+            ],
+            modalities: ["image", "text"],
+          }),
+        });
+
+        if (imgResp.ok) {
+          const imgData = await imgResp.json();
+          const url = imgData.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+          if (url && typeof url === "string" && url.startsWith("data:image")) {
+            profilePhotoDataUrl = url;
+          }
+        } else {
+          console.error("Avatar extraction failed:", imgResp.status, await imgResp.text());
+        }
+      } catch (e) {
+        console.error("Avatar extraction error:", e);
+      }
+    }
+
+    return new Response(JSON.stringify({ contact: extracted, profilePhotoDataUrl }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
