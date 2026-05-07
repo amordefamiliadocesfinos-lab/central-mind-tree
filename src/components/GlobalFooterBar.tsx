@@ -220,6 +220,16 @@ export function GlobalFooterBar() {
     const saved = parseInt(localStorage.getItem("footerHeight") || "");
     return Number.isFinite(saved) && saved >= 0 && saved <= 64 ? saved : 30;
   });
+  const [footerHidden, setFooterHidden] = useState<boolean>(() => {
+    return localStorage.getItem("footerHidden") === "true";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("footerHidden", String(footerHidden));
+    if (footerHidden && window.matchMedia("(min-width: 768px)").matches) {
+      document.body.style.paddingBottom = "0px";
+    }
+  }, [footerHidden]);
 
   // Persist + apply CSS variables so buttons scale proportionally and body padding follows
   useEffect(() => {
