@@ -223,6 +223,26 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
           </Button>
         </div>
 
+        {/* Plataformas — expandir em cards por plataforma */}
+        {!singlePlatform && platformCount > 1 && onExpandPlatforms && (
+          <Button
+            size="sm"
+            variant={isExpandedByPlatforms ? 'secondary' : 'outline'}
+            className="w-full h-9 text-xs gap-1.5 font-medium"
+            onClick={(e) => {
+              e.stopPropagation();
+              isExpandedByPlatforms ? onCollapsePlatforms?.() : onExpandPlatforms();
+            }}
+            aria-label="Expandir por plataforma"
+          >
+            {isExpandedByPlatforms ? (
+              <><Minimize2 className="h-3.5 w-3.5" /> Recolher plataformas</>
+            ) : (
+              <><Layers className="h-3.5 w-3.5" /> Plataformas ({platformCount})</>
+            )}
+          </Button>
+        )}
+
         {/* ═══════ EXPANDABLE ═══════ */}
         <Collapsible open={expanded} onOpenChange={setExpanded}>
           <CollapsibleTrigger asChild>
