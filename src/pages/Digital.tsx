@@ -603,7 +603,7 @@ export default function Digital() {
           ) : activeTab === 'ideias' ? (
             viewMode === 'kanban' ? (
               <KanbanBoard
-                ideas={displayedIdeas}
+                ideas={scopedIdeas}
                 onUpdateIdea={updateIdea}
                 onUpdateVariation={updateVariation}
                 onSelectIdea={setSelectedIdea}
