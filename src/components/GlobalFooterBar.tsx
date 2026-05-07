@@ -18,7 +18,7 @@ import {
   Play, Pause, RotateCcw, Clock, Focus, Calendar, Timer, 
   ShoppingCart, FileText, Undo2, Redo2, Home, FileSpreadsheet,
   Users, User, UsersRound, DollarSign, Brain, LayoutDashboard,
-  UserPlus, MoreHorizontal, Truck, Settings2,
+  UserPlus, MoreHorizontal, Truck, Settings2, Eye, EyeOff,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -220,6 +220,16 @@ export function GlobalFooterBar() {
     const saved = parseInt(localStorage.getItem("footerHeight") || "");
     return Number.isFinite(saved) && saved >= 0 && saved <= 64 ? saved : 30;
   });
+  const [footerHidden, setFooterHidden] = useState<boolean>(() => {
+    return localStorage.getItem("footerHidden") === "true";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("footerHidden", String(footerHidden));
+    if (footerHidden && window.matchMedia("(min-width: 768px)").matches) {
+      document.body.style.paddingBottom = "0px";
+    }
+  }, [footerHidden]);
 
   // Persist + apply CSS variables so buttons scale proportionally and body padding follows
   useEffect(() => {
@@ -230,12 +240,12 @@ export function GlobalFooterBar() {
     document.documentElement.style.setProperty("--footer-icon", `${Math.max(12, Math.round(footerHeight * 0.5))}px`);
     document.documentElement.style.setProperty("--footer-font", `${Math.max(10, Math.round(footerHeight * 0.36))}px`);
     if (window.matchMedia("(min-width: 768px)").matches) {
-      document.body.style.paddingBottom = `${footerHeight}px`;
+      document.body.style.paddingBottom = footerHidden ? "0px" : `${footerHeight}px`;
     }
     return () => {
       // do not clear; user expects persistence across renders
     };
-  }, [footerHeight]);
+  }, [footerHeight, footerHidden]);
   const location = useLocation();
   const { toast } = useToast();
   const { undo, redo, canUndo, canRedo } = useUndoRedoContext();
@@ -574,6 +584,28 @@ export function GlobalFooterBar() {
     return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   };
 
+  // When fully hidden, render only a tiny show handle
+  if (footerHidden) {
+    return (
+      <div data-global-footer="true" className="fixed bottom-1 right-2 z-[9999]">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-6 w-6 p-0 rounded-full shadow opacity-50 hover:opacity-100"
+              onClick={() => setFooterHidden(false)}
+              aria-label="Mostrar barra inferior"
+            >
+              <Eye className="h-3 w-3" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="top">Mostrar barra inferior</TooltipContent>
+        </Tooltip>
+      </div>
+    );
+  }
+
   // When collapsed to 0 on desktop, render only a tiny restore handle
   const isDesktopCollapsed = footerHeight === 0 && typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches;
 
@@ -897,6 +929,21 @@ export function GlobalFooterBar() {
 
         {/* Right: Footer height adjuster + Timer */}
         <div className="flex items-center gap-1 md:gap-2">
+          {/* Hide footer button */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 w-7 p-0"
+                onClick={() => setFooterHidden(true)}
+                aria-label="Ocultar barra inferior"
+              >
+                <EyeOff className="h-3.5 w-3.5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Ocultar barra</TooltipContent>
+          </Tooltip>
           {/* Height adjuster (desktop only) */}
           <Popover>
             <PopoverTrigger asChild>
