@@ -423,7 +423,16 @@ export function ContactFormDialog({
             }
           }
 
-          const bestComponent = components
+          const cropNormWidth = Math.max(0.000001, paddedX2 - paddedX1);
+          const cropNormHeight = Math.max(0.000001, paddedY2 - paddedY1);
+          const bboxLeftInCrop = Math.round(((x1 - paddedX1) / cropNormWidth) * sw);
+          const bboxTopInCrop = Math.round(((y1 - paddedY1) / cropNormHeight) * sh);
+          const bboxWidthInCrop = Math.max(1, Math.round(((x2 - x1) / cropNormWidth) * sw));
+          const bboxHeightInCrop = Math.max(1, Math.round(((y2 - y1) / cropNormHeight) * sh));
+          const bboxCenterX = bboxLeftInCrop + bboxWidthInCrop / 2;
+          const bboxCenterY = bboxTopInCrop + bboxHeightInCrop / 2;
+
+          const bestCandidate = components
             .map((component) => {
               const width = component.maxX - component.minX + 1;
               const height = component.maxY - component.minY + 1;
@@ -431,21 +440,25 @@ export function ContactFormDialog({
               const aspectScore = 1 - Math.min(1, Math.abs(1 - aspect) / 0.45);
               const fillRatio = component.area / Math.max(1, width * height);
               const fillScore = Math.min(1, fillRatio / 0.5);
-              const centerDx = Math.abs(component.cx - sw / 2) / Math.max(1, sw / 2);
-              const centerDy = Math.abs(component.cy - sh / 2) / Math.max(1, sh / 2);
-              const centerPenalty = (centerDx + centerDy) * 0.35;
+              const centerDx = Math.abs(component.cx - bboxCenterX) / Math.max(1, sw / 2);
+              const centerDy = Math.abs(component.cy - bboxCenterY) / Math.max(1, sh / 2);
+              const centerPenalty = (centerDx + centerDy) * 0.8;
               const edgePenalty = (width < sw * 0.22 || height < sh * 0.22) ? 0.6 : 1;
               const score = component.area * (0.4 + aspectScore * 0.4 + fillScore * 0.2) * (1 - centerPenalty) * edgePenalty;
               return { component, score };
             })
-            .sort((a, b) => b.score - a.score)[0]?.component;
+            .sort((a, b) => b.score - a.score)[0];
 
-          const fallbackSide = Math.min(sw, sh);
-          let squareLeft = Math.max(0, Math.round((sw - fallbackSide) / 2));
-          let squareTop = Math.max(0, Math.round((sh - fallbackSide) / 2));
+          const fallbackSide = Math.min(Math.max(bboxWidthInCrop, bboxHeightInCrop), sw, sh);
+          let squareLeft = Math.round(bboxLeftInCrop - (fallbackSide - bboxWidthInCrop) / 2);
+          let squareTop = Math.round(bboxTopInCrop - (fallbackSide - bboxHeightInCrop) / 2);
+          squareLeft = Math.max(0, Math.min(sw - fallbackSide, squareLeft));
+          squareTop = Math.max(0, Math.min(sh - fallbackSide, squareTop));
           let squareSide = fallbackSide;
 
-          if (bestComponent) {
+          const fallbackArea = bboxWidthInCrop * bboxHeightInCrop;
+          if (bestCandidate && bestCandidate.component.area >= fallbackArea * 0.35) {
+            const bestComponent = bestCandidate.component;
             const width = bestComponent.maxX - bestComponent.minX + 1;
             const height = bestComponent.maxY - bestComponent.minY + 1;
             const side = Math.min(Math.max(width, height), sw, sh);
@@ -493,6 +506,58 @@ export function ContactFormDialog({
           ctx.drawImage(rawCanvas, squareLeft, squareTop, squareSide, squareSide, 0, 0, outputSize, outputSize);
           if (isLikelyCircularAvatar) ctx.restore();
 
+          canvas.toBlob((b) => {
+            URL.revokeObjectURL(objectUrl);
+            resolve(b);
+          }, 'image/png');
+        } catch {
+          URL.revokeObjectURL(objectUrl);
+          resolve(null);
+        }
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve(null);
+      };
+      img.src = objectUrl;
+    });
+  };
+
+  const cropImageByBboxSimple = async (
+    source: Blob,
+    bbox: { x: number; y: number; width: number; height: number }
+  ): Promise<Blob | null> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(source);
+      img.onload = () => {
+        try {
+          const W = img.naturalWidth;
+          const H = img.naturalHeight;
+          const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+          const x1 = clamp01(bbox.x);
+          const y1 = clamp01(bbox.y);
+          const x2 = clamp01(bbox.x + bbox.width);
+          const y2 = clamp01(bbox.y + bbox.height);
+          const sx = Math.round(x1 * W);
+          const sy = Math.round(y1 * H);
+          const sw = Math.max(1, Math.round((x2 - x1) * W));
+          const sh = Math.max(1, Math.round((y2 - y1) * H));
+          const side = Math.min(Math.max(sw, sh), W, H);
+          const squareX = Math.max(0, Math.min(W - side, Math.round(sx - (side - sw) / 2)));
+          const squareY = Math.max(0, Math.min(H - side, Math.round(sy - (side - sh) / 2)));
+
+          const canvas = document.createElement('canvas');
+          canvas.width = 1920;
+          canvas.height = 1920;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            URL.revokeObjectURL(objectUrl);
+            return resolve(null);
+          }
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          ctx.drawImage(img, squareX, squareY, side, side, 0, 0, 1920, 1920);
           canvas.toBlob((b) => {
             URL.revokeObjectURL(objectUrl);
             resolve(b);
@@ -586,7 +651,7 @@ export function ContactFormDialog({
       let avatarUrl: string | null = null;
       if (extracted.has_profile_photo && bbox && typeof bbox.x === 'number') {
         try {
-          const cropped = await cropImageByBbox(uploadFile, bbox);
+            const cropped = await cropImageByBbox(uploadFile, bbox) || await cropImageByBboxSimple(uploadFile, bbox);
           if (cropped) {
             const avatarPath = `ai-extract/avatar-${crypto.randomUUID()}.png`;
             const { error: avErr } = await supabase.storage
