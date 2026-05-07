@@ -12,11 +12,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Slider } from "@/components/ui/slider";
 import { 
   Play, Pause, RotateCcw, Clock, Focus, Calendar, Timer, 
   ShoppingCart, FileText, Undo2, Redo2, Home, FileSpreadsheet,
   Users, User, UsersRound, DollarSign, Brain, LayoutDashboard,
-  UserPlus, MoreHorizontal, Truck,
+  UserPlus, MoreHorizontal, Truck, Settings2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
