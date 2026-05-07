@@ -239,87 +239,63 @@ export function ContactFormDialog({
   const aiFileRef = useRef<HTMLInputElement>(null);
   const [aiLoading, setAiLoading] = useState(false);
 
+  // Recorta os pixels REAIS da mídia original com base no bbox retornado pela IA.
+  // NÃO usa modelo generativo (que alucinaria um rosto diferente).
   const cropImageByBbox = async (
-    file: File,
+    source: Blob,
     bbox: { x: number; y: number; width: number; height: number }
   ): Promise<Blob | null> => {
     return new Promise((resolve) => {
       const img = new Image();
+      const objectUrl = URL.createObjectURL(source);
       img.onload = () => {
         try {
           const W = img.naturalWidth;
           const H = img.naturalHeight;
-          const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
-          const rawX1 = clamp01(bbox.x);
-          const rawY1 = clamp01(bbox.y);
-          const rawX2 = clamp01(bbox.x + bbox.width);
-          const rawY2 = clamp01(bbox.y + bbox.height);
-
-          if (rawX2 <= rawX1 || rawY2 <= rawY1) {
-            resolve(null);
-            return;
+          const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+          const x1 = clamp01(bbox.x);
+          const y1 = clamp01(bbox.y);
+          const x2 = clamp01(bbox.x + bbox.width);
+          const y2 = clamp01(bbox.y + bbox.height);
+          if (x2 <= x1 || y2 <= y1) {
+            URL.revokeObjectURL(objectUrl);
+            return resolve(null);
           }
-
-          const boxW = rawX2 - rawX1;
-          const boxH = rawY2 - rawY1;
-          const shrinkRatio = 0.06;
-          const minShrink = 0.0025;
-
-          const shrinkX = Math.min(boxW * shrinkRatio, Math.max(minShrink, boxW * 0.18));
-          const shrinkY = Math.min(boxH * shrinkRatio, Math.max(minShrink, boxH * 0.18));
-
-          let x1 = clamp01(rawX1 + shrinkX / 2);
-          let y1 = clamp01(rawY1 + shrinkY / 2);
-          let x2 = clamp01(rawX2 - shrinkX / 2);
-          let y2 = clamp01(rawY2 - shrinkY / 2);
-
-          const tightenedW = x2 - x1;
-          const tightenedH = y2 - y1;
-          if (tightenedW <= 0 || tightenedH <= 0) {
-            resolve(null);
-            return;
-          }
-
-          const sideNorm = Math.min(1, Math.max(tightenedW, tightenedH));
-          const cx = (x1 + x2) / 2;
-          const cy = (y1 + y2) / 2;
-
-          x1 = clamp01(cx - sideNorm / 2);
-          y1 = clamp01(cy - sideNorm / 2);
-          x2 = clamp01(cx + sideNorm / 2);
-          y2 = clamp01(cy + sideNorm / 2);
-
-          if (x2 - x1 < sideNorm) {
-            if (x1 === 0) x2 = Math.min(1, sideNorm);
-            else if (x2 === 1) x1 = Math.max(0, 1 - sideNorm);
-          }
-
-          if (y2 - y1 < sideNorm) {
-            if (y1 === 0) y2 = Math.min(1, sideNorm);
-            else if (y2 === 1) y1 = Math.max(0, 1 - sideNorm);
-          }
-
           const sx = Math.round(x1 * W);
           const sy = Math.round(y1 * H);
           const sw = Math.max(1, Math.round((x2 - x1) * W));
           const sh = Math.max(1, Math.round((y2 - y1) * H));
 
+          const targetMax = 1920;
+          const scale = Math.min(targetMax / sw, targetMax / sh, 4);
+          const outW = Math.max(256, Math.round(sw * scale));
+          const outH = Math.max(256, Math.round(sh * scale));
+
           const canvas = document.createElement('canvas');
-          const out = 1920;
-          canvas.width = out;
-          canvas.height = out;
+          canvas.width = outW;
+          canvas.height = outH;
           const ctx = canvas.getContext('2d');
-          if (!ctx) return resolve(null);
+          if (!ctx) {
+            URL.revokeObjectURL(objectUrl);
+            return resolve(null);
+          }
           ctx.imageSmoothingEnabled = true;
           ctx.imageSmoothingQuality = 'high';
-          ctx.drawImage(img, sx, sy, sw, sh, 0, 0, out, out);
-          canvas.toBlob((b) => resolve(b), 'image/jpeg', 0.95);
+          ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
+          canvas.toBlob((b) => {
+            URL.revokeObjectURL(objectUrl);
+            resolve(b);
+          }, 'image/jpeg', 0.95);
         } catch {
+          URL.revokeObjectURL(objectUrl);
           resolve(null);
         }
       };
-      img.onerror = () => resolve(null);
-      img.src = URL.createObjectURL(file);
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        resolve(null);
+      };
+      img.src = objectUrl;
     });
   };
 
@@ -391,24 +367,27 @@ export function ContactFormDialog({
       if (data?.error) throw new Error(data.error);
 
       const extracted = data.contact || {};
-      const profilePhotoDataUrl: string | null = data.profilePhotoDataUrl || null;
+      const bbox = extracted.profile_photo_bbox as
+        | { x: number; y: number; width: number; height: number }
+        | undefined;
 
-      // Se a IA extraiu a foto de perfil isolada (via modelo de edição de imagem),
-      // sobe esse blob para o storage e usa como avatar — sem recorte por bbox.
+      // Recorta os pixels REAIS da mídia analisada (uploadFile já é JPEG/imagem).
       let avatarUrl: string | null = null;
-      if (profilePhotoDataUrl) {
+      if (extracted.has_profile_photo && bbox && typeof bbox.x === 'number') {
         try {
-          const blob = await (await fetch(profilePhotoDataUrl)).blob();
-          const avatarPath = `ai-extract/avatar-${crypto.randomUUID()}.png`;
-          const { error: avErr } = await supabase.storage
-            .from('media')
-            .upload(avatarPath, blob, { upsert: true, contentType: blob.type || 'image/png', cacheControl: '3600' });
-          if (!avErr) {
-            const { data: avUrl } = supabase.storage.from('media').getPublicUrl(avatarPath);
-            avatarUrl = avUrl.publicUrl;
+          const cropped = await cropImageByBbox(uploadFile, bbox);
+          if (cropped) {
+            const avatarPath = `ai-extract/avatar-${crypto.randomUUID()}.jpg`;
+            const { error: avErr } = await supabase.storage
+              .from('media')
+              .upload(avatarPath, cropped, { upsert: true, contentType: 'image/jpeg', cacheControl: '3600' });
+            if (!avErr) {
+              const { data: avUrl } = supabase.storage.from('media').getPublicUrl(avatarPath);
+              avatarUrl = avUrl.publicUrl;
+            }
           }
         } catch (e) {
-          console.error('Erro ao subir avatar extraído:', e);
+          console.error('Erro ao recortar avatar:', e);
         }
       }
 
