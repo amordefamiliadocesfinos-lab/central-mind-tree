@@ -131,6 +131,16 @@ export default function Digital() {
     return true;
   });
 
+  // Scope variations within each idea to the active platform filter so Kanban "Por Variação"
+  // and per-platform expansions don't show variations from non-selected channels.
+  const scopedIdeas = displayedIdeas.map(idea => {
+    if (platformFilter === 'all') return idea;
+    return {
+      ...idea,
+      variations: (idea.variations || []).filter(v => v.platform === platformFilter),
+    };
+  });
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
