@@ -624,7 +624,7 @@ export default function Digital() {
                     </Button>
                   </Card>
                 ) : (
-                  displayedIdeas.flatMap((idea) => {
+                  scopedIdeas.flatMap((idea) => {
                     const isExpanded = expandedByPlatforms.has(idea.id);
                     const ideaPlatformIds = Array.from(new Set((idea.variations || []).map(v => v.platform).filter(Boolean)));
                     const ideaPlatforms = ideaPlatformIds
