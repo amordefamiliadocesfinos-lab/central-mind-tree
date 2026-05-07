@@ -648,34 +648,9 @@ export function ContactFormDialog({
         | { x: number; y: number; width: number; height: number }
         | undefined;
 
-      // Recorta os pixels REAIS da mídia analisada (uploadFile já é JPEG/imagem).
-      let avatarUrl: string | null = null;
-      let refinedPreviewUrl: string | null = null;
-      let simplePreviewUrl: string | null = null;
-      let usedKind: 'refined' | 'simple' | 'none' = 'none';
-      if (extracted.has_profile_photo && bbox && typeof bbox.x === 'number') {
-        try {
-          const refined = await cropImageByBbox(uploadFile, bbox).catch(() => null);
-          const simple = await cropImageByBboxSimple(uploadFile, bbox).catch(() => null);
-          if (refined) refinedPreviewUrl = URL.createObjectURL(refined);
-          if (simple) simplePreviewUrl = URL.createObjectURL(simple);
-          const chosen = refined || simple;
-          usedKind = refined ? 'refined' : simple ? 'simple' : 'none';
-          if (chosen) {
-            const avatarPath = `ai-extract/avatar-${crypto.randomUUID()}.png`;
-            const { error: avErr } = await supabase.storage
-              .from('media')
-              .upload(avatarPath, chosen, { upsert: true, contentType: 'image/png', cacheControl: '3600' });
-            if (!avErr) {
-              const { data: avUrl } = supabase.storage.from('media').getPublicUrl(avatarPath);
-              avatarUrl = avUrl.publicUrl;
-            }
-          }
-        } catch (e) {
-          console.error('Erro ao recortar avatar:', e);
-        }
-      }
-      setAiPreview({ refinedUrl: refinedPreviewUrl, simpleUrl: simplePreviewUrl, usedKind });
+      // Abre o editor interativo de recorte com a imagem ORIGINAL e o bbox sugerido pela IA.
+      // O usuário ajusta manualmente até centralizar a foto de perfil exatamente onde quiser.
+      setCropEditor({ blob: uploadFile, bbox: (extracted.has_profile_photo && bbox && typeof bbox.x === 'number') ? bbox : null });
 
       setForm(prev => {
         const merged: any = { ...prev };
@@ -690,14 +665,10 @@ export function ContactFormDialog({
             merged[k] = v;
           }
         });
-        if (avatarUrl) {
-          merged.photo_url = avatarUrl;
-        }
         return merged;
       });
       setShowDetails(true);
-      const photoMsg = avatarUrl ? ' Foto de perfil extraída e aplicada.' : '';
-      toast.success(`✨ Dados extraídos!${photoMsg} Revise e salve.`, { id: toastId });
+      toast.success(`✨ Dados extraídos! Ajuste o recorte da foto e salve.`, { id: toastId });
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || 'Erro ao analisar mídia', { id: toastId });
