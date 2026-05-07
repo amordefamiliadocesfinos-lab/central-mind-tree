@@ -240,7 +240,8 @@ export function ContactFormDialog({
   const [aiLoading, setAiLoading] = useState(false);
 
   // Recorta os pixels REAIS da mídia original com base no bbox retornado pela IA.
-  // NÃO usa modelo generativo (que alucinaria um rosto diferente).
+  // Faz pós-processamento não-generativo para remover bordas/padding do print,
+  // preencher melhor o avatar e exportar em PNG nítido.
   const cropImageByBbox = async (
     source: Blob,
     bbox: { x: number; y: number; width: number; height: number }
@@ -261,31 +262,158 @@ export function ContactFormDialog({
             URL.revokeObjectURL(objectUrl);
             return resolve(null);
           }
-          const sx = Math.round(x1 * W);
-          const sy = Math.round(y1 * H);
-          const sw = Math.max(1, Math.round((x2 - x1) * W));
-          const sh = Math.max(1, Math.round((y2 - y1) * H));
+          const bboxPadX = Math.min(0.02, bbox.width * 0.15);
+          const bboxPadY = Math.min(0.02, bbox.height * 0.15);
+          const paddedX1 = clamp01(x1 - bboxPadX);
+          const paddedY1 = clamp01(y1 - bboxPadY);
+          const paddedX2 = clamp01(x2 + bboxPadX);
+          const paddedY2 = clamp01(y2 + bboxPadY);
 
-          const targetMax = 1920;
-          const scale = Math.min(targetMax / sw, targetMax / sh, 4);
-          const outW = Math.max(256, Math.round(sw * scale));
-          const outH = Math.max(256, Math.round(sh * scale));
+          const sx = Math.round(paddedX1 * W);
+          const sy = Math.round(paddedY1 * H);
+          const sw = Math.max(1, Math.round((paddedX2 - paddedX1) * W));
+          const sh = Math.max(1, Math.round((paddedY2 - paddedY1) * H));
 
+          const rawCanvas = document.createElement('canvas');
+          rawCanvas.width = sw;
+          rawCanvas.height = sh;
+          const rawCtx = rawCanvas.getContext('2d', { willReadFrequently: true });
+          if (!rawCtx) {
+            URL.revokeObjectURL(objectUrl);
+            return resolve(null);
+          }
+
+          rawCtx.imageSmoothingEnabled = true;
+          rawCtx.imageSmoothingQuality = 'high';
+          rawCtx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+
+          const imageData = rawCtx.getImageData(0, 0, sw, sh);
+          const pixels = imageData.data;
+          const getPixel = (px: number, py: number) => {
+            const cx = Math.max(0, Math.min(sw - 1, Math.round(px)));
+            const cy = Math.max(0, Math.min(sh - 1, Math.round(py)));
+            const idx = (cy * sw + cx) * 4;
+            return {
+              r: pixels[idx],
+              g: pixels[idx + 1],
+              b: pixels[idx + 2],
+              a: pixels[idx + 3],
+            };
+          };
+          const colorDistance = (
+            a: { r: number; g: number; b: number; a: number },
+            b: { r: number; g: number; b: number; a: number }
+          ) => {
+            const dr = a.r - b.r;
+            const dg = a.g - b.g;
+            const db = a.b - b.b;
+            return Math.sqrt(dr * dr + dg * dg + db * db);
+          };
+          const averageColor = (samples: Array<{ r: number; g: number; b: number; a: number }>) => ({
+            r: samples.reduce((acc, c) => acc + c.r, 0) / samples.length,
+            g: samples.reduce((acc, c) => acc + c.g, 0) / samples.length,
+            b: samples.reduce((acc, c) => acc + c.b, 0) / samples.length,
+            a: samples.reduce((acc, c) => acc + c.a, 0) / samples.length,
+          });
+
+          const cornerSamples = [
+            getPixel(0, 0),
+            getPixel(sw - 1, 0),
+            getPixel(0, sh - 1),
+            getPixel(sw - 1, sh - 1),
+          ];
+          const background = averageColor(cornerSamples);
+          const bgSpread = Math.max(
+            ...cornerSamples.map((sample) => colorDistance(sample, background))
+          );
+          const bgThreshold = Math.max(18, Math.min(52, bgSpread + 18));
+
+          const pixelLooksLikeBackground = (px: number, py: number) => {
+            const sample = getPixel(px, py);
+            if (sample.a < 16) return true;
+            return colorDistance(sample, background) <= bgThreshold;
+          };
+
+          const lineHasContent = (axis: 'x' | 'y', line: number) => {
+            const total = axis === 'y' ? sw : sh;
+            const step = Math.max(1, Math.floor(total / 64));
+            let contentHits = 0;
+            let checks = 0;
+            for (let i = 0; i < total; i += step) {
+              checks += 1;
+              const isBackground = axis === 'y'
+                ? pixelLooksLikeBackground(i, line)
+                : pixelLooksLikeBackground(line, i);
+              if (!isBackground) contentHits += 1;
+            }
+            return contentHits / Math.max(1, checks) >= 0.12;
+          };
+
+          let trimTop = 0;
+          while (trimTop < sh - 1 && !lineHasContent('y', trimTop)) trimTop += 1;
+          let trimBottom = sh - 1;
+          while (trimBottom > trimTop && !lineHasContent('y', trimBottom)) trimBottom -= 1;
+          let trimLeft = 0;
+          while (trimLeft < sw - 1 && !lineHasContent('x', trimLeft)) trimLeft += 1;
+          let trimRight = sw - 1;
+          while (trimRight > trimLeft && !lineHasContent('x', trimRight)) trimRight -= 1;
+
+          if (trimRight - trimLeft < sw * 0.25 || trimBottom - trimTop < sh * 0.25) {
+            trimTop = 0;
+            trimLeft = 0;
+            trimRight = sw - 1;
+            trimBottom = sh - 1;
+          }
+
+          const contentWidth = trimRight - trimLeft + 1;
+          const contentHeight = trimBottom - trimTop + 1;
+          const side = Math.max(contentWidth, contentHeight);
+          let squareLeft = Math.round(trimLeft - (side - contentWidth) / 2);
+          let squareTop = Math.round(trimTop - (side - contentHeight) / 2);
+          squareLeft = Math.max(0, Math.min(sw - side, squareLeft));
+          squareTop = Math.max(0, Math.min(sh - side, squareTop));
+
+          const insetProbe = Math.max(1, Math.round(side * 0.08));
+          const circularBgHits = [
+            pixelLooksLikeBackground(squareLeft + insetProbe, squareTop + insetProbe),
+            pixelLooksLikeBackground(squareLeft + side - insetProbe, squareTop + insetProbe),
+            pixelLooksLikeBackground(squareLeft + insetProbe, squareTop + side - insetProbe),
+            pixelLooksLikeBackground(squareLeft + side - insetProbe, squareTop + side - insetProbe),
+          ].filter(Boolean).length;
+          const isLikelyCircularAvatar = circularBgHits >= 3;
+
+          const innerInset = isLikelyCircularAvatar ? Math.max(2, Math.round(side * 0.06)) : 0;
+          squareLeft += innerInset;
+          squareTop += innerInset;
+          const squareSide = Math.max(32, side - innerInset * 2);
+
+          const outputSize = 1080;
           const canvas = document.createElement('canvas');
-          canvas.width = outW;
-          canvas.height = outH;
+          canvas.width = outputSize;
+          canvas.height = outputSize;
           const ctx = canvas.getContext('2d');
           if (!ctx) {
             URL.revokeObjectURL(objectUrl);
             return resolve(null);
           }
+
+          ctx.clearRect(0, 0, outputSize, outputSize);
           ctx.imageSmoothingEnabled = true;
           ctx.imageSmoothingQuality = 'high';
-          ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
+          if (isLikelyCircularAvatar) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.arc(outputSize / 2, outputSize / 2, outputSize / 2 - 2, 0, Math.PI * 2);
+            ctx.closePath();
+            ctx.clip();
+          }
+          ctx.drawImage(rawCanvas, squareLeft, squareTop, squareSide, squareSide, 0, 0, outputSize, outputSize);
+          if (isLikelyCircularAvatar) ctx.restore();
+
           canvas.toBlob((b) => {
             URL.revokeObjectURL(objectUrl);
             resolve(b);
-          }, 'image/jpeg', 0.95);
+          }, 'image/png');
         } catch {
           URL.revokeObjectURL(objectUrl);
           resolve(null);
@@ -377,10 +505,10 @@ export function ContactFormDialog({
         try {
           const cropped = await cropImageByBbox(uploadFile, bbox);
           if (cropped) {
-            const avatarPath = `ai-extract/avatar-${crypto.randomUUID()}.jpg`;
+            const avatarPath = `ai-extract/avatar-${crypto.randomUUID()}.png`;
             const { error: avErr } = await supabase.storage
               .from('media')
-              .upload(avatarPath, cropped, { upsert: true, contentType: 'image/jpeg', cacheControl: '3600' });
+              .upload(avatarPath, cropped, { upsert: true, contentType: 'image/png', cacheControl: '3600' });
             if (!avErr) {
               const { data: avUrl } = supabase.storage.from('media').getPublicUrl(avatarPath);
               avatarUrl = avUrl.publicUrl;
@@ -404,7 +532,7 @@ export function ContactFormDialog({
             merged[k] = v;
           }
         });
-        if (avatarUrl && !merged.photo_url) {
+        if (avatarUrl) {
           merged.photo_url = avatarUrl;
         }
         return merged;
