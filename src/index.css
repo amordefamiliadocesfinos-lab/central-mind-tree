@@ -136,7 +136,15 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
-    /* Allow native vertical scrolling on mobile (no overscroll lock) */
+    /* Reserve space for the global fixed footer bar so it never overlaps content.
+       Mobile: ~96px (2 rows + safe-area). Desktop: ~64px (floating pill + bottom offset). */
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  }
+
+  @media (min-width: 768px) {
+    body {
+      padding-bottom: 64px;
+    }
   }
 
   /* Prevent horizontal overflow on mobile */
