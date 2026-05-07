@@ -218,7 +218,7 @@ export function GlobalFooterBar() {
   const [collaboratorsOpen, setCollaboratorsOpen] = useState(false);
   const [footerHeight, setFooterHeight] = useState<number>(() => {
     const saved = parseInt(localStorage.getItem("footerHeight") || "");
-    return Number.isFinite(saved) && saved >= 24 && saved <= 64 ? saved : 30;
+    return Number.isFinite(saved) && saved >= 0 && saved <= 64 ? saved : 30;
   });
 
   // Persist + apply CSS variables so buttons scale proportionally and body padding follows
@@ -887,14 +887,14 @@ export function GlobalFooterBar() {
                   <span className="text-muted-foreground">{footerHeight}px</span>
                 </div>
                 <Slider
-                  min={24}
+                  min={0}
                   max={64}
                   step={1}
                   value={[footerHeight]}
                   onValueChange={(v) => setFooterHeight(v[0])}
                 />
                 <div className="flex justify-between text-[10px] text-muted-foreground">
-                  <span>24</span><span>44</span><span>64</span>
+                  <span>0</span><span>32</span><span>64</span>
                 </div>
                 <Button
                   size="sm"
