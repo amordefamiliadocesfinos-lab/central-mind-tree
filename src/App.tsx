@@ -100,6 +100,7 @@ function AnimatedRoutes() {
 
 function AppContent() {
   useScheduledTaskPromotion();
+  useKeyboardAware();
 
   return (
     <BrowserRouter>
