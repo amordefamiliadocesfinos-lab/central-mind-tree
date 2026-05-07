@@ -367,24 +367,27 @@ export function ContactFormDialog({
       if (data?.error) throw new Error(data.error);
 
       const extracted = data.contact || {};
-      const profilePhotoDataUrl: string | null = data.profilePhotoDataUrl || null;
+      const bbox = extracted.profile_photo_bbox as
+        | { x: number; y: number; width: number; height: number }
+        | undefined;
 
-      // Se a IA extraiu a foto de perfil isolada (via modelo de edição de imagem),
-      // sobe esse blob para o storage e usa como avatar — sem recorte por bbox.
+      // Recorta os pixels REAIS da mídia analisada (uploadFile já é JPEG/imagem).
       let avatarUrl: string | null = null;
-      if (profilePhotoDataUrl) {
+      if (extracted.has_profile_photo && bbox && typeof bbox.x === 'number') {
         try {
-          const blob = await (await fetch(profilePhotoDataUrl)).blob();
-          const avatarPath = `ai-extract/avatar-${crypto.randomUUID()}.png`;
-          const { error: avErr } = await supabase.storage
-            .from('media')
-            .upload(avatarPath, blob, { upsert: true, contentType: blob.type || 'image/png', cacheControl: '3600' });
-          if (!avErr) {
-            const { data: avUrl } = supabase.storage.from('media').getPublicUrl(avatarPath);
-            avatarUrl = avUrl.publicUrl;
+          const cropped = await cropImageByBbox(uploadFile, bbox);
+          if (cropped) {
+            const avatarPath = `ai-extract/avatar-${crypto.randomUUID()}.jpg`;
+            const { error: avErr } = await supabase.storage
+              .from('media')
+              .upload(avatarPath, cropped, { upsert: true, contentType: 'image/jpeg', cacheControl: '3600' });
+            if (!avErr) {
+              const { data: avUrl } = supabase.storage.from('media').getPublicUrl(avatarPath);
+              avatarUrl = avUrl.publicUrl;
+            }
           }
         } catch (e) {
-          console.error('Erro ao subir avatar extraído:', e);
+          console.error('Erro ao recortar avatar:', e);
         }
       }
 
