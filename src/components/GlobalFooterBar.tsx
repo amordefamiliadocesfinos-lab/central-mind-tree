@@ -574,6 +574,35 @@ export function GlobalFooterBar() {
     return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
   };
 
+  // When collapsed to 0 on desktop, render only a tiny restore handle
+  const isDesktopCollapsed = footerHeight === 0 && typeof window !== "undefined" && window.matchMedia("(min-width: 768px)").matches;
+
+  if (isDesktopCollapsed) {
+    return (
+      <div data-global-footer="true" className="fixed bottom-1 right-2 z-[9999]">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button size="sm" variant="outline" className="h-6 w-6 p-0 rounded-full shadow" title="Mostrar barra inferior">
+              <Settings2 className="h-3 w-3" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent side="top" align="end" className="w-64 p-3">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs font-medium">
+                <span>Altura da barra</span>
+                <span className="text-muted-foreground">{footerHeight}px</span>
+              </div>
+              <Slider min={0} max={64} step={1} value={[footerHeight]} onValueChange={(v) => setFooterHeight(v[0])} />
+              <Button size="sm" variant="outline" className="w-full h-7 text-xs" onClick={() => setFooterHeight(30)}>
+                Restaurar padrão (30px)
+              </Button>
+            </div>
+          </PopoverContent>
+        </Popover>
+      </div>
+    );
+  }
+
   return (
     <div data-global-footer="true" className="fixed bottom-0 left-0 right-0 z-[9999] bg-background/95 backdrop-blur-md border-t border-border shadow-[0_-1px_8px_rgba(0,0,0,0.08)] pb-safe-bottom">
       {/* Windows 11 style: full-width thin bar, content centered with auto width */}
