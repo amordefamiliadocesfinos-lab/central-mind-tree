@@ -49,7 +49,7 @@ interface IdeaCardProps {
 export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products = [], ideaTypes = [], singlePlatform, onExpandPlatforms, onCollapsePlatforms, isExpandedByPlatforms }: IdeaCardProps) {
   const [expanded, setExpanded] = useState(false);
   const statusConfig = DIGITAL_STATUS[idea.status];
-  const variations = idea.variations || [];
+  
 
   const getPlatform = (platformId: string) => platforms.find(p => p.id === platformId);
 
