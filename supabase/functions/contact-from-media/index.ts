@@ -39,6 +39,9 @@ REGRA CRÍTICA - FOTO DE PERFIL (BOUNDING BOX):
 - Formato: { x, y, width, height } onde x,y é o canto superior-esquerdo do avatar e width/height são as dimensões — todos relativos ao tamanho da imagem completa.
 - Se o avatar for circular, o bbox deve encostar na borda externa do círculo da foto, como um quadrado tangente ao círculo, sem folga.
 - Se o avatar for quadrado/retangular, o bbox deve encostar exatamente nas bordas da foto visível.
+- Se houver fundo branco/cinza ao redor do avatar dentro do print, EXCLUA esse fundo do bbox ao máximo possível; o bbox deve ficar o mais justo possível na foto.
+- NÃO centralize pela área do cabeçalho; centralize apenas pela foto real visível.
+- Se existir dúvida entre um bbox mais aberto e um bbox mais fechado, escolha o mais FECHADO desde que não corte a foto.
 - Seja extremamente preciso: o recorte deve conter SOMENTE a imagem da foto do perfil, descartando todo o resto do print.
 - Se for cartão de visita SEM foto da pessoa, ou apenas texto/documento, has_profile_photo = false e NÃO retorne bbox.`;
 
