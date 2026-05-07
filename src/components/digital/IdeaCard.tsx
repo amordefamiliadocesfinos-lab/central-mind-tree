@@ -40,9 +40,13 @@ interface IdeaCardProps {
   nodes?: Node[];
   products?: ProductListItem[];
   ideaTypes?: IdeaType[];
+  singlePlatform?: Platform;
+  onExpandPlatforms?: () => void;
+  onCollapsePlatforms?: () => void;
+  isExpandedByPlatforms?: boolean;
 }
 
-export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products = [], ideaTypes = [] }: IdeaCardProps) {
+export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products = [], ideaTypes = [], singlePlatform, onExpandPlatforms, onCollapsePlatforms, isExpandedByPlatforms }: IdeaCardProps) {
   const [expanded, setExpanded] = useState(false);
   const statusConfig = DIGITAL_STATUS[idea.status];
   const variations = idea.variations || [];
