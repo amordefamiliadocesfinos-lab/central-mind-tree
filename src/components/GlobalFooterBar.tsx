@@ -216,6 +216,26 @@ export function GlobalFooterBar() {
   const [stateId, setStateId] = useState<string | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [collaboratorsOpen, setCollaboratorsOpen] = useState(false);
+  const [footerHeight, setFooterHeight] = useState<number>(() => {
+    const saved = parseInt(localStorage.getItem("footerHeight") || "");
+    return Number.isFinite(saved) && saved >= 24 && saved <= 64 ? saved : 30;
+  });
+
+  // Persist + apply CSS variables so buttons scale proportionally and body padding follows
+  useEffect(() => {
+    localStorage.setItem("footerHeight", String(footerHeight));
+    document.documentElement.style.setProperty("--footer-h", `${footerHeight}px`);
+    // buttons ~ 92% of bar, icons ~ 50%
+    document.documentElement.style.setProperty("--footer-btn", `${Math.round(footerHeight * 0.92)}px`);
+    document.documentElement.style.setProperty("--footer-icon", `${Math.max(12, Math.round(footerHeight * 0.5))}px`);
+    document.documentElement.style.setProperty("--footer-font", `${Math.max(10, Math.round(footerHeight * 0.36))}px`);
+    if (window.matchMedia("(min-width: 768px)").matches) {
+      document.body.style.paddingBottom = `${footerHeight}px`;
+    }
+    return () => {
+      // do not clear; user expects persistence across renders
+    };
+  }, [footerHeight]);
   const location = useLocation();
   const { toast } = useToast();
   const { undo, redo, canUndo, canRedo } = useUndoRedoContext();
