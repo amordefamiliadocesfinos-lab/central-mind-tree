@@ -615,7 +615,7 @@ export default function Digital() {
               />
             ) : (
               <div className="space-y-3">
-                {displayedIdeas.length === 0 ? (
+                {scopedIdeas.length === 0 ? (
                   <Card className="p-8 text-center">
                     <p className="text-muted-foreground">Nenhuma ideia encontrada.</p>
                     <Button className="mt-4" onClick={() => setShowCreateDialog(true)}>
