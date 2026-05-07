@@ -334,60 +334,136 @@ export function ContactFormDialog({
             return colorDistance(sample, background) <= bgThreshold;
           };
 
-          const lineHasContent = (axis: 'x' | 'y', line: number) => {
-            const total = axis === 'y' ? sw : sh;
-            const step = Math.max(1, Math.floor(total / 64));
-            let contentHits = 0;
-            let checks = 0;
-            for (let i = 0; i < total; i += step) {
-              checks += 1;
-              const isBackground = axis === 'y'
-                ? pixelLooksLikeBackground(i, line)
-                : pixelLooksLikeBackground(line, i);
-              if (!isBackground) contentHits += 1;
+          const mask = new Uint8Array(sw * sh);
+          for (let yy = 0; yy < sh; yy += 1) {
+            for (let xx = 0; xx < sw; xx += 1) {
+              mask[yy * sw + xx] = pixelLooksLikeBackground(xx, yy) ? 0 : 1;
             }
-            return contentHits / Math.max(1, checks) >= 0.12;
-          };
-
-          let trimTop = 0;
-          while (trimTop < sh - 1 && !lineHasContent('y', trimTop)) trimTop += 1;
-          let trimBottom = sh - 1;
-          while (trimBottom > trimTop && !lineHasContent('y', trimBottom)) trimBottom -= 1;
-          let trimLeft = 0;
-          while (trimLeft < sw - 1 && !lineHasContent('x', trimLeft)) trimLeft += 1;
-          let trimRight = sw - 1;
-          while (trimRight > trimLeft && !lineHasContent('x', trimRight)) trimRight -= 1;
-
-          if (trimRight - trimLeft < sw * 0.25 || trimBottom - trimTop < sh * 0.25) {
-            trimTop = 0;
-            trimLeft = 0;
-            trimRight = sw - 1;
-            trimBottom = sh - 1;
           }
 
-          const contentWidth = trimRight - trimLeft + 1;
-          const contentHeight = trimBottom - trimTop + 1;
-          const side = Math.min(Math.max(contentWidth, contentHeight), sw, sh);
-          let squareLeft = Math.round(trimLeft - (side - contentWidth) / 2);
-          let squareTop = Math.round(trimTop - (side - contentHeight) / 2);
-          squareLeft = Math.max(0, Math.min(sw - side, squareLeft));
-          squareTop = Math.max(0, Math.min(sh - side, squareTop));
+          type Component = {
+            area: number;
+            minX: number;
+            minY: number;
+            maxX: number;
+            maxY: number;
+            cx: number;
+            cy: number;
+          };
 
-          const insetProbe = Math.max(1, Math.round(side * 0.08));
+          const visited = new Uint8Array(sw * sh);
+          const components: Component[] = [];
+          const queueX = new Int32Array(sw * sh);
+          const queueY = new Int32Array(sw * sh);
+
+          for (let yy = 0; yy < sh; yy += 1) {
+            for (let xx = 0; xx < sw; xx += 1) {
+              const startIndex = yy * sw + xx;
+              if (!mask[startIndex] || visited[startIndex]) continue;
+
+              let head = 0;
+              let tail = 0;
+              let area = 0;
+              let sumX = 0;
+              let sumY = 0;
+              let minX = xx;
+              let minY = yy;
+              let maxX = xx;
+              let maxY = yy;
+
+              visited[startIndex] = 1;
+              queueX[tail] = xx;
+              queueY[tail] = yy;
+              tail += 1;
+
+              while (head < tail) {
+                const cx = queueX[head];
+                const cy = queueY[head];
+                head += 1;
+
+                area += 1;
+                sumX += cx;
+                sumY += cy;
+                if (cx < minX) minX = cx;
+                if (cy < minY) minY = cy;
+                if (cx > maxX) maxX = cx;
+                if (cy > maxY) maxY = cy;
+
+                const neighbors = [
+                  [cx - 1, cy], [cx + 1, cy], [cx, cy - 1], [cx, cy + 1],
+                ];
+                for (const [nx, ny] of neighbors) {
+                  if (nx < 0 || ny < 0 || nx >= sw || ny >= sh) continue;
+                  const ni = ny * sw + nx;
+                  if (!mask[ni] || visited[ni]) continue;
+                  visited[ni] = 1;
+                  queueX[tail] = nx;
+                  queueY[tail] = ny;
+                  tail += 1;
+                }
+              }
+
+              if (area >= Math.max(20, Math.round(sw * sh * 0.01))) {
+                components.push({
+                  area,
+                  minX,
+                  minY,
+                  maxX,
+                  maxY,
+                  cx: sumX / area,
+                  cy: sumY / area,
+                });
+              }
+            }
+          }
+
+          const bestComponent = components
+            .map((component) => {
+              const width = component.maxX - component.minX + 1;
+              const height = component.maxY - component.minY + 1;
+              const aspect = width / Math.max(1, height);
+              const aspectScore = 1 - Math.min(1, Math.abs(1 - aspect));
+              const fillRatio = component.area / Math.max(1, width * height);
+              const fillScore = Math.min(1, fillRatio / 0.5);
+              const centerDx = Math.abs(component.cx - sw / 2) / Math.max(1, sw / 2);
+              const centerDy = Math.abs(component.cy - sh / 2) / Math.max(1, sh / 2);
+              const centerPenalty = (centerDx + centerDy) * 0.35;
+              const score = component.area * (0.45 + aspectScore * 0.35 + fillScore * 0.2) * (1 - centerPenalty);
+              return { component, score };
+            })
+            .sort((a, b) => b.score - a.score)[0]?.component;
+
+          const fallbackSide = Math.min(sw, sh);
+          let squareLeft = Math.max(0, Math.round((sw - fallbackSide) / 2));
+          let squareTop = Math.max(0, Math.round((sh - fallbackSide) / 2));
+          let squareSide = fallbackSide;
+
+          if (bestComponent) {
+            const width = bestComponent.maxX - bestComponent.minX + 1;
+            const height = bestComponent.maxY - bestComponent.minY + 1;
+            const side = Math.min(Math.max(width, height), sw, sh);
+            squareLeft = Math.round(bestComponent.minX - (side - width) / 2);
+            squareTop = Math.round(bestComponent.minY - (side - height) / 2);
+            squareLeft = Math.max(0, Math.min(sw - side, squareLeft));
+            squareTop = Math.max(0, Math.min(sh - side, squareTop));
+            squareSide = side;
+          }
+
+          const insetProbe = Math.max(1, Math.round(squareSide * 0.08));
           const circularBgHits = [
             pixelLooksLikeBackground(squareLeft + insetProbe, squareTop + insetProbe),
-            pixelLooksLikeBackground(squareLeft + side - insetProbe, squareTop + insetProbe),
-            pixelLooksLikeBackground(squareLeft + insetProbe, squareTop + side - insetProbe),
-            pixelLooksLikeBackground(squareLeft + side - insetProbe, squareTop + side - insetProbe),
+            pixelLooksLikeBackground(squareLeft + squareSide - insetProbe, squareTop + insetProbe),
+            pixelLooksLikeBackground(squareLeft + insetProbe, squareTop + squareSide - insetProbe),
+            pixelLooksLikeBackground(squareLeft + squareSide - insetProbe, squareTop + squareSide - insetProbe),
           ].filter(Boolean).length;
           const isLikelyCircularAvatar = circularBgHits >= 3;
 
-          const innerInset = isLikelyCircularAvatar ? Math.max(2, Math.round(side * 0.06)) : 0;
-          squareLeft += innerInset;
-          squareTop += innerInset;
-          const squareSide = Math.max(32, side - innerInset * 2);
+          const innerInset = isLikelyCircularAvatar ? Math.max(2, Math.round(squareSide * 0.05)) : 0;
+          squareLeft = Math.max(0, Math.min(sw - 1, squareLeft + innerInset));
+          squareTop = Math.max(0, Math.min(sh - 1, squareTop + innerInset));
+          squareSide = Math.max(32, Math.min(sw - squareLeft, sh - squareTop, squareSide - innerInset * 2));
 
-          const outputSize = 1080;
+          const outputSize = 1920;
           const canvas = document.createElement('canvas');
           canvas.width = outputSize;
           canvas.height = outputSize;
