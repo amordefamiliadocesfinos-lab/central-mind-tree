@@ -137,14 +137,28 @@ All colors MUST be HSL.
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
     /* Reserve space for the global fixed footer bar so it never overlaps content.
-       Mobile: ~96px (2 rows + safe-area). Desktop: ~64px (floating pill + bottom offset). */
+       Mobile: ~96px (2 rows + safe-area). Desktop: ~48px (single thin bar). */
     padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+    transition: padding-bottom 0.2s ease;
   }
 
   @media (min-width: 768px) {
     body {
       padding-bottom: 48px;
     }
+  }
+
+  /* When the virtual keyboard is open on mobile, hide the global footer
+     and remove the reserved space so inputs aren't covered. */
+  body.keyboard-open {
+    padding-bottom: 0 !important;
+  }
+  body.keyboard-open [data-global-footer="true"] {
+    transform: translateY(110%);
+    pointer-events: none;
+  }
+  [data-global-footer="true"] {
+    transition: transform 0.2s ease;
   }
 
   /* Prevent horizontal overflow on mobile */

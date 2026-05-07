@@ -33,6 +33,7 @@ import Rotas from "./pages/Rotas";
 import NotFound from "./pages/NotFound";
 import { QuickConversationFAB } from "@/components/crm/QuickConversationFAB";
 import { useScheduledTaskPromotion } from "./hooks/useScheduledTaskPromotion";
+import { useKeyboardAware } from "./hooks/useKeyboardAware";
 
 const queryClient = new QueryClient();
 
@@ -99,6 +100,7 @@ function AnimatedRoutes() {
 
 function AppContent() {
   useScheduledTaskPromotion();
+  useKeyboardAware();
 
   return (
     <BrowserRouter>
