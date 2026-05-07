@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
 import { openWhatsAppBroadcast } from '@/lib/whatsapp';
-import { ChevronDown, Eye, MessageCircle, UserPlus, LinkIcon, Package, Target, Users, Calendar, Image } from 'lucide-react';
+import { ChevronDown, Eye, MessageCircle, UserPlus, LinkIcon, Package, Target, Users, Calendar, Image, Layers, Minimize2 } from 'lucide-react';
 
 const DEFAULT_TYPE = { label: 'Outro', icon: '📄', color: 'bg-muted text-muted-foreground border-border' };
 
