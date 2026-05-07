@@ -866,8 +866,48 @@ export function GlobalFooterBar() {
           onOpenChange={setCollaboratorsOpen} 
         />
 
-        {/* Right: Timer */}
+        {/* Right: Footer height adjuster + Timer */}
         <div className="flex items-center gap-1 md:gap-2">
+          {/* Height adjuster (desktop only) */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="hidden md:inline-flex h-7 w-7 p-0"
+                title="Ajustar altura da barra"
+              >
+                <Settings2 className="h-3.5 w-3.5" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent side="top" align="end" className="w-64 p-3">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs font-medium">
+                  <span>Altura da barra</span>
+                  <span className="text-muted-foreground">{footerHeight}px</span>
+                </div>
+                <Slider
+                  min={24}
+                  max={64}
+                  step={1}
+                  value={[footerHeight]}
+                  onValueChange={(v) => setFooterHeight(v[0])}
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground">
+                  <span>24</span><span>44</span><span>64</span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full h-7 text-xs"
+                  onClick={() => setFooterHeight(30)}
+                >
+                  Restaurar padrão (30px)
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+
           {isEditing ? (
             <div className="flex items-center gap-1">
               <Input
