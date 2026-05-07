@@ -428,13 +428,14 @@ export function ContactFormDialog({
               const width = component.maxX - component.minX + 1;
               const height = component.maxY - component.minY + 1;
               const aspect = width / Math.max(1, height);
-              const aspectScore = 1 - Math.min(1, Math.abs(1 - aspect));
+              const aspectScore = 1 - Math.min(1, Math.abs(1 - aspect) / 0.45);
               const fillRatio = component.area / Math.max(1, width * height);
               const fillScore = Math.min(1, fillRatio / 0.5);
               const centerDx = Math.abs(component.cx - sw / 2) / Math.max(1, sw / 2);
               const centerDy = Math.abs(component.cy - sh / 2) / Math.max(1, sh / 2);
               const centerPenalty = (centerDx + centerDy) * 0.35;
-              const score = component.area * (0.45 + aspectScore * 0.35 + fillScore * 0.2) * (1 - centerPenalty);
+              const edgePenalty = (width < sw * 0.22 || height < sh * 0.22) ? 0.6 : 1;
+              const score = component.area * (0.4 + aspectScore * 0.4 + fillScore * 0.2) * (1 - centerPenalty) * edgePenalty;
               return { component, score };
             })
             .sort((a, b) => b.score - a.score)[0]?.component;
