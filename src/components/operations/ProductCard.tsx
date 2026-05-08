@@ -27,9 +27,26 @@ export function ProductCard({
   onEdit, 
   onMovement, 
   onHistory,
-  showInventoryActions = false 
+  showInventoryActions = false,
+  linkedIdeas = [],
+  platformsMap = {},
 }: ProductCardProps) {
+  const navigate = useNavigate();
   const isLow = balance <= product.min_stock;
+  const hasIdeas = linkedIdeas.length > 0;
+  // Aggregate unique platforms across linked ideas
+  const linkedPlatformIds = Array.from(
+    new Set(linkedIdeas.flatMap(i => i.platforms))
+  );
+
+  const handleIdeaClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (hasIdeas) {
+      navigate(`/digital?product_id=${product.id}`);
+    } else {
+      navigate(`/digital?newIdea=1&product_id=${product.id}`);
+    }
+  };
 
   return (
     <Card 
