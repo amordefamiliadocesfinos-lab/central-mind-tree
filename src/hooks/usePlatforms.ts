@@ -94,6 +94,7 @@ export function usePlatforms() {
         { id: 'cta', label: 'Call to Action', type: 'input' },
       ])),
       checklist_template: JSON.parse(JSON.stringify(platform.checklist_template || [])),
+      structure_media_urls: JSON.parse(JSON.stringify(platform.structure_media_urls || [])),
       is_active: true,
       order_index: platforms.length,
     };
