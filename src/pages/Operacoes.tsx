@@ -1084,6 +1084,8 @@ export default function Operacoes() {
                     product={product as Product}
                     balance={getProductBalance(product.id)}
                     onEdit={setEditingProduct}
+                    linkedIdeas={productIdeasMap[product.id]}
+                    platformsMap={platformsById}
                   />
                 ))
               )}
