@@ -42,6 +42,8 @@ import { ProductionPlanningView } from '@/components/operations/ProductionPlanni
 import { ContactAutocomplete } from '@/components/operations/ContactAutocomplete';
 import { ProductCategoriesManager } from '@/components/operations/ProductCategoriesManager';
 import { useProductCategories } from '@/hooks/useProductCategories';
+import { useProductIdeas } from '@/hooks/useProductIdeas';
+import { usePlatforms } from '@/hooks/usePlatforms';
 import { 
   useAppStore, 
   PRODUCT_CATEGORIES, 
