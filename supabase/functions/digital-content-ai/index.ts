@@ -426,8 +426,9 @@ Retorne APENAS o JSON.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: useVisionModel ? "google/gemini-2.5-flash" : "google/gemini-3-flash-preview",
+        model: useVisionModel ? "google/gemini-2.5-pro" : "google/gemini-3-flash-preview",
         messages,
+        ...(useVisionModel ? { max_tokens: 8192 } : {}),
       }),
     });
 
