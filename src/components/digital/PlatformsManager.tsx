@@ -53,6 +53,114 @@ export function PlatformIcon({ icon, size = 'md', className }: { icon: string; s
 
 const EMOJI_OPTIONS = ['📱', '📷', '🎬', '📺', '⚡', '🎵', '📘', '🎥', '🎠', '🛒', '🟡', '🧡', '🟢', '🔵', '🟣', '📦', '🏪', '💼', '🌐', '📧'];
 
+// Reusable panel: upload screenshots/videos showing the real platform UI and extract structure with AI
+interface RealStructurePanelProps {
+  platformName: string;
+  media: string[];
+  uploading: boolean;
+  loading: boolean;
+  notes: string;
+  inputRef: React.RefObject<HTMLInputElement>;
+  onUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onRemove: (url: string) => void;
+  onExtract: () => void;
+}
+
+function RealStructurePanel({
+  platformName,
+  media,
+  uploading,
+  loading,
+  notes,
+  inputRef,
+  onUpload,
+  onRemove,
+  onExtract,
+}: RealStructurePanelProps) {
+  const isVideo = (url: string) => /\.(mp4|webm|mov|avi)(\?|$)/i.test(url);
+  const isImage = (url: string) => /\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(url);
+
+  return (
+    <Card className="border-dashed border-primary/30 bg-primary/5">
+      <CardContent className="p-3 space-y-3">
+        <div className="space-y-1">
+          <h4 className="text-sm font-semibold flex items-center gap-2">
+            <ImagePlus className="h-4 w-4 text-primary" />
+            Estrutura Real da Plataforma
+          </h4>
+          <p className="text-xs text-muted-foreground">
+            Envie prints (ou vídeo) da tela real da plataforma e a IA reproduz fielmente todos os campos visíveis (títulos, variações, peso, categorias, etc).
+          </p>
+        </div>
+
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/*,video/*"
+          multiple
+          onChange={onUpload}
+          className="hidden"
+        />
+
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => inputRef.current?.click()}
+            disabled={uploading}
+            className="gap-2"
+          >
+            {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+            {uploading ? 'Enviando...' : 'Adicionar prints/vídeo'}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={onExtract}
+            disabled={loading || media.length === 0 || !platformName.trim()}
+            className="gap-2"
+          >
+            {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+            {loading ? 'Analisando...' : 'Extrair estrutura com IA'}
+          </Button>
+        </div>
+
+        {media.length > 0 && (
+          <div className="grid grid-cols-4 gap-2">
+            {media.map((url) => (
+              <div key={url} className="relative group aspect-square rounded border overflow-hidden bg-muted">
+                {isImage(url) ? (
+                  <img src={url} alt="Print" className="w-full h-full object-cover" />
+                ) : isVideo(url) ? (
+                  <video src={url} className="w-full h-full object-cover" muted />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xs text-muted-foreground">
+                    Arquivo
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => onRemove(url)}
+                  className="absolute top-1 right-1 p-1 rounded-full bg-destructive text-destructive-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {notes && (
+          <p className="text-xs text-muted-foreground italic border-l-2 border-primary/30 pl-2">
+            {notes}
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 interface PlatformFormData {
   name: string;
   icon: string;
@@ -125,6 +233,12 @@ export function PlatformsManager() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [iconUploading, setIconUploading] = useState(false);
   const iconInputRef = useRef<HTMLInputElement>(null);
+  // Real platform structure (from screenshot/video analysis)
+  const [realStructureMedia, setRealStructureMedia] = useState<string[]>([]);
+  const [realStructureLoading, setRealStructureLoading] = useState(false);
+  const [realStructureUploading, setRealStructureUploading] = useState(false);
+  const [realStructureNotes, setRealStructureNotes] = useState<string>('');
+  const realMediaInputRef = useRef<HTMLInputElement>(null);
 
   // Upload custom icon image
   const handleIconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -261,6 +375,105 @@ export function PlatformsManager() {
     }
   };
 
+  // Upload screenshots/videos showing the real platform interface
+  const handleRealStructureUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setRealStructureUploading(true);
+    const newUrls: string[] = [];
+    try {
+      for (const file of Array.from(files)) {
+        const ext = file.name.split('.').pop();
+        const path = `platform-structure/${crypto.randomUUID()}.${ext}`;
+        const { error } = await supabase.storage.from('media').upload(path, file, { upsert: true });
+        if (error) throw error;
+        const { data: urlData } = supabase.storage.from('media').getPublicUrl(path);
+        newUrls.push(urlData.publicUrl);
+      }
+      setRealStructureMedia(prev => [...prev, ...newUrls]);
+      toast.success(`${newUrls.length} mídia(s) carregada(s)`);
+    } catch (err) {
+      console.error('Real structure upload error:', err);
+      toast.error('Erro ao enviar mídia');
+    } finally {
+      setRealStructureUploading(false);
+      if (realMediaInputRef.current) realMediaInputRef.current.value = '';
+    }
+  };
+
+  const removeRealStructureMedia = (url: string) => {
+    setRealStructureMedia(prev => prev.filter(u => u !== url));
+  };
+
+  // Send uploaded screenshots to AI to extract real structure
+  const extractRealStructure = async () => {
+    if (!formData.name.trim()) {
+      toast.error('Informe o nome da plataforma primeiro');
+      return;
+    }
+    // Filter out non-image URLs (videos won't be processed by vision model)
+    const imageUrls = realStructureMedia.filter(u =>
+      /\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(u)
+    );
+    if (imageUrls.length === 0) {
+      toast.error('Adicione ao menos uma imagem (print) da plataforma');
+      return;
+    }
+    setRealStructureLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('digital-content-ai', {
+        body: {
+          title: formData.name,
+          field: 'platform_structure_from_media',
+          mediaUrls: imageUrls,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      const newFields: CustomField[] = (data.custom_fields || []).map((f: any) => ({
+        id:
+          f.id ||
+          (f.label || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '_')
+            .replace(/^_|_$/g, '') ||
+          `field_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        label: f.label || 'Campo',
+        type: ['input', 'textarea', 'number', 'select', 'date', 'media'].includes(f.type)
+          ? f.type
+          : 'input',
+      }));
+
+      if (newFields.length === 0) {
+        toast.error('A IA não conseguiu identificar campos nas imagens');
+        return;
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        custom_fields: newFields,
+        aspect_ratio: data.aspect_ratio || prev.aspect_ratio,
+        checklist_items:
+          (data.checklist || []).join('\n') || prev.checklist_items,
+      }));
+      setRealStructureNotes(data.notes || '');
+      setAiStructured(true);
+      setShowAdvanced(true);
+      toast.success(`Estrutura real extraída: ${newFields.length} campos`);
+    } catch (err) {
+      console.error('Real structure extraction error:', err);
+      toast.error('Erro ao extrair estrutura com IA');
+    } finally {
+      setRealStructureLoading(false);
+    }
+  };
+
   const handleOpenCreate = (parentId?: string, groupId?: string) => {
     setEditingPlatform(null);
     setFormData({
@@ -276,6 +489,8 @@ export function PlatformsManager() {
     setAiStructured(false);
     setAiSuggestions(null);
     setShowAdvanced(false);
+    setRealStructureMedia([]);
+    setRealStructureNotes('');
     setShowDialog(true);
   };
 
@@ -294,6 +509,8 @@ export function PlatformsManager() {
     setAiStructured(false);
     setAiSuggestions(null);
     setShowAdvanced(true); // Show all fields in edit mode
+    setRealStructureMedia(platform.structure_media_urls || []);
+    setRealStructureNotes('');
     setShowDialog(true);
   };
 
@@ -342,6 +559,7 @@ export function PlatformsManager() {
       fields,
       custom_fields: formData.custom_fields,
       checklist_template,
+      structure_media_urls: realStructureMedia,
     };
 
     if (editingPlatform) {
@@ -368,6 +586,8 @@ export function PlatformsManager() {
 
     setAiStructured(false);
     setAiSuggestions(null);
+    setRealStructureMedia([]);
+    setRealStructureNotes('');
     setShowDialog(false);
   };
 
@@ -750,6 +970,19 @@ export function PlatformsManager() {
                   )}
                   {aiStructureLoading ? 'Analisando...' : 'Estruturar com IA'}
                 </Button>
+
+                {/* Real Platform Structure - from screenshots */}
+                <RealStructurePanel
+                  platformName={formData.name}
+                  media={realStructureMedia}
+                  uploading={realStructureUploading}
+                  loading={realStructureLoading}
+                  notes={realStructureNotes}
+                  inputRef={realMediaInputRef}
+                  onUpload={handleRealStructureUpload}
+                  onRemove={removeRealStructureMedia}
+                  onExtract={extractRealStructure}
+                />
               </div>
               <div className="border-t pt-3">
                 <Button
@@ -829,7 +1062,19 @@ export function PlatformsManager() {
                 </Card>
               )}
 
-              {/* Icon and Name */}
+              {/* Real Platform Structure - also accessible in edit/manual mode */}
+              <RealStructurePanel
+                platformName={formData.name}
+                media={realStructureMedia}
+                uploading={realStructureUploading}
+                loading={realStructureLoading}
+                notes={realStructureNotes}
+                inputRef={realMediaInputRef}
+                onUpload={handleRealStructureUpload}
+                onRemove={removeRealStructureMedia}
+                onExtract={extractRealStructure}
+              />
+
               <div className="flex gap-3">
                 <div className="space-y-2">
                   <Label>Ícone</Label>

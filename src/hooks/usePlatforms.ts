@@ -21,6 +21,7 @@ export interface Platform {
   fields: string[]; // Legacy - kept for backwards compatibility
   custom_fields: CustomField[];
   checklist_template: { id: string; text: string }[];
+  structure_media_urls: string[];
   is_active: boolean;
   order_index: number;
   created_at: string;
@@ -71,6 +72,9 @@ export function usePlatforms() {
       checklist_template: Array.isArray(p.checklist_template) 
         ? (p.checklist_template as unknown as { id: string; text: string }[])
         : [],
+      structure_media_urls: Array.isArray((p as any).structure_media_urls)
+        ? ((p as any).structure_media_urls as string[])
+        : [],
     })) as Platform[];
 
     setPlatforms(parsedData);
@@ -90,6 +94,7 @@ export function usePlatforms() {
         { id: 'cta', label: 'Call to Action', type: 'input' },
       ])),
       checklist_template: JSON.parse(JSON.stringify(platform.checklist_template || [])),
+      structure_media_urls: JSON.parse(JSON.stringify(platform.structure_media_urls || [])),
       is_active: true,
       order_index: platforms.length,
     };

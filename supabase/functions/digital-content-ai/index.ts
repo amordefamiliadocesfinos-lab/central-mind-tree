@@ -25,12 +25,14 @@ interface GenerateRequest {
   title: string;
   field: 'objective' | 'target_audience' | 'key_message' | 'kpi' | 'all' | 
          'description' | 'caption' | 'cta' | 'hashtags' | 'checklist_suggestion' |
-         'custom_field' | 'all_variation_fields' | 'platform_structure' | 'generate_all_variations';
+         'custom_field' | 'all_variation_fields' | 'platform_structure' | 'generate_all_variations' |
+         'platform_structure_from_media';
   platform?: string;
   platformType?: string;
   existingData?: Record<string, string>;
   customFieldLabel?: string;
   customFields?: CustomField[];
+  mediaUrls?: string[]; // For platform_structure_from_media (image URLs)
   // For generate_all_variations
   ideaContext?: {
     title: string;
@@ -315,6 +317,7 @@ serve(async (req) => {
     // Build prompts based on field type
     let systemPrompt: string;
     let userPrompt: string;
+    let messages: any[] = [];
 
     if (field === 'generate_all_variations') {
       if (!ideaContext || !variations || variations.length === 0) {
@@ -326,11 +329,60 @@ serve(async (req) => {
       const prompts = buildVariationsPrompt(ideaContext, variations);
       systemPrompt = prompts.system;
       userPrompt = prompts.user;
+      messages = [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ];
+    } else if (field === 'platform_structure_from_media') {
+      const { mediaUrls } = requestData;
+      if (!mediaUrls || mediaUrls.length === 0) {
+        return new Response(
+          JSON.stringify({ error: "mediaUrls is required for platform_structure_from_media" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      systemPrompt = `Você é um especialista em análise visual de plataformas digitais (marketplaces, redes sociais, e-commerce). Você recebe screenshots da interface real da plataforma e extrai fielmente TODOS os campos visíveis que o usuário precisa preencher (títulos, descrições, preços, variações, peso, dimensões, categorias, atributos, mídias, cupons, etc).`;
+      userPrompt = `Analise as imagens da plataforma "${title}" em anexo. Identifique TODOS os campos de cadastro/preenchimento visíveis nos prints (incluindo títulos de seção, atributos, variações, fotos, preços, dimensões, etc).
+
+Retorne um JSON com a estrutura real extraída:
+{
+  "custom_fields": [
+    {"id": "identificador_snake_case", "label": "Nome exato do campo conforme aparece na plataforma", "type": "input | textarea | number | select | date | media"}
+  ],
+  "checklist": [
+    "Item de verificação baseado no que precisa estar preenchido (máx 60 caracteres)"
+  ],
+  "aspect_ratio": "proporção principal das mídias se identificável (ex: 1:1) ou null",
+  "notes": "Observações importantes sobre a estrutura identificada (1-2 frases)"
+}
+
+Regras:
+- Seja FIEL ao que aparece nas imagens — extraia EXATAMENTE os nomes dos campos como vistos
+- Use 'textarea' para descrições/legendas longas, 'number' para preços/quantidades/peso, 'media' para uploads de fotos/vídeos, 'select' para categorias/variações com opções, 'date' para datas, 'input' para o resto
+- Inclua TODOS os campos visíveis, mesmo opcionais
+- O checklist deve refletir o que o usuário precisa garantir antes de publicar nessa plataforma
+
+Retorne APENAS o JSON válido, sem markdown.`;
+
+      const userContent: any[] = [{ type: "text", text: userPrompt }];
+      for (const url of mediaUrls) {
+        userContent.push({ type: "image_url", image_url: { url } });
+      }
+      messages = [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userContent },
+      ];
     } else {
       const prompts = buildSingleFieldPrompt(requestData);
       systemPrompt = prompts.system;
       userPrompt = prompts.user;
+      messages = [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ];
     }
+
+    const useVisionModel = field === 'platform_structure_from_media';
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -339,11 +391,8 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
+        model: useVisionModel ? "google/gemini-2.5-pro" : "google/gemini-3-flash-preview",
+        messages,
       }),
     });
 
@@ -373,7 +422,7 @@ serve(async (req) => {
 
     // Parse response based on field type
     let result: unknown;
-    if (field === 'generate_all_variations' || field === 'all' || field === 'all_variation_fields' || field === 'platform_structure') {
+    if (field === 'generate_all_variations' || field === 'all' || field === 'all_variation_fields' || field === 'platform_structure' || field === 'platform_structure_from_media') {
       try {
         const cleanedJson = generatedText.replace(/```json\n?|\n?```/g, '').trim();
         result = JSON.parse(cleanedJson);
