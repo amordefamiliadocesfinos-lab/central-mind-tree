@@ -1177,12 +1177,31 @@ export function VariationEditor({
                   <div className="flex items-center gap-2">
                     <Button
                       type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 gap-1.5 text-xs"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleGenerateReplica(true);
+                      }}
+                      disabled={generatingReplica}
+                      title="Usa modelo gratuito (qualidade menor)"
+                    >
+                      {generatingReplica ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-3.5 w-3.5" />
+                      )}
+                      Gratuito
+                    </Button>
+                    <Button
+                      type="button"
                       variant="outline"
                       size="sm"
                       className="h-7 gap-1.5 text-xs"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleGenerateReplica();
+                        handleGenerateReplica(false);
                       }}
                       disabled={generatingReplica}
                     >
