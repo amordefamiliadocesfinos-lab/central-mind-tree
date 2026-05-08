@@ -267,6 +267,105 @@ export function PlatformsManager() {
     }
   };
 
+  // Upload screenshots/videos showing the real platform interface
+  const handleRealStructureUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    setRealStructureUploading(true);
+    const newUrls: string[] = [];
+    try {
+      for (const file of Array.from(files)) {
+        const ext = file.name.split('.').pop();
+        const path = `platform-structure/${crypto.randomUUID()}.${ext}`;
+        const { error } = await supabase.storage.from('media').upload(path, file, { upsert: true });
+        if (error) throw error;
+        const { data: urlData } = supabase.storage.from('media').getPublicUrl(path);
+        newUrls.push(urlData.publicUrl);
+      }
+      setRealStructureMedia(prev => [...prev, ...newUrls]);
+      toast.success(`${newUrls.length} mídia(s) carregada(s)`);
+    } catch (err) {
+      console.error('Real structure upload error:', err);
+      toast.error('Erro ao enviar mídia');
+    } finally {
+      setRealStructureUploading(false);
+      if (realMediaInputRef.current) realMediaInputRef.current.value = '';
+    }
+  };
+
+  const removeRealStructureMedia = (url: string) => {
+    setRealStructureMedia(prev => prev.filter(u => u !== url));
+  };
+
+  // Send uploaded screenshots to AI to extract real structure
+  const extractRealStructure = async () => {
+    if (!formData.name.trim()) {
+      toast.error('Informe o nome da plataforma primeiro');
+      return;
+    }
+    // Filter out non-image URLs (videos won't be processed by vision model)
+    const imageUrls = realStructureMedia.filter(u =>
+      /\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(u)
+    );
+    if (imageUrls.length === 0) {
+      toast.error('Adicione ao menos uma imagem (print) da plataforma');
+      return;
+    }
+    setRealStructureLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('digital-content-ai', {
+        body: {
+          title: formData.name,
+          field: 'platform_structure_from_media',
+          mediaUrls: imageUrls,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      const newFields: CustomField[] = (data.custom_fields || []).map((f: any) => ({
+        id:
+          f.id ||
+          (f.label || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9]+/g, '_')
+            .replace(/^_|_$/g, '') ||
+          `field_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        label: f.label || 'Campo',
+        type: ['input', 'textarea', 'number', 'select', 'date', 'media'].includes(f.type)
+          ? f.type
+          : 'input',
+      }));
+
+      if (newFields.length === 0) {
+        toast.error('A IA não conseguiu identificar campos nas imagens');
+        return;
+      }
+
+      setFormData(prev => ({
+        ...prev,
+        custom_fields: newFields,
+        aspect_ratio: data.aspect_ratio || prev.aspect_ratio,
+        checklist_items:
+          (data.checklist || []).join('\n') || prev.checklist_items,
+      }));
+      setRealStructureNotes(data.notes || '');
+      setAiStructured(true);
+      setShowAdvanced(true);
+      toast.success(`Estrutura real extraída: ${newFields.length} campos`);
+    } catch (err) {
+      console.error('Real structure extraction error:', err);
+      toast.error('Erro ao extrair estrutura com IA');
+    } finally {
+      setRealStructureLoading(false);
+    }
+  };
+
   const handleOpenCreate = (parentId?: string, groupId?: string) => {
     setEditingPlatform(null);
     setFormData({
