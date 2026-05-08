@@ -238,6 +238,7 @@ export function PlatformsManager() {
   const [realStructureLoading, setRealStructureLoading] = useState(false);
   const [realStructureUploading, setRealStructureUploading] = useState(false);
   const [realStructureNotes, setRealStructureNotes] = useState<string>('');
+  const [platformReplica, setPlatformReplica] = useState<PlatformReplica>({ sections: [] });
   const realMediaInputRef = useRef<HTMLInputElement>(null);
 
   // Upload custom icon image
