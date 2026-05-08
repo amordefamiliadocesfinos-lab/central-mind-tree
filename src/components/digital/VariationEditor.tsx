@@ -213,7 +213,7 @@ export function VariationEditor({
 
   const effectiveReplica = liveReplica || platformConfig?.platform_replica || { sections: [] };
 
-  const handleGenerateReplica = async () => {
+  const handleGenerateReplica = async (useFreeModel = false) => {
     if (!platformConfig) return;
     const urls = platformConfig.structure_media_urls || [];
     if (urls.length === 0) {
@@ -227,6 +227,7 @@ export function VariationEditor({
           title: platformConfig.name,
           field: 'platform_structure_from_media',
           mediaUrls: urls,
+          model: useFreeModel ? 'google/gemini-2.5-flash' : undefined,
         },
       });
       if (error) throw error;
@@ -1176,12 +1177,31 @@ export function VariationEditor({
                   <div className="flex items-center gap-2">
                     <Button
                       type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 gap-1.5 text-xs"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleGenerateReplica(true);
+                      }}
+                      disabled={generatingReplica}
+                      title="Usa modelo gratuito (qualidade menor)"
+                    >
+                      {generatingReplica ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-3.5 w-3.5" />
+                      )}
+                      Gratuito
+                    </Button>
+                    <Button
+                      type="button"
                       variant="outline"
                       size="sm"
                       className="h-7 gap-1.5 text-xs"
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleGenerateReplica();
+                        handleGenerateReplica(false);
                       }}
                       disabled={generatingReplica}
                     >
@@ -1225,19 +1245,36 @@ export function VariationEditor({
                     Ainda não há réplica editável
                   </Badge>
                 </CardTitle>
-                <Button
-                  size="sm"
-                  onClick={handleGenerateReplica}
-                  disabled={generatingReplica}
-                  className="gap-2"
-                >
-                  {generatingReplica ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Sparkles className="h-3.5 w-3.5" />
-                  )}
-                  Gerar app editável a partir dos prints
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleGenerateReplica(true)}
+                    disabled={generatingReplica}
+                    className="gap-2"
+                    title="Usa modelo gratuito (qualidade menor)"
+                  >
+                    {generatingReplica ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5" />
+                    )}
+                    Gratuito
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleGenerateReplica(false)}
+                    disabled={generatingReplica}
+                    className="gap-2"
+                  >
+                    {generatingReplica ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5" />
+                    )}
+                    Gerar app editável a partir dos prints
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="pt-0 pb-4">
