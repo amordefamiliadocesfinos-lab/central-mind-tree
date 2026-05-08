@@ -85,11 +85,65 @@ export function ProductCard({
               )}
             </div>
             
-            {product.category && (
-              <Badge variant="secondary" className="text-xs mt-1">
-                {product.category}
-              </Badge>
-            )}
+            <div className="flex items-center flex-wrap gap-1.5 mt-1">
+              {product.category && (
+                <Badge variant="secondary" className="text-xs">
+                  {product.category}
+                </Badge>
+              )}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={handleIdeaClick}
+                    className={cn(
+                      'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors',
+                      hasIdeas
+                        ? 'border-amber-400/60 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-500/10 dark:text-amber-300'
+                        : 'border-dashed text-muted-foreground hover:bg-muted'
+                    )}
+                  >
+                    {hasIdeas ? (
+                      <Lightbulb className="h-3 w-3 fill-current" />
+                    ) : (
+                      <Plus className="h-3 w-3" />
+                    )}
+                    <span>
+                      {hasIdeas
+                        ? `Vinculado a ${linkedIdeas.length} ideia${linkedIdeas.length > 1 ? 's' : ''}`
+                        : 'Vincular a ideia'}
+                    </span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  {hasIdeas
+                    ? 'Ver ideias vinculadas no Digital'
+                    : 'Criar nova ideia no Digital com este produto'}
+                </TooltipContent>
+              </Tooltip>
+              {linkedPlatformIds.map(pid => {
+                const p = platformsMap[pid];
+                if (!p) return null;
+                return (
+                  <Tooltip key={pid}>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/digital?product_id=${product.id}`);
+                        }}
+                        className="inline-flex items-center justify-center rounded-md bg-muted/60 hover:bg-muted p-0.5"
+                        aria-label={p.name}
+                      >
+                        <PlatformIcon icon={p.icon} size="sm" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">{p.name}</TooltipContent>
+                  </Tooltip>
+                );
+              })}
+            </div>
             
             <div className="flex items-center justify-between mt-2">
               <span className="text-sm font-bold">
