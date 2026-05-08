@@ -428,7 +428,7 @@ Retorne APENAS o JSON.`;
       body: JSON.stringify({
         model: useVisionModel ? "google/gemini-2.5-pro" : "google/gemini-3-flash-preview",
         messages,
-        ...(useVisionModel ? { max_tokens: 8192 } : {}),
+        ...(useVisionModel ? { max_tokens: 32000 } : {}),
       }),
     });
 
@@ -459,10 +459,36 @@ Retorne APENAS o JSON.`;
     // Parse response based on field type
     let result: unknown;
     if (field === 'generate_all_variations' || field === 'all' || field === 'all_variation_fields' || field === 'platform_structure' || field === 'platform_structure_from_media') {
-      try {
-        const cleanedJson = generatedText.replace(/```json\n?|\n?```/g, '').trim();
-        result = JSON.parse(cleanedJson);
-      } catch {
+      const tryParse = (s: string) => { try { return JSON.parse(s); } catch { return null; } };
+      let cleaned = generatedText.replace(/```json\n?|\n?```/g, '').trim();
+      const firstBrace = cleaned.indexOf('{');
+      if (firstBrace > 0) cleaned = cleaned.slice(firstBrace);
+      let parsed: any = tryParse(cleaned);
+      if (!parsed) {
+        const s = cleaned;
+        const minCut = Math.max(0, s.length - 8000);
+        for (let cut = s.length; cut > minCut && !parsed; cut--) {
+          const sub = s.slice(0, cut).replace(/[,\s]+$/, '');
+          let depthC = 0, depthS = 0, inStr = false, esc = false, ok = true;
+          for (let i = 0; i < sub.length; i++) {
+            const ch = sub[i];
+            if (esc) { esc = false; continue; }
+            if (ch === '\\') { esc = true; continue; }
+            if (ch === '"') { inStr = !inStr; continue; }
+            if (inStr) continue;
+            if (ch === '{') depthC++;
+            else if (ch === '}') { depthC--; if (depthC < 0) { ok = false; break; } }
+            else if (ch === '[') depthS++;
+            else if (ch === ']') { depthS--; if (depthS < 0) { ok = false; break; } }
+          }
+          if (!ok || inStr) continue;
+          const candidate = sub + ']'.repeat(depthS) + '}'.repeat(depthC);
+          parsed = tryParse(candidate);
+        }
+      }
+      if (parsed) {
+        result = parsed;
+      } else {
         console.error("Failed to parse AI JSON response:", generatedText);
         result = { error: "Falha ao processar resposta da IA" };
       }
