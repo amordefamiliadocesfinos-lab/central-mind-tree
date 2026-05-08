@@ -478,6 +478,8 @@ export function PlatformsManager() {
 
     setAiStructured(false);
     setAiSuggestions(null);
+    setRealStructureMedia([]);
+    setRealStructureNotes('');
     setShowDialog(false);
   };
 
