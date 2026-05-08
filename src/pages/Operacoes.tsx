@@ -40,6 +40,8 @@ import { MRPTab } from '@/components/operations/MRPTab';
 import { ProductCostEditor } from '@/components/operations/ProductCostEditor';
 import { ProductionPlanningView } from '@/components/operations/ProductionPlanningView';
 import { ContactAutocomplete } from '@/components/operations/ContactAutocomplete';
+import { ProductCategoriesManager } from '@/components/operations/ProductCategoriesManager';
+import { useProductCategories } from '@/hooks/useProductCategories';
 import { 
   useAppStore, 
   PRODUCT_CATEGORIES, 
@@ -199,6 +201,9 @@ export default function Operacoes() {
   const [showCostEditor, setShowCostEditor] = useState(false);
   const [showNewContactFromSale, setShowNewContactFromSale] = useState(false);
   const [ordersViewMode, setOrdersViewMode] = useState<'list' | 'grid' | 'planning'>('list');
+  const [showCategoriesManager, setShowCategoriesManager] = useState(false);
+  const { categoryNames: dynamicCategories } = useProductCategories();
+  const productCategories = dynamicCategories.length > 0 ? dynamicCategories : [...PRODUCT_CATEGORIES];
   const { createContact } = useContacts();
   const { addEntry } = useContactHistory();
   const [crmContactId, setCrmContactId] = useState<string | null>(null);
@@ -470,7 +475,7 @@ export default function Operacoes() {
               onCategoryChange={setCategoryFilter}
               statusFilter={statusFilter}
               onStatusChange={setStatusFilter}
-              categories={[...PRODUCT_CATEGORIES]}
+              categories={productCategories}
               statuses={statusList}
               placeholder="Buscar pedidos..."
               showCategoryFilter={false}
@@ -926,7 +931,8 @@ export default function Operacoes() {
               onCategoryChange={setCategoryFilter}
               statusFilter={statusFilter}
               onStatusChange={setStatusFilter}
-              categories={[...PRODUCT_CATEGORIES]}
+              categories={productCategories}
+              onManageCategories={() => setShowCategoriesManager(true)}
               statuses={[]}
               placeholder="Buscar produtos..."
               showStatusFilter={false}
@@ -995,7 +1001,7 @@ export default function Operacoes() {
                           <SelectValue placeholder="Selecione..." />
                         </SelectTrigger>
                         <SelectContent>
-                          {PRODUCT_CATEGORIES.map((cat) => (
+                          {productCategories.map((cat) => (
                             <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                           ))}
                         </SelectContent>
@@ -1085,7 +1091,8 @@ export default function Operacoes() {
               onCategoryChange={setCategoryFilter}
               statusFilter={statusFilter}
               onStatusChange={setStatusFilter}
-              categories={[...PRODUCT_CATEGORIES]}
+              categories={productCategories}
+              onManageCategories={() => setShowCategoriesManager(true)}
               statuses={[]}
               placeholder="Buscar no estoque..."
               showStatusFilter={false}
@@ -1279,7 +1286,7 @@ export default function Operacoes() {
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {PRODUCT_CATEGORIES.map((cat) => (
+                    {productCategories.map((cat) => (
                       <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                     ))}
                   </SelectContent>
@@ -1426,6 +1433,11 @@ export default function Operacoes() {
         orderChannels={ORDER_CHANNELS}
         onSave={updateOrder}
         onDelete={deleteOrder}
+      />
+
+      <ProductCategoriesManager
+        open={showCategoriesManager}
+        onOpenChange={setShowCategoriesManager}
       />
     </div>
   );
