@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { usePlatforms, Platform, CustomField } from '@/hooks/usePlatforms';
+import { usePlatforms, Platform, CustomField, PlatformReplica } from '@/hooks/usePlatforms';
 import { usePlatformGroups, PlatformGroup } from '@/hooks/usePlatformGroups';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
