@@ -1059,8 +1059,10 @@ export type Database = {
           folder_id: string | null
           id: string
           idea_id: string | null
+          is_product_cover: boolean
           original_url: string | null
           parent_media_id: string | null
+          product_id: string | null
           quality_status: string | null
           tags: string[] | null
           url: string
@@ -1077,8 +1079,10 @@ export type Database = {
           folder_id?: string | null
           id?: string
           idea_id?: string | null
+          is_product_cover?: boolean
           original_url?: string | null
           parent_media_id?: string | null
+          product_id?: string | null
           quality_status?: string | null
           tags?: string[] | null
           url: string
@@ -1095,8 +1099,10 @@ export type Database = {
           folder_id?: string | null
           id?: string
           idea_id?: string | null
+          is_product_cover?: boolean
           original_url?: string | null
           parent_media_id?: string | null
+          product_id?: string | null
           quality_status?: string | null
           tags?: string[] | null
           url?: string

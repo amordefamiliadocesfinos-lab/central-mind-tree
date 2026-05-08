@@ -31,6 +31,8 @@ interface MediaItem {
   tags: string[];
   idea_id: string | null;
   variation_id: string | null;
+  product_id: string | null;
+  is_product_cover?: boolean;
   folder_id: string | null;
   created_at: string;
   quality_status?: string;
@@ -60,6 +62,7 @@ export function MediaLibrary({ ideaId, variationId, onSelect, onSelectMultiple, 
   const [editingMedia, setEditingMedia] = useState<MediaItem | null>(null);
   const [qualityFilter, setQualityFilter] = useState<string | null>(null);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'product' | 'idea'>('all');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
@@ -208,7 +211,11 @@ export function MediaLibrary({ ideaId, variationId, onSelect, onSelectMultiple, 
     if (selectedFolderId !== null) {
       if (item.folder_id !== selectedFolderId) return false;
     }
-    
+
+    // Filter by source (product vs idea)
+    if (sourceFilter === 'product' && !item.product_id) return false;
+    if (sourceFilter === 'idea' && (!item.idea_id && !item.variation_id)) return false;
+
     // Filter by quality status
     if (qualityFilter) {
       if (item.quality_status !== qualityFilter) return false;
@@ -297,6 +304,32 @@ export function MediaLibrary({ ideaId, variationId, onSelect, onSelectMultiple, 
             className="hidden"
             onChange={(e) => handleUpload(e.target.files)}
           />
+        </div>
+
+        {/* Source Filter */}
+        <div className="px-4 py-2 border-b flex gap-2 flex-wrap items-center">
+          <span className="text-xs text-muted-foreground mr-2">Origem:</span>
+          <Badge
+            variant={sourceFilter === 'all' ? 'default' : 'outline'}
+            className="cursor-pointer"
+            onClick={() => setSourceFilter('all')}
+          >
+            Todas
+          </Badge>
+          <Badge
+            variant={sourceFilter === 'idea' ? 'default' : 'outline'}
+            className="cursor-pointer"
+            onClick={() => setSourceFilter('idea')}
+          >
+            Ideias
+          </Badge>
+          <Badge
+            variant={sourceFilter === 'product' ? 'default' : 'outline'}
+            className="cursor-pointer"
+            onClick={() => setSourceFilter('product')}
+          >
+            Produtos
+          </Badge>
         </div>
 
         {/* Quality Filter */}
