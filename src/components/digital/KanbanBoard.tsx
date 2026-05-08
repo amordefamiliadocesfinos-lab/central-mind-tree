@@ -158,7 +158,7 @@ function SortableIdeaCard({
             </div>
 
             {/* Title */}
-            <h4 className="font-semibold text-sm leading-snug line-clamp-2">{idea.title}</h4>
+            <h4 className="font-semibold text-sm leading-snug break-words">{idea.title}</h4>
 
             {/* Type badge */}
             <div className="flex items-center gap-1 flex-wrap">
