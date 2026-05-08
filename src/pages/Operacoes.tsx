@@ -1141,6 +1141,8 @@ export default function Operacoes() {
                   onMovement={(p) => setMovementProduct({ id: p.id, name: p.name })}
                   onHistory={setHistoryProductId}
                   showInventoryActions
+                  linkedIdeas={productIdeasMap[product.id]}
+                  platformsMap={platformsById}
                 />
               ))}
             </div>
