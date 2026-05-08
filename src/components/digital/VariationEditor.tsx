@@ -59,9 +59,54 @@ export function VariationEditor({
   const [showChecklist, setShowChecklist] = useState(true);
   const [showMetrics, setShowMetrics] = useState(false);
   const [showRealStructure, setShowRealStructure] = useState(true);
-  
+  const [generatingReplica, setGeneratingReplica] = useState(false);
+
   // Find the platform from dynamic platforms list
   const platformConfig = platforms.find(p => p.id === variation.platform);
+
+  const handleGenerateReplica = async () => {
+    if (!platformConfig) return;
+    const urls = platformConfig.structure_media_urls || [];
+    if (urls.length === 0) {
+      toast.error('Adicione prints da plataforma primeiro (editar plataforma).');
+      return;
+    }
+    setGeneratingReplica(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('digital-content-ai', {
+        body: {
+          title: platformConfig.name,
+          field: 'platform_structure_from_media',
+          mediaUrls: urls,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+      if (!data?.sections || !Array.isArray(data.sections) || data.sections.length === 0) {
+        toast.error('A IA não conseguiu identificar a estrutura visual nas imagens.');
+        return;
+      }
+      const replica = {
+        brand_color: data.brand_color,
+        brand_name: data.brand_name || platformConfig.name,
+        sections: data.sections,
+      };
+      const { error: updErr } = await supabase
+        .from('digital_platforms')
+        .update({ platform_replica: replica as any })
+        .eq('id', platformConfig.id);
+      if (updErr) throw updErr;
+      toast.success(`Réplica gerada: ${data.sections.length} seções`);
+    } catch (e) {
+      console.error(e);
+      toast.error('Erro ao gerar réplica visual');
+    } finally {
+      setGeneratingReplica(false);
+    }
+  };
   const statusConfig = DIGITAL_STATUS[variation.status];
 
   const checklistProgress = variation.checklist?.length
