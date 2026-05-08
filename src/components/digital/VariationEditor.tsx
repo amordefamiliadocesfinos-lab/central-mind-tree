@@ -59,9 +59,54 @@ export function VariationEditor({
   const [showChecklist, setShowChecklist] = useState(true);
   const [showMetrics, setShowMetrics] = useState(false);
   const [showRealStructure, setShowRealStructure] = useState(true);
-  
+  const [generatingReplica, setGeneratingReplica] = useState(false);
+
   // Find the platform from dynamic platforms list
   const platformConfig = platforms.find(p => p.id === variation.platform);
+
+  const handleGenerateReplica = async () => {
+    if (!platformConfig) return;
+    const urls = platformConfig.structure_media_urls || [];
+    if (urls.length === 0) {
+      toast.error('Adicione prints da plataforma primeiro (editar plataforma).');
+      return;
+    }
+    setGeneratingReplica(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('digital-content-ai', {
+        body: {
+          title: platformConfig.name,
+          field: 'platform_structure_from_media',
+          mediaUrls: urls,
+        },
+      });
+      if (error) throw error;
+      if (data?.error) {
+        toast.error(data.error);
+        return;
+      }
+      if (!data?.sections || !Array.isArray(data.sections) || data.sections.length === 0) {
+        toast.error('A IA não conseguiu identificar a estrutura visual nas imagens.');
+        return;
+      }
+      const replica = {
+        brand_color: data.brand_color,
+        brand_name: data.brand_name || platformConfig.name,
+        sections: data.sections,
+      };
+      const { error: updErr } = await supabase
+        .from('digital_platforms')
+        .update({ platform_replica: replica as any })
+        .eq('id', platformConfig.id);
+      if (updErr) throw updErr;
+      toast.success(`Réplica gerada: ${data.sections.length} seções`);
+    } catch (e) {
+      console.error(e);
+      toast.error('Erro ao gerar réplica visual');
+    } finally {
+      setGeneratingReplica(false);
+    }
+  };
   const statusConfig = DIGITAL_STATUS[variation.status];
 
   const checklistProgress = variation.checklist?.length
@@ -988,19 +1033,37 @@ export function VariationEditor({
         </Collapsible>
       )}
 
-      {/* Fallback — se não houver réplica visual ainda mas há prints, mostrar galeria */}
+      {/* Fallback — se não houver réplica visual ainda mas há prints, mostrar galeria + botão de geração */}
       {(platformConfig?.platform_replica?.sections?.length ?? 0) === 0 &&
         (platformConfig?.structure_media_urls?.length ?? 0) > 0 && (
-          <Card>
+          <Card className="border-dashed border-primary/40 bg-primary/5">
             <CardHeader className="py-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                🧩 Estrutura Real (Prints)
-                <Badge variant="outline" className="text-[10px]">
-                  Gere a réplica visual editando a plataforma
-                </Badge>
-              </CardTitle>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  🧩 Estrutura Real (Prints)
+                  <Badge variant="outline" className="text-[10px]">
+                    Ainda não há réplica editável
+                  </Badge>
+                </CardTitle>
+                <Button
+                  size="sm"
+                  onClick={handleGenerateReplica}
+                  disabled={generatingReplica}
+                  className="gap-2"
+                >
+                  {generatingReplica ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5" />
+                  )}
+                  Gerar app editável a partir dos prints
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="pt-0 pb-4">
+              <p className="text-xs text-muted-foreground mb-3">
+                A IA vai analisar os prints abaixo e reproduzir a interface real ({platformConfig?.name}) com campos editáveis (foto, vídeo, título, peso, valor, etc).
+              </p>
               <div className="grid grid-cols-2 gap-2">
                 {platformConfig?.structure_media_urls?.map((url, idx) => {
                   const isVideo = /\.(mp4|webm|mov|avi)(\?|$)/i.test(url);
