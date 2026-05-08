@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Filter, X } from 'lucide-react';
+import { Search, Filter, X, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface OperationsSearchBarProps {
@@ -17,6 +17,7 @@ interface OperationsSearchBarProps {
   placeholder?: string;
   showCategoryFilter?: boolean;
   showStatusFilter?: boolean;
+  onManageCategories?: () => void;
 }
 
 export function OperationsSearchBar({
@@ -31,6 +32,7 @@ export function OperationsSearchBar({
   placeholder = "Buscar...",
   showCategoryFilter = true,
   showStatusFilter = true,
+  onManageCategories,
 }: OperationsSearchBarProps) {
   const [showFilters, setShowFilters] = useState(false);
   const hasActiveFilters = categoryFilter !== 'all' || statusFilter !== 'all';
@@ -98,6 +100,17 @@ export function OperationsSearchBar({
                 {categoryFilter === cat && <X className="ml-1 h-3 w-3" />}
               </Button>
             ))}
+            {showCategoryFilter && onManageCategories && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="shrink-0 h-9 px-4 rounded-full text-sm border-dashed touch-manipulation active:scale-95"
+                onClick={onManageCategories}
+              >
+                <Plus className="mr-1 h-3.5 w-3.5" />
+                Criar Categoria
+              </Button>
+            )}
             {hasActiveFilters && (
               <Button
                 variant="ghost"
