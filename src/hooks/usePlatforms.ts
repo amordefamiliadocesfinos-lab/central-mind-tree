@@ -9,6 +9,32 @@ export interface CustomField {
   select_options?: string[];
 }
 
+export interface ReplicaField {
+  id: string;
+  label: string;
+  type: 'input' | 'textarea' | 'number' | 'select' | 'media' | 'switch' | 'price' | 'tags' | 'date';
+  placeholder?: string;
+  hint?: string;
+  required?: boolean;
+  options?: string[];
+  prefix?: string;
+  suffix?: string;
+  max_length?: number;
+}
+
+export interface ReplicaSection {
+  id: string;
+  title: string;
+  icon?: string;
+  fields: ReplicaField[];
+}
+
+export interface PlatformReplica {
+  brand_color?: string;
+  brand_name?: string;
+  sections: ReplicaSection[];
+}
+
 export interface Platform {
   id: string;
   name: string;
@@ -22,6 +48,7 @@ export interface Platform {
   custom_fields: CustomField[];
   checklist_template: { id: string; text: string }[];
   structure_media_urls: string[];
+  platform_replica: PlatformReplica;
   is_active: boolean;
   order_index: number;
   created_at: string;
