@@ -502,6 +502,7 @@ export function PlatformsManager() {
     setShowAdvanced(false);
     setRealStructureMedia([]);
     setRealStructureNotes('');
+    setPlatformReplica({ sections: [] });
     setShowDialog(true);
   };
 
