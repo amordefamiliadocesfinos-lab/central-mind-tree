@@ -211,7 +211,11 @@ export function MediaLibrary({ ideaId, variationId, onSelect, onSelectMultiple, 
     if (selectedFolderId !== null) {
       if (item.folder_id !== selectedFolderId) return false;
     }
-    
+
+    // Filter by source (product vs idea)
+    if (sourceFilter === 'product' && !item.product_id) return false;
+    if (sourceFilter === 'idea' && (!item.idea_id && !item.variation_id)) return false;
+
     // Filter by quality status
     if (qualityFilter) {
       if (item.quality_status !== qualityFilter) return false;
