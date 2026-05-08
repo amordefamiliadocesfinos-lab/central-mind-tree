@@ -1062,7 +1062,19 @@ export function PlatformsManager() {
                 </Card>
               )}
 
-              {/* Icon and Name */}
+              {/* Real Platform Structure - also accessible in edit/manual mode */}
+              <RealStructurePanel
+                platformName={formData.name}
+                media={realStructureMedia}
+                uploading={realStructureUploading}
+                loading={realStructureLoading}
+                notes={realStructureNotes}
+                inputRef={realMediaInputRef}
+                onUpload={handleRealStructureUpload}
+                onRemove={removeRealStructureMedia}
+                onExtract={extractRealStructure}
+              />
+
               <div className="flex gap-3">
                 <div className="space-y-2">
                   <Label>Ícone</Label>
