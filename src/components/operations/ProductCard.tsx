@@ -2,9 +2,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Image, AlertTriangle, ArrowUpDown, History, Edit } from 'lucide-react';
+import { Image, AlertTriangle, ArrowUpDown, History, Edit, Lightbulb, Plus } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { Product } from '@/hooks/useOrders';
+import { useNavigate } from 'react-router-dom';
+import { PlatformIcon } from '@/components/digital/PlatformsManager';
+import type { LinkedIdeaSummary } from '@/hooks/useProductIdeas';
+import type { Platform } from '@/hooks/usePlatforms';
 
 interface ProductCardProps {
   product: Product;
@@ -13,6 +17,8 @@ interface ProductCardProps {
   onMovement?: (product: { id: string; name: string; balance: number }) => void;
   onHistory?: (productId: string) => void;
   showInventoryActions?: boolean;
+  linkedIdeas?: LinkedIdeaSummary[];
+  platformsMap?: Record<string, Platform>;
 }
 
 export function ProductCard({ 
@@ -21,9 +27,26 @@ export function ProductCard({
   onEdit, 
   onMovement, 
   onHistory,
-  showInventoryActions = false 
+  showInventoryActions = false,
+  linkedIdeas = [],
+  platformsMap = {},
 }: ProductCardProps) {
+  const navigate = useNavigate();
   const isLow = balance <= product.min_stock;
+  const hasIdeas = linkedIdeas.length > 0;
+  // Aggregate unique platforms across linked ideas
+  const linkedPlatformIds = Array.from(
+    new Set(linkedIdeas.flatMap(i => i.platforms))
+  );
+
+  const handleIdeaClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (hasIdeas) {
+      navigate(`/digital?product_id=${product.id}`);
+    } else {
+      navigate(`/digital?newIdea=1&product_id=${product.id}`);
+    }
+  };
 
   return (
     <Card 
@@ -62,11 +85,65 @@ export function ProductCard({
               )}
             </div>
             
-            {product.category && (
-              <Badge variant="secondary" className="text-xs mt-1">
-                {product.category}
-              </Badge>
-            )}
+            <div className="flex items-center flex-wrap gap-1.5 mt-1">
+              {product.category && (
+                <Badge variant="secondary" className="text-xs">
+                  {product.category}
+                </Badge>
+              )}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    onClick={handleIdeaClick}
+                    className={cn(
+                      'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs transition-colors',
+                      hasIdeas
+                        ? 'border-amber-400/60 bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-500/10 dark:text-amber-300'
+                        : 'border-dashed text-muted-foreground hover:bg-muted'
+                    )}
+                  >
+                    {hasIdeas ? (
+                      <Lightbulb className="h-3 w-3 fill-current" />
+                    ) : (
+                      <Plus className="h-3 w-3" />
+                    )}
+                    <span>
+                      {hasIdeas
+                        ? `Vinculado a ${linkedIdeas.length} ideia${linkedIdeas.length > 1 ? 's' : ''}`
+                        : 'Vincular a ideia'}
+                    </span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  {hasIdeas
+                    ? 'Ver ideias vinculadas no Digital'
+                    : 'Criar nova ideia no Digital com este produto'}
+                </TooltipContent>
+              </Tooltip>
+              {linkedPlatformIds.map(pid => {
+                const p = platformsMap[pid];
+                if (!p) return null;
+                return (
+                  <Tooltip key={pid}>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/digital?product_id=${product.id}`);
+                        }}
+                        className="inline-flex items-center justify-center rounded-md bg-muted/60 hover:bg-muted p-0.5"
+                        aria-label={p.name}
+                      >
+                        <PlatformIcon icon={p.icon} size="sm" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">{p.name}</TooltipContent>
+                  </Tooltip>
+                );
+              })}
+            </div>
             
             <div className="flex items-center justify-between mt-2">
               <span className="text-sm font-bold">

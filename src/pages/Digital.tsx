@@ -20,7 +20,7 @@ import { Plus, ArrowLeft, Search, LayoutGrid, Columns3, Image, BarChart3, Link2,
 import { HierarchicalPlatformSelector } from '@/components/digital/HierarchicalPlatformSelector';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -89,6 +89,33 @@ export default function Digital() {
     };
     fetchNodes();
   }, []);
+
+  // Sync with URL params (e.g., from Operações > Produtos)
+  const [searchParams, setSearchParams] = useSearchParams();
+  useEffect(() => {
+    const productId = searchParams.get('product_id');
+    const wantNewIdea = searchParams.get('newIdea') === '1';
+    if (!productId && !wantNewIdea) return;
+
+    if (wantNewIdea && productId) {
+      const product = products.find(p => p.id === productId);
+      setNewIdea(prev => ({
+        ...prev,
+        product_id: productId,
+        title: prev.title || product?.name || '',
+        objective: prev.objective || product?.description || '',
+      }));
+      setShowCreateDialog(true);
+    } else if (productId) {
+      setProductFilter(productId);
+    }
+    // Clear params so reopening dialog manually works
+    const next = new URLSearchParams(searchParams);
+    next.delete('newIdea');
+    next.delete('product_id');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products]);
 
   const handleCreateIdea = async () => {
     const idea = await createIdea({

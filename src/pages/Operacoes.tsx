@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { useContacts } from '@/hooks/useContacts';
 import { useContactHistory } from '@/hooks/useContactHistory';
@@ -42,6 +42,8 @@ import { ProductionPlanningView } from '@/components/operations/ProductionPlanni
 import { ContactAutocomplete } from '@/components/operations/ContactAutocomplete';
 import { ProductCategoriesManager } from '@/components/operations/ProductCategoriesManager';
 import { useProductCategories } from '@/hooks/useProductCategories';
+import { useProductIdeas } from '@/hooks/useProductIdeas';
+import { usePlatforms } from '@/hooks/usePlatforms';
 import { 
   useAppStore, 
   PRODUCT_CATEGORIES, 
@@ -203,6 +205,12 @@ export default function Operacoes() {
   const [ordersViewMode, setOrdersViewMode] = useState<'list' | 'grid' | 'planning'>('list');
   const [showCategoriesManager, setShowCategoriesManager] = useState(false);
   const { categoryNames: dynamicCategories } = useProductCategories();
+  const { productIdeasMap } = useProductIdeas();
+  const { platforms: allPlatforms } = usePlatforms();
+  const platformsById = useMemo(
+    () => Object.fromEntries(allPlatforms.map(p => [p.id, p])),
+    [allPlatforms]
+  );
   const productCategories = dynamicCategories.length > 0 ? dynamicCategories : [...PRODUCT_CATEGORIES];
   const { createContact } = useContacts();
   const { addEntry } = useContactHistory();
@@ -454,6 +462,8 @@ export default function Operacoes() {
                           product={product}
                           balance={getProductBalance(product.id)}
                           onEdit={setEditingProduct}
+                          linkedIdeas={productIdeasMap[product.id]}
+                          platformsMap={platformsById}
                         />
                       ))}
                   </div>
@@ -1074,6 +1084,8 @@ export default function Operacoes() {
                     product={product as Product}
                     balance={getProductBalance(product.id)}
                     onEdit={setEditingProduct}
+                    linkedIdeas={productIdeasMap[product.id]}
+                    platformsMap={platformsById}
                   />
                 ))
               )}
@@ -1129,6 +1141,8 @@ export default function Operacoes() {
                   onMovement={(p) => setMovementProduct({ id: p.id, name: p.name })}
                   onHistory={setHistoryProductId}
                   showInventoryActions
+                  linkedIdeas={productIdeasMap[product.id]}
+                  platformsMap={platformsById}
                 />
               ))}
             </div>
