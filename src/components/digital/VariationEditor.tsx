@@ -57,6 +57,7 @@ export function VariationEditor({
   const [showIdea, setShowIdea] = useState(true);
   const [showChecklist, setShowChecklist] = useState(true);
   const [showMetrics, setShowMetrics] = useState(false);
+  const [showRealStructure, setShowRealStructure] = useState(true);
   
   // Find the platform from dynamic platforms list
   const platformConfig = platforms.find(p => p.id === variation.platform);
@@ -953,7 +954,57 @@ export function VariationEditor({
         </Card>
       </Collapsible>
 
-      {/* Media Library Dialog */}
+      {/* Estrutura Real da Plataforma - reproduz fielmente os prints/vídeos enviados */}
+      {(platformConfig?.structure_media_urls?.length ?? 0) > 0 && (
+        <Collapsible open={showRealStructure} onOpenChange={setShowRealStructure}>
+          <Card>
+            <CollapsibleTrigger asChild>
+              <CardHeader className="py-3 cursor-pointer hover:bg-muted/50">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    🧩 Estrutura Real da Plataforma
+                    <Badge variant="secondary" className="text-[10px]">
+                      {platformConfig?.structure_media_urls?.length}
+                    </Badge>
+                  </CardTitle>
+                  {showRealStructure ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </div>
+              </CardHeader>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="pt-0 pb-4">
+                <p className="text-xs text-muted-foreground mb-3">
+                  Reprodução fiel da interface real de <strong>{platformConfig?.name}</strong>. Use como referência visual para preencher exatamente como aparece na plataforma.
+                </p>
+                <div className="flex flex-col gap-4 bg-muted/30 rounded-lg p-3">
+                  {platformConfig?.structure_media_urls?.map((url, idx) => {
+                    const isVideo = /\.(mp4|webm|mov|avi)(\?|$)/i.test(url);
+                    return (
+                      <div
+                        key={idx}
+                        className="w-full rounded-lg overflow-hidden border bg-background shadow-sm"
+                      >
+                        {isVideo ? (
+                          <video src={url} controls className="w-full h-auto block" />
+                        ) : (
+                          <img
+                            src={url}
+                            alt={`Estrutura ${platformConfig?.name} ${idx + 1}`}
+                            className="w-full h-auto block cursor-zoom-in"
+                            onClick={() => window.open(url, '_blank')}
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+      )}
+
+
       <ResponsiveDialog
         open={showMediaLibrary}
         onOpenChange={setShowMediaLibrary}
