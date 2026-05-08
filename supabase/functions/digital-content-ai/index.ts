@@ -422,7 +422,7 @@ Retorne APENAS o JSON válido, sem markdown.`;
 
     // Parse response based on field type
     let result: unknown;
-    if (field === 'generate_all_variations' || field === 'all' || field === 'all_variation_fields' || field === 'platform_structure') {
+    if (field === 'generate_all_variations' || field === 'all' || field === 'all_variation_fields' || field === 'platform_structure' || field === 'platform_structure_from_media') {
       try {
         const cleanedJson = generatedText.replace(/```json\n?|\n?```/g, '').trim();
         result = JSON.parse(cleanedJson);
