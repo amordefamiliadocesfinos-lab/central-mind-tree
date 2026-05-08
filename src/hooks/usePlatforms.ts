@@ -72,6 +72,9 @@ export function usePlatforms() {
       checklist_template: Array.isArray(p.checklist_template) 
         ? (p.checklist_template as unknown as { id: string; text: string }[])
         : [],
+      structure_media_urls: Array.isArray((p as any).structure_media_urls)
+        ? ((p as any).structure_media_urls as string[])
+        : [],
     })) as Platform[];
 
     setPlatforms(parsedData);
