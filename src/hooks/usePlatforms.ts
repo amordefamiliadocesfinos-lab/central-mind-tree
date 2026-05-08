@@ -102,7 +102,10 @@ export function usePlatforms() {
       structure_media_urls: Array.isArray((p as any).structure_media_urls)
         ? ((p as any).structure_media_urls as string[])
         : [],
-    })) as Platform[];
+      platform_replica: ((p as any).platform_replica && typeof (p as any).platform_replica === 'object' && Array.isArray((p as any).platform_replica.sections))
+        ? ((p as any).platform_replica as PlatformReplica)
+        : { sections: [] },
+    })) as unknown as Platform[];
 
     setPlatforms(parsedData);
     setLoading(false);
