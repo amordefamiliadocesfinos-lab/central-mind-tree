@@ -25,12 +25,14 @@ interface GenerateRequest {
   title: string;
   field: 'objective' | 'target_audience' | 'key_message' | 'kpi' | 'all' | 
          'description' | 'caption' | 'cta' | 'hashtags' | 'checklist_suggestion' |
-         'custom_field' | 'all_variation_fields' | 'platform_structure' | 'generate_all_variations';
+         'custom_field' | 'all_variation_fields' | 'platform_structure' | 'generate_all_variations' |
+         'platform_structure_from_media';
   platform?: string;
   platformType?: string;
   existingData?: Record<string, string>;
   customFieldLabel?: string;
   customFields?: CustomField[];
+  mediaUrls?: string[]; // For platform_structure_from_media (image URLs)
   // For generate_all_variations
   ideaContext?: {
     title: string;
