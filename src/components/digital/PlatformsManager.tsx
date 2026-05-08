@@ -523,6 +523,7 @@ export function PlatformsManager() {
     setShowAdvanced(true); // Show all fields in edit mode
     setRealStructureMedia(platform.structure_media_urls || []);
     setRealStructureNotes('');
+    setPlatformReplica(platform.platform_replica || { sections: [] });
     setShowDialog(true);
   };
 
