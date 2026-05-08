@@ -197,7 +197,6 @@ function ReplicaFieldRow({
         {field.suffix && (
           <span className="text-[13px] text-muted-foreground">{field.suffix}</span>
         )}
-        {field.type === 'select' && <ChevronRight className="h-4 w-4 text-muted-foreground" />}
       </div>
       {hintEl}
     </div>
