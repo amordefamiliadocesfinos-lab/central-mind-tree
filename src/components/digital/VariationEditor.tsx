@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DigitalVariation, DigitalIdea, DIGITAL_STATUS } from '@/hooks/useDigital';
-import { Platform } from '@/hooks/usePlatforms';
+import { CustomField, Platform, PlatformReplica, ReplicaField, ReplicaSection } from '@/hooks/usePlatforms';
 import { PlatformIcon } from './PlatformsManager';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,6 +41,148 @@ interface VariationEditorProps {
   platforms?: Platform[];
 }
 
+const REPLICA_SECTION_CONFIG: Array<{
+  id: string;
+  title: string;
+  icon: string;
+  matcher: (field: ReplicaField) => boolean;
+}> = [
+  {
+    id: 'midia',
+    title: 'Mídia do Produto',
+    icon: '🖼️',
+    matcher: (field) => field.type === 'media' || /imagem|foto|vídeo|video|capa|thumbnail/i.test(field.label),
+  },
+  {
+    id: 'informacoes_basicas',
+    title: 'Informações Básicas',
+    icon: '📝',
+    matcher: (field) => /nome|t[ií]tulo|descri|categoria|marca|condiç|condicao/i.test(field.label),
+  },
+  {
+    id: 'atributos',
+    title: 'Especificações',
+    icon: '🏷️',
+    matcher: (field) => /atributo|sabor|origem|pacote|unidade|tamanho|abr[oó]gano|alimento/i.test(field.label),
+  },
+  {
+    id: 'vendas',
+    title: 'Vendas e Estoque',
+    icon: '💰',
+    matcher: (field) => /preço|preco|valor|estoque|sku|gtin|variaç|variacao|opç|opcao/i.test(field.label),
+  },
+  {
+    id: 'fiscal',
+    title: 'Dados Fiscais',
+    icon: '🧾',
+    matcher: (field) => /ncm|cfop|csosn|pis|cofins|cest|fiscal|tipi|fci|recopi|tribut/i.test(field.label),
+  },
+  {
+    id: 'logistica',
+    title: 'Envio e Logística',
+    icon: '📦',
+    matcher: (field) => /peso|largura|altura|comprimento|frete|retirada|xpress|pacote/i.test(field.label),
+  },
+  {
+    id: 'publicacao',
+    title: 'Publicação',
+    icon: '📅',
+    matcher: (field) => /agenda|publica/i.test(field.label),
+  },
+];
+
+function sanitizeReplicaFieldId(value: string, fallback: string) {
+  const normalized = value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_|_$/g, '');
+
+  return normalized || fallback;
+}
+
+function normalizeReplicaField(rawField: Partial<ReplicaField & CustomField>, index: number): ReplicaField {
+  const rawLabel = String(rawField.label || 'Campo').trim();
+  const label = rawLabel.replace(/^\*\s*/, '').trim() || 'Campo';
+  const baseType = rawField.type || 'input';
+
+  let type: ReplicaField['type'] = ['input', 'textarea', 'number', 'select', 'media', 'switch', 'price', 'tags', 'date'].includes(baseType)
+    ? (baseType as ReplicaField['type'])
+    : 'input';
+
+  let prefix = rawField.prefix;
+  let suffix = rawField.suffix;
+
+  if (type === 'input' && /preço|preco|valor/i.test(label)) {
+    type = 'price';
+    prefix ||= 'R$';
+  }
+
+  if (type === 'input' && /data/i.test(label)) {
+    type = 'date';
+  }
+
+  if ((type === 'number' || type === 'input') && !suffix) {
+    if (/peso/i.test(label)) suffix = 'kg';
+    else if (/largura|altura|comprimento|dimens/i.test(label)) suffix = 'cm';
+    else if (/percentual|tribut|^%/i.test(label)) suffix = '%';
+  }
+
+  return {
+    id: sanitizeReplicaFieldId(String(rawField.id || label), `campo_${index + 1}`),
+    label,
+    type,
+    placeholder: rawField.placeholder,
+    hint: rawField.hint,
+    required: Boolean(rawField.required ?? rawLabel.startsWith('*')),
+    options: rawField.options || rawField.select_options,
+    prefix,
+    suffix,
+    max_length: rawField.max_length,
+  };
+}
+
+function buildSectionsFromFields(fields: Array<Partial<ReplicaField & CustomField>>): ReplicaSection[] {
+  const buckets = new Map<string, ReplicaSection>();
+
+  for (const config of REPLICA_SECTION_CONFIG) {
+    buckets.set(config.id, { id: config.id, title: config.title, icon: config.icon, fields: [] });
+  }
+  buckets.set('outros', { id: 'outros', title: 'Outros Campos', icon: '⚙️', fields: [] });
+
+  fields.forEach((rawField, index) => {
+    const field = normalizeReplicaField(rawField, index);
+    const matched = REPLICA_SECTION_CONFIG.find((config) => config.matcher(field));
+    (buckets.get(matched?.id || 'outros')?.fields || []).push(field);
+  });
+
+  return Array.from(buckets.values()).filter((section) => section.fields.length > 0);
+}
+
+function buildReplicaFromResponse(data: any, platformConfig: Platform): PlatformReplica {
+  const sectionsFromAi = Array.isArray(data?.sections)
+    ? data.sections.map((section: any, index: number) => ({
+        id: sanitizeReplicaFieldId(section?.id || section?.title || `secao_${index + 1}`, `secao_${index + 1}`),
+        title: section?.title || `Seção ${index + 1}`,
+        icon: section?.icon,
+        fields: Array.isArray(section?.fields)
+          ? section.fields.map((field: any, fieldIndex: number) => normalizeReplicaField(field, fieldIndex))
+          : [],
+      })).filter((section: ReplicaSection) => section.fields.length > 0)
+    : [];
+
+  const fallbackFields = Array.isArray(data?.custom_fields) && data.custom_fields.length > 0
+    ? data.custom_fields
+    : platformConfig.custom_fields || [];
+
+  return {
+    brand_color: data?.brand_color,
+    brand_name: data?.brand_name || platformConfig.name,
+    sections: sectionsFromAi.length > 0 ? sectionsFromAi : buildSectionsFromFields(fallbackFields),
+  };
+}
+
 export function VariationEditor({
   variation,
   idea,
@@ -53,6 +195,7 @@ export function VariationEditor({
   platforms = [],
 }: VariationEditorProps) {
   const isMobile = useIsMobile();
+  const platformConfig = platforms.find(p => p.id === variation.platform);
   const [showMediaLibrary, setShowMediaLibrary] = useState(false);
   const [aiLoading, setAiLoading] = useState<Record<string, boolean>>({});
   const [showIdea, setShowIdea] = useState(true);
@@ -60,9 +203,15 @@ export function VariationEditor({
   const [showMetrics, setShowMetrics] = useState(false);
   const [showRealStructure, setShowRealStructure] = useState(true);
   const [generatingReplica, setGeneratingReplica] = useState(false);
+  const [liveReplica, setLiveReplica] = useState<PlatformReplica | null>(
+    (platformConfig?.platform_replica?.sections?.length ?? 0) > 0 ? platformConfig!.platform_replica : null
+  );
 
-  // Find the platform from dynamic platforms list
-  const platformConfig = platforms.find(p => p.id === variation.platform);
+  useEffect(() => {
+    setLiveReplica((platformConfig?.platform_replica?.sections?.length ?? 0) > 0 ? platformConfig!.platform_replica : null);
+  }, [platformConfig?.id, platformConfig?.updated_at]);
+
+  const effectiveReplica = liveReplica || platformConfig?.platform_replica || { sections: [] };
 
   const handleGenerateReplica = async () => {
     if (!platformConfig) return;
@@ -87,61 +236,30 @@ export function VariationEditor({
       }
       console.log('[Réplica IA] resposta:', data);
 
-      // Build sections from AI response, with multiple fallbacks
-      let sections = Array.isArray(data?.sections) ? data.sections : [];
+      const replica = buildReplicaFromResponse(data, platformConfig);
 
-      // Fallback 1: AI returned only flat custom_fields → wrap into a single section
-      if (sections.length === 0 && Array.isArray(data?.custom_fields) && data.custom_fields.length > 0) {
-        sections = [{
-          id: 'principal',
-          title: 'Cadastro do Produto',
-          icon: '📝',
-          fields: data.custom_fields.map((f: any) => ({
-            id: f.id || (f.label || 'campo').toLowerCase().replace(/[^a-z0-9]+/g, '_'),
-            label: f.label || 'Campo',
-            type: ['input','textarea','number','select','media','switch','price','tags','date'].includes(f.type) ? f.type : 'input',
-            placeholder: f.placeholder,
-            hint: f.hint,
-            required: f.required,
-            options: f.options,
-            prefix: f.prefix,
-            suffix: f.suffix,
-            max_length: f.max_length,
-          })),
-        }];
-      }
-
-      // Fallback 2: AI returned nothing usable → derive from existing platform custom_fields
-      if (sections.length === 0 && (platformConfig.custom_fields?.length ?? 0) > 0) {
-        sections = [{
-          id: 'principal',
-          title: 'Cadastro do Produto',
-          icon: '📝',
-          fields: platformConfig.custom_fields.map((f) => ({
-            id: f.id,
-            label: f.label,
-            type: f.type as any,
-          })),
-        }];
-        toast.message('A IA não detalhou a estrutura — usando os campos atuais da plataforma.');
-      }
-
-      if (sections.length === 0) {
+      if ((replica.sections?.length ?? 0) === 0) {
         toast.error('Não foi possível extrair estrutura. Adicione mais prints nítidos da tela de cadastro.');
         return;
       }
 
-      const replica = {
-        brand_color: data?.brand_color,
-        brand_name: data?.brand_name || platformConfig.name,
-        sections,
-      };
+      setLiveReplica(replica);
+      setShowRealStructure(true);
+
+      if ((data?.sections?.length ?? 0) === 0) {
+        toast.message('Estrutura montada a partir dos campos reconhecidos nos prints.');
+      }
+
       const { error: updErr } = await supabase
         .from('digital_platforms')
         .update({ platform_replica: replica as any })
         .eq('id', platformConfig.id);
-      if (updErr) throw updErr;
-      toast.success(`Réplica gerada: ${sections.length} seções`);
+      if (updErr) {
+        console.error(updErr);
+        toast.success(`Réplica gerada localmente: ${replica.sections.length} seções`);
+        return;
+      }
+      toast.success(`Réplica gerada: ${replica.sections.length} seções`);
     } catch (e) {
       console.error(e);
       toast.error('Erro ao gerar réplica visual');
@@ -1043,7 +1161,7 @@ export function VariationEditor({
       </Collapsible>
 
       {/* Réplica Visual da Plataforma — interface idêntica ao app real, com campos editáveis */}
-      {(platformConfig?.platform_replica?.sections?.length ?? 0) > 0 && (
+      {(effectiveReplica?.sections?.length ?? 0) > 0 && (
         <Collapsible open={showRealStructure} onOpenChange={setShowRealStructure}>
           <Card>
             <CollapsibleTrigger asChild>
@@ -1052,7 +1170,7 @@ export function VariationEditor({
                   <CardTitle className="text-sm flex items-center gap-2">
                     🧩 Réplica da Plataforma
                     <Badge variant="secondary" className="text-[10px]">
-                      {platformConfig?.platform_replica?.sections?.length} seções
+                      {effectiveReplica?.sections?.length} seções
                     </Badge>
                   </CardTitle>
                   {showRealStructure ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -1065,7 +1183,7 @@ export function VariationEditor({
                   Reprodução fiel de <strong>{platformConfig?.name}</strong>. Edite aqui exatamente como faria no app real — os dados serão usados para integrar via API.
                 </p>
                 <PlatformReplicaRenderer
-                  replica={platformConfig!.platform_replica}
+                  replica={effectiveReplica}
                   values={variation.custom_field_values || {}}
                   onChange={(vals) => onUpdate(variation.id, { custom_field_values: vals })}
                 />
@@ -1076,7 +1194,7 @@ export function VariationEditor({
       )}
 
       {/* Fallback — se não houver réplica visual ainda mas há prints, mostrar galeria + botão de geração */}
-      {(platformConfig?.platform_replica?.sections?.length ?? 0) === 0 &&
+      {(effectiveReplica?.sections?.length ?? 0) === 0 &&
         (platformConfig?.structure_media_urls?.length ?? 0) > 0 && (
           <Card className="border-dashed border-primary/40 bg-primary/5">
             <CardHeader className="py-3">

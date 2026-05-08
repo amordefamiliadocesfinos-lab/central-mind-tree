@@ -341,8 +341,8 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      systemPrompt = `Você é um especialista em UI/UX que analisa screenshots de plataformas digitais (marketplaces, redes sociais, e-commerce, apps) e reproduz fielmente a interface como um schema interativo. Sua resposta deve permitir reproduzir VISUALMENTE a tela real da plataforma com seções, ícones, cores e campos editáveis idênticos.`;
-      userPrompt = `Analise as imagens da plataforma "${title}" em anexo. Reproduza FIELMENTE a tela de cadastro/edição como um schema JSON estruturado, agrupando campos em seções como aparecem na interface real.
+      systemPrompt = `Você analisa screenshots de apps e marketplaces e retorna um JSON enxuto para reconstruir uma tela editável. Priorize velocidade e precisão dos campos. Se não conseguir inferir todas as seções visuais, ainda assim extraia o máximo possível de campos editáveis.`;
+      userPrompt = `Analise os prints da plataforma "${title}". Retorne APENAS JSON válido, sem markdown, para reconstruir a tela de cadastro/edição com campos editáveis.
 
 Retorne um JSON com:
 {
@@ -377,19 +377,21 @@ Retorne um JSON com:
   "notes": "Observações sobre a estrutura (1-2 frases)"
 }
 
-REGRAS CRÍTICAS:
-- Reproduza TODAS as seções visíveis, na MESMA ORDEM em que aparecem na tela
+ REGRAS CRÍTICAS:
+- Responda de forma objetiva e curta para reduzir latência
+- Reproduza as seções visíveis na MESMA ORDEM em que aparecem na tela
 - Use os títulos EXATOS das seções (ex: "Informações básicas", "Especificações do produto", "Vendas", "Frete", "Outros")
 - Use os labels EXATOS dos campos (ex: "Nome do produto", "Categoria", "Preço", "Estoque", "Peso (Após embalagem)")
 - Identifique tipos corretos: 'media' para upload foto/vídeo, 'price' para preços (com prefix R$), 'number' para quantidade/peso/dimensão (com suffix apropriado), 'select' para campos com seta/dropdown, 'switch' para toggles on/off, 'tags' para campos multi-valor, 'textarea' para descrições longas, 'input' para texto curto
 - Marque required=true para campos com asterisco * vermelho
 - Para "brand_color" identifique a cor primária real da marca (laranja Shopee, amarelo Mercado Livre, vermelho Pinterest, azul Facebook, etc)
 - "custom_fields" deve replicar TODOS os fields de todas as sections (formato plano para compatibilidade)
+- Se não conseguir montar "sections" completas, retorne pelo menos "custom_fields" com o maior número possível de campos reais
 
 Retorne APENAS JSON válido, sem markdown.`;
 
       const userContent: any[] = [{ type: "text", text: userPrompt }];
-      for (const url of mediaUrls) {
+      for (const url of mediaUrls.slice(0, 3)) {
         userContent.push({ type: "image_url", image_url: { url } });
       }
       messages = [
@@ -415,7 +417,7 @@ Retorne APENAS JSON válido, sem markdown.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: useVisionModel ? "google/gemini-2.5-pro" : "google/gemini-3-flash-preview",
+        model: useVisionModel ? "google/gemini-2.5-flash" : "google/gemini-3-flash-preview",
         messages,
       }),
     });
