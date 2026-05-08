@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Progress } from '@/components/ui/progress';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { MediaLibrary } from './MediaLibrary';
+import { PlatformReplicaRenderer } from './PlatformReplicaRenderer';
 import { MediaGallery } from './MediaThumbnail';
 import { Calendar as CalendarComponent } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
