@@ -306,6 +306,32 @@ export function MediaLibrary({ ideaId, variationId, onSelect, onSelectMultiple, 
           />
         </div>
 
+        {/* Source Filter */}
+        <div className="px-4 py-2 border-b flex gap-2 flex-wrap items-center">
+          <span className="text-xs text-muted-foreground mr-2">Origem:</span>
+          <Badge
+            variant={sourceFilter === 'all' ? 'default' : 'outline'}
+            className="cursor-pointer"
+            onClick={() => setSourceFilter('all')}
+          >
+            Todas
+          </Badge>
+          <Badge
+            variant={sourceFilter === 'idea' ? 'default' : 'outline'}
+            className="cursor-pointer"
+            onClick={() => setSourceFilter('idea')}
+          >
+            Ideias
+          </Badge>
+          <Badge
+            variant={sourceFilter === 'product' ? 'default' : 'outline'}
+            className="cursor-pointer"
+            onClick={() => setSourceFilter('product')}
+          >
+            Produtos
+          </Badge>
+        </div>
+
         {/* Quality Filter */}
         <div className="px-4 py-2 border-b flex gap-2 flex-wrap items-center">
           <span className="text-xs text-muted-foreground mr-2">Qualidade:</span>
