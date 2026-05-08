@@ -1201,6 +1201,7 @@ export type Database = {
           name: string
           order_index: number
           parent_id: string | null
+          structure_media_urls: Json
           updated_at: string
         }
         Insert: {
@@ -1218,6 +1219,7 @@ export type Database = {
           name: string
           order_index?: number
           parent_id?: string | null
+          structure_media_urls?: Json
           updated_at?: string
         }
         Update: {
@@ -1235,6 +1237,7 @@ export type Database = {
           name?: string
           order_index?: number
           parent_id?: string | null
+          structure_media_urls?: Json
           updated_at?: string
         }
         Relationships: [
