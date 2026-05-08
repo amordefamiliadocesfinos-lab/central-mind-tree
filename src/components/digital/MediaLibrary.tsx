@@ -31,6 +31,8 @@ interface MediaItem {
   tags: string[];
   idea_id: string | null;
   variation_id: string | null;
+  product_id: string | null;
+  is_product_cover?: boolean;
   folder_id: string | null;
   created_at: string;
   quality_status?: string;
