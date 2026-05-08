@@ -153,22 +153,43 @@ export function ProductGallery({
       />
 
       {editable && (
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => inputRef.current?.click()}
-          disabled={uploading}
-          className="gap-2"
-        >
-          {uploading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Plus className="h-4 w-4" />
-          )}
-          Adicionar Imagem
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => inputRef.current?.click()}
+            disabled={uploading}
+            className="gap-2"
+          >
+            {uploading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4" />
+            )}
+            Adicionar Imagem
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setShowLibrary(true)}
+            className="gap-2"
+          >
+            <FolderOpen className="h-4 w-4" />
+            Escolher da Biblioteca
+          </Button>
+        </div>
       )}
+
+      <ResponsiveDialog open={showLibrary} onOpenChange={setShowLibrary} title="Biblioteca de Mídia">
+        <div className="-mx-6 -mb-6">
+          <MediaLibrary
+            mode="select"
+            onSelectMultiple={handlePickFromLibrary}
+          />
+        </div>
+      </ResponsiveDialog>
 
       {mediaUrls.length === 0 ? (
         <div className="flex items-center justify-center h-32 bg-muted rounded-lg border-2 border-dashed">
