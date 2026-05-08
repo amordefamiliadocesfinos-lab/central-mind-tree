@@ -475,7 +475,7 @@ export default function Operacoes() {
               onCategoryChange={setCategoryFilter}
               statusFilter={statusFilter}
               onStatusChange={setStatusFilter}
-              categories={[...PRODUCT_CATEGORIES]}
+              categories={productCategories}
               statuses={statusList}
               placeholder="Buscar pedidos..."
               showCategoryFilter={false}
@@ -931,7 +931,8 @@ export default function Operacoes() {
               onCategoryChange={setCategoryFilter}
               statusFilter={statusFilter}
               onStatusChange={setStatusFilter}
-              categories={[...PRODUCT_CATEGORIES]}
+              categories={productCategories}
+              onManageCategories={() => setShowCategoriesManager(true)}
               statuses={[]}
               placeholder="Buscar produtos..."
               showStatusFilter={false}
@@ -1000,7 +1001,7 @@ export default function Operacoes() {
                           <SelectValue placeholder="Selecione..." />
                         </SelectTrigger>
                         <SelectContent>
-                          {PRODUCT_CATEGORIES.map((cat) => (
+                          {productCategories.map((cat) => (
                             <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                           ))}
                         </SelectContent>
@@ -1090,7 +1091,8 @@ export default function Operacoes() {
               onCategoryChange={setCategoryFilter}
               statusFilter={statusFilter}
               onStatusChange={setStatusFilter}
-              categories={[...PRODUCT_CATEGORIES]}
+              categories={productCategories}
+              onManageCategories={() => setShowCategoriesManager(true)}
               statuses={[]}
               placeholder="Buscar no estoque..."
               showStatusFilter={false}
@@ -1284,7 +1286,7 @@ export default function Operacoes() {
                     <SelectValue placeholder="Selecione..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {PRODUCT_CATEGORIES.map((cat) => (
+                    {productCategories.map((cat) => (
                       <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                     ))}
                   </SelectContent>
