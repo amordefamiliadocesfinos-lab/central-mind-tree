@@ -85,21 +85,63 @@ export function VariationEditor({
         toast.error(data.error);
         return;
       }
-      if (!data?.sections || !Array.isArray(data.sections) || data.sections.length === 0) {
-        toast.error('A IA não conseguiu identificar a estrutura visual nas imagens.');
+      console.log('[Réplica IA] resposta:', data);
+
+      // Build sections from AI response, with multiple fallbacks
+      let sections = Array.isArray(data?.sections) ? data.sections : [];
+
+      // Fallback 1: AI returned only flat custom_fields → wrap into a single section
+      if (sections.length === 0 && Array.isArray(data?.custom_fields) && data.custom_fields.length > 0) {
+        sections = [{
+          id: 'principal',
+          title: 'Cadastro do Produto',
+          icon: '📝',
+          fields: data.custom_fields.map((f: any) => ({
+            id: f.id || (f.label || 'campo').toLowerCase().replace(/[^a-z0-9]+/g, '_'),
+            label: f.label || 'Campo',
+            type: ['input','textarea','number','select','media','switch','price','tags','date'].includes(f.type) ? f.type : 'input',
+            placeholder: f.placeholder,
+            hint: f.hint,
+            required: f.required,
+            options: f.options,
+            prefix: f.prefix,
+            suffix: f.suffix,
+            max_length: f.max_length,
+          })),
+        }];
+      }
+
+      // Fallback 2: AI returned nothing usable → derive from existing platform custom_fields
+      if (sections.length === 0 && (platformConfig.custom_fields?.length ?? 0) > 0) {
+        sections = [{
+          id: 'principal',
+          title: 'Cadastro do Produto',
+          icon: '📝',
+          fields: platformConfig.custom_fields.map((f) => ({
+            id: f.id,
+            label: f.label,
+            type: f.type as any,
+          })),
+        }];
+        toast.message('A IA não detalhou a estrutura — usando os campos atuais da plataforma.');
+      }
+
+      if (sections.length === 0) {
+        toast.error('Não foi possível extrair estrutura. Adicione mais prints nítidos da tela de cadastro.');
         return;
       }
+
       const replica = {
-        brand_color: data.brand_color,
-        brand_name: data.brand_name || platformConfig.name,
-        sections: data.sections,
+        brand_color: data?.brand_color,
+        brand_name: data?.brand_name || platformConfig.name,
+        sections,
       };
       const { error: updErr } = await supabase
         .from('digital_platforms')
         .update({ platform_replica: replica as any })
         .eq('id', platformConfig.id);
       if (updErr) throw updErr;
-      toast.success(`Réplica gerada: ${data.sections.length} seções`);
+      toast.success(`Réplica gerada: ${sections.length} seções`);
     } catch (e) {
       console.error(e);
       toast.error('Erro ao gerar réplica visual');
