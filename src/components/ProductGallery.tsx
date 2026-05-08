@@ -1,9 +1,11 @@
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus, X, Star, Image as ImageIcon, Loader2 } from 'lucide-react';
+import { Plus, X, Star, Image as ImageIcon, Loader2, FolderOpen } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
+import { MediaLibrary } from '@/components/digital/MediaLibrary';
 
 interface ProductGalleryProps {
   productId: string;
