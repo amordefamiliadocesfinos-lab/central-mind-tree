@@ -155,6 +155,9 @@ export function usePlatforms() {
     if (updates.checklist_template) {
       dbUpdates.checklist_template = JSON.parse(JSON.stringify(updates.checklist_template));
     }
+    if (updates.platform_replica) {
+      dbUpdates.platform_replica = JSON.parse(JSON.stringify(updates.platform_replica));
+    }
     
     const { error } = await supabase
       .from('digital_platforms')
