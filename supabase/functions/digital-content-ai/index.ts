@@ -341,57 +341,66 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      systemPrompt = `Você analisa screenshots de apps e marketplaces e retorna um JSON enxuto para reconstruir uma tela editável. Priorize velocidade e precisão dos campos. Se não conseguir inferir todas as seções visuais, ainda assim extraia o máximo possível de campos editáveis.`;
-      userPrompt = `Analise os prints da plataforma "${title}". Retorne APENAS JSON válido, sem markdown, para reconstruir a tela de cadastro/edição com campos editáveis.
+      systemPrompt = `Você é um engenheiro reverso de UIs de apps e marketplaces. Sua missão é analisar screenshots reais e reconstruir FIELMENTE a tela de cadastro/edição como JSON, capturando TODA seção, subseção, campo, ícone, ordem, agrupamento, prefixo, sufixo, placeholder, dica, asterisco de obrigatório, contador de caracteres e cores. Não invente campos: extraia apenas o que aparece nos prints. Se houver mais de um print, una as seções em ordem visual contínua, sem duplicar.`;
+      userPrompt = `Analise TODOS os prints anexados da plataforma "${title}" e retorne APENAS JSON válido (sem markdown, sem comentários) que permita reconstruir a tela de cadastro/edição com fidelidade máxima.
 
-Retorne um JSON com:
+Estrutura esperada:
 {
-  "brand_color": "#HEX da cor primária da marca (ex: #EE4D2D para Shopee, #E60023 para Pinterest, #1306FF para Mercado Livre)",
-  "brand_name": "Nome da plataforma como aparece no topo",
+  "brand_color": "#HEX exato da cor primária da marca",
+  "brand_secondary_color": "#HEX cor secundária/acento se houver",
+  "brand_name": "Nome exato da plataforma no header",
+  "header_title": "Título exato da tela (ex: 'Adicionar produto', 'Criar anúncio')",
   "sections": [
     {
-      "id": "identificador_snake_case",
-      "title": "Título exato da seção como aparece (ex: 'Informações básicas', 'Especificações', 'Vendas')",
-      "icon": "emoji representativo (ex: 📷, 📝, 💰, 📦, 🚚)",
+      "id": "snake_case",
+      "title": "Título EXATO da seção como aparece",
+      "icon": "emoji representativo",
+      "description": "Subtítulo/descrição da seção se houver",
       "fields": [
         {
-          "id": "identificador_snake_case_unico",
-          "label": "Nome EXATO do campo conforme a plataforma",
-          "type": "input | textarea | number | select | media | switch | price | tags | date",
-          "placeholder": "texto cinza dentro do campo se houver",
-          "hint": "texto auxiliar abaixo do campo se houver",
-          "required": true/false (se houver asterisco vermelho ou indicação),
-          "options": ["opção1","opção2"] (apenas para select),
-          "prefix": "R$" (apenas para price ou campos com prefixo visível),
-          "suffix": "g | cm | un" (sufixo se houver, ex: peso, dimensão),
-          "max_length": 100 (se houver contador visível)
+          "id": "snake_case_unico",
+          "label": "Label EXATO",
+          "type": "input | textarea | number | select | media | switch | price | tags | date | radio | checkbox | dimensions",
+          "placeholder": "texto cinza dentro do campo",
+          "hint": "texto auxiliar abaixo (cinza)",
+          "required": true/false,
+          "options": ["..."],
+          "prefix": "R$ | + | @",
+          "suffix": "g | cm | un | %",
+          "max_length": 100,
+          "multiple": true/false (para media/tags),
+          "media_kind": "image | video | both",
+          "default": "valor padrão visível",
+          "group": "nome do agrupamento se vários campos estiverem em uma linha (ex: 'dimensões')"
         }
       ]
     }
   ],
-  "custom_fields": [
-    {"id": "mesmo_id_dos_fields_acima", "label": "Mesmo label", "type": "input | textarea | number | select | date | media"}
-  ],
-  "checklist": ["Item de verificação (máx 60 caracteres)"],
-  "aspect_ratio": "proporção principal das mídias (ex: 1:1) ou null",
-  "notes": "Observações sobre a estrutura (1-2 frases)"
+  "custom_fields": [ {"id":"...","label":"...","type":"..."} ],
+  "checklist": ["..."],
+  "aspect_ratio": "1:1 | 4:5 | 9:16 | null",
+  "notes": "1-2 frases sobre o layout"
 }
 
- REGRAS CRÍTICAS:
-- Responda de forma objetiva e curta para reduzir latência
-- Reproduza as seções visíveis na MESMA ORDEM em que aparecem na tela
-- Use os títulos EXATOS das seções (ex: "Informações básicas", "Especificações do produto", "Vendas", "Frete", "Outros")
-- Use os labels EXATOS dos campos (ex: "Nome do produto", "Categoria", "Preço", "Estoque", "Peso (Após embalagem)")
-- Identifique tipos corretos: 'media' para upload foto/vídeo, 'price' para preços (com prefix R$), 'number' para quantidade/peso/dimensão (com suffix apropriado), 'select' para campos com seta/dropdown, 'switch' para toggles on/off, 'tags' para campos multi-valor, 'textarea' para descrições longas, 'input' para texto curto
-- Marque required=true para campos com asterisco * vermelho
-- Para "brand_color" identifique a cor primária real da marca (laranja Shopee, amarelo Mercado Livre, vermelho Pinterest, azul Facebook, etc)
-- "custom_fields" deve replicar TODOS os fields de todas as sections (formato plano para compatibilidade)
-- Se não conseguir montar "sections" completas, retorne pelo menos "custom_fields" com o maior número possível de campos reais
+REGRAS DE FIDELIDADE (CRÍTICAS):
+1. ORDEM: reproduza as seções e campos EXATAMENTE na mesma ordem visual dos prints (de cima para baixo, esquerda para direita).
+2. TÍTULOS EXATOS: copie os textos das seções e labels letra por letra (incluindo acentos, parênteses e maiúsculas).
+3. NÃO INVENTE campos. Não adicione campos genéricos que não aparecem nos prints.
+4. NÃO DUPLIQUE seções repetidas em prints diferentes — una-as.
+5. COR DA MARCA: identifique a cor primária real observando botões/header (Shopee #EE4D2D, Mercado Livre #FFE600, Pinterest #E60023, Facebook #1877F2, Instagram gradiente #E4405F, TikTok #000000, etc).
+6. ASTERISCO VERMELHO ⇒ required=true.
+7. Campos lado a lado (ex: peso/largura/altura/comprimento) devem ter o mesmo "group".
+8. Cada upload de foto/vídeo é "media" com multiple=true quando há vários slots.
+9. Preços com R$ ⇒ type "price" + prefix "R$".
+10. Toggles ⇒ "switch". Listas com seta ⇒ "select" (preencha "options" se visíveis).
+11. custom_fields deve conter TODOS os fields de todas as sections (espelho plano).
+12. Se um campo tiver contador visível (ex: "0/120"), preencha max_length.
+13. Use ícones (emoji) consistentes: 📷 mídia, 📝 informações, 🏷️ categoria, 📦 frete/estoque, 💰 vendas, ⚙️ outros, 📐 dimensões.
 
-Retorne APENAS JSON válido, sem markdown.`;
+Retorne APENAS o JSON.`;
 
       const userContent: any[] = [{ type: "text", text: userPrompt }];
-      for (const url of mediaUrls.slice(0, 3)) {
+      for (const url of mediaUrls.slice(0, 8)) {
         userContent.push({ type: "image_url", image_url: { url } });
       }
       messages = [
