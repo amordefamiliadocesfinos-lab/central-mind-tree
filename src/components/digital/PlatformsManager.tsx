@@ -464,6 +464,16 @@ export function PlatformsManager() {
           (data.checklist || []).join('\n') || prev.checklist_items,
       }));
       setRealStructureNotes(data.notes || '');
+
+      // Capture full visual replica schema if AI returned it
+      if (data.sections && Array.isArray(data.sections)) {
+        setPlatformReplica({
+          brand_color: data.brand_color,
+          brand_name: data.brand_name || formData.name,
+          sections: data.sections,
+        });
+      }
+
       setAiStructured(true);
       setShowAdvanced(true);
       toast.success(`Estrutura real extraída: ${newFields.length} campos`);
