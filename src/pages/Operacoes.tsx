@@ -40,6 +40,8 @@ import { MRPTab } from '@/components/operations/MRPTab';
 import { ProductCostEditor } from '@/components/operations/ProductCostEditor';
 import { ProductionPlanningView } from '@/components/operations/ProductionPlanningView';
 import { ContactAutocomplete } from '@/components/operations/ContactAutocomplete';
+import { ProductCategoriesManager } from '@/components/operations/ProductCategoriesManager';
+import { useProductCategories } from '@/hooks/useProductCategories';
 import { 
   useAppStore, 
   PRODUCT_CATEGORIES, 
