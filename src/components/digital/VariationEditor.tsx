@@ -1245,19 +1245,36 @@ export function VariationEditor({
                     Ainda não há réplica editável
                   </Badge>
                 </CardTitle>
-                <Button
-                  size="sm"
-                  onClick={handleGenerateReplica}
-                  disabled={generatingReplica}
-                  className="gap-2"
-                >
-                  {generatingReplica ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Sparkles className="h-3.5 w-3.5" />
-                  )}
-                  Gerar app editável a partir dos prints
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleGenerateReplica(true)}
+                    disabled={generatingReplica}
+                    className="gap-2"
+                    title="Usa modelo gratuito (qualidade menor)"
+                  >
+                    {generatingReplica ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5" />
+                    )}
+                    Gratuito
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => handleGenerateReplica(false)}
+                    disabled={generatingReplica}
+                    className="gap-2"
+                  >
+                    {generatingReplica ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-3.5 w-3.5" />
+                    )}
+                    Gerar app editável a partir dos prints
+                  </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent className="pt-0 pb-4">
