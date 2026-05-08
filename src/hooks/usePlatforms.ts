@@ -21,6 +21,7 @@ export interface Platform {
   fields: string[]; // Legacy - kept for backwards compatibility
   custom_fields: CustomField[];
   checklist_template: { id: string; text: string }[];
+  structure_media_urls: string[];
   is_active: boolean;
   order_index: number;
   created_at: string;
