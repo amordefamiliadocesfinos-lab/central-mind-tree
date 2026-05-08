@@ -125,6 +125,12 @@ export function PlatformsManager() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [iconUploading, setIconUploading] = useState(false);
   const iconInputRef = useRef<HTMLInputElement>(null);
+  // Real platform structure (from screenshot/video analysis)
+  const [realStructureMedia, setRealStructureMedia] = useState<string[]>([]);
+  const [realStructureLoading, setRealStructureLoading] = useState(false);
+  const [realStructureUploading, setRealStructureUploading] = useState(false);
+  const [realStructureNotes, setRealStructureNotes] = useState<string>('');
+  const realMediaInputRef = useRef<HTMLInputElement>(null);
 
   // Upload custom icon image
   const handleIconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
