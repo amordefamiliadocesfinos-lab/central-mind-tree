@@ -1033,19 +1033,37 @@ export function VariationEditor({
         </Collapsible>
       )}
 
-      {/* Fallback — se não houver réplica visual ainda mas há prints, mostrar galeria */}
+      {/* Fallback — se não houver réplica visual ainda mas há prints, mostrar galeria + botão de geração */}
       {(platformConfig?.platform_replica?.sections?.length ?? 0) === 0 &&
         (platformConfig?.structure_media_urls?.length ?? 0) > 0 && (
-          <Card>
+          <Card className="border-dashed border-primary/40 bg-primary/5">
             <CardHeader className="py-3">
-              <CardTitle className="text-sm flex items-center gap-2">
-                🧩 Estrutura Real (Prints)
-                <Badge variant="outline" className="text-[10px]">
-                  Gere a réplica visual editando a plataforma
-                </Badge>
-              </CardTitle>
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  🧩 Estrutura Real (Prints)
+                  <Badge variant="outline" className="text-[10px]">
+                    Ainda não há réplica editável
+                  </Badge>
+                </CardTitle>
+                <Button
+                  size="sm"
+                  onClick={handleGenerateReplica}
+                  disabled={generatingReplica}
+                  className="gap-2"
+                >
+                  {generatingReplica ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5" />
+                  )}
+                  Gerar app editável a partir dos prints
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="pt-0 pb-4">
+              <p className="text-xs text-muted-foreground mb-3">
+                A IA vai analisar os prints abaixo e reproduzir a interface real ({platformConfig?.name}) com campos editáveis (foto, vídeo, título, peso, valor, etc).
+              </p>
               <div className="grid grid-cols-2 gap-2">
                 {platformConfig?.structure_media_urls?.map((url, idx) => {
                   const isVideo = /\.(mp4|webm|mov|avi)(\?|$)/i.test(url);
