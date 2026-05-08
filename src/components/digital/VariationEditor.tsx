@@ -1166,14 +1166,34 @@ export function VariationEditor({
           <Card>
             <CollapsibleTrigger asChild>
               <CardHeader className="py-3 cursor-pointer hover:bg-muted/50">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2 flex-wrap">
                   <CardTitle className="text-sm flex items-center gap-2">
                     🧩 Réplica da Plataforma
                     <Badge variant="secondary" className="text-[10px]">
                       {effectiveReplica?.sections?.length} seções
                     </Badge>
                   </CardTitle>
-                  {showRealStructure ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 gap-1.5 text-xs"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleGenerateReplica();
+                      }}
+                      disabled={generatingReplica}
+                    >
+                      {generatingReplica ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Sparkles className="h-3.5 w-3.5" />
+                      )}
+                      Gerar novamente
+                    </Button>
+                    {showRealStructure ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </div>
                 </div>
               </CardHeader>
             </CollapsibleTrigger>
