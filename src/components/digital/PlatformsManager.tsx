@@ -282,6 +282,8 @@ export function PlatformsManager() {
     setAiStructured(false);
     setAiSuggestions(null);
     setShowAdvanced(false);
+    setRealStructureMedia([]);
+    setRealStructureNotes('');
     setShowDialog(true);
   };
 
@@ -300,6 +302,8 @@ export function PlatformsManager() {
     setAiStructured(false);
     setAiSuggestions(null);
     setShowAdvanced(true); // Show all fields in edit mode
+    setRealStructureMedia(platform.structure_media_urls || []);
+    setRealStructureNotes('');
     setShowDialog(true);
   };
 
