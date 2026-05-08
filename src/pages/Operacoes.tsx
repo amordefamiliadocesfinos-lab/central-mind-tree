@@ -1434,6 +1434,11 @@ export default function Operacoes() {
         onSave={updateOrder}
         onDelete={deleteOrder}
       />
+
+      <ProductCategoriesManager
+        open={showCategoriesManager}
+        onOpenChange={setShowCategoriesManager}
+      />
     </div>
   );
 }
