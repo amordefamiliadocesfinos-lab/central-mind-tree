@@ -954,17 +954,17 @@ export function VariationEditor({
         </Card>
       </Collapsible>
 
-      {/* Estrutura Real da Plataforma - reproduz fielmente os prints/vídeos enviados */}
-      {(platformConfig?.structure_media_urls?.length ?? 0) > 0 && (
+      {/* Réplica Visual da Plataforma — interface idêntica ao app real, com campos editáveis */}
+      {(platformConfig?.platform_replica?.sections?.length ?? 0) > 0 && (
         <Collapsible open={showRealStructure} onOpenChange={setShowRealStructure}>
           <Card>
             <CollapsibleTrigger asChild>
               <CardHeader className="py-3 cursor-pointer hover:bg-muted/50">
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-sm flex items-center gap-2">
-                    🧩 Estrutura Real da Plataforma
+                    🧩 Réplica da Plataforma
                     <Badge variant="secondary" className="text-[10px]">
-                      {platformConfig?.structure_media_urls?.length}
+                      {platformConfig?.platform_replica?.sections?.length} seções
                     </Badge>
                   </CardTitle>
                   {showRealStructure ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
@@ -974,35 +974,51 @@ export function VariationEditor({
             <CollapsibleContent>
               <CardContent className="pt-0 pb-4">
                 <p className="text-xs text-muted-foreground mb-3">
-                  Reprodução fiel da interface real de <strong>{platformConfig?.name}</strong>. Use como referência visual para preencher exatamente como aparece na plataforma.
+                  Reprodução fiel de <strong>{platformConfig?.name}</strong>. Edite aqui exatamente como faria no app real — os dados serão usados para integrar via API.
                 </p>
-                <div className="flex flex-col gap-4 bg-muted/30 rounded-lg p-3">
-                  {platformConfig?.structure_media_urls?.map((url, idx) => {
-                    const isVideo = /\.(mp4|webm|mov|avi)(\?|$)/i.test(url);
-                    return (
-                      <div
-                        key={idx}
-                        className="w-full rounded-lg overflow-hidden border bg-background shadow-sm"
-                      >
-                        {isVideo ? (
-                          <video src={url} controls className="w-full h-auto block" />
-                        ) : (
-                          <img
-                            src={url}
-                            alt={`Estrutura ${platformConfig?.name} ${idx + 1}`}
-                            className="w-full h-auto block cursor-zoom-in"
-                            onClick={() => window.open(url, '_blank')}
-                          />
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
+                <PlatformReplicaRenderer
+                  replica={platformConfig!.platform_replica}
+                  values={variation.custom_field_values || {}}
+                  onChange={(vals) => onUpdate(variation.id, { custom_field_values: vals })}
+                />
               </CardContent>
             </CollapsibleContent>
           </Card>
         </Collapsible>
       )}
+
+      {/* Fallback — se não houver réplica visual ainda mas há prints, mostrar galeria */}
+      {(platformConfig?.platform_replica?.sections?.length ?? 0) === 0 &&
+        (platformConfig?.structure_media_urls?.length ?? 0) > 0 && (
+          <Card>
+            <CardHeader className="py-3">
+              <CardTitle className="text-sm flex items-center gap-2">
+                🧩 Estrutura Real (Prints)
+                <Badge variant="outline" className="text-[10px]">
+                  Gere a réplica visual editando a plataforma
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0 pb-4">
+              <div className="grid grid-cols-2 gap-2">
+                {platformConfig?.structure_media_urls?.map((url, idx) => {
+                  const isVideo = /\.(mp4|webm|mov|avi)(\?|$)/i.test(url);
+                  return isVideo ? (
+                    <video key={idx} src={url} controls className="w-full rounded border" />
+                  ) : (
+                    <img
+                      key={idx}
+                      src={url}
+                      alt={`Print ${idx + 1}`}
+                      className="w-full rounded border cursor-zoom-in"
+                      onClick={() => window.open(url, '_blank')}
+                    />
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
 
       <ResponsiveDialog
