@@ -62,6 +62,7 @@ export function MediaLibrary({ ideaId, variationId, onSelect, onSelectMultiple, 
   const [editingMedia, setEditingMedia] = useState<MediaItem | null>(null);
   const [qualityFilter, setQualityFilter] = useState<string | null>(null);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [sourceFilter, setSourceFilter] = useState<'all' | 'product' | 'idea'>('all');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const {
