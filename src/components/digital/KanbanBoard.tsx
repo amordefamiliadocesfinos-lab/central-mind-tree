@@ -290,24 +290,22 @@ function SortableVariationCard({
       )}
       onClick={onClick}
     >
-      <CardContent className="p-3 space-y-1.5">
-        {/* Grip + Platform */}
-        <div className="flex items-center gap-1.5">
-          <button {...attributes} {...listeners} className="touch-none shrink-0">
+      <CardContent className="p-2.5 space-y-1.5">
+        {/* Grip + Platform icon + Idea title (side by side) */}
+        <div className="flex items-start gap-1.5">
+          <button {...attributes} {...listeners} className="touch-none shrink-0 pt-0.5">
             <GripVertical className="h-4 w-4 text-muted-foreground" />
           </button>
-          {platform ? (
-            <div className="flex items-center gap-1.5 min-w-0 flex-1">
-              <PlatformIcon icon={platform.icon} size="sm" />
-              <span className="text-xs font-medium text-foreground truncate">{platform.name}</span>
-            </div>
-          ) : (
-            <span className="text-xs text-muted-foreground">Plataforma</span>
+          {platform && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="shrink-0 pt-0.5"><PlatformIcon icon={platform.icon} size="sm" /></span>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs">{platform.name}</TooltipContent>
+            </Tooltip>
           )}
+          <h4 className="font-semibold text-sm leading-snug flex-1 min-w-0 break-words">{ideaTitle}</h4>
         </div>
-
-        {/* Idea title */}
-        <h4 className="font-semibold text-sm leading-snug">{ideaTitle}</h4>
 
         {/* Type badge */}
         <div className="flex items-center gap-1 flex-wrap">
