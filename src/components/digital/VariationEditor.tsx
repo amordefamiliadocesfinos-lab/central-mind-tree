@@ -213,7 +213,7 @@ export function VariationEditor({
 
   const effectiveReplica = liveReplica || platformConfig?.platform_replica || { sections: [] };
 
-  const handleGenerateReplica = async () => {
+  const handleGenerateReplica = async (useFreeModel = false) => {
     if (!platformConfig) return;
     const urls = platformConfig.structure_media_urls || [];
     if (urls.length === 0) {
@@ -227,6 +227,7 @@ export function VariationEditor({
           title: platformConfig.name,
           field: 'platform_structure_from_media',
           mediaUrls: urls,
+          model: useFreeModel ? 'google/gemini-2.5-flash' : undefined,
         },
       });
       if (error) throw error;
