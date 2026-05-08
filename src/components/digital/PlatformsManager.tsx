@@ -451,6 +451,7 @@ export function PlatformsManager() {
       fields,
       custom_fields: formData.custom_fields,
       checklist_template,
+      structure_media_urls: realStructureMedia,
     };
 
     if (editingPlatform) {
