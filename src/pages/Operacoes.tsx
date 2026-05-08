@@ -458,6 +458,8 @@ export default function Operacoes() {
                           product={product}
                           balance={getProductBalance(product.id)}
                           onEdit={setEditingProduct}
+                          linkedIdeas={productIdeasMap[product.id]}
+                          platformsMap={platformsMap}
                         />
                       ))}
                   </div>
