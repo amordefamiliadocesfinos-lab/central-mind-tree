@@ -602,6 +602,7 @@ export function PlatformsManager() {
     setAiSuggestions(null);
     setRealStructureMedia([]);
     setRealStructureNotes('');
+    setPlatformReplica({ sections: [] });
     setShowDialog(false);
   };
 
