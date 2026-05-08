@@ -206,7 +206,11 @@ export default function Operacoes() {
   const [showCategoriesManager, setShowCategoriesManager] = useState(false);
   const { categoryNames: dynamicCategories } = useProductCategories();
   const { productIdeasMap } = useProductIdeas();
-  const { platformsMap } = usePlatforms();
+  const { platforms: allPlatforms } = usePlatforms();
+  const platformsById = useMemo(
+    () => Object.fromEntries(allPlatforms.map(p => [p.id, p])),
+    [allPlatforms]
+  );
   const productCategories = dynamicCategories.length > 0 ? dynamicCategories : [...PRODUCT_CATEGORIES];
   const { createContact } = useContacts();
   const { addEntry } = useContactHistory();
