@@ -201,6 +201,9 @@ export default function Operacoes() {
   const [showCostEditor, setShowCostEditor] = useState(false);
   const [showNewContactFromSale, setShowNewContactFromSale] = useState(false);
   const [ordersViewMode, setOrdersViewMode] = useState<'list' | 'grid' | 'planning'>('list');
+  const [showCategoriesManager, setShowCategoriesManager] = useState(false);
+  const { categoryNames: dynamicCategories } = useProductCategories();
+  const productCategories = dynamicCategories.length > 0 ? dynamicCategories : [...PRODUCT_CATEGORIES];
   const { createContact } = useContacts();
   const { addEntry } = useContactHistory();
   const [crmContactId, setCrmContactId] = useState<string | null>(null);
