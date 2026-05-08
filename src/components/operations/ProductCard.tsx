@@ -2,9 +2,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { Image, AlertTriangle, ArrowUpDown, History, Edit } from 'lucide-react';
+import { Image, AlertTriangle, ArrowUpDown, History, Edit, Lightbulb, Plus } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { Product } from '@/hooks/useOrders';
+import { useNavigate } from 'react-router-dom';
+import { PlatformIcon } from '@/components/digital/PlatformsManager';
+import type { LinkedIdeaSummary } from '@/hooks/useProductIdeas';
+import type { Platform } from '@/hooks/usePlatforms';
 
 interface ProductCardProps {
   product: Product;
@@ -13,6 +17,8 @@ interface ProductCardProps {
   onMovement?: (product: { id: string; name: string; balance: number }) => void;
   onHistory?: (productId: string) => void;
   showInventoryActions?: boolean;
+  linkedIdeas?: LinkedIdeaSummary[];
+  platformsMap?: Record<string, Platform>;
 }
 
 export function ProductCard({ 
