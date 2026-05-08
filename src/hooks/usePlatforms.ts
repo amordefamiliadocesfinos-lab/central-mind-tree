@@ -125,6 +125,7 @@ export function usePlatforms() {
       ])),
       checklist_template: JSON.parse(JSON.stringify(platform.checklist_template || [])),
       structure_media_urls: JSON.parse(JSON.stringify(platform.structure_media_urls || [])),
+      platform_replica: JSON.parse(JSON.stringify(platform.platform_replica || { sections: [] })),
       is_active: true,
       order_index: platforms.length,
     };
