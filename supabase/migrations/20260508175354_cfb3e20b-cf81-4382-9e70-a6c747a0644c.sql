@@ -1,0 +1,1 @@
+ALTER TABLE public.digital_platforms ADD COLUMN IF NOT EXISTS platform_replica jsonb NOT NULL DEFAULT '{}'::jsonb;

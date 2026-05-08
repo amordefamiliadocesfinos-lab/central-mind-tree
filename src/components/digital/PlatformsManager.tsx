@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { usePlatforms, Platform, CustomField } from '@/hooks/usePlatforms';
+import { usePlatforms, Platform, CustomField, PlatformReplica } from '@/hooks/usePlatforms';
 import { usePlatformGroups, PlatformGroup } from '@/hooks/usePlatformGroups';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -238,6 +238,7 @@ export function PlatformsManager() {
   const [realStructureLoading, setRealStructureLoading] = useState(false);
   const [realStructureUploading, setRealStructureUploading] = useState(false);
   const [realStructureNotes, setRealStructureNotes] = useState<string>('');
+  const [platformReplica, setPlatformReplica] = useState<PlatformReplica>({ sections: [] });
   const realMediaInputRef = useRef<HTMLInputElement>(null);
 
   // Upload custom icon image
@@ -463,6 +464,16 @@ export function PlatformsManager() {
           (data.checklist || []).join('\n') || prev.checklist_items,
       }));
       setRealStructureNotes(data.notes || '');
+
+      // Capture full visual replica schema if AI returned it
+      if (data.sections && Array.isArray(data.sections)) {
+        setPlatformReplica({
+          brand_color: data.brand_color,
+          brand_name: data.brand_name || formData.name,
+          sections: data.sections,
+        });
+      }
+
       setAiStructured(true);
       setShowAdvanced(true);
       toast.success(`Estrutura real extraída: ${newFields.length} campos`);
@@ -491,6 +502,7 @@ export function PlatformsManager() {
     setShowAdvanced(false);
     setRealStructureMedia([]);
     setRealStructureNotes('');
+    setPlatformReplica({ sections: [] });
     setShowDialog(true);
   };
 
@@ -511,6 +523,7 @@ export function PlatformsManager() {
     setShowAdvanced(true); // Show all fields in edit mode
     setRealStructureMedia(platform.structure_media_urls || []);
     setRealStructureNotes('');
+    setPlatformReplica(platform.platform_replica || { sections: [] });
     setShowDialog(true);
   };
 
@@ -560,6 +573,7 @@ export function PlatformsManager() {
       custom_fields: formData.custom_fields,
       checklist_template,
       structure_media_urls: realStructureMedia,
+      platform_replica: platformReplica,
     };
 
     if (editingPlatform) {
@@ -588,6 +602,7 @@ export function PlatformsManager() {
     setAiSuggestions(null);
     setRealStructureMedia([]);
     setRealStructureNotes('');
+    setPlatformReplica({ sections: [] });
     setShowDialog(false);
   };
 

@@ -9,6 +9,32 @@ export interface CustomField {
   select_options?: string[];
 }
 
+export interface ReplicaField {
+  id: string;
+  label: string;
+  type: 'input' | 'textarea' | 'number' | 'select' | 'media' | 'switch' | 'price' | 'tags' | 'date';
+  placeholder?: string;
+  hint?: string;
+  required?: boolean;
+  options?: string[];
+  prefix?: string;
+  suffix?: string;
+  max_length?: number;
+}
+
+export interface ReplicaSection {
+  id: string;
+  title: string;
+  icon?: string;
+  fields: ReplicaField[];
+}
+
+export interface PlatformReplica {
+  brand_color?: string;
+  brand_name?: string;
+  sections: ReplicaSection[];
+}
+
 export interface Platform {
   id: string;
   name: string;
@@ -22,6 +48,7 @@ export interface Platform {
   custom_fields: CustomField[];
   checklist_template: { id: string; text: string }[];
   structure_media_urls: string[];
+  platform_replica: PlatformReplica;
   is_active: boolean;
   order_index: number;
   created_at: string;
@@ -75,7 +102,10 @@ export function usePlatforms() {
       structure_media_urls: Array.isArray((p as any).structure_media_urls)
         ? ((p as any).structure_media_urls as string[])
         : [],
-    })) as Platform[];
+      platform_replica: ((p as any).platform_replica && typeof (p as any).platform_replica === 'object' && Array.isArray((p as any).platform_replica.sections))
+        ? ((p as any).platform_replica as PlatformReplica)
+        : { sections: [] },
+    })) as unknown as Platform[];
 
     setPlatforms(parsedData);
     setLoading(false);
@@ -95,6 +125,7 @@ export function usePlatforms() {
       ])),
       checklist_template: JSON.parse(JSON.stringify(platform.checklist_template || [])),
       structure_media_urls: JSON.parse(JSON.stringify(platform.structure_media_urls || [])),
+      platform_replica: JSON.parse(JSON.stringify(platform.platform_replica || { sections: [] })),
       is_active: true,
       order_index: platforms.length,
     };
@@ -123,6 +154,9 @@ export function usePlatforms() {
     }
     if (updates.checklist_template) {
       dbUpdates.checklist_template = JSON.parse(JSON.stringify(updates.checklist_template));
+    }
+    if (updates.platform_replica) {
+      dbUpdates.platform_replica = JSON.parse(JSON.stringify(updates.platform_replica));
     }
     
     const { error } = await supabase

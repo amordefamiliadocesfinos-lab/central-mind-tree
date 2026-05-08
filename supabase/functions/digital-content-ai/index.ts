@@ -341,28 +341,52 @@ serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      systemPrompt = `Você é um especialista em análise visual de plataformas digitais (marketplaces, redes sociais, e-commerce). Você recebe screenshots da interface real da plataforma e extrai fielmente TODOS os campos visíveis que o usuário precisa preencher (títulos, descrições, preços, variações, peso, dimensões, categorias, atributos, mídias, cupons, etc).`;
-      userPrompt = `Analise as imagens da plataforma "${title}" em anexo. Identifique TODOS os campos de cadastro/preenchimento visíveis nos prints (incluindo títulos de seção, atributos, variações, fotos, preços, dimensões, etc).
+      systemPrompt = `Você é um especialista em UI/UX que analisa screenshots de plataformas digitais (marketplaces, redes sociais, e-commerce, apps) e reproduz fielmente a interface como um schema interativo. Sua resposta deve permitir reproduzir VISUALMENTE a tela real da plataforma com seções, ícones, cores e campos editáveis idênticos.`;
+      userPrompt = `Analise as imagens da plataforma "${title}" em anexo. Reproduza FIELMENTE a tela de cadastro/edição como um schema JSON estruturado, agrupando campos em seções como aparecem na interface real.
 
-Retorne um JSON com a estrutura real extraída:
+Retorne um JSON com:
 {
+  "brand_color": "#HEX da cor primária da marca (ex: #EE4D2D para Shopee, #E60023 para Pinterest, #1306FF para Mercado Livre)",
+  "brand_name": "Nome da plataforma como aparece no topo",
+  "sections": [
+    {
+      "id": "identificador_snake_case",
+      "title": "Título exato da seção como aparece (ex: 'Informações básicas', 'Especificações', 'Vendas')",
+      "icon": "emoji representativo (ex: 📷, 📝, 💰, 📦, 🚚)",
+      "fields": [
+        {
+          "id": "identificador_snake_case_unico",
+          "label": "Nome EXATO do campo conforme a plataforma",
+          "type": "input | textarea | number | select | media | switch | price | tags | date",
+          "placeholder": "texto cinza dentro do campo se houver",
+          "hint": "texto auxiliar abaixo do campo se houver",
+          "required": true/false (se houver asterisco vermelho ou indicação),
+          "options": ["opção1","opção2"] (apenas para select),
+          "prefix": "R$" (apenas para price ou campos com prefixo visível),
+          "suffix": "g | cm | un" (sufixo se houver, ex: peso, dimensão),
+          "max_length": 100 (se houver contador visível)
+        }
+      ]
+    }
+  ],
   "custom_fields": [
-    {"id": "identificador_snake_case", "label": "Nome exato do campo conforme aparece na plataforma", "type": "input | textarea | number | select | date | media"}
+    {"id": "mesmo_id_dos_fields_acima", "label": "Mesmo label", "type": "input | textarea | number | select | date | media"}
   ],
-  "checklist": [
-    "Item de verificação baseado no que precisa estar preenchido (máx 60 caracteres)"
-  ],
-  "aspect_ratio": "proporção principal das mídias se identificável (ex: 1:1) ou null",
-  "notes": "Observações importantes sobre a estrutura identificada (1-2 frases)"
+  "checklist": ["Item de verificação (máx 60 caracteres)"],
+  "aspect_ratio": "proporção principal das mídias (ex: 1:1) ou null",
+  "notes": "Observações sobre a estrutura (1-2 frases)"
 }
 
-Regras:
-- Seja FIEL ao que aparece nas imagens — extraia EXATAMENTE os nomes dos campos como vistos
-- Use 'textarea' para descrições/legendas longas, 'number' para preços/quantidades/peso, 'media' para uploads de fotos/vídeos, 'select' para categorias/variações com opções, 'date' para datas, 'input' para o resto
-- Inclua TODOS os campos visíveis, mesmo opcionais
-- O checklist deve refletir o que o usuário precisa garantir antes de publicar nessa plataforma
+REGRAS CRÍTICAS:
+- Reproduza TODAS as seções visíveis, na MESMA ORDEM em que aparecem na tela
+- Use os títulos EXATOS das seções (ex: "Informações básicas", "Especificações do produto", "Vendas", "Frete", "Outros")
+- Use os labels EXATOS dos campos (ex: "Nome do produto", "Categoria", "Preço", "Estoque", "Peso (Após embalagem)")
+- Identifique tipos corretos: 'media' para upload foto/vídeo, 'price' para preços (com prefix R$), 'number' para quantidade/peso/dimensão (com suffix apropriado), 'select' para campos com seta/dropdown, 'switch' para toggles on/off, 'tags' para campos multi-valor, 'textarea' para descrições longas, 'input' para texto curto
+- Marque required=true para campos com asterisco * vermelho
+- Para "brand_color" identifique a cor primária real da marca (laranja Shopee, amarelo Mercado Livre, vermelho Pinterest, azul Facebook, etc)
+- "custom_fields" deve replicar TODOS os fields de todas as sections (formato plano para compatibilidade)
 
-Retorne APENAS o JSON válido, sem markdown.`;
+Retorne APENAS JSON válido, sem markdown.`;
 
       const userContent: any[] = [{ type: "text", text: userPrompt }];
       for (const url of mediaUrls) {

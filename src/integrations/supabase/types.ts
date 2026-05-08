@@ -1201,6 +1201,7 @@ export type Database = {
           name: string
           order_index: number
           parent_id: string | null
+          platform_replica: Json
           structure_media_urls: Json
           updated_at: string
         }
@@ -1219,6 +1220,7 @@ export type Database = {
           name: string
           order_index?: number
           parent_id?: string | null
+          platform_replica?: Json
           structure_media_urls?: Json
           updated_at?: string
         }
@@ -1237,6 +1239,7 @@ export type Database = {
           name?: string
           order_index?: number
           parent_id?: string | null
+          platform_replica?: Json
           structure_media_urls?: Json
           updated_at?: string
         }
