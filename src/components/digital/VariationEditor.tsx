@@ -57,6 +57,7 @@ export function VariationEditor({
   const [showIdea, setShowIdea] = useState(true);
   const [showChecklist, setShowChecklist] = useState(true);
   const [showMetrics, setShowMetrics] = useState(false);
+  const [showRealStructure, setShowRealStructure] = useState(true);
   
   // Find the platform from dynamic platforms list
   const platformConfig = platforms.find(p => p.id === variation.platform);
