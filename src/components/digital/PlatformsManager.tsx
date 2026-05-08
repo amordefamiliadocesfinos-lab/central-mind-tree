@@ -862,6 +862,19 @@ export function PlatformsManager() {
                   )}
                   {aiStructureLoading ? 'Analisando...' : 'Estruturar com IA'}
                 </Button>
+
+                {/* Real Platform Structure - from screenshots */}
+                <RealStructurePanel
+                  platformName={formData.name}
+                  media={realStructureMedia}
+                  uploading={realStructureUploading}
+                  loading={realStructureLoading}
+                  notes={realStructureNotes}
+                  inputRef={realMediaInputRef}
+                  onUpload={handleRealStructureUpload}
+                  onRemove={removeRealStructureMedia}
+                  onExtract={extractRealStructure}
+                />
               </div>
               <div className="border-t pt-3">
                 <Button
