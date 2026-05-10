@@ -334,6 +334,7 @@ export function useServiceChat() {
     approveAISuggestion,
     updateConversation,
     deleteConversation,
+    linkContactToConversation,
     toggleAutoReply,
     refetch: fetchConversations,
   };
