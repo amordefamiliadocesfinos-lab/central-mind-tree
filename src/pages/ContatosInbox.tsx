@@ -378,6 +378,7 @@ export default function ContatosInbox() {
       </div>
 
       {/* Quick conversation */}
+      <MergeDuplicatesDialog open={mergeOpen} onOpenChange={setMergeOpen} onMerged={() => { load(); loadOpenConvs(); }} />
       <QuickConversationDialog
         open={quickOpen}
         onOpenChange={setQuickOpen}
