@@ -1,5 +1,7 @@
 import { useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { Contact } from '@/hooks/useContacts';
+import { useContactConversations } from '@/hooks/useContactConversations';
 import { ContactAvatar } from './ContactAvatar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
