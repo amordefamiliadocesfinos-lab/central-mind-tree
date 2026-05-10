@@ -256,6 +256,8 @@ export function ServicePanel() {
                 <ChatHeader
                   conversation={activeConv}
                   platform={getPlatform(activeConv.platform_id)}
+                  linkedContact={linkedContact}
+                  onLinkContact={(cid) => linkContactToConversation(activeConv.id, cid)}
                   onUpdateFunnel={(stage) => updateConversation(activeConv.id, { funnel_stage: stage } as any)}
                   onClose={() => updateConversation(activeConv.id, { status: 'closed' } as any)}
                   onDelete={() => deleteConversation(activeConv.id)}
