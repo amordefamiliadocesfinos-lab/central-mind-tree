@@ -93,6 +93,10 @@ export default function Digital() {
   // Sync with URL params (e.g., from Operações > Produtos)
   const [searchParams, setSearchParams] = useSearchParams();
   useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam && ['ideias','calendario','midia','metricas','plataformas','tendencias','engajamento','faq','atendimento'].includes(tabParam)) {
+      setActiveTab(tabParam as any);
+    }
     const productId = searchParams.get('product_id');
     const wantNewIdea = searchParams.get('newIdea') === '1';
     if (!productId && !wantNewIdea) return;
