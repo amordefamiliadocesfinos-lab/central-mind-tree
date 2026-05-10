@@ -90,6 +90,7 @@ export function useServiceChat() {
 
   const createConversation = useCallback(async (data: {
     platform_id?: string;
+    contact_id?: string | null;
     contact_name?: string;
     contact_handle?: string;
   }) => {
@@ -97,6 +98,7 @@ export function useServiceChat() {
       .from('service_conversations')
       .insert({
         platform_id: data.platform_id || null,
+        contact_id: data.contact_id || null,
         contact_name: data.contact_name || null,
         contact_handle: data.contact_handle || null,
         status: 'open',
@@ -113,6 +115,17 @@ export function useServiceChat() {
     fetchConversations();
     return conv as unknown as ServiceConversation;
   }, [fetchConversations]);
+
+  const linkContactToConversation = useCallback(async (conversationId: string, contactId: string | null) => {
+    const { error } = await supabase
+      .from('service_conversations')
+      .update({ contact_id: contactId })
+      .eq('id', conversationId);
+    if (error) { toast.error('Erro ao vincular contato'); return; }
+    toast.success(contactId ? 'Contato vinculado' : 'Vínculo removido');
+    fetchConversations();
+  }, [fetchConversations]);
+
 
   const sendMessage = useCallback(async (conversationId: string, content: string, sender: 'customer' | 'agent' = 'agent') => {
     const { data: msg, error } = await supabase
