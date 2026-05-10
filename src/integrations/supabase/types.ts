@@ -481,6 +481,9 @@ export type Database = {
           is_active: boolean
           issuing_agency: string | null
           landline: string | null
+          last_payment_date: string | null
+          last_purchase_date: string | null
+          lifetime_value: number
           marital_status: string | null
           mobile: string | null
           mobile_carrier: string | null
@@ -495,6 +498,7 @@ export type Database = {
           nfe_email: string | null
           notes: string | null
           origem_lead: string | null
+          paid_orders_count: number
           payment_condition: string | null
           person_type: string | null
           phone: string | null
@@ -557,6 +561,9 @@ export type Database = {
           is_active?: boolean
           issuing_agency?: string | null
           landline?: string | null
+          last_payment_date?: string | null
+          last_purchase_date?: string | null
+          lifetime_value?: number
           marital_status?: string | null
           mobile?: string | null
           mobile_carrier?: string | null
@@ -571,6 +578,7 @@ export type Database = {
           nfe_email?: string | null
           notes?: string | null
           origem_lead?: string | null
+          paid_orders_count?: number
           payment_condition?: string | null
           person_type?: string | null
           phone?: string | null
@@ -633,6 +641,9 @@ export type Database = {
           is_active?: boolean
           issuing_agency?: string | null
           landline?: string | null
+          last_payment_date?: string | null
+          last_purchase_date?: string | null
+          lifetime_value?: number
           marital_status?: string | null
           mobile?: string | null
           mobile_carrier?: string | null
@@ -647,6 +658,7 @@ export type Database = {
           nfe_email?: string | null
           notes?: string | null
           origem_lead?: string | null
+          paid_orders_count?: number
           payment_condition?: string | null
           person_type?: string | null
           phone?: string | null
