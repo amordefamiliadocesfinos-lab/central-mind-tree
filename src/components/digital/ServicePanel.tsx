@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -394,6 +394,7 @@ function ConversationList({ conversations, platforms, activeId, onSelect }: {
             )}
           >
             <Avatar className="h-10 w-10 shrink-0">
+              {conv.contact_avatar_url && <AvatarImage src={conv.contact_avatar_url} alt={conv.contact_name || ''} />}
               <AvatarFallback className="text-xs">{initials}</AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
@@ -468,6 +469,9 @@ function ChatHeader({ conversation, platform, linkedContact, onLinkContact, onBa
           </Button>
         )}
         <Avatar className="h-8 w-8 shrink-0">
+          {(linkedContact?.photo_url || conversation.contact_avatar_url) && (
+            <AvatarImage src={linkedContact?.photo_url || conversation.contact_avatar_url} alt={displayName} />
+          )}
           <AvatarFallback className="text-xs">
             {displayName.slice(0, 2).toUpperCase()}
           </AvatarFallback>
