@@ -394,6 +394,7 @@ function ConversationList({ conversations, platforms, activeId, onSelect }: {
             )}
           >
             <Avatar className="h-10 w-10 shrink-0">
+              {conv.contact_avatar_url && <AvatarImage src={conv.contact_avatar_url} alt={conv.contact_name || ''} />}
               <AvatarFallback className="text-xs">{initials}</AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">
