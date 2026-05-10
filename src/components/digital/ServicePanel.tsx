@@ -40,19 +40,21 @@ export function ServicePanel() {
     messagesLoading, aiSuggesting, selectConversation,
     createConversation, sendMessage, suggestAIResponse,
     approveAISuggestion, updateConversation, deleteConversation,
-    toggleAutoReply,
+    toggleAutoReply, linkContactToConversation,
   } = useServiceChat();
   const { activePlatforms } = usePlatforms();
+  const { contacts } = useContacts();
   const isMobile = useIsMobile();
 
   const [filterPlatform, setFilterPlatform] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('open');
   const [showNewConv, setShowNewConv] = useState(false);
-  const [newConv, setNewConv] = useState({ platform_id: '', contact_name: '', contact_handle: '' });
+  const [newConv, setNewConv] = useState<{ platform_id: string; contact_id: string | null; contact_name: string; contact_handle: string }>({ platform_id: '', contact_id: null, contact_name: '', contact_handle: '' });
   const [inputMessage, setInputMessage] = useState('');
   const [showMobileChat, setShowMobileChat] = useState(false);
 
   const activeConv = conversations.find(c => c.id === activeConversationId);
+  const linkedContact = activeConv?.contact_id ? contacts.find(c => c.id === activeConv.contact_id) : null;
 
   const filteredConversations = conversations.filter(c => {
     if (filterPlatform !== 'all' && c.platform_id !== filterPlatform) return false;
