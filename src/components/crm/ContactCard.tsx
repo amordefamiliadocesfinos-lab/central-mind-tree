@@ -332,7 +332,35 @@ export function ContactCard({
                   </div>
                 )}
 
-                {/* Notes */}
+                {/* Customer Health (auto-synced from orders + payments) */}
+                {((contact.paid_orders_count || 0) > 0 || (contact.lifetime_value || 0) > 0) && (
+                  <div className="rounded-md border border-emerald-200 bg-emerald-50/40 dark:border-emerald-800/60 dark:bg-emerald-950/20 px-2 py-1.5">
+                    <p className="text-[10px] font-semibold text-emerald-700 dark:text-emerald-400 mb-1">
+                      💎 Saúde do Cliente
+                    </p>
+                    <div className="grid grid-cols-3 gap-1.5 text-[10px]">
+                      <div className="text-center">
+                        <div className="font-bold text-foreground">{contact.paid_orders_count || 0}</div>
+                        <div className="text-muted-foreground">Pedidos</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-bold text-foreground">
+                          {(contact.lifetime_value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 })}
+                        </div>
+                        <div className="text-muted-foreground">Total</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="font-bold text-foreground">
+                          {contact.last_purchase_date
+                            ? `${differenceInDays(new Date(), parseISO(contact.last_purchase_date))}d`
+                            : '—'}
+                        </div>
+                        <div className="text-muted-foreground">Últ. compra</div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {contact.notes && (
                   <div className="text-[11px] text-muted-foreground bg-muted/30 rounded-md px-2 py-1.5 border border-border/50">
                     <p className="font-medium text-foreground text-[10px] mb-0.5">📝 Observações</p>
