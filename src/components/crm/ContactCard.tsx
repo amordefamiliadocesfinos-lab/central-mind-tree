@@ -127,6 +127,9 @@ export function ContactCard({
   const [followUpNote, setFollowUpNote] = useState('');
   const [followUpType, setFollowUpType] = useState('mensagem');
   const [savingFollowUp, setSavingFollowUp] = useState(false);
+  const { conversations: linkedConvos } = useContactConversations(contact.id);
+  const openConvCount = linkedConvos.filter(c => c.status === 'open').length;
+  const totalUnread = linkedConvos.reduce((s, c) => s + (c.unread_count || 0), 0);
 
   const urgencyCfg = URGENCY_LEVELS[urgencyLevel];
   const temp = contact.temperatura_lead || 'morno';
