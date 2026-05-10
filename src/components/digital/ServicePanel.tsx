@@ -1,7 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useServiceChat, ServiceConversation, ServiceMessage, SalesChannelEntry } from '@/hooks/useServiceChat';
 import { usePlatforms } from '@/hooks/usePlatforms';
+import { useContacts } from '@/hooks/useContacts';
 import { PlatformIcon } from './PlatformsManager';
+import { ContactAutocomplete } from '@/components/operations/ContactAutocomplete';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -16,7 +19,7 @@ import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import {
   Plus, MessageCircle, Send, Sparkles, Check, X, Trash2,
   Loader2, ArrowLeft, ChevronRight, AlertTriangle, User,
-  Bot, Copy, Archive,
+  Bot, Copy, Archive, Link2, ExternalLink, Crown,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
