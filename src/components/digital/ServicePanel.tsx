@@ -311,12 +311,33 @@ export function ServicePanel() {
             </Select>
           </div>
           <div className="space-y-2">
+            <Label>Vincular contato (CRM)</Label>
+            <ContactAutocomplete
+              value={newConv.contact_name}
+              contactId={newConv.contact_id}
+              onSelect={(c) => {
+                if (c) {
+                  setNewConv(prev => ({
+                    ...prev,
+                    contact_id: c.id,
+                    contact_name: c.name,
+                    contact_handle: prev.contact_handle || c.whatsapp || c.phone || '',
+                  }));
+                } else {
+                  setNewConv(prev => ({ ...prev, contact_id: null }));
+                }
+              }}
+              placeholder="Buscar contato existente..."
+            />
+            <p className="text-[10px] text-muted-foreground">Opcional. Se o telefone/@ casar com um contato, o vínculo é automático.</p>
+          </div>
+          <div className="space-y-2">
             <Label>Nome do Contato</Label>
             <Input value={newConv.contact_name} onChange={(e) => setNewConv(prev => ({ ...prev, contact_name: e.target.value }))} placeholder="Maria Silva" />
           </div>
           <div className="space-y-2">
-            <Label>@ do Contato</Label>
-            <Input value={newConv.contact_handle} onChange={(e) => setNewConv(prev => ({ ...prev, contact_handle: e.target.value }))} placeholder="@usuario" />
+            <Label>Telefone / @ do Contato</Label>
+            <Input value={newConv.contact_handle} onChange={(e) => setNewConv(prev => ({ ...prev, contact_handle: e.target.value }))} placeholder="@usuario ou (11) 9..." />
           </div>
           <Button onClick={handleCreateConv} className="w-full">Criar Conversa</Button>
         </div>
