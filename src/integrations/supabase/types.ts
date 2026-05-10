@@ -3447,6 +3447,7 @@ export type Database = {
           auto_reply_enabled: boolean
           contact_avatar_url: string | null
           contact_handle: string | null
+          contact_id: string | null
           contact_name: string | null
           created_at: string
           funnel_stage: string
@@ -3463,6 +3464,7 @@ export type Database = {
           auto_reply_enabled?: boolean
           contact_avatar_url?: string | null
           contact_handle?: string | null
+          contact_id?: string | null
           contact_name?: string | null
           created_at?: string
           funnel_stage?: string
@@ -3479,6 +3481,7 @@ export type Database = {
           auto_reply_enabled?: boolean
           contact_avatar_url?: string | null
           contact_handle?: string | null
+          contact_id?: string | null
           contact_name?: string | null
           created_at?: string
           funnel_stage?: string
@@ -3510,6 +3513,7 @@ export type Database = {
           id: string
           intent_detected: string | null
           is_ai_suggested: boolean
+          logged_to_history: boolean
           sender: string
         }
         Insert: {
@@ -3520,6 +3524,7 @@ export type Database = {
           id?: string
           intent_detected?: string | null
           is_ai_suggested?: boolean
+          logged_to_history?: boolean
           sender?: string
         }
         Update: {
@@ -3530,6 +3535,7 @@ export type Database = {
           id?: string
           intent_detected?: string | null
           is_ai_suggested?: boolean
+          logged_to_history?: boolean
           sender?: string
         }
         Relationships: [
@@ -3964,7 +3970,8 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      map_contact_to_conv_funnel: { Args: { _status: string }; Returns: string }
+      map_conv_to_contact_funnel: { Args: { _stage: string }; Returns: string }
     }
     Enums: {
       [_ in never]: never

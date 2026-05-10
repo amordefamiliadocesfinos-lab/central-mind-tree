@@ -1,5 +1,7 @@
 import { useState, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { Contact } from '@/hooks/useContacts';
+import { useContactConversations } from '@/hooks/useContactConversations';
 import { ContactAvatar } from './ContactAvatar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -125,6 +127,9 @@ export function ContactCard({
   const [followUpNote, setFollowUpNote] = useState('');
   const [followUpType, setFollowUpType] = useState('mensagem');
   const [savingFollowUp, setSavingFollowUp] = useState(false);
+  const { conversations: linkedConvos } = useContactConversations(contact.id);
+  const openConvCount = linkedConvos.filter(c => c.status === 'open').length;
+  const totalUnread = linkedConvos.reduce((s, c) => s + (c.unread_count || 0), 0);
 
   const urgencyCfg = URGENCY_LEVELS[urgencyLevel];
   const temp = contact.temperatura_lead || 'morno';
@@ -246,6 +251,22 @@ export function ContactCard({
                 <Clock className="h-2.5 w-2.5" />
                 {daysSinceContact}d sem resposta
               </span>
+            )}
+            {/* Linked conversations from Atendimento */}
+            {linkedConvos.length > 0 && (
+              <Link
+                to="/digital?tab=atendimento"
+                onClick={(e) => e.stopPropagation()}
+                className="inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold bg-violet-100 text-violet-700 border-violet-300 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-700 hover:opacity-80 transition-opacity"
+                title={`${linkedConvos.length} conversa(s) vinculada(s) — abrir Atendimento`}
+              >
+                <MessageCircle className="h-2.5 w-2.5" />
+                {linkedConvos.length}
+                {openConvCount > 0 && <span className="opacity-80">· {openConvCount} ab.</span>}
+                {totalUnread > 0 && (
+                  <span className="ml-0.5 inline-flex items-center justify-center bg-red-500 text-white rounded-full h-3 min-w-3 px-1 text-[8px] font-bold">{totalUnread}</span>
+                )}
+              </Link>
             )}
           </div>
 
