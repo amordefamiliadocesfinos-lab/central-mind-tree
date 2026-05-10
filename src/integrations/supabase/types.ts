@@ -3972,6 +3972,10 @@ export type Database = {
     Functions: {
       map_contact_to_conv_funnel: { Args: { _status: string }; Returns: string }
       map_conv_to_contact_funnel: { Args: { _stage: string }; Returns: string }
+      merge_contacts: {
+        Args: { _duplicate_id: string; _primary_id: string }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never
