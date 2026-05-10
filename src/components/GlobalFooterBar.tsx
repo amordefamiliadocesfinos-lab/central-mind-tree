@@ -495,21 +495,24 @@ export function GlobalFooterBar() {
         const adjusted = data.remaining_seconds - elapsedSinceLastSave;
 
         if (adjusted <= 0) {
-          // Timer already expired while tab was closed
+          // Timer already expired while tab was closed — finalize silently (no beep loop)
+          endsAtRef.current = null;
+          completedRef.current = true;
           setRemainingSeconds(0);
           setStatus("stopped");
-          // Persist the completed state
           await supabase
             .from("timer_state")
             .update({ remaining_seconds: 0, status: "stopped", last_update: new Date().toISOString() })
             .eq("id", data.id);
-          playAlertSound();
-          toast({ title: "Timer finalizado!" });
         } else {
+          endsAtRef.current = Date.now() + adjusted * 1000;
+          completedRef.current = false;
           setRemainingSeconds(adjusted);
           setStatus("running");
         }
       } else {
+        endsAtRef.current = null;
+        completedRef.current = savedStatus === "stopped" && (data.remaining_seconds ?? 0) <= 0;
         setRemainingSeconds(data.remaining_seconds);
         setStatus(savedStatus);
       }
@@ -537,6 +540,8 @@ export function GlobalFooterBar() {
       if (permission === 'default') {
         await requestPermission();
       }
+      endsAtRef.current = Date.now() + remainingSeconds * 1000;
+      completedRef.current = false;
       setStatus("running");
     } else {
       toast({
@@ -546,15 +551,32 @@ export function GlobalFooterBar() {
     }
   };
 
-  const handlePause = () => setStatus("paused");
-  const handleResume = () => setStatus("running");
-  
+  const handlePause = () => {
+    // Freeze remaining at the exact moment of pause based on the anchor.
+    if (endsAtRef.current != null) {
+      const left = Math.max(0, Math.ceil((endsAtRef.current - Date.now()) / 1000));
+      remainingRef.current = left;
+      setRemainingSeconds(left);
+    }
+    endsAtRef.current = null;
+    setStatus("paused");
+  };
+  const handleResume = () => {
+    endsAtRef.current = Date.now() + remainingRef.current * 1000;
+    completedRef.current = false;
+    setStatus("running");
+  };
+
   const handleStop = () => {
+    endsAtRef.current = null;
+    completedRef.current = true;
     setStatus("stopped");
   };
 
   const handleReset = () => {
-    handleStop();
+    endsAtRef.current = null;
+    completedRef.current = true;
+    setStatus("stopped");
     setRemainingSeconds(0);
   };
 
