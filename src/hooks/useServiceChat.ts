@@ -10,6 +10,7 @@ export interface SalesChannelEntry {
 export interface ServiceConversation {
   id: string;
   platform_id: string | null;
+  contact_id: string | null;
   contact_name: string | null;
   contact_handle: string | null;
   contact_avatar_url: string | null;
