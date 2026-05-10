@@ -199,6 +199,10 @@ export default function ContatosInbox() {
             </Button>
           </Link>
           <h1 className="text-base font-semibold flex-1">Caixa de Entrada</h1>
+          <Button size="sm" variant="outline" onClick={() => setMergeOpen(true)} className="gap-1.5 h-8" title="Mesclar contatos duplicados">
+            <Merge className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Duplicados</span>
+          </Button>
           <Button size="sm" onClick={() => setQuickOpen(true)} className="gap-1.5 h-8">
             <Zap className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Registrar conversa</span>
@@ -216,6 +220,46 @@ export default function ContatosInbox() {
             />
           </div>
         </div>
+        {openConvs.length > 0 && (
+          <div className="px-3 pb-3 border-t pt-2">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5 flex items-center gap-1.5">
+              <Inbox className="h-3 w-3" /> Conversas abertas no Atendimento ({openConvs.length})
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+              {openConvs.map(c => (
+                <Link
+                  key={c.id}
+                  to={`/digital?tab=atendimento&conversation=${c.id}`}
+                  className="shrink-0 w-[220px] border rounded-md p-2 hover:bg-muted/50 transition-colors bg-card"
+                >
+                  <div className="flex items-center gap-2">
+                    <ContactAvatar
+                      name={c.contact?.name || c.contact_name || '?'}
+                      photoUrl={c.contact?.photo_url || c.contact_avatar_url}
+                      size="sm"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-medium truncate flex items-center gap-1">
+                        {c.contact?.name || c.contact_name || 'Sem nome'}
+                        {c.contact?.client_classification === 'vip' && (
+                          <span className="text-[9px]">👑</span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground truncate">
+                        {c.last_message_preview || 'Sem mensagens'}
+                      </div>
+                    </div>
+                    {c.unread_count > 0 && (
+                      <Badge variant="destructive" className="text-[9px] h-4 px-1.5 shrink-0">
+                        {c.unread_count}
+                      </Badge>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid md:grid-cols-[380px_1fr] gap-0 md:gap-4 md:p-4">
