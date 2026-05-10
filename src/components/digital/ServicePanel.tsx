@@ -70,12 +70,13 @@ export function ServicePanel() {
   const handleCreateConv = async () => {
     const conv = await createConversation({
       platform_id: newConv.platform_id || undefined,
+      contact_id: newConv.contact_id || undefined,
       contact_name: newConv.contact_name || undefined,
       contact_handle: newConv.contact_handle || undefined,
     });
     if (conv) {
       setShowNewConv(false);
-      setNewConv({ platform_id: '', contact_name: '', contact_handle: '' });
+      setNewConv({ platform_id: '', contact_id: null, contact_name: '', contact_handle: '' });
       selectConversation(conv.id);
       if (isMobile) setShowMobileChat(true);
     }
