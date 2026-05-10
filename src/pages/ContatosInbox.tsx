@@ -47,6 +47,13 @@ export default function ContatosInbox() {
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [quickOpen, setQuickOpen] = useState(false);
+  const [mergeOpen, setMergeOpen] = useState(false);
+  const [openConvs, setOpenConvs] = useState<Array<{
+    id: string; contact_id: string | null; contact_name: string | null;
+    contact_avatar_url: string | null; last_message_preview: string | null;
+    last_message_at: string; unread_count: number; platform_id: string | null;
+    contact?: { name: string; photo_url: string | null; client_classification: string | null } | null;
+  }>>([]);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [summary, setSummary] = useState('');
   const [summaryLoading, setSummaryLoading] = useState(false);
