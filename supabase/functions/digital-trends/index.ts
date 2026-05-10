@@ -93,14 +93,18 @@ Responda em formato JSON: {"response": "sua resposta", "intent": "intenção det
         .map((m: any) => `${m.role}: ${m.content}`)
         .join('\n');
 
+      const ctxBlock = query.contact_context
+        ? `\n\n### Contexto do contato (CRM)\n${query.contact_context}\n`
+        : '';
       userPrompt = `Histórico da conversa:
 ${history}
 
 Plataforma: ${query.platform}
 Estágio no funil: ${query.funnel_stage}
-Nome do contato: ${query.contact_name}
+Nome do contato: ${query.contact_name}${ctxBlock}
 
 Sugira uma resposta profissional e empática para a última mensagem do cliente.
+Use o contexto do CRM (classificação, LTV, histórico) para personalizar o tom: clientes VIP/recorrentes merecem tratamento premium, leads novos merecem acolhimento, leads frios merecem reativação.
 A resposta deve ser natural, não robótica, e adequada à plataforma.`;
     }
 

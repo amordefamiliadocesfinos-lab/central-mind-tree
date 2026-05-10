@@ -8,9 +8,10 @@ import { Card } from '@/components/ui/card';
 import { ContactTimeline } from '@/components/crm/ContactTimeline';
 import { QuickConversationDialog } from '@/components/crm/QuickConversationDialog';
 import { ContactAvatar } from '@/components/crm/ContactAvatar';
+import { MergeDuplicatesDialog } from '@/components/crm/MergeDuplicatesDialog';
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ArrowLeft, Search, Zap, MessageCircle, Phone, ExternalLink, Sparkles, Loader2 } from 'lucide-react';
+import { ArrowLeft, Search, Zap, MessageCircle, Phone, ExternalLink, Sparkles, Loader2, Merge, Inbox } from 'lucide-react';
 import { openWhatsApp } from '@/lib/whatsapp';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -46,6 +47,13 @@ export default function ContatosInbox() {
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [quickOpen, setQuickOpen] = useState(false);
+  const [mergeOpen, setMergeOpen] = useState(false);
+  const [openConvs, setOpenConvs] = useState<Array<{
+    id: string; contact_id: string | null; contact_name: string | null;
+    contact_avatar_url: string | null; last_message_preview: string | null;
+    last_message_at: string; unread_count: number; platform_id: string | null;
+    contact?: { name: string; photo_url: string | null; client_classification: string | null } | null;
+  }>>([]);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [summary, setSummary] = useState('');
   const [summaryLoading, setSummaryLoading] = useState(false);
@@ -110,8 +118,27 @@ export default function ContatosInbox() {
     setLoading(false);
   };
 
+  const loadOpenConvs = async () => {
+    const { data } = await supabase
+      .from('service_conversations')
+      .select('id,contact_id,contact_name,contact_avatar_url,last_message_preview,last_message_at,unread_count,platform_id')
+      .eq('status', 'open')
+      .order('last_message_at', { ascending: false })
+      .limit(30);
+    const convs = (data || []) as any[];
+    const cids = Array.from(new Set(convs.map(c => c.contact_id).filter(Boolean))) as string[];
+    let byId = new Map<string, any>();
+    if (cids.length) {
+      const { data: cs } = await supabase.from('contacts')
+        .select('id,name,photo_url,client_classification').in('id', cids);
+      byId = new Map((cs || []).map((c: any) => [c.id, c]));
+    }
+    setOpenConvs(convs.map(c => ({ ...c, contact: c.contact_id ? byId.get(c.contact_id) : null })));
+  };
+
   useEffect(() => {
     load();
+    loadOpenConvs();
   }, []);
 
   const filtered = useMemo(() => {
@@ -172,6 +199,10 @@ export default function ContatosInbox() {
             </Button>
           </Link>
           <h1 className="text-base font-semibold flex-1">Caixa de Entrada</h1>
+          <Button size="sm" variant="outline" onClick={() => setMergeOpen(true)} className="gap-1.5 h-8" title="Mesclar contatos duplicados">
+            <Merge className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Duplicados</span>
+          </Button>
           <Button size="sm" onClick={() => setQuickOpen(true)} className="gap-1.5 h-8">
             <Zap className="h-3.5 w-3.5" />
             <span className="hidden sm:inline">Registrar conversa</span>
@@ -189,6 +220,46 @@ export default function ContatosInbox() {
             />
           </div>
         </div>
+        {openConvs.length > 0 && (
+          <div className="px-3 pb-3 border-t pt-2">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5 flex items-center gap-1.5">
+              <Inbox className="h-3 w-3" /> Conversas abertas no Atendimento ({openConvs.length})
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+              {openConvs.map(c => (
+                <Link
+                  key={c.id}
+                  to={`/digital?tab=atendimento&conversation=${c.id}`}
+                  className="shrink-0 w-[220px] border rounded-md p-2 hover:bg-muted/50 transition-colors bg-card"
+                >
+                  <div className="flex items-center gap-2">
+                    <ContactAvatar
+                      name={c.contact?.name || c.contact_name || '?'}
+                      photoUrl={c.contact?.photo_url || c.contact_avatar_url}
+                      size="sm"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-xs font-medium truncate flex items-center gap-1">
+                        {c.contact?.name || c.contact_name || 'Sem nome'}
+                        {c.contact?.client_classification === 'vip' && (
+                          <span className="text-[9px]">👑</span>
+                        )}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground truncate">
+                        {c.last_message_preview || 'Sem mensagens'}
+                      </div>
+                    </div>
+                    {c.unread_count > 0 && (
+                      <Badge variant="destructive" className="text-[9px] h-4 px-1.5 shrink-0">
+                        {c.unread_count}
+                      </Badge>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid md:grid-cols-[380px_1fr] gap-0 md:gap-4 md:p-4">
@@ -307,6 +378,7 @@ export default function ContatosInbox() {
       </div>
 
       {/* Quick conversation */}
+      <MergeDuplicatesDialog open={mergeOpen} onOpenChange={setMergeOpen} onMerged={() => { load(); loadOpenConvs(); }} />
       <QuickConversationDialog
         open={quickOpen}
         onOpenChange={setQuickOpen}

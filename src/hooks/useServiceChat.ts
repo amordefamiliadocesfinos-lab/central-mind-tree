@@ -176,6 +176,47 @@ export function useServiceChat() {
     const conv = conversations.find(c => c.id === conversationId);
     const recentMessages = messages.slice(-10);
 
+    // Etapa 5: contexto do CRM (se a conversa estiver vinculada a um contato)
+    let contactContext = '';
+    if (conv?.contact_id) {
+      const [{ data: contact }, { data: recentHistory }, { data: orders }] = await Promise.all([
+        supabase.from('contacts')
+          .select('name,fantasy_name,funnel_status,client_classification,temperatura_lead,lifetime_value,paid_orders_count,last_purchase_date,city,origem_lead,notes,next_action_text,next_action_date')
+          .eq('id', conv.contact_id).maybeSingle(),
+        supabase.from('contact_history')
+          .select('interaction_type,event_type,description,interaction_date,created_at')
+          .eq('contact_id', conv.contact_id)
+          .order('interaction_date', { ascending: false })
+          .limit(8),
+        supabase.from('orders')
+          .select('order_number,status,total_value,order_date')
+          .eq('contact_id', conv.contact_id)
+          .order('order_date', { ascending: false })
+          .limit(5),
+      ]);
+      if (contact) {
+        const lines: string[] = [
+          `Nome: ${contact.name}${contact.fantasy_name ? ` (${contact.fantasy_name})` : ''}`,
+          `Funil: ${contact.funnel_status} | Classificação: ${contact.client_classification ?? '—'} | Temperatura: ${contact.temperatura_lead ?? '—'}`,
+          `LTV: R$ ${Number(contact.lifetime_value || 0).toFixed(2)} | Pedidos pagos: ${contact.paid_orders_count ?? 0} | Última compra: ${contact.last_purchase_date ?? '—'}`,
+          `Cidade: ${contact.city ?? '—'} | Origem: ${contact.origem_lead ?? '—'}`,
+          `Próxima ação planejada: ${contact.next_action_text ?? '—'} (${contact.next_action_date ?? '—'})`,
+          contact.notes ? `Notas internas: ${contact.notes}` : '',
+        ].filter(Boolean);
+        if (orders?.length) {
+          lines.push(`Últimos pedidos: ${orders.map(o => `#${o.order_number}/${o.status}/R$${o.total_value ?? 0}`).join(' • ')}`);
+        }
+        if (recentHistory?.length) {
+          lines.push('Histórico recente:');
+          for (const h of recentHistory) {
+            const d = (h.interaction_date ?? h.created_at)?.slice(0, 10);
+            lines.push(`  - [${d}] ${h.interaction_type ?? h.event_type}: ${h.description?.slice(0, 140)}`);
+          }
+        }
+        contactContext = lines.join('\n');
+      }
+    }
+
     try {
       const { data, error } = await supabase.functions.invoke('digital-trends', {
         body: {
@@ -188,6 +229,7 @@ export function useServiceChat() {
             platform: conv?.platform_id || 'general',
             funnel_stage: conv?.funnel_stage || 'lead',
             contact_name: conv?.contact_name || 'Cliente',
+            contact_context: contactContext || undefined,
           },
         },
       });

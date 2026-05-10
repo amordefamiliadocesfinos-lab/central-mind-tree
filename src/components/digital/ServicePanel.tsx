@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Link } from 'react-router-dom';
 import { useServiceChat, ServiceConversation, ServiceMessage, SalesChannelEntry } from '@/hooks/useServiceChat';
 import { usePlatforms } from '@/hooks/usePlatforms';
@@ -52,6 +53,20 @@ export function ServicePanel() {
   const [newConv, setNewConv] = useState<{ platform_id: string; contact_id: string | null; contact_name: string; contact_handle: string }>({ platform_id: '', contact_id: null, contact_name: '', contact_handle: '' });
   const [inputMessage, setInputMessage] = useState('');
   const [showMobileChat, setShowMobileChat] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Etapa 5: deep-link via ?conversation=<id> (vindo do CRM/Caixa de Entrada)
+  useEffect(() => {
+    const cid = searchParams.get('conversation');
+    if (cid && conversations.some(c => c.id === cid)) {
+      selectConversation(cid);
+      if (isMobile) setShowMobileChat(true);
+      const next = new URLSearchParams(searchParams);
+      next.delete('conversation');
+      setSearchParams(next, { replace: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversations.length]);
 
   const activeConv = conversations.find(c => c.id === activeConversationId);
   const linkedContact = activeConv?.contact_id ? contacts.find(c => c.id === activeConv.contact_id) : null;
