@@ -307,9 +307,19 @@ export function GlobalFooterBar() {
     concluído: tasks.filter(t => t.status === "concluído").length,
   };
 
-  // Load timer state from DB and subscribe to realtime changes
   // Track local saves to ignore echo events from our own writes
   const lastLocalSaveAt = useRef(0);
+  // Timestamp anchor: absolute moment when the timer should reach zero (ms epoch).
+  // This is the single source of truth while running — immune to tab throttling,
+  // background sleep, mobile lock screens, and route changes.
+  const endsAtRef = useRef<number | null>(null);
+  // Guard so the completion sound/notification fires exactly once per countdown.
+  const completedRef = useRef(false);
+
+  const statusRef = useRef(status);
+  statusRef.current = status;
+  const remainingRef = useRef(remainingSeconds);
+  remainingRef.current = remainingSeconds;
 
   useEffect(() => {
     loadTimerState();
@@ -324,18 +334,29 @@ export function GlobalFooterBar() {
           table: 'timer_state',
         },
         (payload) => {
-          // Ignore echoes of our own writes (within 2s of last local save)
-          if (Date.now() - lastLocalSaveAt.current < 2000) return;
+          // Ignore echoes of our own writes (within 3s of last local save)
+          if (Date.now() - lastLocalSaveAt.current < 3000) return;
           // Skip realtime events while timer is running or paused locally
-          // The local countdown is the source of truth during execution
           if (statusRef.current === 'running' || statusRef.current === 'paused') {
             return;
           }
-          const next = payload.new as { id: string; remaining_seconds: number; status: string };
+          const next = payload.new as { id: string; remaining_seconds: number; status: string; last_update?: string };
           if (!next?.id) return;
           setStateId(next.id);
-          setRemainingSeconds(next.remaining_seconds ?? 0);
-          setStatus((next.status as "stopped" | "running" | "paused") ?? "stopped");
+          const nextStatus = (next.status as "stopped" | "running" | "paused") ?? "stopped";
+          if (nextStatus === 'running' && next.last_update) {
+            const elapsed = Math.floor((Date.now() - new Date(next.last_update).getTime()) / 1000);
+            const adjusted = Math.max(0, (next.remaining_seconds ?? 0) - elapsed);
+            endsAtRef.current = Date.now() + adjusted * 1000;
+            completedRef.current = adjusted <= 0;
+            setRemainingSeconds(adjusted);
+            setStatus(adjusted <= 0 ? 'stopped' : 'running');
+          } else {
+            endsAtRef.current = null;
+            completedRef.current = nextStatus === 'stopped' && (next.remaining_seconds ?? 0) <= 0;
+            setRemainingSeconds(next.remaining_seconds ?? 0);
+            setStatus(nextStatus);
+          }
         }
       )
       .subscribe();
@@ -345,48 +366,51 @@ export function GlobalFooterBar() {
     };
   }, []);
 
-  // Timer countdown logic - use ref-based interval to avoid restart on every tick
-  const statusRef = useRef(status);
-  statusRef.current = status;
-  const remainingRef = useRef(remainingSeconds);
-  remainingRef.current = remainingSeconds;
-  const lastSavedRef = useRef(0);
-
-  // Detect timer completion via a separate effect (no side effects inside setState updater)
+  // Timestamp-anchored countdown: re-derive remaining from (endsAt - now).
+  // Tick every 250ms purely to refresh the display; never mutate the source of truth.
   useEffect(() => {
-    if (remainingSeconds <= 0 && status === "running") {
-      // Timer just hit zero while running — complete it
-      setStatus("stopped");
-      playAlertSound();
-      notify("Timer finalizado!", {
-        body: "Seu tempo de foco terminou.",
-        tag: "timer-complete",
-      });
-      toast({ title: "Timer finalizado!" });
+    if (status !== 'running') return;
+    if (endsAtRef.current == null) {
+      endsAtRef.current = Date.now() + remainingRef.current * 1000;
+    }
 
-      // Force save 0 immediately
-      if (stateId) {
-        supabase
-          .from("timer_state")
-          .update({ remaining_seconds: 0, status: "stopped", last_update: new Date().toISOString() })
-          .eq("id", stateId);
+    const tick = () => {
+      const end = endsAtRef.current;
+      if (end == null) return;
+      const left = Math.max(0, Math.ceil((end - Date.now()) / 1000));
+      setRemainingSeconds(left);
+      if (left <= 0 && !completedRef.current) {
+        completedRef.current = true;
+        endsAtRef.current = null;
+        setStatus('stopped');
+        playAlertSound();
+        notify('Timer finalizado!', {
+          body: 'Seu tempo de foco terminou.',
+          tag: 'timer-complete',
+        });
+        toast({ title: 'Timer finalizado!' });
+        if (stateId) {
+          lastLocalSaveAt.current = Date.now();
+          supabase
+            .from('timer_state')
+            .update({ remaining_seconds: 0, status: 'stopped', last_update: new Date().toISOString() })
+            .eq('id', stateId);
+        }
       }
-    }
-  }, [remainingSeconds, status]);
-
-  useEffect(() => {
-    let intervalId: number | null = null;
-
-    if (status === "running") {
-      intervalId = window.setInterval(() => {
-        setRemainingSeconds((prev) => Math.max(prev - 1, 0));
-      }, 1000);
-    }
-
-    return () => {
-      if (intervalId) clearInterval(intervalId);
     };
-  }, [status]);
+
+    tick();
+    const intervalId = window.setInterval(tick, 250);
+    // Recompute on tab focus / visibility change to catch any drift.
+    const onVisible = () => tick();
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
+  }, [status, stateId]);
 
   useEffect(() => {
     if (!stateId) return;
@@ -395,11 +419,9 @@ export function GlobalFooterBar() {
 
   useEffect(() => {
     if (!stateId || status !== 'running') return;
-    
     const saveInterval = window.setInterval(() => {
       saveTimerState();
     }, 5000);
-
     return () => clearInterval(saveInterval);
   }, [status, stateId]);
 
