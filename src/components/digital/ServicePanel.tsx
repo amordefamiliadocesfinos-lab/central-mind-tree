@@ -469,6 +469,9 @@ function ChatHeader({ conversation, platform, linkedContact, onLinkContact, onBa
           </Button>
         )}
         <Avatar className="h-8 w-8 shrink-0">
+          {(linkedContact?.photo_url || conversation.contact_avatar_url) && (
+            <AvatarImage src={linkedContact?.photo_url || conversation.contact_avatar_url} alt={displayName} />
+          )}
           <AvatarFallback className="text-xs">
             {displayName.slice(0, 2).toUpperCase()}
           </AvatarFallback>
