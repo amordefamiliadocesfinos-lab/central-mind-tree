@@ -118,8 +118,27 @@ export default function ContatosInbox() {
     setLoading(false);
   };
 
+  const loadOpenConvs = async () => {
+    const { data } = await supabase
+      .from('service_conversations')
+      .select('id,contact_id,contact_name,contact_avatar_url,last_message_preview,last_message_at,unread_count,platform_id')
+      .eq('status', 'open')
+      .order('last_message_at', { ascending: false })
+      .limit(30);
+    const convs = (data || []) as any[];
+    const cids = Array.from(new Set(convs.map(c => c.contact_id).filter(Boolean))) as string[];
+    let byId = new Map<string, any>();
+    if (cids.length) {
+      const { data: cs } = await supabase.from('contacts')
+        .select('id,name,photo_url,client_classification').in('id', cids);
+      byId = new Map((cs || []).map((c: any) => [c.id, c]));
+    }
+    setOpenConvs(convs.map(c => ({ ...c, contact: c.contact_id ? byId.get(c.contact_id) : null })));
+  };
+
   useEffect(() => {
     load();
+    loadOpenConvs();
   }, []);
 
   const filtered = useMemo(() => {
