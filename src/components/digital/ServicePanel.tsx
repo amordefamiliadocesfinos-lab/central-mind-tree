@@ -410,9 +410,11 @@ function ConversationList({ conversations, platforms, activeId, onSelect }: {
   );
 }
 
-function ChatHeader({ conversation, platform, onBack, onUpdateFunnel, onClose, onDelete, onToggleAuto, onUpdateConversation, platforms }: {
+function ChatHeader({ conversation, platform, linkedContact, onLinkContact, onBack, onUpdateFunnel, onClose, onDelete, onToggleAuto, onUpdateConversation, platforms }: {
   conversation: ServiceConversation;
   platform: any;
+  linkedContact?: any;
+  onLinkContact: (contactId: string | null) => void;
   onBack?: () => void;
   onUpdateFunnel: (stage: string) => void;
   onClose: () => void;
@@ -422,6 +424,7 @@ function ChatHeader({ conversation, platform, onBack, onUpdateFunnel, onClose, o
   platforms: any[];
 }) {
   const [showChannels, setShowChannels] = useState(false);
+  const [showLink, setShowLink] = useState(false);
   const salesChannels: SalesChannelEntry[] = (conversation.sales_channels as any) || [];
 
   const addChannel = (platformId: string) => {
@@ -436,6 +439,11 @@ function ChatHeader({ conversation, platform, onBack, onUpdateFunnel, onClose, o
 
   const getPlatformInfo = (id: string) => platforms.find(p => p.id === id);
 
+  const displayName = linkedContact?.name || conversation.contact_name || conversation.contact_handle || 'Cliente';
+  const isVip = linkedContact?.client_classification === 'vip';
+  const ltv = Number(linkedContact?.lifetime_value || 0);
+  const paidOrders = linkedContact?.paid_orders_count || 0;
+
   return (
     <div className="border-b bg-muted/30">
       <div className="p-3 flex items-center gap-3">
@@ -446,18 +454,60 @@ function ChatHeader({ conversation, platform, onBack, onUpdateFunnel, onClose, o
         )}
         <Avatar className="h-8 w-8 shrink-0">
           <AvatarFallback className="text-xs">
-            {(conversation.contact_name || 'C').slice(0, 2).toUpperCase()}
+            {displayName.slice(0, 2).toUpperCase()}
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium truncate">
-            {conversation.contact_name || conversation.contact_handle || 'Cliente'}
-          </p>
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <p className="text-sm font-medium truncate">{displayName}</p>
+            {isVip && (
+              <Badge className="h-4 text-[9px] px-1 bg-emerald-500/15 text-emerald-700 border-emerald-500/30 gap-0.5">
+                <Crown className="h-2.5 w-2.5" /> VIP
+              </Badge>
+            )}
+            {paidOrders > 0 && (
+              <Badge variant="secondary" className="h-4 text-[9px] px-1">
+                {paidOrders}× R$ {ltv.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              </Badge>
+            )}
+            {linkedContact ? (
+              <Link to="/contatos" className="text-[10px] text-primary hover:underline inline-flex items-center gap-0.5">
+                <ExternalLink className="h-2.5 w-2.5" /> CRM
+              </Link>
+            ) : (
+              <button
+                onClick={() => setShowLink(true)}
+                className="text-[10px] text-primary hover:underline inline-flex items-center gap-0.5"
+                title="Vincular a um contato do CRM"
+              >
+                <Link2 className="h-2.5 w-2.5" /> Vincular
+              </button>
+            )}
+          </div>
           <div className="flex items-center gap-1.5">
             {platform && <span className="text-xs flex items-center gap-1"><PlatformIcon icon={platform.icon} size="sm" /> {platform.name}</span>}
             {conversation.contact_handle && <span className="text-xs text-muted-foreground">{conversation.contact_handle}</span>}
           </div>
         </div>
+
+        <ResponsiveDialog open={showLink} onOpenChange={setShowLink} title="Vincular contato do CRM">
+          <div className="space-y-3">
+            <ContactAutocomplete
+              onSelect={(c) => {
+                if (c) {
+                  onLinkContact(c.id);
+                  setShowLink(false);
+                }
+              }}
+              placeholder="Buscar contato..."
+            />
+            {linkedContact && (
+              <Button variant="outline" className="w-full" onClick={() => { onLinkContact(null); setShowLink(false); }}>
+                Remover vínculo atual
+              </Button>
+            )}
+          </div>
+        </ResponsiveDialog>
 
         <div className="flex items-center gap-2 shrink-0">
           <Select value={conversation.funnel_stage} onValueChange={onUpdateFunnel}>
