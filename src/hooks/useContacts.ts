@@ -92,6 +92,12 @@ export interface Contact {
   // Campaign
   campaign_idea_id?: string;
 
+  // Customer health (auto-synced from orders + payments)
+  lifetime_value?: number;
+  paid_orders_count?: number;
+  last_purchase_date?: string;
+  last_payment_date?: string;
+
   // Other
   company_name?: string;
   notes?: string;
