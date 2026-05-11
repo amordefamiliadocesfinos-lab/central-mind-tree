@@ -62,6 +62,7 @@ export function IdeaEditor({
   onBack,
   onUpdate,
   onDelete,
+  onDuplicate,
   onCreateVariation,
   onUpdateVariation,
   onDeleteVariation,
