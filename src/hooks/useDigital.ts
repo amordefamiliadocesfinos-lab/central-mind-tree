@@ -611,6 +611,7 @@ export function useDigital() {
     createIdea,
     updateIdea,
     deleteIdea,
+    duplicateIdea,
     createVariation,
     updateVariation,
     deleteVariation,
