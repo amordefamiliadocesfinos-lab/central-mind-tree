@@ -46,6 +46,7 @@ interface IdeaEditorProps {
   onBack: () => void;
   onUpdate: (id: string, updates: Partial<DigitalIdea>) => void;
   onDelete: (id: string) => void;
+  onDuplicate?: (id: string) => void | Promise<void>;
   onCreateVariation: (ideaId: string, platformId: string) => Promise<DigitalVariation | null>;
   onUpdateVariation: (id: string, updates: Partial<DigitalVariation>) => void;
   onDeleteVariation: (id: string) => void;
@@ -61,6 +62,7 @@ export function IdeaEditor({
   onBack,
   onUpdate,
   onDelete,
+  onDuplicate,
   onCreateVariation,
   onUpdateVariation,
   onDeleteVariation,
@@ -359,6 +361,18 @@ export function IdeaEditor({
             </SelectContent>
           </Select>
           
+          {onDuplicate && (
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-9 w-9"
+              onClick={() => onDuplicate(idea.id)}
+              aria-label="Duplicar ideia"
+              title="Duplicar ideia (com variações)"
+            >
+              <Copy className="h-4 w-4" />
+            </Button>
+          )}
           <Button
             variant="destructive"
             size="icon"
