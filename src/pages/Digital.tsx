@@ -424,22 +424,15 @@ export default function Digital() {
 
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Canal</Label>
-                      <Select value={platformFilter} onValueChange={setPlatformFilter}>
-                        <SelectTrigger className="h-9"><SelectValue placeholder="Todos" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todos</SelectItem>
-                          {Object.entries(groupedPlatforms || {}).map(([_group, platforms]) => (
-                            platforms.map(platform => (
-                              <SelectItem key={platform.id} value={platform.id}>
-                                <div className="flex items-center gap-2">
-                                  <PlatformIcon icon={platform.icon} size="sm" />
-                                  {platform.name}
-                                </div>
-                              </SelectItem>
-                            ))
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <PlatformHierarchicalPicker
+                        platforms={activePlatforms}
+                        value={platformFilter === 'all' ? null : platformFilter}
+                        onChange={(id) => setPlatformFilter(id ?? 'all')}
+                        showAllOption
+                        allLabel="Todos"
+                        size="sm"
+                        placeholder="Todos"
+                      />
                     </div>
 
                     <div className="space-y-1">
