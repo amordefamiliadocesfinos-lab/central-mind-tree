@@ -182,6 +182,7 @@ type SortDir = 'asc' | 'desc';
 
 export default function Contatos() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { contacts, loading, createContact, updateContact, deleteContact } = useContacts();
   const { addEntry } = useContactHistory();
   const { getTagsForContact } = useContactTags();
