@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, ArrowLeft, Search, LayoutGrid, Columns3, Image, BarChart3, Link2, Settings2, TrendingUp, MessageCircle, Book, Calendar, Headset, X, SlidersHorizontal, Sparkles, Layers } from 'lucide-react';
 import { HierarchicalPlatformSelector } from '@/components/digital/HierarchicalPlatformSelector';
+import { PlatformHierarchicalPicker } from '@/components/digital/PlatformHierarchicalPicker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Separator } from '@/components/ui/separator';
 import { Link, useSearchParams } from 'react-router-dom';
@@ -424,22 +425,15 @@ export default function Digital() {
 
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Canal</Label>
-                      <Select value={platformFilter} onValueChange={setPlatformFilter}>
-                        <SelectTrigger className="h-9"><SelectValue placeholder="Todos" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Todos</SelectItem>
-                          {Object.entries(groupedPlatforms || {}).map(([_group, platforms]) => (
-                            platforms.map(platform => (
-                              <SelectItem key={platform.id} value={platform.id}>
-                                <div className="flex items-center gap-2">
-                                  <PlatformIcon icon={platform.icon} size="sm" />
-                                  {platform.name}
-                                </div>
-                              </SelectItem>
-                            ))
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <PlatformHierarchicalPicker
+                        platforms={activePlatforms}
+                        value={platformFilter === 'all' ? null : platformFilter}
+                        onChange={(id) => setPlatformFilter(id ?? 'all')}
+                        showAllOption
+                        allLabel="Todos"
+                        size="sm"
+                        placeholder="Todos"
+                      />
                     </div>
 
                     <div className="space-y-1">

@@ -22,6 +22,7 @@ import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { usePlatforms } from '@/hooks/usePlatforms';
+import { PlatformHierarchicalPicker } from '@/components/digital/PlatformHierarchicalPicker';
 import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { ContactTimeline } from '@/components/crm/ContactTimeline';
 import { WhatsAppMessageSelector } from '@/components/crm/WhatsAppMessageSelector';
@@ -1244,13 +1245,16 @@ export function ContactFormDialog({
                           })}
                         </div>
                       )}
-                      <Select value="__none__" onValueChange={(v) => { if (v !== '__none__') addChannel(v); }}>
-                        <SelectTrigger className="w-[220px]"><SelectValue placeholder="+ Adicionar canal..." /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="__none__">+ Adicionar canal...</SelectItem>
-                          {activePlatforms.map(p => (<SelectItem key={p.id} value={p.id}>{p.icon} {p.name}</SelectItem>))}
-                        </SelectContent>
-                      </Select>
+                      <div className="w-[260px]">
+                        <PlatformHierarchicalPicker
+                          platforms={activePlatforms}
+                          value={null}
+                          onChange={(id) => { if (id) addChannel(id); }}
+                          placeholder="+ Adicionar canal..."
+                          excludedPlatformIds={channels.map(c => c.platform_id)}
+                          size="sm"
+                        />
+                      </div>
                     </div>
                   );
                 })()}
