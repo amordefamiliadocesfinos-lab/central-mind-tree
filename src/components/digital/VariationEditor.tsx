@@ -764,9 +764,9 @@ export function VariationEditor({
                     <span className="ml-1">Gerar</span>
                   </Button>
                 </div>
-                <Textarea
+                <DebouncedTextarea
                   value={value}
-                  onChange={(e) => handleFieldChange(e.target.value)}
+                  onChange={(v) => handleFieldChange(v)}
                   placeholder={field.label}
                   rows={isTextarea ? 3 : 1}
                   className={cn(
