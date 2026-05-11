@@ -156,6 +156,7 @@ export function HierarchicalPlatformSelector({
   const checkHasAvailableDescendants = (node: PlatformNode): boolean => {
     if (!node.platform.is_active) return false;
     if (node.isLeaf) return !excludedPlatformIds.includes(node.platform.id);
+    if (allowSelectParents && !excludedPlatformIds.includes(node.platform.id)) return true;
     return node.children.some(child => checkHasAvailableDescendants(child));
   };
 
