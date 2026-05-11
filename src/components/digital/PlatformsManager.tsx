@@ -192,7 +192,8 @@ export function PlatformsManager() {
     loading, 
     createPlatform, 
     updatePlatform, 
-    deletePlatform, 
+    deletePlatform,
+    countVariations,
     toggleActive 
   } = usePlatforms();
 
