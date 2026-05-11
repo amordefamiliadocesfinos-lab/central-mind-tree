@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { Calendar, ChevronDown, ChevronUp, GripVertical, LinkIcon, Package, Target, Users } from 'lucide-react';
+import { Calendar, ChevronDown, ChevronUp, GripVertical, LinkIcon, Package, Target, Users, Copy } from 'lucide-react';
 
 interface Node {
   id: string;
@@ -25,6 +25,7 @@ interface KanbanBoardProps {
   onUpdateIdea: (id: string, updates: Partial<DigitalIdea>) => void;
   onUpdateVariation: (id: string, updates: Partial<DigitalVariation>) => void;
   onSelectIdea: (id: string) => void;
+  onDuplicateIdea?: (id: string) => void;
   viewMode: 'ideas' | 'variations';
   platforms?: Platform[];
   nodes?: Node[];
@@ -44,6 +45,7 @@ const formatDate = (d: string) => {
 function SortableIdeaCard({
   idea,
   onClick,
+  onDuplicate,
   platforms = [],
   nodes = [],
   products = [],
@@ -51,6 +53,7 @@ function SortableIdeaCard({
 }: {
   idea: DigitalIdea;
   onClick: () => void;
+  onDuplicate?: (id: string) => void;
   platforms?: Platform[];
   nodes?: Node[];
   products?: ProductListItem[];
@@ -143,6 +146,20 @@ function SortableIdeaCard({
                 </div>
               ) : (
                 <span className="text-xs text-muted-foreground flex-1">Sem plataforma</span>
+              )}
+              {onDuplicate && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onDuplicate(idea.id); }}
+                      className="shrink-0 p-1 rounded hover:bg-primary/10 hover:text-primary text-muted-foreground transition-colors"
+                      aria-label="Duplicar ideia"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">Duplicar ideia</TooltipContent>
+                </Tooltip>
               )}
               {/* Expand toggle */}
               <button
@@ -335,7 +352,7 @@ function SortableVariationCard({
   );
 }
 
-export function KanbanBoard({ ideas, onUpdateIdea, onUpdateVariation, onSelectIdea, viewMode, platforms = [], nodes = [], products = [], ideaTypes = [] }: KanbanBoardProps) {
+export function KanbanBoard({ ideas, onUpdateIdea, onUpdateVariation, onSelectIdea, onDuplicateIdea, viewMode, platforms = [], nodes = [], products = [], ideaTypes = [] }: KanbanBoardProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
@@ -440,6 +457,7 @@ export function KanbanBoard({ ideas, onUpdateIdea, onUpdateVariation, onSelectId
                         key={item.id}
                         idea={item as DigitalIdea}
                         onClick={() => onSelectIdea((item as DigitalIdea).id)}
+                        onDuplicate={onDuplicateIdea}
                         platforms={platforms}
                         nodes={nodes}
                         products={products}
