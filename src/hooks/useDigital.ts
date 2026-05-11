@@ -279,7 +279,84 @@ export function useDigital() {
     fetchIdeas();
   }, [fetchIdeas]);
 
-  // Duplicate variation - now uses dynamic platforms
+  // Duplicate an entire idea (with all its variations)
+  const duplicateIdea = useCallback(async (ideaId: string) => {
+    const original = ideas.find(i => i.id === ideaId);
+    if (!original) {
+      toast.error('Ideia não encontrada');
+      return null;
+    }
+
+    const { data: newIdea, error: ideaError } = await supabase
+      .from('digital_ideas')
+      .insert({
+        title: `${original.title} (cópia)`,
+        objective: original.objective,
+        target_audience: original.target_audience,
+        key_message: original.key_message,
+        kpi: original.kpi,
+        status: 'estrutural',
+        idea_type: original.idea_type,
+        node_id: original.node_id,
+        product_id: original.product_id,
+        media_urls: original.media_urls || [],
+        custom_fields: JSON.parse(JSON.stringify(original.custom_fields || [])),
+        custom_field_values: JSON.parse(JSON.stringify(original.custom_field_values || {})),
+      })
+      .select()
+      .single();
+
+    if (ideaError || !newIdea) {
+      toast.error('Erro ao duplicar ideia');
+      return null;
+    }
+
+    // Duplicate variations
+    const variations = original.variations || [];
+    if (variations.length > 0) {
+      const variationsToInsert = variations.map(v => ({
+        idea_id: newIdea.id,
+        platform: v.platform,
+        status: 'pendente' as const,
+        title: v.title,
+        description: v.description,
+        caption: v.caption,
+        hashtags: v.hashtags,
+        cta: v.cta,
+        cover_url: v.cover_url,
+        aspect_ratio: v.aspect_ratio,
+        duration_seconds: v.duration_seconds,
+        resolution: v.resolution,
+        tags: v.tags,
+        music: v.music,
+        link: v.link,
+        chapters: v.chapters,
+        playlist: v.playlist,
+        thumbnail_url: v.thumbnail_url,
+        media_urls: v.media_urls || [],
+        checklist: JSON.parse(JSON.stringify((v.checklist || []).map(c => ({ ...c, done: false })))),
+        hidden_inherited_media: v.hidden_inherited_media || [],
+        extra_media_ids: v.extra_media_ids || [],
+        media_transforms: JSON.parse(JSON.stringify(v.media_transforms || {})),
+        media_mode: v.media_mode || 'inherit',
+        custom_field_values: JSON.parse(JSON.stringify(v.custom_field_values || {})),
+      }));
+
+      const { error: varError } = await supabase
+        .from('digital_variations')
+        .insert(variationsToInsert as any);
+
+      if (varError) {
+        console.error('Error duplicating variations:', varError);
+        toast.error('Ideia duplicada, mas erro ao copiar variações');
+      }
+    }
+
+    toast.success('Ideia duplicada com sucesso!');
+    fetchIdeas();
+    return newIdea.id as string;
+  }, [ideas, fetchIdeas]);
+
   const duplicateVariation = useCallback(async (variationId: string, targetPlatformId?: string) => {
     const idea = ideas.find(i => i.variations?.some(v => v.id === variationId));
     const variation = idea?.variations?.find(v => v.id === variationId);
