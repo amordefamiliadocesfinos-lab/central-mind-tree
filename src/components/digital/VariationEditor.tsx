@@ -572,9 +572,9 @@ export function VariationEditor({
       {(() => {
         const aspectRatio = platformConfig?.aspect_ratio || variation.aspect_ratio || '1:1';
         const previewAspectClass = (() => {
-          if (aspectRatio.includes('9:16') || aspectRatio.includes('4:5')) return 'aspect-[9/16] max-h-[380px]';
+          if (aspectRatio.includes('9:16') || aspectRatio.includes('4:5')) return 'aspect-[9/16] max-h-[420px]';
           if (aspectRatio.includes('16:9') || aspectRatio.includes('1.91:1')) return 'aspect-video';
-          return 'aspect-square max-h-[320px]';
+          return 'aspect-square max-h-[360px]';
         })();
 
         // Collect all visible media
