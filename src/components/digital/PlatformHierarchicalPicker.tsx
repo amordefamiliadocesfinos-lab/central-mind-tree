@@ -88,6 +88,7 @@ export function PlatformHierarchicalPicker({
         <HierarchicalPlatformSelector
           platforms={platforms}
           excludedPlatformIds={excludedPlatformIds}
+          allowSelectParents={allowSelectParents}
           onSelect={(id) => {
             onChange(id);
             setOpen(false);
