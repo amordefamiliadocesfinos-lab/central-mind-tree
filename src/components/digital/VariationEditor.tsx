@@ -601,10 +601,11 @@ export function VariationEditor({
               </div>
             </CardHeader>
             <CardContent className="p-3 pt-0">
-              <div className={cn(
-                'relative w-full mx-auto rounded-lg overflow-hidden border bg-muted/30',
-                previewAspectClass
-              )}>
+              <div className="flex justify-center bg-muted/10 p-4 rounded-lg">
+                <div className={cn(
+                  'relative w-full max-w-sm bg-background rounded-lg border shadow-sm overflow-hidden',
+                  previewAspectClass
+                )}>
                 {firstMedia ? (
                   isVideo ? (
                     <video
