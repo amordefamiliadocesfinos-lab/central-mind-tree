@@ -12,8 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-import { Plus, Edit2, Trash2, ChevronDown, ChevronUp, Settings2, Sparkles, Loader2, GripVertical, Type, AlignLeft, ChevronRight, Copy, FolderPlus, Wand2, Check, RotateCcw, ImagePlus, Upload, Undo2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, ChevronDown, ChevronUp, Settings2, Sparkles, Loader2, GripVertical, Type, AlignLeft, ChevronRight, Copy, FolderPlus, Wand2, Check, RotateCcw, ImagePlus, Upload, Undo2, FolderOpen } from 'lucide-react';
 import { CustomFieldsDefinition } from './CustomFieldsDefinition';
+import { MediaLibrary } from './MediaLibrary';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { supabase } from '@/integrations/supabase/client';
@@ -256,8 +257,17 @@ export function PlatformsManager() {
       const { error } = await supabase.storage.from('media').upload(path, file, { upsert: true });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from('media').getPublicUrl(path);
-      setFormData(prev => ({ ...prev, icon: urlData.publicUrl }));
-      toast.success('Ícone atualizado!');
+      const publicUrl = urlData.publicUrl;
+      // Mirror into universal media library tagged as platform-icon
+      await supabase.from('digital_media').insert({
+        url: publicUrl,
+        filename: file.name,
+        file_type: file.type,
+        file_size: file.size,
+        tags: ['platform-icon'],
+      });
+      setFormData(prev => ({ ...prev, icon: publicUrl }));
+      toast.success('Ícone atualizado e salvo na biblioteca!');
     } catch (err) {
       console.error('Icon upload error:', err);
       toast.error('Erro ao fazer upload do ícone');
@@ -265,6 +275,28 @@ export function PlatformsManager() {
       setIconUploading(false);
       if (iconInputRef.current) iconInputRef.current.value = '';
     }
+  };
+
+  const [showIconLibrary, setShowIconLibrary] = useState(false);
+  const handlePickIconFromLibrary = async (url: string) => {
+    setFormData(prev => ({ ...prev, icon: url }));
+    // Ensure the picked media is tagged as platform-icon for future filtering
+    try {
+      const { data: rows } = await supabase
+        .from('digital_media')
+        .select('id, tags')
+        .eq('url', url);
+      for (const row of rows || []) {
+        const tags = Array.isArray(row.tags) ? row.tags : [];
+        if (!tags.includes('platform-icon')) {
+          await supabase.from('digital_media').update({ tags: [...tags, 'platform-icon'] }).eq('id', row.id);
+        }
+      }
+    } catch (err) {
+      console.error('Tag sync error:', err);
+    }
+    setShowIconLibrary(false);
+    toast.success('Ícone selecionado da biblioteca');
   };
 
   const restoreDefaultIcon = () => {
@@ -1142,6 +1174,15 @@ export function PlatformsManager() {
                             <Upload className="h-3.5 w-3.5" />
                             Upload de imagem
                           </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full gap-2"
+                            onClick={() => setShowIconLibrary(true)}
+                          >
+                            <FolderOpen className="h-3.5 w-3.5" />
+                            Da Biblioteca
+                          </Button>
                           {isIconUrl(formData.icon) && (
                             <Button
                               variant="ghost"
@@ -1393,6 +1434,16 @@ export function PlatformsManager() {
               {editingGroup ? 'Salvar' : 'Criar'}
             </Button>
           </div>
+        </div>
+      </ResponsiveDialog>
+
+      {/* Icon Library Picker */}
+      <ResponsiveDialog open={showIconLibrary} onOpenChange={setShowIconLibrary} title="Escolher ícone da Biblioteca">
+        <div className="-mx-6 -mb-6">
+          <MediaLibrary
+            mode="select"
+            onSelect={handlePickIconFromLibrary}
+          />
         </div>
       </ResponsiveDialog>
 
