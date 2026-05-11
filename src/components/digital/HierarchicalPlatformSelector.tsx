@@ -152,11 +152,12 @@ export function HierarchicalPlatformSelector({
     }
   };
 
-  // Helper function to check if a node has any available leaf descendants
+  // Helper function to check if a node has any available descendants.
+  // We recurse through inactive nodes too, so active children of an
+  // inactive parent still keep the branch visible (they get lifted up).
   const checkHasAvailableDescendants = (node: PlatformNode): boolean => {
-    if (!node.platform.is_active) return false;
-    if (node.isLeaf) return !excludedPlatformIds.includes(node.platform.id);
-    if (allowSelectParents && !excludedPlatformIds.includes(node.platform.id)) return true;
+    if (node.isLeaf) return node.platform.is_active && !excludedPlatformIds.includes(node.platform.id);
+    if (node.platform.is_active && allowSelectParents && !excludedPlatformIds.includes(node.platform.id)) return true;
     return node.children.some(child => checkHasAvailableDescendants(child));
   };
 
@@ -166,8 +167,12 @@ export function HierarchicalPlatformSelector({
     const isExcluded = excludedPlatformIds.includes(platform.id);
     const isSelected = localSelectedIds.includes(platform.id);
 
-    // Skip inactive platforms and their children
-    if (!platform.is_active) return null;
+    // If this platform is inactive, lift its active descendants up so they
+    // remain visible/selectable instead of disappearing with the parent.
+    if (!platform.is_active) {
+      if (isLeaf) return null;
+      return <>{children.map(child => renderPlatformNode(child, depth))}</>;
+    }
 
     // If it's a leaf and excluded, skip it
     if (isLeaf && isExcluded) return null;

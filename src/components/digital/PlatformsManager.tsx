@@ -16,6 +16,7 @@ import { Plus, Edit2, Trash2, ChevronDown, ChevronUp, Settings2, Sparkles, Loade
 import { CustomFieldsDefinition } from './CustomFieldsDefinition';
 import { MediaLibrary } from './MediaLibrary';
 import { PlatformHierarchicalPicker } from './PlatformHierarchicalPicker';
+import { PlatformsHealthPanel } from './PlatformsHealthPanel';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { supabase } from '@/integrations/supabase/client';
@@ -192,7 +193,8 @@ export function PlatformsManager() {
     loading, 
     createPlatform, 
     updatePlatform, 
-    deletePlatform, 
+    deletePlatform,
+    countVariations,
     toggleActive 
   } = usePlatforms();
 
@@ -220,7 +222,8 @@ export function PlatformsManager() {
     checklist_items: '',
   });
   const [groupFormData, setGroupFormData] = useState<GroupFormData>({ name: '', icon: '📦' });
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; varCount: number; childCount: number } | null>(null);
+  const [deleteCascade, setDeleteCascade] = useState(false);
   const [deleteGroupConfirm, setDeleteGroupConfirm] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiStructureLoading, setAiStructureLoading] = useState(false);
@@ -639,11 +642,19 @@ export function PlatformsManager() {
     setShowDialog(false);
   };
 
-  const handleDelete = async (id: string) => {
-    const success = await deletePlatform(id);
+  const handleDelete = async (id: string, cascade: boolean) => {
+    const success = await deletePlatform(id, { cascade });
     if (success) {
       setDeleteConfirm(null);
+      setDeleteCascade(false);
     }
+  };
+
+  const openDeleteConfirm = async (platform: Platform) => {
+    const childCount = getChildren(platform.id).length;
+    const varCount = await countVariations(platform.id);
+    setDeleteCascade(false);
+    setDeleteConfirm({ id: platform.id, varCount, childCount });
   };
 
   // Group CRUD
@@ -790,7 +801,7 @@ export function PlatformsManager() {
               variant="ghost"
               size="icon"
               className="h-8 w-8 text-destructive"
-              onClick={() => setDeleteConfirm(platform.id)}
+              onClick={() => openDeleteConfirm(platform)}
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -841,7 +852,16 @@ export function PlatformsManager() {
         </div>
       </div>
 
+      {/* Health diagnostics */}
+      <PlatformsHealthPanel
+        platforms={platforms}
+        onToggleActive={toggleActive}
+        onEdit={handleOpenEdit}
+        onDelete={openDeleteConfirm}
+      />
+
       {/* Groups */}
+
       {groups.map(group => {
         const groupPlatforms = (groupedPlatforms[group.id] || []).filter(p => !p.parent_id);
         const isExpanded = expandedGroups[group.id] !== false;
@@ -1437,19 +1457,48 @@ export function PlatformsManager() {
       </ResponsiveDialog>
 
       {/* Delete Platform Confirmation */}
-      <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+      <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => { if (!open) { setDeleteConfirm(null); setDeleteCascade(false); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir Plataforma?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita. A plataforma será removida permanentemente.
-              Se existirem variações usando esta plataforma, a exclusão não será permitida.
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm">
+                <p>Esta ação não pode ser desfeita.</p>
+                {deleteConfirm?.childCount ? (
+                  <p className="text-destructive font-medium">
+                    ⚠️ Esta plataforma possui {deleteConfirm.childCount} sub-plataforma(s). Mova ou exclua os filhos primeiro.
+                  </p>
+                ) : null}
+                {deleteConfirm && deleteConfirm.varCount > 0 ? (
+                  <>
+                    <p className="text-amber-600 font-medium">
+                      ⚠️ Existem <strong>{deleteConfirm.varCount}</strong> variação(ões) vinculada(s) a esta plataforma.
+                    </p>
+                    <label className="flex items-start gap-2 p-2 rounded border cursor-pointer hover:bg-muted/50">
+                      <input
+                        type="checkbox"
+                        checked={deleteCascade}
+                        onChange={(e) => setDeleteCascade(e.target.checked)}
+                        className="mt-0.5"
+                      />
+                      <span>
+                        Excluir junto com as <strong>{deleteConfirm.varCount}</strong> variação(ões) vinculada(s).
+                        <br />
+                        <span className="text-xs text-muted-foreground">
+                          As variações em ideias serão removidas permanentemente.
+                        </span>
+                      </span>
+                    </label>
+                  </>
+                ) : null}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+              onClick={() => deleteConfirm && handleDelete(deleteConfirm.id, deleteCascade)}
+              disabled={!!deleteConfirm?.childCount || (!!deleteConfirm?.varCount && !deleteCascade)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Excluir
