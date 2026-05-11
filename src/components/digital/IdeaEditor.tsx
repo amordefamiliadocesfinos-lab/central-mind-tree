@@ -620,9 +620,16 @@ export function IdeaEditor({
                         if (!idea.objective && product.description) {
                           updates.objective = product.description;
                         }
-                        // Import product media if idea has no media
-                        if ((!idea.media_urls || idea.media_urls.length === 0) && product.media_urls?.length > 0) {
-                          updates.media_urls = product.media_urls;
+                        // Auto-sync product media into idea structural media (merge, no duplicates)
+                        if (product.media_urls?.length > 0) {
+                          const existing = idea.media_urls || [];
+                          const merged = [...existing];
+                          product.media_urls.forEach(url => {
+                            if (!merged.includes(url)) merged.push(url);
+                          });
+                          if (merged.length !== existing.length) {
+                            updates.media_urls = merged;
+                          }
                         }
                       }
                     }
