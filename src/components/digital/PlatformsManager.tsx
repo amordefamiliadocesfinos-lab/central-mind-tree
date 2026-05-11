@@ -851,7 +851,16 @@ export function PlatformsManager() {
         </div>
       </div>
 
+      {/* Health diagnostics */}
+      <PlatformsHealthPanel
+        platforms={platforms}
+        onToggleActive={toggleActive}
+        onEdit={handleOpenEdit}
+        onDelete={openDeleteConfirm}
+      />
+
       {/* Groups */}
+
       {groups.map(group => {
         const groupPlatforms = (groupedPlatforms[group.id] || []).filter(p => !p.parent_id);
         const isExpanded = expandedGroups[group.id] !== false;
