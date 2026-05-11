@@ -22,6 +22,7 @@ import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { usePlatforms } from '@/hooks/usePlatforms';
+import { PlatformHierarchicalPicker } from '@/components/digital/PlatformHierarchicalPicker';
 import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { ContactTimeline } from '@/components/crm/ContactTimeline';
 import { WhatsAppMessageSelector } from '@/components/crm/WhatsAppMessageSelector';
