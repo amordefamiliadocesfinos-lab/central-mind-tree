@@ -653,6 +653,7 @@ export function VariationEditor({
                     {platformConfig?.name}
                   </Badge>
                 </div>
+                </div>
               </div>
             </CardContent>
           </Card>
