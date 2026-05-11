@@ -1447,19 +1447,48 @@ export function PlatformsManager() {
       </ResponsiveDialog>
 
       {/* Delete Platform Confirmation */}
-      <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+      <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => { if (!open) { setDeleteConfirm(null); setDeleteCascade(false); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir Plataforma?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação não pode ser desfeita. A plataforma será removida permanentemente.
-              Se existirem variações usando esta plataforma, a exclusão não será permitida.
+            <AlertDialogDescription asChild>
+              <div className="space-y-2 text-sm">
+                <p>Esta ação não pode ser desfeita.</p>
+                {deleteConfirm?.childCount ? (
+                  <p className="text-destructive font-medium">
+                    ⚠️ Esta plataforma possui {deleteConfirm.childCount} sub-plataforma(s). Mova ou exclua os filhos primeiro.
+                  </p>
+                ) : null}
+                {deleteConfirm && deleteConfirm.varCount > 0 ? (
+                  <>
+                    <p className="text-amber-600 font-medium">
+                      ⚠️ Existem <strong>{deleteConfirm.varCount}</strong> variação(ões) vinculada(s) a esta plataforma.
+                    </p>
+                    <label className="flex items-start gap-2 p-2 rounded border cursor-pointer hover:bg-muted/50">
+                      <input
+                        type="checkbox"
+                        checked={deleteCascade}
+                        onChange={(e) => setDeleteCascade(e.target.checked)}
+                        className="mt-0.5"
+                      />
+                      <span>
+                        Excluir junto com as <strong>{deleteConfirm.varCount}</strong> variação(ões) vinculada(s).
+                        <br />
+                        <span className="text-xs text-muted-foreground">
+                          As variações em ideias serão removidas permanentemente.
+                        </span>
+                      </span>
+                    </label>
+                  </>
+                ) : null}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => deleteConfirm && handleDelete(deleteConfirm)}
+              onClick={() => deleteConfirm && handleDelete(deleteConfirm.id, deleteCascade)}
+              disabled={!!deleteConfirm?.childCount || (!!deleteConfirm?.varCount && !deleteCascade)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Excluir
