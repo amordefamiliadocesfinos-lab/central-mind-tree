@@ -123,14 +123,13 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
     >
       {/* ═══════ PREVIEW IMAGE ═══════ */}
       {previewUrl ? (
-        <div className="relative w-full aspect-[32/9] max-h-[220px] bg-muted overflow-hidden">
+        <div className="relative w-full bg-muted overflow-hidden flex items-center justify-center py-2">
           <img
             src={previewUrl}
             alt={idea.title}
-            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+            className="max-w-full max-h-[160px] object-contain transition-transform duration-300 group-hover:scale-[1.02]"
             loading="lazy"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
           {/* Status badge over image */}
           <Badge className={cn('absolute top-2 right-2 text-[10px] font-semibold text-white shadow-md backdrop-blur-sm', statusConfig.color)}>
             {statusConfig.label}
@@ -150,7 +149,7 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
           )}
         </div>
       ) : (
-        <div className="relative w-full aspect-[3/1] bg-gradient-to-br from-muted/40 to-muted/70 flex items-center justify-center">
+        <div className="relative w-full bg-gradient-to-br from-muted/40 to-muted/70 flex items-center justify-center py-6">
           <Image className="h-8 w-8 text-muted-foreground/30" />
           <Badge className={cn('absolute top-2 right-2 text-[10px] font-semibold text-white shadow-md', statusConfig.color)}>
             {statusConfig.label}
