@@ -25,6 +25,7 @@ interface KanbanBoardProps {
   onUpdateIdea: (id: string, updates: Partial<DigitalIdea>) => void;
   onUpdateVariation: (id: string, updates: Partial<DigitalVariation>) => void;
   onSelectIdea: (id: string) => void;
+  onDuplicateIdea?: (id: string) => void;
   viewMode: 'ideas' | 'variations';
   platforms?: Platform[];
   nodes?: Node[];
