@@ -1437,6 +1437,16 @@ export function PlatformsManager() {
         </div>
       </ResponsiveDialog>
 
+      {/* Icon Library Picker */}
+      <ResponsiveDialog open={showIconLibrary} onOpenChange={setShowIconLibrary} title="Escolher ícone da Biblioteca">
+        <div className="-mx-6 -mb-6">
+          <MediaLibrary
+            mode="select"
+            onSelect={handlePickIconFromLibrary}
+          />
+        </div>
+      </ResponsiveDialog>
+
       {/* Delete Platform Confirmation */}
       <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
         <AlertDialogContent>
