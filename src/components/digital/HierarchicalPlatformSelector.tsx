@@ -19,6 +19,8 @@ interface HierarchicalPlatformSelectorProps {
   multiSelect?: boolean;
   selectedIds?: string[];
   onMultiSelect?: (platformIds: string[]) => void;
+  /** When true, parent (non-leaf) platforms are also selectable, regardless of hierarchy level. */
+  allowSelectParents?: boolean;
 }
 
 interface PlatformNode {
