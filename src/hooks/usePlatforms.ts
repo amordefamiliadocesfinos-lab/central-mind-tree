@@ -305,6 +305,7 @@ export function usePlatforms() {
     createPlatform,
     updatePlatform,
     deletePlatform,
+    countVariations,
     toggleActive,
     refetch: fetchPlatforms,
     GROUP_LABELS,
