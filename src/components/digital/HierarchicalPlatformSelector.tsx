@@ -37,6 +37,7 @@ export function HierarchicalPlatformSelector({
   multiSelect = false,
   selectedIds = [],
   onMultiSelect,
+  allowSelectParents = false,
 }: HierarchicalPlatformSelectorProps) {
   const { groups } = usePlatformGroups();
   const [searchQuery, setSearchQuery] = useState('');
