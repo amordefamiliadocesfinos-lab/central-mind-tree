@@ -135,15 +135,59 @@ export function MediaThumbnail({
         </Badge>
       )}
 
+      {/* Cover badge */}
+      {isCover && (
+        <Badge
+          className="absolute -top-2 -right-2 text-[8px] px-1 py-0 bg-amber-500 text-white border-0 gap-0.5 shadow"
+          title="Capa principal"
+        >
+          <Star className="h-2.5 w-2.5 fill-current" />
+          Capa
+        </Badge>
+      )}
+
       {/* Action Buttons - Only show on hover for larger sizes */}
-      {size === 'lg' && (showDistribute || showRemove) && (
+      {size === 'lg' && (showDistribute || showRemove || showReorder) && (
         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 rounded pointer-events-none">
-          <div className="flex items-center gap-1 pointer-events-auto">
+          <div className="flex items-center gap-1 pointer-events-auto flex-wrap justify-center">
+            {showReorder && onMoveLeft && canMoveLeft && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-white hover:bg-white/20"
+                onClick={(e) => { e.stopPropagation(); onMoveLeft(url); }}
+                title="Mover para esquerda"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+            )}
+            {showReorder && onSetCover && !isCover && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-white hover:bg-amber-500/80"
+                onClick={(e) => { e.stopPropagation(); onSetCover(url); }}
+                title="Definir como capa"
+              >
+                <Star className="h-4 w-4" />
+              </Button>
+            )}
+            {showReorder && onMoveRight && canMoveRight && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-white hover:bg-white/20"
+                onClick={(e) => { e.stopPropagation(); onMoveRight(url); }}
+                title="Mover para direita"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            )}
             {showDistribute && onDistribute && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-white hover:bg-white/20"
+                className="h-6 w-6 text-white hover:bg-white/20"
                 onClick={(e) => {
                   e.stopPropagation();
                   onDistribute(url);
@@ -157,7 +201,7 @@ export function MediaThumbnail({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-white hover:bg-destructive/80"
+                className="h-6 w-6 text-white hover:bg-destructive/80"
                 onClick={(e) => {
                   e.stopPropagation();
                   onRemove(url);
