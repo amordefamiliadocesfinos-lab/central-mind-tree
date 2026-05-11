@@ -147,6 +147,20 @@ function SortableIdeaCard({
               ) : (
                 <span className="text-xs text-muted-foreground flex-1">Sem plataforma</span>
               )}
+              {onDuplicate && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onDuplicate(idea.id); }}
+                      className="shrink-0 p-1 rounded hover:bg-primary/10 hover:text-primary text-muted-foreground transition-colors"
+                      aria-label="Duplicar ideia"
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="text-xs">Duplicar ideia</TooltipContent>
+                </Tooltip>
+              )}
               {/* Expand toggle */}
               <button
                 onClick={toggleExpand}
