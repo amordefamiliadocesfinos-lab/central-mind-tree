@@ -637,6 +637,10 @@ export default function Digital() {
                 onUpdateIdea={updateIdea}
                 onUpdateVariation={updateVariation}
                 onSelectIdea={setSelectedIdea}
+                onDuplicateIdea={async (id) => {
+                  const newId = await duplicateIdea(id);
+                  if (newId) setSelectedIdea(newId);
+                }}
                 viewMode={kanbanMode}
                 platforms={activePlatforms}
                 nodes={nodes}
