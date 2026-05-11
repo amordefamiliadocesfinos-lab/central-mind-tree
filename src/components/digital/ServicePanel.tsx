@@ -490,7 +490,7 @@ function ChatHeader({ conversation, platform, linkedContact, onLinkContact, onBa
               </Badge>
             )}
             {linkedContact ? (
-              <Link to="/contatos" className="text-[10px] text-primary hover:underline inline-flex items-center gap-0.5">
+              <Link to={`/contatos?contact=${linkedContact.id}`} className="text-[10px] text-primary hover:underline inline-flex items-center gap-0.5">
                 <ExternalLink className="h-2.5 w-2.5" /> CRM
               </Link>
             ) : (
