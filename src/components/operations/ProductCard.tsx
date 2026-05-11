@@ -121,6 +121,25 @@ export function ProductCard({
                     : 'Criar nova ideia no Digital com este produto'}
                 </TooltipContent>
               </Tooltip>
+              {hasIdeas && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(`/digital?newIdea=1&product_id=${product.id}`);
+                      }}
+                      className="inline-flex items-center gap-1 rounded-full border border-dashed border-primary/40 px-2 py-0.5 text-xs text-primary hover:bg-primary/10 transition-colors"
+                      aria-label="Vincular nova ideia"
+                    >
+                      <Plus className="h-3 w-3" />
+                      <span>Vincular</span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">Vincular outra ideia a este produto</TooltipContent>
+                </Tooltip>
+              )}
               {linkedPlatformIds.map(pid => {
                 const p = platformsMap[pid];
                 if (!p) return null;
