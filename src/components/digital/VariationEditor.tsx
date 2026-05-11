@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { DebouncedInput, DebouncedTextarea } from '@/components/ui/debounced-input';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -763,9 +764,9 @@ export function VariationEditor({
                     <span className="ml-1">Gerar</span>
                   </Button>
                 </div>
-                <Textarea
+                <DebouncedTextarea
                   value={value}
-                  onChange={(e) => handleFieldChange(e.target.value)}
+                  onChange={(v) => handleFieldChange(v)}
                   placeholder={field.label}
                   rows={isTextarea ? 3 : 1}
                   className={cn(
@@ -1037,19 +1038,19 @@ export function VariationEditor({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label className="text-xs">Aspecto</Label>
-              <Input
+              <DebouncedInput
                 value={variation.aspect_ratio || platformConfig?.aspect_ratio || ''}
-                onChange={(e) => onUpdate(variation.id, { aspect_ratio: e.target.value })}
+                onChange={(v) => onUpdate(variation.id, { aspect_ratio: v })}
                 placeholder="16:9, 9:16..."
                 className="h-10"
               />
             </div>
             <div className="space-y-2">
               <Label className="text-xs">Duração (seg)</Label>
-              <Input
+              <DebouncedInput
                 type="number"
-                value={variation.duration_seconds || ''}
-                onChange={(e) => onUpdate(variation.id, { duration_seconds: parseInt(e.target.value) || null })}
+                value={variation.duration_seconds ?? ''}
+                onChange={(v) => onUpdate(variation.id, { duration_seconds: parseInt(v) || null })}
                 placeholder="60"
                 className="h-10"
               />
@@ -1124,30 +1125,30 @@ export function VariationEditor({
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1">
                   <Label className="text-xs">Alcance</Label>
-                  <Input
+                  <DebouncedInput
                     type="number"
-                    value={variation.metric_reach || ''}
-                    onChange={(e) => onUpdate(variation.id, { metric_reach: parseInt(e.target.value) || null })}
+                    value={variation.metric_reach ?? ''}
+                    onChange={(v) => onUpdate(variation.id, { metric_reach: parseInt(v) || null })}
                     placeholder="0"
                     className="h-9"
                   />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Engajamento</Label>
-                  <Input
+                  <DebouncedInput
                     type="number"
-                    value={variation.metric_engagement || ''}
-                    onChange={(e) => onUpdate(variation.id, { metric_engagement: parseInt(e.target.value) || null })}
+                    value={variation.metric_engagement ?? ''}
+                    onChange={(v) => onUpdate(variation.id, { metric_engagement: parseInt(v) || null })}
                     placeholder="0"
                     className="h-9"
                   />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Cliques</Label>
-                  <Input
+                  <DebouncedInput
                     type="number"
-                    value={variation.metric_clicks || ''}
-                    onChange={(e) => onUpdate(variation.id, { metric_clicks: parseInt(e.target.value) || null })}
+                    value={variation.metric_clicks ?? ''}
+                    onChange={(v) => onUpdate(variation.id, { metric_clicks: parseInt(v) || null })}
                     placeholder="0"
                     className="h-9"
                   />
@@ -1156,22 +1157,22 @@ export function VariationEditor({
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label className="text-xs">Retenção (%)</Label>
-                  <Input
+                  <DebouncedInput
                     type="number"
                     step="0.1"
-                    value={variation.metric_retention || ''}
-                    onChange={(e) => onUpdate(variation.id, { metric_retention: parseFloat(e.target.value) || null })}
+                    value={variation.metric_retention ?? ''}
+                    onChange={(v) => onUpdate(variation.id, { metric_retention: parseFloat(v) || null })}
                     placeholder="0"
                     className="h-9"
                   />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">CTR (%)</Label>
-                  <Input
+                  <DebouncedInput
                     type="number"
                     step="0.1"
-                    value={variation.metric_ctr || ''}
-                    onChange={(e) => onUpdate(variation.id, { metric_ctr: parseFloat(e.target.value) || null })}
+                    value={variation.metric_ctr ?? ''}
+                    onChange={(v) => onUpdate(variation.id, { metric_ctr: parseFloat(v) || null })}
                     placeholder="0"
                     className="h-9"
                   />

@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { DebouncedInput, DebouncedTextarea } from '@/components/ui/debounced-input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -521,9 +522,9 @@ export function IdeaEditor({
 
               <div className="space-y-2">
                 <Label>Título da Ideia</Label>
-                <Input
+                <DebouncedInput
                   value={idea.title}
-                  onChange={(e) => onUpdate(idea.id, { title: e.target.value })}
+                  onChange={(v) => onUpdate(idea.id, { title: v })}
                   className="h-12 text-lg font-medium"
                   placeholder="Ex: IPHONE 14 ORIGINAL 128 GB PERFEITO SEM DEFEITOS"
                 />
@@ -575,9 +576,9 @@ export function IdeaEditor({
                     <span className="text-xs">Gerar</span>
                   </Button>
                 </div>
-                <Input
+                <DebouncedInput
                   value={idea.target_audience || ''}
-                  onChange={(e) => onUpdate(idea.id, { target_audience: e.target.value })}
+                  onChange={(v) => onUpdate(idea.id, { target_audience: v })}
                   placeholder="Para quem é este conteúdo?"
                   className="h-11"
                 />
@@ -601,9 +602,9 @@ export function IdeaEditor({
                     <span className="text-xs">Gerar</span>
                   </Button>
                 </div>
-                <Textarea
+                <DebouncedTextarea
                   value={idea.key_message || ''}
-                  onChange={(e) => onUpdate(idea.id, { key_message: e.target.value })}
+                  onChange={(v) => onUpdate(idea.id, { key_message: v })}
                   placeholder="Qual a mensagem chave a transmitir?"
                   rows={2}
                 />
@@ -627,9 +628,9 @@ export function IdeaEditor({
                     <span className="text-xs">Gerar</span>
                   </Button>
                 </div>
-                <Input
+                <DebouncedInput
                   value={idea.kpi || ''}
-                  onChange={(e) => onUpdate(idea.id, { kpi: e.target.value })}
+                  onChange={(v) => onUpdate(idea.id, { kpi: v })}
                   placeholder="Ex: 10k views, 500 cliques..."
                   className="h-11"
                 />

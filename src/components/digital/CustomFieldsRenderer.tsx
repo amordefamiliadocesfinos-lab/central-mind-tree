@@ -1,6 +1,7 @@
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { DebouncedInput, DebouncedTextarea } from '@/components/ui/debounced-input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CustomField } from '@/hooks/usePlatforms';
 
@@ -27,18 +28,18 @@ export function CustomFieldsRenderer({ fields, values, onChange }: CustomFieldsR
           <Label className="text-sm">{field.label || field.id}</Label>
 
           {field.type === 'input' && (
-            <Input
+            <DebouncedInput
               value={values[field.id] || ''}
-              onChange={(e) => updateValue(field.id, e.target.value)}
+              onChange={(v) => updateValue(field.id, v)}
               placeholder={field.label}
               className="h-10"
             />
           )}
 
           {field.type === 'textarea' && (
-            <Textarea
+            <DebouncedTextarea
               value={values[field.id] || ''}
-              onChange={(e) => updateValue(field.id, e.target.value)}
+              onChange={(v) => updateValue(field.id, v)}
               placeholder={field.label}
               rows={3}
               className="resize-y"
@@ -46,10 +47,10 @@ export function CustomFieldsRenderer({ fields, values, onChange }: CustomFieldsR
           )}
 
           {field.type === 'number' && (
-            <Input
+            <DebouncedInput
               type="number"
               value={values[field.id] || ''}
-              onChange={(e) => updateValue(field.id, e.target.value)}
+              onChange={(v) => updateValue(field.id, v)}
               placeholder="0"
               className="h-10"
             />
