@@ -282,42 +282,84 @@ function MediaGalleryInner({
   className,
 }: MediaGalleryProps) {
   const { open } = useLightbox();
+  const dragIndexRef = useRef<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const move = (from: number, to: number) => {
-    if (!onReorder || to < 0 || to >= media.length) return;
+    if (!onReorder || to < 0 || to >= media.length || from === to) return;
     const next = media.slice();
     const [item] = next.splice(from, 1);
     next.splice(to, 0, item);
     onReorder(next);
   };
 
+  const dndEnabled = showReorder && !!onReorder;
+
   return (
     <div className={cn("flex gap-2 flex-wrap", className)}>
       {media.map((url, i) => (
-        <MediaThumbnail
+        <div
           key={i}
-          url={url}
-          index={i}
-          allMedia={media}
-          label={label}
-          labelColor={labelColor}
-          size={size}
-          isHidden={hiddenMedia.includes(url)}
-          showVisibilityToggle={showVisibilityToggle}
-          showRemove={showRemove}
-          showDistribute={showDistribute}
-          showReorder={showReorder && !!onReorder}
-          isCover={showReorder && i === 0}
-          canMoveLeft={showReorder && i > 0}
-          canMoveRight={showReorder && i < media.length - 1}
-          onToggleVisibility={onToggleVisibility}
-          onRemove={onDelete}
-          onDistribute={onDistribute}
-          onSetCover={() => move(i, 0)}
-          onMoveLeft={() => move(i, i - 1)}
-          onMoveRight={() => move(i, i + 1)}
-          onOpenLightbox={open}
-        />
+          draggable={dndEnabled}
+          onDragStart={(e) => {
+            if (!dndEnabled) return;
+            dragIndexRef.current = i;
+            e.dataTransfer.effectAllowed = 'move';
+            try { e.dataTransfer.setData('text/plain', String(i)); } catch {}
+          }}
+          onDragOver={(e) => {
+            if (!dndEnabled || dragIndexRef.current === null) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            if (dragOverIndex !== i) setDragOverIndex(i);
+          }}
+          onDragLeave={() => {
+            if (dragOverIndex === i) setDragOverIndex(null);
+          }}
+          onDrop={(e) => {
+            if (!dndEnabled) return;
+            e.preventDefault();
+            const from = dragIndexRef.current;
+            dragIndexRef.current = null;
+            setDragOverIndex(null);
+            if (from === null) return;
+            move(from, i);
+          }}
+          onDragEnd={() => {
+            dragIndexRef.current = null;
+            setDragOverIndex(null);
+          }}
+          className={cn(
+            'relative transition-all',
+            dndEnabled && 'cursor-grab active:cursor-grabbing',
+            dragOverIndex === i && 'ring-2 ring-primary rounded scale-105',
+          )}
+          title={dndEnabled ? 'Arraste para reordenar' : undefined}
+        >
+          <MediaThumbnail
+            url={url}
+            index={i}
+            allMedia={media}
+            label={label}
+            labelColor={labelColor}
+            size={size}
+            isHidden={hiddenMedia.includes(url)}
+            showVisibilityToggle={showVisibilityToggle}
+            showRemove={showRemove}
+            showDistribute={showDistribute}
+            showReorder={dndEnabled}
+            isCover={dndEnabled && i === 0}
+            canMoveLeft={dndEnabled && i > 0}
+            canMoveRight={dndEnabled && i < media.length - 1}
+            onToggleVisibility={onToggleVisibility}
+            onRemove={onDelete}
+            onDistribute={onDistribute}
+            onSetCover={() => move(i, 0)}
+            onMoveLeft={() => move(i, i - 1)}
+            onMoveRight={() => move(i, i + 1)}
+            onOpenLightbox={open}
+          />
+        </div>
       ))}
     </div>
   );
