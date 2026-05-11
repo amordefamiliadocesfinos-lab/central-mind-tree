@@ -352,7 +352,7 @@ function SortableVariationCard({
   );
 }
 
-export function KanbanBoard({ ideas, onUpdateIdea, onUpdateVariation, onSelectIdea, viewMode, platforms = [], nodes = [], products = [], ideaTypes = [] }: KanbanBoardProps) {
+export function KanbanBoard({ ideas, onUpdateIdea, onUpdateVariation, onSelectIdea, onDuplicateIdea, viewMode, platforms = [], nodes = [], products = [], ideaTypes = [] }: KanbanBoardProps) {
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(
