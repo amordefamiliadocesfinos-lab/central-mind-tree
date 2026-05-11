@@ -193,6 +193,22 @@ export default function Contatos() {
   const { checklistMap, refetchChecklists } = useContactChecklist(contactIds);
   const { dailyMetrics, refetchDaily } = useDailyMetrics();
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Deep-link: abrir contato selecionado vindo de outras telas (ex.: Atendimento)
+  useEffect(() => {
+    const cid = searchParams.get('contact');
+    if (!cid || !contacts.length) return;
+    const target = contacts.find(c => c.id === cid);
+    if (target) {
+      setEditingContact(target);
+      setFormOpen(true);
+      setSearchQuery(target.name);
+      const next = new URLSearchParams(searchParams);
+      next.delete('contact');
+      setSearchParams(next, { replace: true });
+    }
+  }, [searchParams, contacts, setSearchParams]);
+
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [tempFilter, setTempFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
