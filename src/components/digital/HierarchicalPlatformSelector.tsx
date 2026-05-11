@@ -158,7 +158,7 @@ export function HierarchicalPlatformSelector({
 
   const renderPlatformNode = (node: PlatformNode, depth: number = 0): React.ReactNode => {
     const { platform, children, isLeaf } = node;
-    const isExpanded = expandedNodes[platform.id] !== false; // Default to expanded
+    const isExpanded = expandedNodes[platform.id] === true; // Default to collapsed
     const isExcluded = excludedPlatformIds.includes(platform.id);
     const isSelected = localSelectedIds.includes(platform.id);
 

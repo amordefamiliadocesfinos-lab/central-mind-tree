@@ -679,7 +679,7 @@ export function PlatformsManager() {
   const renderPlatform = (platform: Platform, depth: number = 0) => {
     const children = getChildren(platform.id);
     const hasChildren = children.length > 0;
-    const isExpanded = expandedPlatforms[platform.id] !== false;
+    const isExpanded = expandedPlatforms[platform.id] === true;
 
     return (
       <div key={platform.id}>
