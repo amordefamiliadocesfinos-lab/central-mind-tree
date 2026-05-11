@@ -16,9 +16,16 @@ interface MediaThumbnailProps {
   showVisibilityToggle?: boolean;
   showRemove?: boolean;
   showDistribute?: boolean;
+  showReorder?: boolean;
+  isCover?: boolean;
+  canMoveLeft?: boolean;
+  canMoveRight?: boolean;
   onToggleVisibility?: (url: string) => void;
   onRemove?: (url: string) => void;
   onDistribute?: (url: string) => void;
+  onSetCover?: (url: string) => void;
+  onMoveLeft?: (url: string) => void;
+  onMoveRight?: (url: string) => void;
   onOpenLightbox?: (items: LightboxItem[], index: number) => void;
   className?: string;
 }
