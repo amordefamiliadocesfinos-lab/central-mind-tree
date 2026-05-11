@@ -123,7 +123,7 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
     >
       {/* ═══════ PREVIEW IMAGE ═══════ */}
       {previewUrl ? (
-        <div className="relative w-full aspect-video bg-muted overflow-hidden">
+        <div className="relative w-full aspect-[32/9] max-h-[220px] bg-muted overflow-hidden">
           <img
             src={previewUrl}
             alt={idea.title}
