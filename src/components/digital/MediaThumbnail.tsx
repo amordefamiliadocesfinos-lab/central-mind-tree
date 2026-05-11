@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { X, Eye, EyeOff, ZoomIn, Play } from 'lucide-react';
+import { X, Eye, EyeOff, ZoomIn, Play, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useLightbox, LightboxItem } from '@/components/lightbox';
 
 interface MediaThumbnailProps {
@@ -16,9 +16,16 @@ interface MediaThumbnailProps {
   showVisibilityToggle?: boolean;
   showRemove?: boolean;
   showDistribute?: boolean;
+  showReorder?: boolean;
+  isCover?: boolean;
+  canMoveLeft?: boolean;
+  canMoveRight?: boolean;
   onToggleVisibility?: (url: string) => void;
   onRemove?: (url: string) => void;
   onDistribute?: (url: string) => void;
+  onSetCover?: (url: string) => void;
+  onMoveLeft?: (url: string) => void;
+  onMoveRight?: (url: string) => void;
   onOpenLightbox?: (items: LightboxItem[], index: number) => void;
   className?: string;
 }
@@ -49,9 +56,16 @@ export function MediaThumbnail({
   showVisibilityToggle = false,
   showRemove = false,
   showDistribute = false,
+  showReorder = false,
+  isCover = false,
+  canMoveLeft = false,
+  canMoveRight = false,
   onToggleVisibility,
   onRemove,
   onDistribute,
+  onSetCover,
+  onMoveLeft,
+  onMoveRight,
   onOpenLightbox,
   className,
 }: MediaThumbnailProps) {
@@ -121,15 +135,59 @@ export function MediaThumbnail({
         </Badge>
       )}
 
+      {/* Cover badge */}
+      {isCover && (
+        <Badge
+          className="absolute -top-2 -right-2 text-[8px] px-1 py-0 bg-amber-500 text-white border-0 gap-0.5 shadow"
+          title="Capa principal"
+        >
+          <Star className="h-2.5 w-2.5 fill-current" />
+          Capa
+        </Badge>
+      )}
+
       {/* Action Buttons - Only show on hover for larger sizes */}
-      {size === 'lg' && (showDistribute || showRemove) && (
+      {size === 'lg' && (showDistribute || showRemove || showReorder) && (
         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1 rounded pointer-events-none">
-          <div className="flex items-center gap-1 pointer-events-auto">
+          <div className="flex items-center gap-1 pointer-events-auto flex-wrap justify-center">
+            {showReorder && onMoveLeft && canMoveLeft && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-white hover:bg-white/20"
+                onClick={(e) => { e.stopPropagation(); onMoveLeft(url); }}
+                title="Mover para esquerda"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+            )}
+            {showReorder && onSetCover && !isCover && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-white hover:bg-amber-500/80"
+                onClick={(e) => { e.stopPropagation(); onSetCover(url); }}
+                title="Definir como capa"
+              >
+                <Star className="h-4 w-4" />
+              </Button>
+            )}
+            {showReorder && onMoveRight && canMoveRight && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-white hover:bg-white/20"
+                onClick={(e) => { e.stopPropagation(); onMoveRight(url); }}
+                title="Mover para direita"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            )}
             {showDistribute && onDistribute && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-white hover:bg-white/20"
+                className="h-6 w-6 text-white hover:bg-white/20"
                 onClick={(e) => {
                   e.stopPropagation();
                   onDistribute(url);
@@ -143,7 +201,7 @@ export function MediaThumbnail({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-white hover:bg-destructive/80"
+                className="h-6 w-6 text-white hover:bg-destructive/80"
                 onClick={(e) => {
                   e.stopPropagation();
                   onRemove(url);
@@ -199,9 +257,11 @@ interface MediaGalleryProps {
   showRemove?: boolean;
   showDistribute?: boolean;
   showVisibilityToggle?: boolean;
+  showReorder?: boolean;
   hiddenMedia?: string[];
   onToggleVisibility?: (url: string) => void;
   onDistribute?: (url: string) => void;
+  onReorder?: (newOrder: string[]) => void;
   className?: string;
 }
 
@@ -214,12 +274,22 @@ function MediaGalleryInner({
   showRemove = false,
   showDistribute = false,
   showVisibilityToggle = false,
+  showReorder = false,
   hiddenMedia = [],
   onToggleVisibility,
   onDistribute,
+  onReorder,
   className,
 }: MediaGalleryProps) {
   const { open } = useLightbox();
+
+  const move = (from: number, to: number) => {
+    if (!onReorder || to < 0 || to >= media.length) return;
+    const next = media.slice();
+    const [item] = next.splice(from, 1);
+    next.splice(to, 0, item);
+    onReorder(next);
+  };
 
   return (
     <div className={cn("flex gap-2 flex-wrap", className)}>
@@ -236,9 +306,16 @@ function MediaGalleryInner({
           showVisibilityToggle={showVisibilityToggle}
           showRemove={showRemove}
           showDistribute={showDistribute}
+          showReorder={showReorder && !!onReorder}
+          isCover={showReorder && i === 0}
+          canMoveLeft={showReorder && i > 0}
+          canMoveRight={showReorder && i < media.length - 1}
           onToggleVisibility={onToggleVisibility}
           onRemove={onDelete}
           onDistribute={onDistribute}
+          onSetCover={() => move(i, 0)}
+          onMoveLeft={() => move(i, i - 1)}
+          onMoveRight={() => move(i, i + 1)}
           onOpenLightbox={open}
         />
       ))}

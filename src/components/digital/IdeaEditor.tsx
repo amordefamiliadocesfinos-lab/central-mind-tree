@@ -720,8 +720,10 @@ export function IdeaEditor({
                   labelColor="bg-purple-500"
                   showRemove
                   showDistribute
+                  showReorder
                   onDelete={handleRemoveIdeaMedia}
                   onDistribute={openDistributeDialog}
+                  onReorder={(newOrder) => onUpdate(idea.id, { media_urls: newOrder })}
                 />
               )}
 
