@@ -1038,19 +1038,19 @@ export function VariationEditor({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
               <Label className="text-xs">Aspecto</Label>
-              <Input
+              <DebouncedInput
                 value={variation.aspect_ratio || platformConfig?.aspect_ratio || ''}
-                onChange={(e) => onUpdate(variation.id, { aspect_ratio: e.target.value })}
+                onChange={(v) => onUpdate(variation.id, { aspect_ratio: v })}
                 placeholder="16:9, 9:16..."
                 className="h-10"
               />
             </div>
             <div className="space-y-2">
               <Label className="text-xs">Duração (seg)</Label>
-              <Input
+              <DebouncedInput
                 type="number"
-                value={variation.duration_seconds || ''}
-                onChange={(e) => onUpdate(variation.id, { duration_seconds: parseInt(e.target.value) || null })}
+                value={variation.duration_seconds ?? ''}
+                onChange={(v) => onUpdate(variation.id, { duration_seconds: parseInt(v) || null })}
                 placeholder="60"
                 className="h-10"
               />
