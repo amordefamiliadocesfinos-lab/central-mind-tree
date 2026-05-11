@@ -602,9 +602,9 @@ export function IdeaEditor({
                     <span className="text-xs">Gerar</span>
                   </Button>
                 </div>
-                <Textarea
+                <DebouncedTextarea
                   value={idea.key_message || ''}
-                  onChange={(e) => onUpdate(idea.id, { key_message: e.target.value })}
+                  onChange={(v) => onUpdate(idea.id, { key_message: v })}
                   placeholder="Qual a mensagem chave a transmitir?"
                   rows={2}
                 />
