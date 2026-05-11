@@ -1174,6 +1174,15 @@ export function PlatformsManager() {
                             <Upload className="h-3.5 w-3.5" />
                             Upload de imagem
                           </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full gap-2"
+                            onClick={() => setShowIconLibrary(true)}
+                          >
+                            <FolderOpen className="h-3.5 w-3.5" />
+                            Da Biblioteca
+                          </Button>
                           {isIconUrl(formData.icon) && (
                             <Button
                               variant="ghost"
