@@ -39,6 +39,7 @@ export function PlatformHierarchicalPicker({
   className,
   triggerClassName,
   size = 'default',
+  allowSelectParents = false,
 }: PlatformHierarchicalPickerProps) {
   const [open, setOpen] = useState(false);
   const selected = value ? platforms.find(p => p.id === value) : null;
