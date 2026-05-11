@@ -19,6 +19,8 @@ interface PlatformHierarchicalPickerProps {
   className?: string;
   triggerClassName?: string;
   size?: 'sm' | 'default';
+  /** Allow selecting parent (non-leaf) platforms regardless of hierarchy depth. */
+  allowSelectParents?: boolean;
 }
 
 /**
@@ -37,6 +39,7 @@ export function PlatformHierarchicalPicker({
   className,
   triggerClassName,
   size = 'default',
+  allowSelectParents = false,
 }: PlatformHierarchicalPickerProps) {
   const [open, setOpen] = useState(false);
   const selected = value ? platforms.find(p => p.id === value) : null;
@@ -85,6 +88,7 @@ export function PlatformHierarchicalPicker({
         <HierarchicalPlatformSelector
           platforms={platforms}
           excludedPlatformIds={excludedPlatformIds}
+          allowSelectParents={allowSelectParents}
           onSelect={(id) => {
             onChange(id);
             setOpen(false);

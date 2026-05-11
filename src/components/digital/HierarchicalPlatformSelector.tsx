@@ -19,6 +19,8 @@ interface HierarchicalPlatformSelectorProps {
   multiSelect?: boolean;
   selectedIds?: string[];
   onMultiSelect?: (platformIds: string[]) => void;
+  /** When true, parent (non-leaf) platforms are also selectable, regardless of hierarchy level. */
+  allowSelectParents?: boolean;
 }
 
 interface PlatformNode {
@@ -35,6 +37,7 @@ export function HierarchicalPlatformSelector({
   multiSelect = false,
   selectedIds = [],
   onMultiSelect,
+  allowSelectParents = false,
 }: HierarchicalPlatformSelectorProps) {
   const { groups } = usePlatformGroups();
   const [searchQuery, setSearchQuery] = useState('');
@@ -153,6 +156,7 @@ export function HierarchicalPlatformSelector({
   const checkHasAvailableDescendants = (node: PlatformNode): boolean => {
     if (!node.platform.is_active) return false;
     if (node.isLeaf) return !excludedPlatformIds.includes(node.platform.id);
+    if (allowSelectParents && !excludedPlatformIds.includes(node.platform.id)) return true;
     return node.children.some(child => checkHasAvailableDescendants(child));
   };
 
@@ -168,7 +172,7 @@ export function HierarchicalPlatformSelector({
     // If it's a leaf and excluded, skip it
     if (isLeaf && isExcluded) return null;
 
-    // Skip branches with no available leaves
+    // Skip branches with no available leaves (and parent itself isn't selectable)
     if (!isLeaf && !checkHasAvailableDescendants(node)) return null;
 
     if (isLeaf) {
@@ -195,27 +199,57 @@ export function HierarchicalPlatformSelector({
       );
     }
 
-    // Render collapsible parent
+    // Render parent node — keep hierarchical visualization, but allow
+    // selecting the parent itself when allowSelectParents is enabled.
+    const parentSelectable = allowSelectParents && !isExcluded;
     return (
       <div key={platform.id} className={cn(depth > 0 && 'ml-4')}>
         <Collapsible open={isExpanded} onOpenChange={() => toggleNode(platform.id)}>
-          <CollapsibleTrigger asChild>
+          <div
+            className={cn(
+              'flex items-center gap-1 rounded-md',
+              isSelected && 'bg-primary text-primary-foreground'
+            )}
+          >
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  'h-8 w-8 shrink-0',
+                  isSelected && 'text-primary-foreground hover:text-primary-foreground'
+                )}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {isExpanded ? (
+                  <ChevronDown className="h-4 w-4" />
+                ) : (
+                  <ChevronRight className="h-4 w-4" />
+                )}
+              </Button>
+            </CollapsibleTrigger>
             <Button
               variant="ghost"
-              className="w-full justify-start h-auto py-2 px-3 text-muted-foreground hover:text-foreground"
-            >
-              {isExpanded ? (
-                <ChevronDown className="h-4 w-4 mr-2 shrink-0" />
-              ) : (
-                <ChevronRight className="h-4 w-4 mr-2 shrink-0" />
+              className={cn(
+                'flex-1 justify-start h-auto py-2 px-2',
+                !parentSelectable && 'text-muted-foreground hover:text-foreground cursor-default',
+                isSelected && 'text-primary-foreground hover:text-primary-foreground hover:bg-transparent'
               )}
+              onClick={() => {
+                if (parentSelectable) {
+                  handleSelect(platform.id);
+                } else {
+                  toggleNode(platform.id);
+                }
+              }}
+            >
               <PlatformIcon icon={platform.icon} size="md" className="mr-2" />
               <span className="flex-1 text-left truncate">{platform.name}</span>
               <Badge variant="secondary" className="ml-2 text-[10px]">
                 {children.filter(c => c.platform.is_active).length}
               </Badge>
             </Button>
-          </CollapsibleTrigger>
+          </div>
           <CollapsibleContent className="space-y-0.5 mt-0.5">
             {children.map(child => renderPlatformNode(child, depth + 1))}
           </CollapsibleContent>
