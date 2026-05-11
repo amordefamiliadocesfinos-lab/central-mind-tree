@@ -572,9 +572,9 @@ export function VariationEditor({
       {(() => {
         const aspectRatio = platformConfig?.aspect_ratio || variation.aspect_ratio || '1:1';
         const previewAspectClass = (() => {
-          if (aspectRatio.includes('9:16') || aspectRatio.includes('4:5')) return 'aspect-[9/16] max-h-[380px]';
+          if (aspectRatio.includes('9:16') || aspectRatio.includes('4:5')) return 'aspect-[9/16] max-h-[420px]';
           if (aspectRatio.includes('16:9') || aspectRatio.includes('1.91:1')) return 'aspect-video';
-          return 'aspect-square max-h-[320px]';
+          return 'aspect-square max-h-[360px]';
         })();
 
         // Collect all visible media
@@ -601,10 +601,11 @@ export function VariationEditor({
               </div>
             </CardHeader>
             <CardContent className="p-3 pt-0">
-              <div className={cn(
-                'relative w-full mx-auto rounded-lg overflow-hidden border bg-muted/30',
-                previewAspectClass
-              )}>
+              <div className="flex justify-center bg-muted/10 p-4 rounded-lg">
+                <div className={cn(
+                  'relative w-full max-w-sm bg-background rounded-lg border shadow-sm overflow-hidden',
+                  previewAspectClass
+                )}>
                 {firstMedia ? (
                   isVideo ? (
                     <video
@@ -651,6 +652,7 @@ export function VariationEditor({
                     <PlatformIcon icon={platformConfig?.icon || '📱'} size="sm" />
                     {platformConfig?.name}
                   </Badge>
+                </div>
                 </div>
               </div>
             </CardContent>
