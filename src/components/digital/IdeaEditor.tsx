@@ -46,6 +46,7 @@ interface IdeaEditorProps {
   onBack: () => void;
   onUpdate: (id: string, updates: Partial<DigitalIdea>) => void;
   onDelete: (id: string) => void;
+  onDuplicate?: (id: string) => void | Promise<void>;
   onCreateVariation: (ideaId: string, platformId: string) => Promise<DigitalVariation | null>;
   onUpdateVariation: (id: string, updates: Partial<DigitalVariation>) => void;
   onDeleteVariation: (id: string) => void;
