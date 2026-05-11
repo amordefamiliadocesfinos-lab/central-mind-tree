@@ -19,6 +19,8 @@ interface PlatformHierarchicalPickerProps {
   className?: string;
   triggerClassName?: string;
   size?: 'sm' | 'default';
+  /** Allow selecting parent (non-leaf) platforms regardless of hierarchy depth. */
+  allowSelectParents?: boolean;
 }
 
 /**
