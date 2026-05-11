@@ -617,6 +617,10 @@ export default function Digital() {
               onBack={() => setSelectedIdea(null)}
               onUpdate={updateIdea}
               onDelete={deleteIdea}
+              onDuplicate={async (id) => {
+                const newId = await duplicateIdea(id);
+                if (newId) setSelectedIdea(newId);
+              }}
               onCreateVariation={createVariation}
               onUpdateVariation={updateVariation}
               onDeleteVariation={deleteVariation}
