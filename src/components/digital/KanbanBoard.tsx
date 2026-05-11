@@ -45,6 +45,7 @@ const formatDate = (d: string) => {
 function SortableIdeaCard({
   idea,
   onClick,
+  onDuplicate,
   platforms = [],
   nodes = [],
   products = [],
@@ -52,6 +53,7 @@ function SortableIdeaCard({
 }: {
   idea: DigitalIdea;
   onClick: () => void;
+  onDuplicate?: (id: string) => void;
   platforms?: Platform[];
   nodes?: Node[];
   products?: ProductListItem[];
