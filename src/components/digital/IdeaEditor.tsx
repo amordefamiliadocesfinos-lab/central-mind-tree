@@ -522,9 +522,9 @@ export function IdeaEditor({
 
               <div className="space-y-2">
                 <Label>Título da Ideia</Label>
-                <Input
+                <DebouncedInput
                   value={idea.title}
-                  onChange={(e) => onUpdate(idea.id, { title: e.target.value })}
+                  onChange={(v) => onUpdate(idea.id, { title: v })}
                   className="h-12 text-lg font-medium"
                   placeholder="Ex: IPHONE 14 ORIGINAL 128 GB PERFEITO SEM DEFEITOS"
                 />
