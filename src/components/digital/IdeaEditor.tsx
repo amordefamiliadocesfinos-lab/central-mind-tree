@@ -75,6 +75,24 @@ export function IdeaEditor({
   const { ideaTypes } = useIdeaTypes();
   const { executeObjectiveActions } = useIdeaActions();
   const prevObjectiveRef = useRef(idea.objective);
+  const syncedProductRef = useRef<string | null>(null);
+
+  // Auto-sync linked product media into idea structural media
+  useEffect(() => {
+    if (!idea.product_id) return;
+    const product = products.find(p => p.id === idea.product_id);
+    if (!product || !product.media_urls?.length) return;
+    const existing = idea.media_urls || [];
+    const missing = product.media_urls.filter(url => !existing.includes(url));
+    const key = `${idea.product_id}:${product.media_urls.length}`;
+    if (missing.length === 0) {
+      syncedProductRef.current = key;
+      return;
+    }
+    if (syncedProductRef.current === key) return;
+    syncedProductRef.current = key;
+    onUpdate(idea.id, { media_urls: [...existing, ...missing] });
+  }, [idea.product_id, idea.id, products, idea.media_urls, onUpdate]);
   const [selectedVariation, setSelectedVariation] = useState<DigitalVariation | null>(null);
   const [showAddPlatform, setShowAddPlatform] = useState(false);
   const [showBatchDialog, setShowBatchDialog] = useState(false);
@@ -620,9 +638,16 @@ export function IdeaEditor({
                         if (!idea.objective && product.description) {
                           updates.objective = product.description;
                         }
-                        // Import product media if idea has no media
-                        if ((!idea.media_urls || idea.media_urls.length === 0) && product.media_urls?.length > 0) {
-                          updates.media_urls = product.media_urls;
+                        // Auto-sync product media into idea structural media (merge, no duplicates)
+                        if (product.media_urls?.length > 0) {
+                          const existing = idea.media_urls || [];
+                          const merged = [...existing];
+                          product.media_urls.forEach(url => {
+                            if (!merged.includes(url)) merged.push(url);
+                          });
+                          if (merged.length !== existing.length) {
+                            updates.media_urls = merged;
+                          }
                         }
                       }
                     }
