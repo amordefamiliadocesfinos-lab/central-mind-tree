@@ -133,8 +133,8 @@ function SortableIdeaCard({
                   {Array.from(uniquePlatforms.values()).map(p => (
                     <Tooltip key={p.id}>
                       <TooltipTrigger asChild>
-                        <span className="inline-flex items-center justify-center h-5 w-5 rounded-sm bg-muted/60">
-                          <PlatformIcon icon={p.icon} size="sm" />
+                        <span className="inline-flex items-center justify-center h-7 w-7 rounded-md bg-background ring-1 ring-border shadow-sm">
+                          <PlatformIcon icon={p.icon} size="md" />
                         </span>
                       </TooltipTrigger>
                       <TooltipContent side="top" className="text-xs">{p.name}</TooltipContent>
