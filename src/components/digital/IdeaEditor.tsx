@@ -576,9 +576,9 @@ export function IdeaEditor({
                     <span className="text-xs">Gerar</span>
                   </Button>
                 </div>
-                <Input
+                <DebouncedInput
                   value={idea.target_audience || ''}
-                  onChange={(e) => onUpdate(idea.id, { target_audience: e.target.value })}
+                  onChange={(v) => onUpdate(idea.id, { target_audience: v })}
                   placeholder="Para quem é este conteúdo?"
                   className="h-11"
                 />
