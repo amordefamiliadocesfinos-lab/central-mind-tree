@@ -641,11 +641,19 @@ export function PlatformsManager() {
     setShowDialog(false);
   };
 
-  const handleDelete = async (id: string) => {
-    const success = await deletePlatform(id);
+  const handleDelete = async (id: string, cascade: boolean) => {
+    const success = await deletePlatform(id, { cascade });
     if (success) {
       setDeleteConfirm(null);
+      setDeleteCascade(false);
     }
+  };
+
+  const openDeleteConfirm = async (platform: Platform) => {
+    const childCount = getChildren(platform.id).length;
+    const varCount = await countVariations(platform.id);
+    setDeleteCascade(false);
+    setDeleteConfirm({ id: platform.id, varCount, childCount });
   };
 
   // Group CRUD
