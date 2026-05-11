@@ -361,6 +361,22 @@ export function IdeaEditor({
             </SelectContent>
           </Select>
           
+          {onDuplicate && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-9 w-9"
+                  onClick={() => onDuplicate(idea.id)}
+                  aria-label="Duplicar ideia"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Duplicar ideia (com variações)</TooltipContent>
+            </Tooltip>
+          )}
           <Button
             variant="destructive"
             size="icon"
