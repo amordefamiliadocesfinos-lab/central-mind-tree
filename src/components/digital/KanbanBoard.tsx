@@ -457,6 +457,7 @@ export function KanbanBoard({ ideas, onUpdateIdea, onUpdateVariation, onSelectId
                         key={item.id}
                         idea={item as DigitalIdea}
                         onClick={() => onSelectIdea((item as DigitalIdea).id)}
+                        onDuplicate={onDuplicateIdea}
                         platforms={platforms}
                         nodes={nodes}
                         products={products}
