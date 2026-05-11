@@ -723,7 +723,7 @@ export function IdeaEditor({
                   showReorder
                   onDelete={handleRemoveIdeaMedia}
                   onDistribute={openDistributeDialog}
-                  onReorder={(newOrder) => onUpdate({ media_urls: newOrder })}
+                  onReorder={(newOrder) => onUpdate(idea.id, { media_urls: newOrder })}
                 />
               )}
 
