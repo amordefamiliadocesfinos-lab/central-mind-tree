@@ -172,17 +172,47 @@ export function usePlatforms() {
     fetchPlatforms();
   }, [fetchPlatforms]);
 
-  const deletePlatform = useCallback(async (id: string) => {
-    // Check if there are variations using this platform
+  const countVariations = useCallback(async (id: string): Promise<number> => {
+    const { count } = await supabase
+      .from('digital_variations')
+      .select('id', { count: 'exact', head: true })
+      .eq('platform', id);
+    return count || 0;
+  }, []);
+
+  const deletePlatform = useCallback(async (id: string, options?: { cascade?: boolean }) => {
+    // Block if has child platforms
+    const children = platforms.filter(p => p.parent_id === id);
+    if (children.length > 0) {
+      toast.error(
+        `Não é possível excluir: existem ${children.length} sub-plataforma(s) vinculada(s). Mova ou exclua os filhos primeiro.`
+      );
+      return false;
+    }
+
+    // Check variations
     const { data: variations } = await supabase
       .from('digital_variations')
-      .select('id')
-      .eq('platform', id)
-      .limit(1);
+      .select('id, idea_id')
+      .eq('platform', id);
 
     if (variations && variations.length > 0) {
-      toast.error('Não é possível excluir: existem variações usando esta plataforma');
-      return false;
+      if (!options?.cascade) {
+        toast.error(
+          `Não é possível excluir: ${variations.length} variação(ões) usando esta plataforma. Use "Excluir junto com variações" para forçar.`
+        );
+        return false;
+      }
+
+      // Cascade delete variations
+      const { error: varErr } = await supabase
+        .from('digital_variations')
+        .delete()
+        .eq('platform', id);
+      if (varErr) {
+        toast.error('Erro ao excluir variações vinculadas');
+        return false;
+      }
     }
 
     const { error } = await supabase
@@ -198,7 +228,7 @@ export function usePlatforms() {
     toast.success('Plataforma excluída!');
     fetchPlatforms();
     return true;
-  }, [fetchPlatforms]);
+  }, [fetchPlatforms, platforms]);
 
   const toggleActive = useCallback(async (id: string, isActive: boolean) => {
     await updatePlatform(id, { is_active: isActive });
