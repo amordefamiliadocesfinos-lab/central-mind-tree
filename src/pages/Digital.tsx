@@ -49,6 +49,7 @@ export default function Digital() {
     createIdea,
     updateIdea,
     deleteIdea,
+    duplicateIdea,
     createVariation,
     updateVariation,
     deleteVariation,
