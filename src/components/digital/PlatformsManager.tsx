@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import { Plus, Edit2, Trash2, ChevronDown, ChevronUp, Settings2, Sparkles, Loader2, GripVertical, Type, AlignLeft, ChevronRight, Copy, FolderPlus, Wand2, Check, RotateCcw, ImagePlus, Upload, Undo2, FolderOpen } from 'lucide-react';
 import { CustomFieldsDefinition } from './CustomFieldsDefinition';
 import { MediaLibrary } from './MediaLibrary';
+import { PlatformHierarchicalPicker } from './PlatformHierarchicalPicker';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { supabase } from '@/integrations/supabase/client';
@@ -1259,27 +1260,14 @@ export function PlatformsManager() {
                   {/* Parent Platform (hierarchy) */}
                   <div className="space-y-2">
                     <Label>Plataforma Pai (opcional)</Label>
-                    <Select
-                      value={formData.parent_id || '__none__'}
-                      onValueChange={(v) => setFormData({ ...formData, parent_id: v === '__none__' ? '' : v })}
-                    >
-                      <SelectTrigger className="h-12">
-                        <SelectValue placeholder="Nenhuma (raiz)" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">Nenhuma (raiz)</SelectItem>
-                        {platforms
-                          .filter(p => p.id !== editingPlatform?.id)
-                          .map(p => (
-                            <SelectItem key={p.id} value={p.id}>
-                              <div className="flex items-center gap-2">
-                                <span>{p.icon}</span>
-                                {p.name}
-                              </div>
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
+                    <PlatformHierarchicalPicker
+                      platforms={platforms.filter(p => p.id !== editingPlatform?.id)}
+                      value={formData.parent_id || null}
+                      onChange={(id) => setFormData({ ...formData, parent_id: id || '' })}
+                      placeholder="Nenhuma (raiz)"
+                      showAllOption
+                      allLabel="Nenhuma (raiz)"
+                    />
                     <p className="text-xs text-muted-foreground">
                       Use para criar hierarquia. Ex: Instagram &gt; Instagram Feed, Instagram Reels
                     </p>
