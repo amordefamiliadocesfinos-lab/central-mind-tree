@@ -257,9 +257,11 @@ interface MediaGalleryProps {
   showRemove?: boolean;
   showDistribute?: boolean;
   showVisibilityToggle?: boolean;
+  showReorder?: boolean;
   hiddenMedia?: string[];
   onToggleVisibility?: (url: string) => void;
   onDistribute?: (url: string) => void;
+  onReorder?: (newOrder: string[]) => void;
   className?: string;
 }
 
@@ -272,12 +274,22 @@ function MediaGalleryInner({
   showRemove = false,
   showDistribute = false,
   showVisibilityToggle = false,
+  showReorder = false,
   hiddenMedia = [],
   onToggleVisibility,
   onDistribute,
+  onReorder,
   className,
 }: MediaGalleryProps) {
   const { open } = useLightbox();
+
+  const move = (from: number, to: number) => {
+    if (!onReorder || to < 0 || to >= media.length) return;
+    const next = media.slice();
+    const [item] = next.splice(from, 1);
+    next.splice(to, 0, item);
+    onReorder(next);
+  };
 
   return (
     <div className={cn("flex gap-2 flex-wrap", className)}>
@@ -294,9 +306,16 @@ function MediaGalleryInner({
           showVisibilityToggle={showVisibilityToggle}
           showRemove={showRemove}
           showDistribute={showDistribute}
+          showReorder={showReorder && !!onReorder}
+          isCover={showReorder && i === 0}
+          canMoveLeft={showReorder && i > 0}
+          canMoveRight={showReorder && i < media.length - 1}
           onToggleVisibility={onToggleVisibility}
           onRemove={onDelete}
           onDistribute={onDistribute}
+          onSetCover={() => move(i, 0)}
+          onMoveLeft={() => move(i, i - 1)}
+          onMoveRight={() => move(i, i + 1)}
           onOpenLightbox={open}
         />
       ))}
