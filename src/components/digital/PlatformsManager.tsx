@@ -257,8 +257,17 @@ export function PlatformsManager() {
       const { error } = await supabase.storage.from('media').upload(path, file, { upsert: true });
       if (error) throw error;
       const { data: urlData } = supabase.storage.from('media').getPublicUrl(path);
-      setFormData(prev => ({ ...prev, icon: urlData.publicUrl }));
-      toast.success('Ícone atualizado!');
+      const publicUrl = urlData.publicUrl;
+      // Mirror into universal media library tagged as platform-icon
+      await supabase.from('digital_media').insert({
+        url: publicUrl,
+        filename: file.name,
+        file_type: file.type,
+        file_size: file.size,
+        tags: ['platform-icon'],
+      });
+      setFormData(prev => ({ ...prev, icon: publicUrl }));
+      toast.success('Ícone atualizado e salvo na biblioteca!');
     } catch (err) {
       console.error('Icon upload error:', err);
       toast.error('Erro ao fazer upload do ícone');
@@ -266,6 +275,28 @@ export function PlatformsManager() {
       setIconUploading(false);
       if (iconInputRef.current) iconInputRef.current.value = '';
     }
+  };
+
+  const [showIconLibrary, setShowIconLibrary] = useState(false);
+  const handlePickIconFromLibrary = async (url: string) => {
+    setFormData(prev => ({ ...prev, icon: url }));
+    // Ensure the picked media is tagged as platform-icon for future filtering
+    try {
+      const { data: rows } = await supabase
+        .from('digital_media')
+        .select('id, tags')
+        .eq('url', url);
+      for (const row of rows || []) {
+        const tags = Array.isArray(row.tags) ? row.tags : [];
+        if (!tags.includes('platform-icon')) {
+          await supabase.from('digital_media').update({ tags: [...tags, 'platform-icon'] }).eq('id', row.id);
+        }
+      }
+    } catch (err) {
+      console.error('Tag sync error:', err);
+    }
+    setShowIconLibrary(false);
+    toast.success('Ícone selecionado da biblioteca');
   };
 
   const restoreDefaultIcon = () => {
