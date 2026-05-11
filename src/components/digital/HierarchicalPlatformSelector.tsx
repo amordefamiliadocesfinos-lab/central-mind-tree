@@ -152,11 +152,12 @@ export function HierarchicalPlatformSelector({
     }
   };
 
-  // Helper function to check if a node has any available leaf descendants
+  // Helper function to check if a node has any available descendants.
+  // We recurse through inactive nodes too, so active children of an
+  // inactive parent still keep the branch visible (they get lifted up).
   const checkHasAvailableDescendants = (node: PlatformNode): boolean => {
-    if (!node.platform.is_active) return false;
-    if (node.isLeaf) return !excludedPlatformIds.includes(node.platform.id);
-    if (allowSelectParents && !excludedPlatformIds.includes(node.platform.id)) return true;
+    if (node.isLeaf) return node.platform.is_active && !excludedPlatformIds.includes(node.platform.id);
+    if (node.platform.is_active && allowSelectParents && !excludedPlatformIds.includes(node.platform.id)) return true;
     return node.children.some(child => checkHasAvailableDescendants(child));
   };
 
