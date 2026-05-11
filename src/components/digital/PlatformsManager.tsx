@@ -1267,6 +1267,7 @@ export function PlatformsManager() {
                       placeholder="Nenhuma (raiz)"
                       showAllOption
                       allLabel="Nenhuma (raiz)"
+                      allowSelectParents
                     />
                     <p className="text-xs text-muted-foreground">
                       Use para criar hierarquia. Ex: Instagram &gt; Instagram Feed, Instagram Reels
