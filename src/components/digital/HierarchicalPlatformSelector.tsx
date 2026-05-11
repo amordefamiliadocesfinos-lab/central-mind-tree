@@ -166,8 +166,12 @@ export function HierarchicalPlatformSelector({
     const isExcluded = excludedPlatformIds.includes(platform.id);
     const isSelected = localSelectedIds.includes(platform.id);
 
-    // Skip inactive platforms and their children
-    if (!platform.is_active) return null;
+    // If this platform is inactive, lift its active descendants up so they
+    // remain visible/selectable instead of disappearing with the parent.
+    if (!platform.is_active) {
+      if (isLeaf) return null;
+      return <>{children.map(child => renderPlatformNode(child, depth))}</>;
+    }
 
     // If it's a leaf and excluded, skip it
     if (isLeaf && isExcluded) return null;
