@@ -628,9 +628,9 @@ export function IdeaEditor({
                     <span className="text-xs">Gerar</span>
                   </Button>
                 </div>
-                <Input
+                <DebouncedInput
                   value={idea.kpi || ''}
-                  onChange={(e) => onUpdate(idea.id, { kpi: e.target.value })}
+                  onChange={(v) => onUpdate(idea.id, { kpi: v })}
                   placeholder="Ex: 10k views, 500 cliques..."
                   className="h-11"
                 />
