@@ -16,6 +16,7 @@ import { Plus, Edit2, Trash2, ChevronDown, ChevronUp, Settings2, Sparkles, Loade
 import { CustomFieldsDefinition } from './CustomFieldsDefinition';
 import { MediaLibrary } from './MediaLibrary';
 import { PlatformHierarchicalPicker } from './PlatformHierarchicalPicker';
+import { PlatformsHealthPanel } from './PlatformsHealthPanel';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { supabase } from '@/integrations/supabase/client';
