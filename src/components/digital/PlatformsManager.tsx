@@ -221,7 +221,8 @@ export function PlatformsManager() {
     checklist_items: '',
   });
   const [groupFormData, setGroupFormData] = useState<GroupFormData>({ name: '', icon: '📦' });
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deleteConfirm, setDeleteConfirm] = useState<{ id: string; varCount: number; childCount: number } | null>(null);
+  const [deleteCascade, setDeleteCascade] = useState(false);
   const [deleteGroupConfirm, setDeleteGroupConfirm] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiStructureLoading, setAiStructureLoading] = useState(false);
