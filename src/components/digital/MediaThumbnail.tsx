@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { X, Eye, EyeOff, ZoomIn, Play } from 'lucide-react';
+import { X, Eye, EyeOff, ZoomIn, Play, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useLightbox, LightboxItem } from '@/components/lightbox';
 
 interface MediaThumbnailProps {
