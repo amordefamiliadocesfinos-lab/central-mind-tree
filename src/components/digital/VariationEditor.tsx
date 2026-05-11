@@ -528,26 +528,44 @@ export function VariationEditor({
         </div>
       </div>
 
-      {/* Platform Header */}
-      <Card className="bg-muted/50">
-        <CardContent className="p-3">
-          <div className="flex items-center gap-3">
-            <PlatformIcon icon={platformConfig?.icon || '📱'} size="xl" />
-            <div className="flex-1 min-w-0">
-              <h2 className="font-semibold">{platformConfig?.name || 'Plataforma'}</h2>
-              <p className="text-sm text-muted-foreground truncate">{idea.title}</p>
-            </div>
-            {platformConfig?.aspect_ratio && (
-              <div className="flex gap-1 text-xs shrink-0">
-                <Badge variant="outline" className="text-[10px]">{platformConfig.aspect_ratio}</Badge>
-                {platformConfig?.duration && (
-                  <Badge variant="outline" className="text-[10px]">{platformConfig.duration}</Badge>
+      {/* Platform Header (hierarchical picker) */}
+      <Popover>
+        <PopoverTrigger asChild>
+          <Card className="bg-muted/50 cursor-pointer hover:bg-muted/70 transition-colors">
+            <CardContent className="p-3">
+              <div className="flex items-center gap-3">
+                <PlatformIcon icon={platformConfig?.icon || '📱'} size="xl" />
+                <div className="flex-1 min-w-0">
+                  <h2 className="font-semibold flex items-center gap-1">
+                    {platformConfig?.name || 'Plataforma'}
+                    <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                  </h2>
+                  <p className="text-sm text-muted-foreground truncate">{idea.title}</p>
+                </div>
+                {platformConfig?.aspect_ratio && (
+                  <div className="flex gap-1 text-xs shrink-0">
+                    <Badge variant="outline" className="text-[10px]">{platformConfig.aspect_ratio}</Badge>
+                    {platformConfig?.duration && (
+                      <Badge variant="outline" className="text-[10px]">{platformConfig.duration}</Badge>
+                    )}
+                  </div>
                 )}
               </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </PopoverTrigger>
+        <PopoverContent className="p-0 w-[340px]" align="start">
+          <HierarchicalPlatformSelector
+            platforms={platforms}
+            onSelect={(id) => {
+              if (id && id !== variation.platform) {
+                onUpdate(variation.id, { platform: id });
+              }
+            }}
+            onCancel={() => {}}
+          />
+        </PopoverContent>
+      </Popover>
 
       {/* Preview Section */}
       {(() => {
