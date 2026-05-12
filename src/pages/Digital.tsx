@@ -687,6 +687,21 @@ export default function Digital() {
                       Criar Primeira Ideia
                     </Button>
                   </Card>
+                ) : kanbanMode === 'variations' ? (
+                  scopedIdeas.flatMap((idea) =>
+                    (idea.variations || []).map((v) => (
+                      <IdeaCard
+                        key={`${idea.id}-${v.id}`}
+                        idea={idea}
+                        singleVariation={v}
+                        onClick={() => setSelectedIdea(idea.id)}
+                        platforms={activePlatforms}
+                        nodes={nodes}
+                        products={products}
+                        ideaTypes={ideaTypes}
+                      />
+                    ))
+                  )
                 ) : (
                   scopedIdeas.flatMap((idea) => {
                     const isExpanded = expandedByPlatforms.has(idea.id);
