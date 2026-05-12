@@ -41,22 +41,26 @@ interface IdeaCardProps {
   products?: ProductListItem[];
   ideaTypes?: IdeaType[];
   singlePlatform?: Platform;
+  singleVariation?: DigitalVariation;
   onExpandPlatforms?: () => void;
   onCollapsePlatforms?: () => void;
   isExpandedByPlatforms?: boolean;
 }
 
-export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products = [], ideaTypes = [], singlePlatform, onExpandPlatforms, onCollapsePlatforms, isExpandedByPlatforms }: IdeaCardProps) {
+export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products = [], ideaTypes = [], singlePlatform, singleVariation, onExpandPlatforms, onCollapsePlatforms, isExpandedByPlatforms }: IdeaCardProps) {
   const [expanded, setExpanded] = useState(false);
-  const statusConfig = DIGITAL_STATUS[idea.status];
+  // When a single variation is provided, derive its status; otherwise use idea status
+  const statusConfig = DIGITAL_STATUS[singleVariation ? singleVariation.status : idea.status];
   
 
   const getPlatform = (platformId: string) => platforms.find(p => p.id === platformId);
 
   const allVariations = idea.variations || [];
-  const variations = singlePlatform
-    ? allVariations.filter(v => v.platform === singlePlatform.id)
-    : allVariations;
+  const variations = singleVariation
+    ? [singleVariation]
+    : singlePlatform
+      ? allVariations.filter(v => v.platform === singlePlatform.id)
+      : allVariations;
 
   const completedVariations = variations.filter(v => v.status === 'concluido').length;
   const progress = variations.length > 0 ? (completedVariations / variations.length) * 100 : 0;
@@ -68,9 +72,12 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
   const linkedNode = idea.node_id ? nodes.find(n => n.id === idea.node_id) : null;
   const linkedProduct = idea.product_id ? products.find(p => p.id === idea.product_id) : null;
 
+  const variationPlatform = singleVariation ? getPlatform(singleVariation.platform as string) : null;
+  const effectivePlatform = singlePlatform || variationPlatform || null;
+
   const uniquePlatforms = new Map<string, Platform>();
-  if (singlePlatform) {
-    uniquePlatforms.set(singlePlatform.id, singlePlatform);
+  if (effectivePlatform) {
+    uniquePlatforms.set(effectivePlatform.id, effectivePlatform);
   } else {
     allVariations.forEach(v => {
       const p = getPlatform(v.platform);
@@ -82,14 +89,40 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
 
   const actionTags = (idea as any).action_tags || [];
 
-  // Get preview image scoped to platform when applicable
+  // Get preview image scoped to platform/variation when applicable
   const ideaMedia = (idea.media_urls as string[] | null) || [];
   const variationMedia = variations.flatMap(v => (v.media_urls as string[] | null) || []);
-  const previewUrl = singlePlatform
+  const previewUrl = (singleVariation || singlePlatform)
     ? (variationMedia[0] || ideaMedia[0] || null)
     : (ideaMedia[0] || variationMedia[0] || null);
 
-  const displayTitle = singlePlatform ? `${idea.title} — ${singlePlatform.name}` : idea.title;
+  // Derive platform-specific title for a single variation (mirrors KanbanBoard logic)
+  const derivePlatformTitle = (v: DigitalVariation, plat: Platform | null): string | null => {
+    if (v.title && v.title.trim()) return v.title.trim();
+    const cfv = (v as any).custom_field_values as Record<string, string> | undefined;
+    if (cfv && plat?.custom_fields?.length) {
+      const titleRegex = /(nome|name|t[ií]tulo|title|produto|headline|assunto)/i;
+      const titleField = plat.custom_fields.find(f =>
+        titleRegex.test(f.id || '') || titleRegex.test(f.label || '')
+      );
+      if (titleField) {
+        const val = cfv[titleField.id];
+        if (val && String(val).trim()) return String(val).trim();
+      }
+      for (const f of plat.custom_fields) {
+        const val = cfv[f.id];
+        if (val && String(val).trim()) return String(val).trim();
+      }
+    }
+    return null;
+  };
+
+  const displayTitle = singleVariation
+    ? (derivePlatformTitle(singleVariation, variationPlatform) || idea.title)
+    : singlePlatform
+      ? `${idea.title} — ${singlePlatform.name}`
+      : idea.title;
+  const showSecondaryIdea = !!singleVariation && displayTitle !== idea.title;
   const platformCount = new Set(allVariations.map(v => v.platform).filter(Boolean)).size;
 
   const objectiveInfo = idea.objective ? OBJECTIVE_MAP[idea.objective] : null;
