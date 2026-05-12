@@ -363,10 +363,10 @@ export default function Digital() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => setSearchFocused(true)}
                   onBlur={() => setSearchFocused(false)}
-                  placeholder={kanbanMode === 'variations' && viewMode === 'kanban' ? "Pesquisar variação, ideia, copy..." : "Pesquisar ideias, copy, KPI..."}
+                  placeholder={kanbanMode === 'variations' ? "Pesquisar variação, ideia, copy..." : "Pesquisar ideias, copy, KPI..."}
                   className="pl-9 pr-9 h-10 w-full text-ellipsis placeholder:truncate placeholder:text-muted-foreground/80 dark:placeholder:text-muted-foreground/90 text-foreground"
-                  aria-label={kanbanMode === 'variations' && viewMode === 'kanban' ? "Pesquisar variações, ideias ou copy" : "Pesquisar ideias, copy ou KPI"}
-                  title={kanbanMode === 'variations' && viewMode === 'kanban' ? "Pesquisar variações, ideias ou copy" : "Pesquisar ideias, copy ou KPI"}
+                  aria-label={kanbanMode === 'variations' ? "Pesquisar variações, ideias ou copy" : "Pesquisar ideias, copy ou KPI"}
+                  title={kanbanMode === 'variations' ? "Pesquisar variações, ideias ou copy" : "Pesquisar ideias, copy ou KPI"}
                 />
                 {searchQuery && (
                   <Button
@@ -510,20 +510,18 @@ export default function Digital() {
                       </Select>
                     </div>
 
-                    {viewMode === 'kanban' && (
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Modo do Kanban</Label>
-                        <Select value={kanbanMode} onValueChange={(v) => setKanbanMode(v as any)}>
-                          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="ideas">Por Ideia</SelectItem>
-                            <SelectItem value="variations">Por Variação</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Agrupar por</Label>
+                      <Select value={kanbanMode} onValueChange={(v) => setKanbanMode(v as any)}>
+                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ideas">Por Ideia</SelectItem>
+                          <SelectItem value="variations">Por Variação</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                    {kanbanMode === 'variations' && viewMode === 'kanban' && (
+                    {kanbanMode === 'variations' && (
                       <div className="space-y-1">
                         <Label className="text-xs text-muted-foreground">Variação</Label>
                         <Select value={variationFilter} onValueChange={setVariationFilter}>
