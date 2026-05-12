@@ -430,7 +430,10 @@ export function useDigital() {
         idea.key_message?.toLowerCase().includes(query);
       const matchesVariation = idea.variations?.some(v => 
         v.title?.toLowerCase().includes(query) ||
-        v.caption?.toLowerCase().includes(query)
+        v.caption?.toLowerCase().includes(query) ||
+        Object.values(v.custom_field_values || {}).some(val =>
+          typeof val === 'string' && val.toLowerCase().includes(query)
+        )
       );
       if (!matchesIdea && !matchesVariation) return false;
     }
