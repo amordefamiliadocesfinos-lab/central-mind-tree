@@ -45,6 +45,8 @@ export default function Digital() {
     setStatusFilter,
     platformFilter,
     setPlatformFilter,
+    variationFilter,
+    setVariationFilter,
     stats,
     createIdea,
     updateIdea,
