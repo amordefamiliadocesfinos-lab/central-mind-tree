@@ -520,6 +520,7 @@ export function KanbanBoard({ ideas, onUpdateIdea, onUpdateVariation, onSelectId
                         variation={item as DigitalVariation & { ideaTitle: string }}
                         ideaTitle={(item as any).ideaTitle}
                         ideaType={(item as any).ideaType}
+                        ideaMediaUrls={(item as any).ideaMediaUrls || []}
                         onClick={() => {
                           const idea = ideas.find(i => i.variations?.some(v => v.id === item.id));
                           if (idea) onSelectIdea(idea.id);
