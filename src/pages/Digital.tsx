@@ -510,20 +510,18 @@ export default function Digital() {
                       </Select>
                     </div>
 
-                    {viewMode === 'kanban' && (
-                      <div className="space-y-1">
-                        <Label className="text-xs text-muted-foreground">Modo do Kanban</Label>
-                        <Select value={kanbanMode} onValueChange={(v) => setKanbanMode(v as any)}>
-                          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="ideas">Por Ideia</SelectItem>
-                            <SelectItem value="variations">Por Variação</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Agrupar por</Label>
+                      <Select value={kanbanMode} onValueChange={(v) => setKanbanMode(v as any)}>
+                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="ideas">Por Ideia</SelectItem>
+                          <SelectItem value="variations">Por Variação</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                    {kanbanMode === 'variations' && viewMode === 'kanban' && (
+                    {kanbanMode === 'variations' && (
                       <div className="space-y-1">
                         <Label className="text-xs text-muted-foreground">Variação</Label>
                         <Select value={variationFilter} onValueChange={setVariationFilter}>
