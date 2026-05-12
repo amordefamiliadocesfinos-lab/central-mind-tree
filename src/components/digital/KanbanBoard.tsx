@@ -296,6 +296,34 @@ function SortableVariationCard({
     ? { label: dynamicType.label, icon: dynamicType.icon, color: dynamicType.color }
     : DEFAULT_TYPE;
 
+  // Derive platform-specific title:
+  // 1) variation.title if set
+  // 2) custom field value matching nome/title/produto patterns
+  // 3) first non-empty custom field value
+  // 4) fallback to ideaTitle
+  const platformTitle = (() => {
+    if (variation.title && variation.title.trim()) return variation.title.trim();
+    const cfv = (variation as any).custom_field_values as Record<string, string> | undefined;
+    if (cfv && platform?.custom_fields?.length) {
+      const titleRegex = /(nome|name|t[ií]tulo|title|produto|headline|assunto)/i;
+      const titleField = platform.custom_fields.find(f =>
+        titleRegex.test(f.id || '') || titleRegex.test(f.label || '')
+      );
+      if (titleField) {
+        const val = cfv[titleField.id];
+        if (val && String(val).trim()) return String(val).trim();
+      }
+      for (const f of platform.custom_fields) {
+        const val = cfv[f.id];
+        if (val && String(val).trim()) return String(val).trim();
+      }
+    }
+    return null;
+  })();
+
+  const displayTitle = platformTitle || ideaTitle;
+  const showSecondaryIdea = !!platformTitle && platformTitle !== ideaTitle;
+
   return (
     <Card
       ref={setNodeRef}
