@@ -321,7 +321,16 @@ function SortableVariationCard({
               <TooltipContent side="top" className="text-xs">{platform.name}</TooltipContent>
             </Tooltip>
           )}
-          <h4 className="font-semibold text-sm leading-snug flex-1 min-w-0 break-words">{ideaTitle}</h4>
+          <div className="flex-1 min-w-0">
+            {variation.title ? (
+              <>
+                <h4 className="font-semibold text-sm leading-snug break-words">{variation.title}</h4>
+                <p className="text-[11px] text-muted-foreground leading-tight truncate mt-0.5">{ideaTitle}</p>
+              </>
+            ) : (
+              <h4 className="font-semibold text-sm leading-snug break-words">{ideaTitle}</h4>
+            )}
+          </div>
         </div>
 
         {/* Type badge */}
