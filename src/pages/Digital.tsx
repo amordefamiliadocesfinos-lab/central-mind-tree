@@ -363,10 +363,10 @@ export default function Digital() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => setSearchFocused(true)}
                   onBlur={() => setSearchFocused(false)}
-                  placeholder="Pesquisar ideias, copy, KPI..."
+                  placeholder={kanbanMode === 'variations' && viewMode === 'kanban' ? "Pesquisar variação, ideia, copy..." : "Pesquisar ideias, copy, KPI..."}
                   className="pl-9 pr-9 h-10 w-full text-ellipsis placeholder:truncate placeholder:text-muted-foreground/80 dark:placeholder:text-muted-foreground/90 text-foreground"
-                  aria-label="Pesquisar ideias, copy ou KPI"
-                  title="Pesquisar ideias, copy ou KPI"
+                  aria-label={kanbanMode === 'variations' && viewMode === 'kanban' ? "Pesquisar variações, ideias ou copy" : "Pesquisar ideias, copy ou KPI"}
+                  title={kanbanMode === 'variations' && viewMode === 'kanban' ? "Pesquisar variações, ideias ou copy" : "Pesquisar ideias, copy ou KPI"}
                 />
                 {searchQuery && (
                   <Button
