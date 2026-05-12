@@ -447,6 +447,14 @@ export function useDigital() {
       if (!idea.variations?.some(v => v.platform === platformFilter)) return false;
     }
 
+    // Variation filter (by variation ID or title match)
+    if (variationFilter !== 'all') {
+      const hasMatchingVariation = idea.variations?.some(
+        v => v.id === variationFilter || v.title === variationFilter
+      );
+      if (!hasMatchingVariation) return false;
+    }
+
     return true;
   });
 
