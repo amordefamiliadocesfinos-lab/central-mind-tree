@@ -269,7 +269,7 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
         </div>
 
         {/* Plataformas — expandir em cards por plataforma */}
-        {!singlePlatform && platformCount > 1 && onExpandPlatforms && (
+        {!singlePlatform && !singleVariation && platformCount > 1 && onExpandPlatforms && (
           <Button
             size="sm"
             variant={isExpandedByPlatforms ? 'secondary' : 'outline'}
