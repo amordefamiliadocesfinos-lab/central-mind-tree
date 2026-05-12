@@ -296,6 +296,34 @@ function SortableVariationCard({
     ? { label: dynamicType.label, icon: dynamicType.icon, color: dynamicType.color }
     : DEFAULT_TYPE;
 
+  // Derive platform-specific title:
+  // 1) variation.title if set
+  // 2) custom field value matching nome/title/produto patterns
+  // 3) first non-empty custom field value
+  // 4) fallback to ideaTitle
+  const platformTitle = (() => {
+    if (variation.title && variation.title.trim()) return variation.title.trim();
+    const cfv = (variation as any).custom_field_values as Record<string, string> | undefined;
+    if (cfv && platform?.custom_fields?.length) {
+      const titleRegex = /(nome|name|t[ií]tulo|title|produto|headline|assunto)/i;
+      const titleField = platform.custom_fields.find(f =>
+        titleRegex.test(f.id || '') || titleRegex.test(f.label || '')
+      );
+      if (titleField) {
+        const val = cfv[titleField.id];
+        if (val && String(val).trim()) return String(val).trim();
+      }
+      for (const f of platform.custom_fields) {
+        const val = cfv[f.id];
+        if (val && String(val).trim()) return String(val).trim();
+      }
+    }
+    return null;
+  })();
+
+  const displayTitle = platformTitle || ideaTitle;
+  const showSecondaryIdea = !!platformTitle && platformTitle !== ideaTitle;
+
   return (
     <Card
       ref={setNodeRef}
@@ -322,27 +350,15 @@ function SortableVariationCard({
             </Tooltip>
           )}
           <div className="flex-1 min-w-0">
-            {variation.title ? (
-              <>
-                <h4 className="font-semibold text-sm leading-snug break-words">{variation.title}</h4>
-                <p className="text-[11px] text-muted-foreground leading-tight truncate mt-0.5">{ideaTitle}</p>
-                {platform && (
-                  <p className="text-[10px] text-muted-foreground/80 leading-tight truncate mt-0.5 flex items-center gap-1">
-                    <PlatformIcon icon={platform.icon} size="sm" />
-                    <span>{platform.name}</span>
-                  </p>
-                )}
-              </>
-            ) : (
-              <>
-                <h4 className="font-semibold text-sm leading-snug break-words">{ideaTitle}</h4>
-                {platform && (
-                  <p className="text-[10px] text-muted-foreground/80 leading-tight truncate mt-0.5 flex items-center gap-1">
-                    <PlatformIcon icon={platform.icon} size="sm" />
-                    <span>{platform.name}</span>
-                  </p>
-                )}
-              </>
+            <h4 className="font-semibold text-sm leading-snug break-words">{displayTitle}</h4>
+            {showSecondaryIdea && (
+              <p className="text-[11px] text-muted-foreground leading-tight truncate mt-0.5">{ideaTitle}</p>
+            )}
+            {platform && (
+              <p className="text-[10px] text-muted-foreground/80 leading-tight truncate mt-0.5 flex items-center gap-1">
+                <PlatformIcon icon={platform.icon} size="sm" />
+                <span>{platform.name}</span>
+              </p>
             )}
           </div>
         </div>
