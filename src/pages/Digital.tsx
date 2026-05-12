@@ -45,6 +45,8 @@ export default function Digital() {
     setStatusFilter,
     platformFilter,
     setPlatformFilter,
+    variationFilter,
+    setVariationFilter,
     stats,
     createIdea,
     updateIdea,
@@ -197,6 +199,11 @@ export default function Digital() {
     const p = all.find((x: any) => x.id === platformFilter);
     activeFilterChips.push({ key: 'platform', label: `Canal: ${p?.name ?? platformFilter}`, clear: () => setPlatformFilter('all') });
   }
+  if (variationFilter !== 'all') {
+    const v = allVariationsWithTitle.find(x => x.id === variationFilter || x.title === variationFilter);
+    const vLabel = v?.title ? `${v.title} (${v.ideaTitle})` : variationFilter;
+    activeFilterChips.push({ key: 'variation', label: `Variação: ${vLabel}`, clear: () => setVariationFilter('all') });
+  }
   if (typeFilter !== 'all') {
     const t = ideaTypes.find(x => x.key === typeFilter);
     activeFilterChips.push({ key: 'type', label: `Tipo: ${t?.label ?? typeFilter}`, clear: () => setTypeFilter('all') });
@@ -214,7 +221,7 @@ export default function Digital() {
     activeFilterChips.push({ key: 'period', label: `Período: ${map[periodFilter] ?? periodFilter}`, clear: () => setPeriodFilter('all') });
   }
   const clearAllFilters = () => {
-    setStatusFilter('all'); setPlatformFilter('all'); setTypeFilter('all');
+    setStatusFilter('all'); setPlatformFilter('all'); setVariationFilter('all'); setTypeFilter('all');
     setNodeFilter('all'); setProductFilter('all'); setPeriodFilter('all');
     setSearchQuery('');
   };
@@ -356,10 +363,10 @@ export default function Digital() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   onFocus={() => setSearchFocused(true)}
                   onBlur={() => setSearchFocused(false)}
-                  placeholder="Pesquisar ideias, copy, KPI..."
+                  placeholder={kanbanMode === 'variations' && viewMode === 'kanban' ? "Pesquisar variação, ideia, copy..." : "Pesquisar ideias, copy, KPI..."}
                   className="pl-9 pr-9 h-10 w-full text-ellipsis placeholder:truncate placeholder:text-muted-foreground/80 dark:placeholder:text-muted-foreground/90 text-foreground"
-                  aria-label="Pesquisar ideias, copy ou KPI"
-                  title="Pesquisar ideias, copy ou KPI"
+                  aria-label={kanbanMode === 'variations' && viewMode === 'kanban' ? "Pesquisar variações, ideias ou copy" : "Pesquisar ideias, copy ou KPI"}
+                  title={kanbanMode === 'variations' && viewMode === 'kanban' ? "Pesquisar variações, ideias ou copy" : "Pesquisar ideias, copy ou KPI"}
                 />
                 {searchQuery && (
                   <Button
@@ -511,6 +518,31 @@ export default function Digital() {
                           <SelectContent>
                             <SelectItem value="ideas">Por Ideia</SelectItem>
                             <SelectItem value="variations">Por Variação</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    {kanbanMode === 'variations' && viewMode === 'kanban' && (
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Variação</Label>
+                        <Select value={variationFilter} onValueChange={setVariationFilter}>
+                          <SelectTrigger className="h-9"><SelectValue placeholder="Todas as variações" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todas as variações</SelectItem>
+                            {allVariationsWithTitle.map(v => {
+                              const platform = activePlatforms.find(p => p.id === v.platform);
+                              return (
+                                <SelectItem key={v.id} value={v.id}>
+                                  <div className="flex items-center gap-2">
+                                    {platform && <PlatformIcon icon={platform.icon} size="sm" />}
+                                    <span className="truncate">
+                                      {v.title || 'Sem título'} {platform ? `(${platform.name})` : ''} — {v.ideaTitle}
+                                    </span>
+                                  </div>
+                                </SelectItem>
+                              );
+                            })}
                           </SelectContent>
                         </Select>
                       </div>

@@ -326,9 +326,23 @@ function SortableVariationCard({
               <>
                 <h4 className="font-semibold text-sm leading-snug break-words">{variation.title}</h4>
                 <p className="text-[11px] text-muted-foreground leading-tight truncate mt-0.5">{ideaTitle}</p>
+                {platform && (
+                  <p className="text-[10px] text-muted-foreground/80 leading-tight truncate mt-0.5 flex items-center gap-1">
+                    <PlatformIcon icon={platform.icon} size="sm" />
+                    <span>{platform.name}</span>
+                  </p>
+                )}
               </>
             ) : (
-              <h4 className="font-semibold text-sm leading-snug break-words">{ideaTitle}</h4>
+              <>
+                <h4 className="font-semibold text-sm leading-snug break-words">{ideaTitle}</h4>
+                {platform && (
+                  <p className="text-[10px] text-muted-foreground/80 leading-tight truncate mt-0.5 flex items-center gap-1">
+                    <PlatformIcon icon={platform.icon} size="sm" />
+                    <span>{platform.name}</span>
+                  </p>
+                )}
+              </>
             )}
           </div>
         </div>

@@ -102,6 +102,7 @@ export function useDigital() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [platformFilter, setPlatformFilter] = useState<string>('all');
+  const [variationFilter, setVariationFilter] = useState<string>('all');
   
   // Use dynamic platforms
   const { 
@@ -446,6 +447,14 @@ export function useDigital() {
       if (!idea.variations?.some(v => v.platform === platformFilter)) return false;
     }
 
+    // Variation filter (by variation ID or title match)
+    if (variationFilter !== 'all') {
+      const hasMatchingVariation = idea.variations?.some(
+        v => v.id === variationFilter || v.title === variationFilter
+      );
+      if (!hasMatchingVariation) return false;
+    }
+
     return true;
   });
 
@@ -607,6 +616,8 @@ export function useDigital() {
     setStatusFilter,
     platformFilter,
     setPlatformFilter,
+    variationFilter,
+    setVariationFilter,
     stats,
     createIdea,
     updateIdea,
