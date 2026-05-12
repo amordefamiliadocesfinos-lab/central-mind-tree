@@ -102,6 +102,7 @@ export function useDigital() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [platformFilter, setPlatformFilter] = useState<string>('all');
+  const [variationFilter, setVariationFilter] = useState<string>('all');
   
   // Use dynamic platforms
   const { 
