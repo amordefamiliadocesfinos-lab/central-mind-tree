@@ -192,7 +192,20 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
 
       <div className="p-3.5 space-y-3">
         {/* ═══════ TITLE ═══════ */}
-        <h3 className="font-semibold text-[15px] leading-snug break-words tracking-tight">{displayTitle}</h3>
+        <div className="space-y-0.5">
+          <h3 className="font-semibold text-[15px] leading-snug break-words tracking-tight">{displayTitle}</h3>
+          {showSecondaryIdea && (
+            <p className="text-[11px] text-muted-foreground leading-tight truncate">
+              Ideia base: {idea.title}
+            </p>
+          )}
+          {singleVariation && variationPlatform && (
+            <p className="text-[11px] text-muted-foreground/80 leading-tight flex items-center gap-1">
+              <PlatformIcon icon={variationPlatform.icon} size="sm" />
+              <span>{variationPlatform.name}</span>
+            </p>
+          )}
+        </div>
 
         {/* ═══════ QUICK ID — Type + Objective + Progress ═══════ */}
         <div className="flex items-center flex-wrap gap-1.5">
