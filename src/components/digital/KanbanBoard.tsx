@@ -365,13 +365,7 @@ function SortableVariationCard({
             </Tooltip>
           )}
           <div className="flex-1 min-w-0">
-            <h4 className="font-semibold text-sm leading-snug break-words">{displayTitle}</h4>
-            {platform && (
-              <p className="text-[10px] text-muted-foreground/80 leading-tight truncate mt-0.5 flex items-center gap-1">
-                <PlatformIcon icon={platform.icon} size="sm" />
-                <span>{platform.name}</span>
-              </p>
-            )}
+            <h4 className="font-semibold text-sm leading-snug break-words line-clamp-2">{displayTitle}</h4>
           </div>
         </div>
 
