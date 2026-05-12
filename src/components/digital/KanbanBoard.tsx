@@ -267,6 +267,7 @@ function SortableVariationCard({
   platforms = [],
   ideaTypes = [],
   ideaType: ideaTypeKey,
+  ideaMediaUrls = [],
 }: {
   variation: DigitalVariation & { ideaTitle: string };
   ideaTitle: string;
@@ -274,6 +275,7 @@ function SortableVariationCard({
   platforms?: Platform[];
   ideaTypes?: IdeaType[];
   ideaType?: string;
+  ideaMediaUrls?: string[];
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: variation.id,
@@ -296,11 +298,6 @@ function SortableVariationCard({
     ? { label: dynamicType.label, icon: dynamicType.icon, color: dynamicType.color }
     : DEFAULT_TYPE;
 
-  // Derive platform-specific title:
-  // 1) variation.title if set
-  // 2) custom field value matching nome/title/produto patterns
-  // 3) first non-empty custom field value
-  // 4) fallback to ideaTitle
   const platformTitle = (() => {
     if (variation.title && variation.title.trim()) return variation.title.trim();
     const cfv = (variation as any).custom_field_values as Record<string, string> | undefined;
@@ -322,26 +319,44 @@ function SortableVariationCard({
   })();
 
   const displayTitle = platformTitle || ideaTitle;
-  const showSecondaryIdea = !!platformTitle && platformTitle !== ideaTitle;
+
+  // Cover image: variation media first, then fallback to idea media
+  const variationMedia = (variation.media_urls as string[] | null) || [];
+  const coverUrl = variationMedia[0] || ideaMediaUrls[0] || null;
 
   return (
     <Card
       ref={setNodeRef}
       style={style}
       className={cn(
-        'cursor-pointer hover:bg-muted/50 transition-all touch-manipulation',
+        'cursor-pointer hover:bg-muted/50 transition-all touch-manipulation overflow-hidden',
         'border-l-4',
         statusConfig.color.replace('bg-', 'border-l-')
       )}
       onClick={onClick}
     >
+      {coverUrl && (
+        <div className="relative w-full bg-muted overflow-hidden flex items-center justify-center py-2">
+          <img
+            src={coverUrl}
+            alt={displayTitle}
+            className="max-w-full max-h-[120px] object-contain"
+            loading="lazy"
+          />
+          {platform && (
+            <div className="absolute top-1.5 left-1.5 flex items-center gap-1 bg-black/50 backdrop-blur-sm rounded-full px-1.5 py-0.5 shadow-sm">
+              <span className="brightness-150"><PlatformIcon icon={platform.icon} size="sm" /></span>
+            </div>
+          )}
+        </div>
+      )}
       <CardContent className="p-2.5 space-y-1.5">
-        {/* Grip + Platform icon + Idea title (side by side) */}
+        {/* Grip + Platform icon (when no cover) + Title */}
         <div className="flex items-start gap-1.5">
           <button {...attributes} {...listeners} className="touch-none shrink-0 pt-0.5">
             <GripVertical className="h-4 w-4 text-muted-foreground" />
           </button>
-          {platform && (
+          {!coverUrl && platform && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <span className="shrink-0 pt-0.5"><PlatformIcon icon={platform.icon} size="sm" /></span>
@@ -351,9 +366,6 @@ function SortableVariationCard({
           )}
           <div className="flex-1 min-w-0">
             <h4 className="font-semibold text-sm leading-snug break-words">{displayTitle}</h4>
-            {showSecondaryIdea && (
-              <p className="text-[11px] text-muted-foreground leading-tight truncate mt-0.5">{ideaTitle}</p>
-            )}
             {platform && (
               <p className="text-[10px] text-muted-foreground/80 leading-tight truncate mt-0.5 flex items-center gap-1">
                 <PlatformIcon icon={platform.icon} size="sm" />
