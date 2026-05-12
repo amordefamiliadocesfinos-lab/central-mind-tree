@@ -522,6 +522,31 @@ export default function Digital() {
                         </Select>
                       </div>
                     )}
+
+                    {kanbanMode === 'variations' && viewMode === 'kanban' && (
+                      <div className="space-y-1">
+                        <Label className="text-xs text-muted-foreground">Variação</Label>
+                        <Select value={variationFilter} onValueChange={setVariationFilter}>
+                          <SelectTrigger className="h-9"><SelectValue placeholder="Todas as variações" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Todas as variações</SelectItem>
+                            {allVariationsWithTitle.map(v => {
+                              const platform = activePlatforms.find(p => p.id === v.platform);
+                              return (
+                                <SelectItem key={v.id} value={v.id}>
+                                  <div className="flex items-center gap-2">
+                                    {platform && <PlatformIcon icon={platform.icon} size="sm" />}
+                                    <span className="truncate">
+                                      {v.title || 'Sem título'} {platform ? `(${platform.name})` : ''} — {v.ideaTitle}
+                                    </span>
+                                  </div>
+                                </SelectItem>
+                              );
+                            })}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </div>
                 </PopoverContent>
               </Popover>
