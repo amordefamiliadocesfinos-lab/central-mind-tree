@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { DigitalIdea, DIGITAL_STATUS } from '@/hooks/useDigital';
+import { DigitalIdea, DigitalVariation, DIGITAL_STATUS } from '@/hooks/useDigital';
 import { Platform } from '@/hooks/usePlatforms';
 import { ProductListItem } from '@/hooks/useProductsList';
 import { IdeaType } from '@/hooks/useIdeaTypes';
