@@ -199,6 +199,11 @@ export default function Digital() {
     const p = all.find((x: any) => x.id === platformFilter);
     activeFilterChips.push({ key: 'platform', label: `Canal: ${p?.name ?? platformFilter}`, clear: () => setPlatformFilter('all') });
   }
+  if (variationFilter !== 'all') {
+    const v = allVariationsWithTitle.find(x => x.id === variationFilter || x.title === variationFilter);
+    const vLabel = v?.title ? `${v.title} (${v.ideaTitle})` : variationFilter;
+    activeFilterChips.push({ key: 'variation', label: `Variação: ${vLabel}`, clear: () => setVariationFilter('all') });
+  }
   if (typeFilter !== 'all') {
     const t = ideaTypes.find(x => x.key === typeFilter);
     activeFilterChips.push({ key: 'type', label: `Tipo: ${t?.label ?? typeFilter}`, clear: () => setTypeFilter('all') });
@@ -216,7 +221,7 @@ export default function Digital() {
     activeFilterChips.push({ key: 'period', label: `Período: ${map[periodFilter] ?? periodFilter}`, clear: () => setPeriodFilter('all') });
   }
   const clearAllFilters = () => {
-    setStatusFilter('all'); setPlatformFilter('all'); setTypeFilter('all');
+    setStatusFilter('all'); setPlatformFilter('all'); setVariationFilter('all'); setTypeFilter('all');
     setNodeFilter('all'); setProductFilter('all'); setPeriodFilter('all');
     setSearchQuery('');
   };
