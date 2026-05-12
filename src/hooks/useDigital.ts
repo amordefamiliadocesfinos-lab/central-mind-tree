@@ -616,6 +616,8 @@ export function useDigital() {
     setStatusFilter,
     platformFilter,
     setPlatformFilter,
+    variationFilter,
+    setVariationFilter,
     stats,
     createIdea,
     updateIdea,
