@@ -408,7 +408,7 @@ export function KanbanBoard({ ideas, onUpdateIdea, onUpdateVariation, onSelectId
       }));
     } else {
       const allVariations = ideas.flatMap(idea =>
-        (idea.variations || []).map(v => ({ ...v, ideaTitle: idea.title, ideaType: idea.idea_type }))
+        (idea.variations || []).map(v => ({ ...v, ideaTitle: idea.title, ideaType: idea.idea_type, ideaMediaUrls: (idea.media_urls as string[] | null) || [] }))
       );
 
       return Object.entries(DIGITAL_STATUS).map(([status, config]) => ({
