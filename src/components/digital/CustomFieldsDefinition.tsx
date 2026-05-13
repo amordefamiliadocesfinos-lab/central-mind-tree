@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,9 +26,36 @@ const slugify = (s: string) =>
   s.toLowerCase().trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
 
 export function CustomFieldsDefinition({ fields, onChange }: CustomFieldsDefinitionProps) {
+  // Auto-fix duplicate ids from legacy data (caused by previous label-slug logic)
+  useEffect(() => {
+    const seen = new Set<string>();
+    let hasDup = false;
+    const fixed = fields.map((f) => {
+      if (!f.id || seen.has(f.id)) {
+        hasDup = true;
+        let nid = `field_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        while (seen.has(nid)) nid = `field_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        seen.add(nid);
+        return { ...f, id: nid };
+      }
+      seen.add(f.id);
+      return f;
+    });
+    if (hasDup) onChange(fixed);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const genId = () => {
+    const existing = new Set(fields.map(f => f.id));
+    let id = `field_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    while (existing.has(id)) {
+      id = `field_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    }
+    return id;
+  };
+
   const addField = () => {
-    const newId = `field_${Date.now()}`;
-    onChange([...fields, { id: newId, label: '', type: 'input' }]);
+    onChange([...fields, { id: genId(), label: '', type: 'input' }]);
   };
 
   const updateField = (index: number, updates: Partial<CustomField>) => {
@@ -68,9 +96,6 @@ export function CustomFieldsDefinition({ fields, onChange }: CustomFieldsDefinit
           keyExtractor={(f) => f.id}
           onReorder={handleReorder}
           renderItem={(field, index) => {
-            // Only auto-slug the id from the label if the id is still the auto-generated placeholder
-            // OR was previously synced from the label. Once user types, we don't remount.
-            const isAutoId = /^field_\d+$/.test(field.id) || field.id === slugify(field.label);
             return (
               <div className="space-y-2 p-2 bg-muted/50 rounded-lg">
                 <div className="flex items-center gap-2">
@@ -78,14 +103,7 @@ export function CustomFieldsDefinition({ fields, onChange }: CustomFieldsDefinit
 
                   <DebouncedInput
                     value={field.label}
-                    onChange={(label) => {
-                      const updates: Partial<CustomField> = { label };
-                      if (isAutoId && label.trim()) {
-                        const slug = slugify(label);
-                        if (slug) updates.id = slug;
-                      }
-                      updateField(index, updates);
-                    }}
+                    onChange={(label) => updateField(index, { label })}
                     placeholder="Nome do campo"
                     className="h-9 flex-1"
                     delay={300}
