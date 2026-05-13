@@ -2,7 +2,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, GripVertical, Type, AlignLeft, Hash, ListFilter, CalendarIcon, ImageIcon } from 'lucide-react';
+import { DebouncedInput } from '@/components/ui/debounced-input';
+import { SortableList, SortableHandle } from '@/components/ui/sortable-list';
+import { Plus, Trash2, Type, AlignLeft, Hash, ListFilter, CalendarIcon, ImageIcon } from 'lucide-react';
 import { CustomField } from '@/hooks/usePlatforms';
 
 interface CustomFieldsDefinitionProps {
@@ -19,6 +21,9 @@ const FIELD_TYPES: { value: CustomField['type']; label: string; icon: React.Reac
   { value: 'media', label: 'Mídia (URL)', icon: <ImageIcon className="h-3.5 w-3.5" /> },
 ];
 
+const slugify = (s: string) =>
+  s.toLowerCase().trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+
 export function CustomFieldsDefinition({ fields, onChange }: CustomFieldsDefinitionProps) {
   const addField = () => {
     const newId = `field_${Date.now()}`;
@@ -26,13 +31,15 @@ export function CustomFieldsDefinition({ fields, onChange }: CustomFieldsDefinit
   };
 
   const updateField = (index: number, updates: Partial<CustomField>) => {
-    onChange(fields.map((f, i) =>
-      i === index ? { ...f, ...updates } : f
-    ));
+    onChange(fields.map((f, i) => (i === index ? { ...f, ...updates } : f)));
   };
 
   const removeField = (index: number) => {
     onChange(fields.filter((_, i) => i !== index));
+  };
+
+  const handleReorder = (newItems: CustomField[]) => {
+    onChange(newItems);
   };
 
   return (
@@ -51,77 +58,93 @@ export function CustomFieldsDefinition({ fields, onChange }: CustomFieldsDefinit
         </Button>
       </div>
 
-      <div className="space-y-2">
-        {fields.map((field, index) => (
-          <div key={field.id} className="space-y-2 p-2 bg-muted/50 rounded-lg">
-            <div className="flex items-center gap-2">
-              <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
+      {fields.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-4 border-2 border-dashed rounded-lg">
+          Nenhum campo definido. Clique em "Adicionar Campo" acima.
+        </p>
+      ) : (
+        <SortableList
+          items={fields}
+          keyExtractor={(f) => f.id}
+          onReorder={handleReorder}
+          renderItem={(field, index) => {
+            // Only auto-slug the id from the label if the id is still the auto-generated placeholder
+            // OR was previously synced from the label. Once user types, we don't remount.
+            const isAutoId = /^field_\d+$/.test(field.id) || field.id === slugify(field.label);
+            return (
+              <div className="space-y-2 p-2 bg-muted/50 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <SortableHandle />
 
-              <Input
-                value={field.label}
-                onChange={(e) => updateField(index, {
-                  label: e.target.value,
-                  id: e.target.value.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') || field.id,
-                })}
-                placeholder="Nome do campo"
-                className="h-9 flex-1"
-              />
+                  <DebouncedInput
+                    value={field.label}
+                    onChange={(label) => {
+                      const updates: Partial<CustomField> = { label };
+                      if (isAutoId && label.trim()) {
+                        const slug = slugify(label);
+                        if (slug) updates.id = slug;
+                      }
+                      updateField(index, updates);
+                    }}
+                    placeholder="Nome do campo"
+                    className="h-9 flex-1"
+                    delay={300}
+                  />
 
-              <Select
-                value={field.type}
-                onValueChange={(v) => updateField(index, { type: v as CustomField['type'] })}
-              >
-                <SelectTrigger className="w-32 h-9">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {FIELD_TYPES.map(ft => (
-                    <SelectItem key={ft.value} value={ft.value}>
-                      <div className="flex items-center gap-2">
-                        {ft.icon}
-                        {ft.label}
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  <Select
+                    value={field.type}
+                    onValueChange={(v) => updateField(index, { type: v as CustomField['type'] })}
+                  >
+                    <SelectTrigger className="w-32 h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {FIELD_TYPES.map((ft) => (
+                        <SelectItem key={ft.value} value={ft.value}>
+                          <div className="flex items-center gap-2">
+                            {ft.icon}
+                            {ft.label}
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
 
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 text-destructive shrink-0"
-                onClick={() => removeField(index)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive shrink-0"
+                    onClick={() => removeField(index)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
 
-            {/* Select options editor */}
-            {field.type === 'select' && (
-              <div className="ml-8">
-                <Input
-                  value={field.select_options?.join(', ') || ''}
-                  onChange={(e) => updateField(index, {
-                    select_options: e.target.value.split(',').map(s => s.trim()).filter(Boolean),
-                  })}
-                  placeholder="Opções separadas por vírgula (ex: Opção 1, Opção 2)"
-                  className="h-8 text-xs"
-                />
+                {/* Select options editor */}
+                {field.type === 'select' && (
+                  <div className="ml-8">
+                    <DebouncedInput
+                      value={field.select_options?.join(', ') || ''}
+                      onChange={(v) =>
+                        updateField(index, {
+                          select_options: v.split(',').map((s) => s.trim()).filter(Boolean),
+                        })
+                      }
+                      placeholder="Opções separadas por vírgula (ex: Opção 1, Opção 2)"
+                      className="h-8 text-xs"
+                      delay={300}
+                    />
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        ))}
-
-        {fields.length === 0 && (
-          <p className="text-sm text-muted-foreground text-center py-4 border-2 border-dashed rounded-lg">
-            Nenhum campo definido. Clique em "Adicionar Campo" acima.
-          </p>
-        )}
-      </div>
+            );
+          }}
+        />
+      )}
 
       <p className="text-xs text-muted-foreground">
-        Tipos disponíveis: texto curto, texto longo, número, seleção, data e mídia.
+        Arraste pela alça à esquerda para reordenar. Tipos disponíveis: texto curto, texto longo, número, seleção, data e mídia.
       </p>
     </div>
   );
