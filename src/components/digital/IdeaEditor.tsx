@@ -73,6 +73,7 @@ export function IdeaEditor({
   onToggleChecklist,
   nodes = [],
   platforms = [],
+  onUpdatePlatform,
 }: IdeaEditorProps) {
   const isMobile = useIsMobile();
   const { products } = useProductsList();
