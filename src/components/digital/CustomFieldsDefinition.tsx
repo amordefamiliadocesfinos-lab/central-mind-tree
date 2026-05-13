@@ -73,12 +73,9 @@ export function CustomFieldsDefinition({ fields, onChange }: CustomFieldsDefinit
       ) : (
         <SortableList
           items={fields}
-          keyExtractor={(f) => f.id}
+          keyExtractor={(_f, _idx) => `${_f.id}__${_idx}`}
           onReorder={handleReorder}
           renderItem={(field, index) => {
-            // Only auto-slug the id from the label if the id is still the auto-generated placeholder
-            // OR was previously synced from the label. Once user types, we don't remount.
-            const isAutoId = /^field_\d+$/.test(field.id) || field.id === slugify(field.label);
             return (
               <div className="space-y-2 p-2 bg-muted/50 rounded-lg">
                 <div className="flex items-center gap-2">
@@ -86,14 +83,7 @@ export function CustomFieldsDefinition({ fields, onChange }: CustomFieldsDefinit
 
                   <DebouncedInput
                     value={field.label}
-                    onChange={(label) => {
-                      const updates: Partial<CustomField> = { label };
-                      if (isAutoId && label.trim()) {
-                        const slug = slugify(label);
-                        if (slug) updates.id = slug;
-                      }
-                      updateField(index, updates);
-                    }}
+                    onChange={(label) => updateField(index, { label })}
                     placeholder="Nome do campo"
                     className="h-9 flex-1"
                     delay={300}
