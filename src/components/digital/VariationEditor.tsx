@@ -28,6 +28,8 @@ import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { CustomFieldsDefinition } from './CustomFieldsDefinition';
+import { SlidersHorizontal } from 'lucide-react';
 
 type AIFieldType = 'title' | 'description' | 'caption' | 'cta' | 'hashtags' | 'custom_field';
 
@@ -41,6 +43,7 @@ interface VariationEditorProps {
   onDelete: (id: string) => void;
   onToggleChecklist: (variationId: string, itemId: string) => void;
   platforms?: Platform[];
+  onUpdatePlatform?: (id: string, updates: Partial<Platform>) => void | Promise<void>;
 }
 
 const REPLICA_SECTION_CONFIG: Array<{
@@ -195,6 +198,7 @@ export function VariationEditor({
   onDelete,
   onToggleChecklist,
   platforms = [],
+  onUpdatePlatform,
 }: VariationEditorProps) {
   const isMobile = useIsMobile();
   const platformConfig = platforms.find(p => p.id === variation.platform);
@@ -777,6 +781,27 @@ export function VariationEditor({
               </div>
             );
           })}
+
+          {/* Manage platform fields (add / edit / reorder / delete) */}
+          {platformConfig && onUpdatePlatform && (
+            <Collapsible>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground gap-1">
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  Gerenciar campos da plataforma ({(platformConfig.custom_fields || []).length})
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-2">
+                <p className="text-[11px] text-muted-foreground mb-2">
+                  Os campos abaixo valem para todas as variações da plataforma <strong>{platformConfig.name}</strong>.
+                </p>
+                <CustomFieldsDefinition
+                  fields={platformConfig.custom_fields || []}
+                  onChange={(fields) => onUpdatePlatform(platformConfig.id, { custom_fields: fields })}
+                />
+              </CollapsibleContent>
+            </Collapsible>
+          )}
 
           {/* Media with Inheritance */}
           <div className="space-y-3">

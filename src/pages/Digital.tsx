@@ -62,6 +62,7 @@ export default function Digital() {
     // Dynamic platforms
     activePlatforms,
     groupedPlatforms,
+    updatePlatform,
     GROUP_LABELS,
     GROUP_ICONS,
   } = useDigital();
@@ -659,6 +660,7 @@ export default function Digital() {
               onToggleChecklist={toggleVariationChecklist}
               nodes={nodes}
               platforms={activePlatforms}
+              onUpdatePlatform={updatePlatform}
             />
           ) : activeTab === 'ideias' ? (
             viewMode === 'kanban' ? (
