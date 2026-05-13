@@ -25,9 +25,17 @@ const slugify = (s: string) =>
   s.toLowerCase().trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
 
 export function CustomFieldsDefinition({ fields, onChange }: CustomFieldsDefinitionProps) {
+  const genId = () => {
+    const existing = new Set(fields.map(f => f.id));
+    let id = `field_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    while (existing.has(id)) {
+      id = `field_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    }
+    return id;
+  };
+
   const addField = () => {
-    const newId = `field_${Date.now()}`;
-    onChange([...fields, { id: newId, label: '', type: 'input' }]);
+    onChange([...fields, { id: genId(), label: '', type: 'input' }]);
   };
 
   const updateField = (index: number, updates: Partial<CustomField>) => {
