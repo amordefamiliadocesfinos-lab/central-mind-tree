@@ -73,7 +73,7 @@ export function CustomFieldsDefinition({ fields, onChange }: CustomFieldsDefinit
       ) : (
         <SortableList
           items={fields}
-          keyExtractor={(_f, _idx) => `${_f.id}__${_idx}`}
+          keyExtractor={(f) => f.id}
           onReorder={handleReorder}
           renderItem={(field, index) => {
             return (
