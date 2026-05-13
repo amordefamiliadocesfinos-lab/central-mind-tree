@@ -660,6 +660,7 @@ export default function Digital() {
               onToggleChecklist={toggleVariationChecklist}
               nodes={nodes}
               platforms={activePlatforms}
+              onUpdatePlatform={updatePlatform}
             />
           ) : activeTab === 'ideias' ? (
             viewMode === 'kanban' ? (
