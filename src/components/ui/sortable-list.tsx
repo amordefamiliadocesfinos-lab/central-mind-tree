@@ -23,6 +23,12 @@ import { CSS } from "@dnd-kit/utilities";
 import { GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const SortableHandleContext = React.createContext<{
+  attributes: any;
+  listeners?: any;
+  isDragging: boolean;
+} | null>(null);
+
 interface SortableListProps<T> {
   items: T[];
   keyExtractor: (item: T) => string;
@@ -166,31 +172,30 @@ function SortableItem({ id, children, isActive }: SortableItemProps) {
     transform: CSS.Transform.toString(transform),
     transition: isDragging ? "none" : transition,
     opacity: isDragging ? 0.4 : 1,
-    touchAction: "none",
     zIndex: isDragging ? 100 : "auto",
   };
 
   return (
-    <div 
-      ref={setNodeRef} 
-      style={style} 
-      {...attributes} 
-      {...listeners}
-      className={cn(
-        "relative transition-all duration-200",
-        isDragging && "scale-[0.98]",
-        isSorting && !isDragging && "transition-transform",
-      )}
-    >
-      {/* Placeholder indicator when dragging over */}
-      {isDragging && (
-        <div 
-          className="absolute inset-0 bg-primary/10 border-2 border-dashed border-primary/40 rounded-lg pointer-events-none"
-          style={{ zIndex: -1 }}
-        />
-      )}
-      {children}
-    </div>
+    <SortableHandleContext.Provider value={{ attributes, listeners, isDragging }}>
+      <div
+        ref={setNodeRef}
+        style={style}
+        className={cn(
+          "relative transition-all duration-200",
+          isDragging && "scale-[0.98]",
+          isSorting && !isDragging && "transition-transform",
+        )}
+      >
+        {/* Placeholder indicator when dragging over */}
+        {isDragging && (
+          <div
+            className="absolute inset-0 bg-primary/10 border-2 border-dashed border-primary/40 rounded-lg pointer-events-none"
+            style={{ zIndex: -1 }}
+          />
+        )}
+        {children}
+      </div>
+    </SortableHandleContext.Provider>
   );
 }
 
@@ -200,18 +205,23 @@ interface SortableHandleProps {
 }
 
 export function SortableHandle({ className, isDragging }: SortableHandleProps) {
+  const sortable = React.useContext(SortableHandleContext);
+  const dragging = isDragging ?? sortable?.isDragging ?? false;
+
   return (
     <div
+      {...sortable?.attributes}
+      {...sortable?.listeners}
       className={cn(
         "flex items-center justify-center w-8 h-8 cursor-grab active:cursor-grabbing touch-none rounded-md transition-all duration-150",
         "hover:bg-muted/80 active:bg-muted",
-        isDragging && "cursor-grabbing bg-primary/10 text-primary",
+        dragging && "cursor-grabbing bg-primary/10 text-primary",
         className
       )}
     >
       <GripVertical className={cn(
         "h-4 w-4 text-muted-foreground transition-colors duration-150",
-        isDragging && "text-primary"
+        dragging && "text-primary"
       )} />
     </div>
   );
