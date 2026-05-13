@@ -26,6 +26,25 @@ const slugify = (s: string) =>
   s.toLowerCase().trim().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
 
 export function CustomFieldsDefinition({ fields, onChange }: CustomFieldsDefinitionProps) {
+  // Auto-fix duplicate ids from legacy data (caused by previous label-slug logic)
+  useEffect(() => {
+    const seen = new Set<string>();
+    let hasDup = false;
+    const fixed = fields.map((f) => {
+      if (!f.id || seen.has(f.id)) {
+        hasDup = true;
+        let nid = `field_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        while (seen.has(nid)) nid = `field_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+        seen.add(nid);
+        return { ...f, id: nid };
+      }
+      seen.add(f.id);
+      return f;
+    });
+    if (hasDup) onChange(fixed);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const genId = () => {
     const existing = new Set(fields.map(f => f.id));
     let id = `field_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
