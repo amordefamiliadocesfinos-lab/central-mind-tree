@@ -309,6 +309,7 @@ export function IdeaEditor({
         onDelete={onDeleteVariation}
         onToggleChecklist={onToggleChecklist}
         platforms={platforms}
+        onUpdatePlatform={onUpdatePlatform}
       />
     );
   }
