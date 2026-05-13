@@ -28,6 +28,8 @@ import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { supabase } from '@/integrations/supabase/client';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { CustomFieldsDefinition } from './CustomFieldsDefinition';
+import { SlidersHorizontal } from 'lucide-react';
 
 type AIFieldType = 'title' | 'description' | 'caption' | 'cta' | 'hashtags' | 'custom_field';
 
