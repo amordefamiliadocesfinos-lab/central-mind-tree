@@ -56,6 +56,7 @@ interface IdeaEditorProps {
   onToggleChecklist: (variationId: string, itemId: string) => void;
   nodes?: Node[];
   platforms?: Platform[];
+  onUpdatePlatform?: (id: string, updates: Partial<Platform>) => void | Promise<void>;
 }
 
 export function IdeaEditor({
