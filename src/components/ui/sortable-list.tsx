@@ -24,8 +24,8 @@ import { GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const SortableHandleContext = React.createContext<{
-  attributes: Record<string, unknown>;
-  listeners?: Record<string, unknown>;
+  attributes: any;
+  listeners?: any;
   isDragging: boolean;
 } | null>(null);
 
