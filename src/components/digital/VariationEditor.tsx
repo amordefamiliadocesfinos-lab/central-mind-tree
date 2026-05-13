@@ -198,6 +198,7 @@ export function VariationEditor({
   onDelete,
   onToggleChecklist,
   platforms = [],
+  onUpdatePlatform,
 }: VariationEditorProps) {
   const isMobile = useIsMobile();
   const platformConfig = platforms.find(p => p.id === variation.platform);
