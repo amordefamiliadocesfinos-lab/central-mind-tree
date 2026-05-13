@@ -62,6 +62,7 @@ export default function Digital() {
     // Dynamic platforms
     activePlatforms,
     groupedPlatforms,
+    updatePlatform,
     GROUP_LABELS,
     GROUP_ICONS,
   } = useDigital();
