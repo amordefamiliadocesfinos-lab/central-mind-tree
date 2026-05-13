@@ -782,6 +782,27 @@ export function VariationEditor({
             );
           })}
 
+          {/* Manage platform fields (add / edit / reorder / delete) */}
+          {platformConfig && onUpdatePlatform && (
+            <Collapsible>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="w-full text-xs text-muted-foreground gap-1">
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  Gerenciar campos da plataforma ({(platformConfig.custom_fields || []).length})
+                </Button>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="pt-2">
+                <p className="text-[11px] text-muted-foreground mb-2">
+                  Os campos abaixo valem para todas as variações da plataforma <strong>{platformConfig.name}</strong>.
+                </p>
+                <CustomFieldsDefinition
+                  fields={platformConfig.custom_fields || []}
+                  onChange={(fields) => onUpdatePlatform(platformConfig.id, { custom_fields: fields })}
+                />
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+
           {/* Media with Inheritance */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
