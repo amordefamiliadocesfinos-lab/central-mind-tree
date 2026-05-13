@@ -43,6 +43,7 @@ interface VariationEditorProps {
   onDelete: (id: string) => void;
   onToggleChecklist: (variationId: string, itemId: string) => void;
   platforms?: Platform[];
+  onUpdatePlatform?: (id: string, updates: Partial<Platform>) => void | Promise<void>;
 }
 
 const REPLICA_SECTION_CONFIG: Array<{
