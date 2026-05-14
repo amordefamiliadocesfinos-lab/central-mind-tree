@@ -86,13 +86,34 @@ export function applyProductsSubFilters<
     });
   }
 
+  // Normalize name for alphabetic sort: strip emojis/symbols, trim, lowercase, remove accents
+  const normalizeName = (n: string) =>
+    (n || '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // remove accents
+      .replace(/[^\p{L}\p{N}\s]/gu, '') // remove emojis/symbols
+      .trim()
+      .toLowerCase();
+
   // Sort
   switch (value.sort) {
     case 'az':
-      result.sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'));
+      result.sort((a, b) =>
+        normalizeName(a.name).localeCompare(normalizeName(b.name), 'pt-BR', {
+          sensitivity: 'base',
+          numeric: true,
+          ignorePunctuation: true,
+        }),
+      );
       break;
     case 'za':
-      result.sort((a, b) => b.name.localeCompare(a.name, 'pt-BR'));
+      result.sort((a, b) =>
+        normalizeName(b.name).localeCompare(normalizeName(a.name), 'pt-BR', {
+          sensitivity: 'base',
+          numeric: true,
+          ignorePunctuation: true,
+        }),
+      );
       break;
     case 'newest':
       result.sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
