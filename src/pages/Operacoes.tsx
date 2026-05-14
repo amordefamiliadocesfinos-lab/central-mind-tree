@@ -1086,14 +1086,14 @@ export default function Operacoes() {
             </div>
 
             <div className="grid gap-3 grid-cols-1">
-              {filteredProducts.length === 0 ? (
+              {productsTabList.length === 0 ? (
                 <Card className="p-8 text-center col-span-full">
                   <p className="text-muted-foreground">
                     {searchTerm || categoryFilter !== 'all' ? 'Nenhum produto encontrado.' : 'Nenhum produto ainda.'}
                   </p>
                 </Card>
               ) : (
-                filteredProducts.map((product) => (
+                productsTabList.map((product) => (
                   <ProductCard
                     key={product.id}
                     product={product as Product}
