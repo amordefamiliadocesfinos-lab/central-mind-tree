@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, Plus, Trash2, Settings, Calendar, Image, Copy, Layers, Link2, X, ImagePlus, Eye, EyeOff, Sparkles, Loader2, Wand2, SlidersHorizontal } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Settings, Calendar, Image, Copy, Layers, Link2, X, ImagePlus, Eye, EyeOff, Sparkles, Loader2, Wand2, SlidersHorizontal, List, LayoutGrid } from 'lucide-react';
 import { CustomFieldsDefinition } from './CustomFieldsDefinition';
 import { CustomFieldsRenderer } from './CustomFieldsRenderer';
 import { AIVariationsGenerator } from './AIVariationsGenerator';
@@ -113,6 +113,7 @@ export function IdeaEditor({
     kpi: false,
     all: false,
   });
+  const [platformsViewMode, setPlatformsViewMode] = useState<'list' | 'kanban'>('list');
 
   // AI Generation function
   const generateWithAI = async (field: AIFieldType) => {
@@ -838,6 +839,35 @@ export function IdeaEditor({
             </div>
           )}
 
+          {/* View Mode Toggle */}
+          {variations.length > 0 && (
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs text-muted-foreground">
+                {variations.length} variação(ões)
+              </span>
+              <div className="inline-flex rounded-md border bg-muted/30 p-0.5">
+                <Button
+                  variant={platformsViewMode === 'list' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="h-7 px-2 gap-1"
+                  onClick={() => setPlatformsViewMode('list')}
+                >
+                  <List className="h-3.5 w-3.5" />
+                  <span className="text-xs hidden sm:inline">Lista</span>
+                </Button>
+                <Button
+                  variant={platformsViewMode === 'kanban' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="h-7 px-2 gap-1"
+                  onClick={() => setPlatformsViewMode('kanban')}
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  <span className="text-xs hidden sm:inline">Kanban</span>
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* Variations List */}
           {variations.length === 0 ? (
             <Card className="p-8 text-center">
@@ -848,6 +878,96 @@ export function IdeaEditor({
                 Adicione plataformas para criar variações do conteúdo.
               </p>
             </Card>
+          ) : platformsViewMode === 'kanban' ? (
+            <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
+              {Object.entries(DIGITAL_STATUS).map(([status, config]) => {
+                const items = variations.filter(v => v.status === status);
+                return (
+                  <div key={status} className="flex-shrink-0 w-64">
+                    <Card className="h-full">
+                      <CardHeader className="py-2 px-3">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-xs font-medium flex items-center gap-2">
+                            <div className={cn('w-2 h-2 rounded-full', config.color)} />
+                            {config.label}
+                          </CardTitle>
+                          <Badge variant="secondary" className="text-[10px] h-5">{items.length}</Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="p-2 space-y-2 min-h-[120px]">
+                        {items.map((variation) => {
+                          const platformConfig = getPlatform(variation.platform);
+                          const checklistProgress = variation.checklist?.length
+                            ? (variation.checklist.filter(c => c.done).length / variation.checklist.length) * 100
+                            : 0;
+                          const variationMedia = (variation.media_urls as string[] | null) || [];
+                          const coverUrl = variationMedia[0] || (idea.media_urls || [])[0] || null;
+                          const cfv = (variation as any).custom_field_values as Record<string, string> | undefined;
+                          const platformTitle = (() => {
+                            if (variation.title?.trim()) return variation.title.trim();
+                            if (cfv && platformConfig?.custom_fields?.length) {
+                              for (const f of platformConfig.custom_fields) {
+                                const val = cfv[f.id];
+                                if (val && String(val).trim()) return String(val).trim();
+                              }
+                            }
+                            return platformConfig?.name || 'Variação';
+                          })();
+                          return (
+                            <Card
+                              key={variation.id}
+                              className={cn(
+                                'cursor-pointer hover:bg-muted/50 transition-all border-l-4 overflow-hidden',
+                                DIGITAL_STATUS[variation.status].color.replace('bg-', 'border-l-')
+                              )}
+                              onClick={() => setSelectedVariation(variation)}
+                            >
+                              {coverUrl && (
+                                <div className="relative w-full bg-muted flex items-center justify-center py-1.5">
+                                  <img src={coverUrl} alt="" className="max-w-full max-h-[90px] object-contain" loading="lazy" />
+                                  {platformConfig && (
+                                    <div className="absolute top-1 left-1 bg-black/50 backdrop-blur-sm rounded-full px-1 py-0.5">
+                                      <span className="brightness-150"><PlatformIcon icon={platformConfig.icon} size="sm" /></span>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                              <CardContent className="p-2 space-y-1">
+                                <div className="flex items-start gap-1.5">
+                                  {!coverUrl && platformConfig && (
+                                    <PlatformIcon icon={platformConfig.icon} size="sm" />
+                                  )}
+                                  <h4 className="font-semibold text-xs leading-snug line-clamp-2 flex-1">
+                                    {platformTitle}
+                                  </h4>
+                                </div>
+                                {variation.scheduled_date && (
+                                  <p className="text-[10px] text-muted-foreground tabular-nums">
+                                    📅 {variation.scheduled_date.slice(5).replace('-', '/')}
+                                    {variation.scheduled_time && ` ${variation.scheduled_time.slice(0, 5)}`}
+                                  </p>
+                                )}
+                                {variation.checklist?.length > 0 && (
+                                  <div className="flex items-center gap-1 pt-1 border-t border-border/50">
+                                    <Progress value={checklistProgress} className="flex-1 h-1" />
+                                    <span className="text-[9px] text-muted-foreground tabular-nums">{Math.round(checklistProgress)}%</span>
+                                  </div>
+                                )}
+                              </CardContent>
+                            </Card>
+                          );
+                        })}
+                        {items.length === 0 && (
+                          <div className="text-center text-muted-foreground text-[10px] py-4">
+                            Vazio
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                );
+              })}
+            </div>
           ) : (
             <div className="space-y-2">
               {variations.map((variation) => {
