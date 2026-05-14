@@ -957,9 +957,14 @@ export default function Operacoes() {
               placeholder="Buscar produtos..."
               showStatusFilter={false}
             />
-            
+
+            <ProductsSubFilters
+              value={productsSubFilter}
+              onChange={setProductsSubFilter}
+            />
+
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold">Produtos ({filteredProducts.length})</h2>
+              <h2 className="text-lg font-semibold">Produtos ({productsTabList.length})</h2>
               <Dialog open={showProductDialog} onOpenChange={setShowProductDialog}>
                 <DialogTrigger asChild>
                   <Button size="lg" className="h-12 px-6">
