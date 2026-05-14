@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, Plus, Trash2, Settings, Calendar, Image, Copy, Layers, Link2, X, ImagePlus, Eye, EyeOff, Sparkles, Loader2, Wand2, SlidersHorizontal } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Settings, Calendar, Image, Copy, Layers, Link2, X, ImagePlus, Eye, EyeOff, Sparkles, Loader2, Wand2, SlidersHorizontal, List, LayoutGrid } from 'lucide-react';
 import { CustomFieldsDefinition } from './CustomFieldsDefinition';
 import { CustomFieldsRenderer } from './CustomFieldsRenderer';
 import { AIVariationsGenerator } from './AIVariationsGenerator';
