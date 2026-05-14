@@ -194,9 +194,9 @@ export default function Operacoes() {
     sort: 'az',
     periodPreset: 'all',
   });
-  const sortedProducts = sortProductsByCategory(useFilteredProducts());
-  const filteredProducts = applyProductsSubFilters(
-    sortedProducts as Product[],
+  const filteredProducts = sortProductsByCategory(useFilteredProducts());
+  const productsTabList = applyProductsSubFilters(
+    filteredProducts as Product[],
     productsSubFilter,
     (id) => productBalances[id] || 0,
   );
