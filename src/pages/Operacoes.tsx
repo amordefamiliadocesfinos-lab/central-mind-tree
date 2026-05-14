@@ -190,7 +190,16 @@ export default function Operacoes() {
   const filteredOrders = sortOrdersByStatus(
     filterOrdersByDate(useFilteredOrders(), ordersDateFilter)
   );
-  const filteredProducts = sortProductsByCategory(useFilteredProducts());
+  const [productsSubFilter, setProductsSubFilter] = useState<ProductsSubFiltersValue>({
+    sort: 'az',
+    periodPreset: 'all',
+  });
+  const sortedProducts = sortProductsByCategory(useFilteredProducts());
+  const filteredProducts = applyProductsSubFilters(
+    sortedProducts as Product[],
+    productsSubFilter,
+    (id) => productBalances[id] || 0,
+  );
 
   // Dialog states (local)
   const [showProductDialog, setShowProductDialog] = useState(false);
