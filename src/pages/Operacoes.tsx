@@ -24,6 +24,7 @@ import { BOMEditor } from '@/components/BOMEditor';
 import { OperationsTab, OperationsBottomNav } from '@/components/operations/OperationsBottomNav';
 import { OperationsSearchBar } from '@/components/operations/OperationsSearchBar';
 import { OrdersDateFilter, filterOrdersByDate, type OrdersDateFilterValue } from '@/components/operations/OrdersDateFilter';
+import { ProductsSubFilters, applyProductsSubFilters, type ProductsSubFiltersValue } from '@/components/operations/ProductsSubFilters';
 import { OperationsTopTabs } from '@/components/operations/OperationsTopTabs';
 import { OrderCard } from '@/components/operations/OrderCard';
 import { OrderGridCard } from '@/components/operations/OrderGridCard';
@@ -189,7 +190,16 @@ export default function Operacoes() {
   const filteredOrders = sortOrdersByStatus(
     filterOrdersByDate(useFilteredOrders(), ordersDateFilter)
   );
+  const [productsSubFilter, setProductsSubFilter] = useState<ProductsSubFiltersValue>({
+    sort: 'az',
+    periodPreset: 'all',
+  });
   const filteredProducts = sortProductsByCategory(useFilteredProducts());
+  const productsTabList = applyProductsSubFilters(
+    filteredProducts as Product[],
+    productsSubFilter,
+    (id) => productBalances[id] || 0,
+  );
 
   // Dialog states (local)
   const [showProductDialog, setShowProductDialog] = useState(false);
@@ -947,9 +957,14 @@ export default function Operacoes() {
               placeholder="Buscar produtos..."
               showStatusFilter={false}
             />
-            
+
+            <ProductsSubFilters
+              value={productsSubFilter}
+              onChange={setProductsSubFilter}
+            />
+
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold">Produtos ({filteredProducts.length})</h2>
+              <h2 className="text-lg font-semibold">Produtos ({productsTabList.length})</h2>
               <Dialog open={showProductDialog} onOpenChange={setShowProductDialog}>
                 <DialogTrigger asChild>
                   <Button size="lg" className="h-12 px-6">
@@ -1071,14 +1086,14 @@ export default function Operacoes() {
             </div>
 
             <div className="grid gap-3 grid-cols-1">
-              {filteredProducts.length === 0 ? (
+              {productsTabList.length === 0 ? (
                 <Card className="p-8 text-center col-span-full">
                   <p className="text-muted-foreground">
                     {searchTerm || categoryFilter !== 'all' ? 'Nenhum produto encontrado.' : 'Nenhum produto ainda.'}
                   </p>
                 </Card>
               ) : (
-                filteredProducts.map((product) => (
+                productsTabList.map((product) => (
                   <ProductCard
                     key={product.id}
                     product={product as Product}
