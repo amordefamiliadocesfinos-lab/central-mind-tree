@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { DecimalInput } from '@/components/ui/decimal-input';
+import { parseDecimalInput } from '@/lib/decimal';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -263,6 +264,17 @@ export default function Operacoes() {
   const [editingCostText, setEditingCostText] = useState('');
   const [editingPriceText, setEditingPriceText] = useState('');
 
+  // Sync text inputs with the product being edited
+  useEffect(() => {
+    if (editingProduct) {
+      setEditingCostText(editingProduct.cost != null ? String(editingProduct.cost) : '');
+      setEditingPriceText(editingProduct.price != null ? String(editingProduct.price) : '');
+    } else {
+      setEditingCostText('');
+      setEditingPriceText('');
+    }
+  }, [editingProduct?.id]);
+
   const getProductBalance = (productId: string) => productBalances[productId] || 0;
 
   const saleSubtotal = newSale.items.reduce((acc, item) => acc + (item.quantity * item.unit_price), 0);
@@ -280,7 +292,15 @@ export default function Operacoes() {
 
   const handleUpdateProduct = async () => {
     if (!editingProduct) return;
-    await updateProduct(editingProduct.id, editingProduct);
+    // Parse current text inputs to ensure latest values are saved even if blur didn't fire
+    const parsedCost = parseDecimalInput(editingCostText, { min: 0, maxDecimals: 10 });
+    const parsedPrice = parseDecimalInput(editingPriceText, { min: 0, maxDecimals: 10 });
+    const payload = {
+      ...editingProduct,
+      cost: editingCostText.trim() === '' ? null : (parsedCost ? parsedCost.number : editingProduct.cost),
+      price: editingPriceText.trim() === '' ? null : (parsedPrice ? parsedPrice.number : editingProduct.price),
+    };
+    await updateProduct(editingProduct.id, payload);
     setEditingProduct(null);
   };
 
