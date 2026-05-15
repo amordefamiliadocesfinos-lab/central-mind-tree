@@ -263,6 +263,17 @@ export default function Operacoes() {
   const [editingCostText, setEditingCostText] = useState('');
   const [editingPriceText, setEditingPriceText] = useState('');
 
+  // Sync text inputs with the product being edited
+  useEffect(() => {
+    if (editingProduct) {
+      setEditingCostText(editingProduct.cost != null ? String(editingProduct.cost) : '');
+      setEditingPriceText(editingProduct.price != null ? String(editingProduct.price) : '');
+    } else {
+      setEditingCostText('');
+      setEditingPriceText('');
+    }
+  }, [editingProduct?.id]);
+
   const getProductBalance = (productId: string) => productBalances[productId] || 0;
 
   const saleSubtotal = newSale.items.reduce((acc, item) => acc + (item.quantity * item.unit_price), 0);
