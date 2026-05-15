@@ -291,7 +291,15 @@ export default function Operacoes() {
 
   const handleUpdateProduct = async () => {
     if (!editingProduct) return;
-    await updateProduct(editingProduct.id, editingProduct);
+    // Parse current text inputs to ensure latest values are saved even if blur didn't fire
+    const parsedCost = parseDecimalInput(editingCostText, { min: 0, maxDecimals: 10 });
+    const parsedPrice = parseDecimalInput(editingPriceText, { min: 0, maxDecimals: 10 });
+    const payload = {
+      ...editingProduct,
+      cost: editingCostText.trim() === '' ? null : (parsedCost ? parsedCost.number : editingProduct.cost),
+      price: editingPriceText.trim() === '' ? null : (parsedPrice ? parsedPrice.number : editingProduct.price),
+    };
+    await updateProduct(editingProduct.id, payload);
     setEditingProduct(null);
   };
 
