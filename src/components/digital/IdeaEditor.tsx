@@ -113,7 +113,7 @@ export function IdeaEditor({
     kpi: false,
     all: false,
   });
-  const [platformsViewMode, setPlatformsViewMode] = useState<'list' | 'kanban' | 'grid'>('list');
+  const [platformsViewMode, setPlatformsViewMode] = useState<'list' | 'kanban' | 'grid' | 'compact'>('list');
 
   // AI Generation function
   const generateWithAI = async (field: AIFieldType) => {
