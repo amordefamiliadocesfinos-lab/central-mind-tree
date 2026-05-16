@@ -896,6 +896,63 @@ export function IdeaEditor({
                 Adicione plataformas para criar variações do conteúdo.
               </p>
             </Card>
+          ) : platformsViewMode === 'compact' ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
+              {variations.map((variation) => {
+                const platformConfig = getPlatform(variation.platform);
+                const variationStatusConfig = DIGITAL_STATUS[variation.status];
+                const variationMedia = (variation.media_urls as string[] | null) || [];
+                const coverUrl = variationMedia[0] || (idea.media_urls || [])[0] || null;
+                const isVideo = coverUrl && /\.(mp4|webm|mov)(\?|$)/i.test(coverUrl);
+                const cfv = (variation as any).custom_field_values as Record<string, string> | undefined;
+                const platformTitle = (() => {
+                  if (variation.title?.trim()) return variation.title.trim();
+                  if (cfv && platformConfig?.custom_fields?.length) {
+                    for (const f of platformConfig.custom_fields) {
+                      const val = cfv[f.id];
+                      if (val && String(val).trim()) return String(val).trim();
+                    }
+                  }
+                  return null;
+                })();
+                return (
+                  <Card
+                    key={variation.id}
+                    className={cn(
+                      'cursor-pointer hover:bg-muted/50 hover:shadow-md transition-all overflow-hidden border-l-4',
+                      variationStatusConfig.color.replace('bg-', 'border-l-')
+                    )}
+                    onClick={() => setSelectedVariation(variation)}
+                  >
+                    <CardContent className="p-2 flex items-center gap-2">
+                      <div className="relative w-12 h-12 shrink-0 rounded-md overflow-hidden bg-muted flex items-center justify-center">
+                        {coverUrl ? (
+                          isVideo ? (
+                            <video src={coverUrl} className="absolute inset-0 w-full h-full object-cover" muted playsInline />
+                          ) : (
+                            <img src={coverUrl} alt="" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
+                          )
+                        ) : (
+                          <Image className="h-4 w-4 text-muted-foreground/40" />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          {platformConfig && <PlatformIcon icon={platformConfig.icon} size="md" />}
+                          <span className="font-semibold text-sm truncate">{platformConfig?.name || 'Plataforma'}</span>
+                        </div>
+                        {platformTitle && (
+                          <p className="text-[10px] text-muted-foreground truncate mt-0.5">{platformTitle}</p>
+                        )}
+                        <div className={cn('inline-block mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-medium text-white', variationStatusConfig.color)}>
+                          {variationStatusConfig.label}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           ) : platformsViewMode === 'grid' ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
               {variations.map((variation) => {
