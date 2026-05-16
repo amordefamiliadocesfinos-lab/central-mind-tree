@@ -864,6 +864,15 @@ export function IdeaEditor({
                   <LayoutGrid className="h-3.5 w-3.5" />
                   <span className="text-xs hidden sm:inline">Kanban</span>
                 </Button>
+                <Button
+                  variant={platformsViewMode === 'grid' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="h-7 px-2 gap-1"
+                  onClick={() => setPlatformsViewMode('grid')}
+                >
+                  <Grid3x3 className="h-3.5 w-3.5" />
+                  <span className="text-xs hidden sm:inline">Mosaico</span>
+                </Button>
               </div>
             </div>
           )}
