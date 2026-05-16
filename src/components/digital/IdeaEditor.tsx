@@ -937,9 +937,9 @@ export function IdeaEditor({
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           {platformConfig && <PlatformIcon icon={platformConfig.icon} size="md" />}
-                          <span className="font-semibold text-sm truncate">{platformConfig?.name || 'Plataforma'}</span>
+                          <span className="font-semibold text-sm break-words">{platformConfig?.name || 'Plataforma'}</span>
                         </div>
                         {platformTitle && (
                           <p className="text-[10px] text-muted-foreground truncate mt-0.5">{platformTitle}</p>
