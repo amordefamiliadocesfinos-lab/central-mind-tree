@@ -873,6 +873,15 @@ export function IdeaEditor({
                   <Grid3x3 className="h-3.5 w-3.5" />
                   <span className="text-xs hidden sm:inline">Mosaico</span>
                 </Button>
+                <Button
+                  variant={platformsViewMode === 'compact' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="h-7 px-2 gap-1"
+                  onClick={() => setPlatformsViewMode('compact')}
+                >
+                  <Layers className="h-3.5 w-3.5" />
+                  <span className="text-xs hidden sm:inline">Compacto</span>
+                </Button>
               </div>
             </div>
           )}
