@@ -887,6 +887,77 @@ export function IdeaEditor({
                 Adicione plataformas para criar variações do conteúdo.
               </p>
             </Card>
+          ) : platformsViewMode === 'grid' ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {variations.map((variation) => {
+                const platformConfig = getPlatform(variation.platform);
+                const variationStatusConfig = DIGITAL_STATUS[variation.status];
+                const variationMedia = (variation.media_urls as string[] | null) || [];
+                const coverUrl = variationMedia[0] || (idea.media_urls || [])[0] || null;
+                const isVideo = coverUrl && /\.(mp4|webm|mov)(\?|$)/i.test(coverUrl);
+                const checklistProgress = variation.checklist?.length
+                  ? (variation.checklist.filter(c => c.done).length / variation.checklist.length) * 100
+                  : 0;
+                const cfv = (variation as any).custom_field_values as Record<string, string> | undefined;
+                const platformTitle = (() => {
+                  if (variation.title?.trim()) return variation.title.trim();
+                  if (cfv && platformConfig?.custom_fields?.length) {
+                    for (const f of platformConfig.custom_fields) {
+                      const val = cfv[f.id];
+                      if (val && String(val).trim()) return String(val).trim();
+                    }
+                  }
+                  return platformConfig?.name || 'Variação';
+                })();
+                return (
+                  <Card
+                    key={variation.id}
+                    className={cn(
+                      'group cursor-pointer hover:shadow-lg hover:-translate-y-0.5 transition-all overflow-hidden border-l-4',
+                      variationStatusConfig.color.replace('bg-', 'border-l-')
+                    )}
+                    onClick={() => setSelectedVariation(variation)}
+                  >
+                    <div className="relative w-full aspect-square bg-muted overflow-hidden">
+                      {coverUrl ? (
+                        isVideo ? (
+                          <video src={coverUrl} className="absolute inset-0 w-full h-full object-cover" muted playsInline />
+                        ) : (
+                          <img src={coverUrl} alt="" className="absolute inset-0 w-full h-full object-cover transition-transform group-hover:scale-105" loading="lazy" />
+                        )
+                      ) : (
+                        <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-muted/40 to-muted/70">
+                          <Image className="h-8 w-8 text-muted-foreground/40" />
+                        </div>
+                      )}
+                      <Badge className={cn('absolute top-1.5 right-1.5 text-[9px] font-semibold text-white shadow-md backdrop-blur-sm', variationStatusConfig.color)}>
+                        {variationStatusConfig.label}
+                      </Badge>
+                      {platformConfig && (
+                        <div className="absolute top-1.5 left-1.5 bg-black/60 backdrop-blur-sm rounded-full px-1.5 py-0.5">
+                          <span className="brightness-150"><PlatformIcon icon={platformConfig.icon} size="sm" /></span>
+                        </div>
+                      )}
+                    </div>
+                    <CardContent className="p-2 space-y-1">
+                      <h4 className="font-semibold text-xs leading-snug line-clamp-2">{platformTitle}</h4>
+                      <div className="flex items-center justify-between gap-1 text-[10px] text-muted-foreground">
+                        <span className="truncate">{platformConfig?.name || ''}</span>
+                        {variation.scheduled_date && (
+                          <span className="tabular-nums shrink-0">📅 {variation.scheduled_date.slice(5).replace('-', '/')}</span>
+                        )}
+                      </div>
+                      {variation.checklist?.length > 0 && (
+                        <div className="flex items-center gap-1 pt-1 border-t border-border/50">
+                          <Progress value={checklistProgress} className="flex-1 h-1" />
+                          <span className="text-[9px] text-muted-foreground tabular-nums">{Math.round(checklistProgress)}%</span>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
           ) : platformsViewMode === 'kanban' ? (
             <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
               {Object.entries(DIGITAL_STATUS).map(([status, config]) => {
