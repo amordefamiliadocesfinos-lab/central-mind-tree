@@ -348,6 +348,11 @@ export default function Digital() {
           </div>
         )}
 
+        {/* Compact dashboard - only on ideas tab */}
+        {!selectedIdea && activeTab === 'ideias' && (
+          <DigitalDashboard ideas={ideas} />
+        )}
+
         {/* Search & Filters - only on ideas tab */}
         {!selectedIdea && activeTab === 'ideias' && (
           <div className="px-4 pb-3 space-y-2.5">
