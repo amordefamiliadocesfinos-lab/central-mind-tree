@@ -4,7 +4,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   ArrowDownAZ, ArrowUpAZ, Clock, History, TrendingUp, TrendingDown,
-  PackageMinus, CalendarIcon, X,
+  PackageMinus, CalendarIcon, X, Lightbulb, LightbulbOff,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, isWithinInterval, parseISO } from 'date-fns';
