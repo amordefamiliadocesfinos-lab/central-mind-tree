@@ -196,10 +196,12 @@ export default function Operacoes() {
     periodPreset: 'all',
   });
   const filteredProducts = sortProductsByCategory(useFilteredProducts());
+  const { productIdeasMap } = useProductIdeas();
   const productsTabList = applyProductsSubFilters(
     filteredProducts as Product[],
     productsSubFilter,
     (id) => productBalances[id] || 0,
+    (id) => (productIdeasMap[id]?.length ?? 0) > 0,
   );
 
   // Dialog states (local)
