@@ -183,6 +183,26 @@ export function ProductsSubFilters({ value, onChange }: Props) {
           );
         })}
 
+        {(['linked', 'unlinked'] as const).map((key) => {
+          const active = value.ideaLink === key;
+          const Icon = key === 'linked' ? Lightbulb : LightbulbOff;
+          const label = key === 'linked' ? 'Vinculado a ideia' : 'Sem ideia';
+          return (
+            <Button
+              key={key}
+              variant={active ? 'default' : 'outline'}
+              size="sm"
+              className="shrink-0 h-9 px-3 rounded-full text-xs gap-1.5 touch-manipulation active:scale-95"
+              onClick={() =>
+                onChange({ ...value, ideaLink: active ? 'all' : key })
+              }
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+            </Button>
+          );
+        })}
+
         {PERIOD_PRESETS.map((p) => (
           <Button
             key={p.key}
