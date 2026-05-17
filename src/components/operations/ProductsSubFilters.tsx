@@ -21,11 +21,13 @@ export type ProductSortKey =
   | 'low_stock';
 
 export type ProductPeriodPreset = 'all' | 'today' | 'week' | 'month' | 'last30' | 'custom';
+export type ProductIdeaLinkFilter = 'all' | 'linked' | 'unlinked';
 
 export interface ProductsSubFiltersValue {
   sort: ProductSortKey;
   periodPreset: ProductPeriodPreset;
   range?: DateRange;
+  ideaLink?: ProductIdeaLinkFilter;
 }
 
 interface Props {
