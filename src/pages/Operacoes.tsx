@@ -218,7 +218,6 @@ export default function Operacoes() {
   const [ordersViewMode, setOrdersViewMode] = useState<'list' | 'grid' | 'planning'>('list');
   const [showCategoriesManager, setShowCategoriesManager] = useState(false);
   const { categoryNames: dynamicCategories } = useProductCategories();
-  const { productIdeasMap } = useProductIdeas();
   const { platforms: allPlatforms } = usePlatforms();
   const platformsById = useMemo(
     () => Object.fromEntries(allPlatforms.map(p => [p.id, p])),
