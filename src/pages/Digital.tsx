@@ -3,6 +3,7 @@ import { useDigital, DIGITAL_STATUS } from '@/hooks/useDigital';
 import { useIdeaTypes } from '@/hooks/useIdeaTypes';
 import { useProductsList } from '@/hooks/useProductsList';
 import { IdeaCard, IdeaEditor, KanbanBoard, MediaLibrary, MetricsChart, BatchVariationDialog, PlatformsManager, DigitalCalendar } from '@/components/digital';
+import { DigitalDashboard } from '@/components/digital/DigitalDashboard';
 import { IdeaTypesManager } from '@/components/digital/IdeaTypesManager';
 import { PlatformIcon } from '@/components/digital/PlatformsManager';
 import { TrendsPanel } from '@/components/digital/TrendsPanel';
@@ -345,6 +346,11 @@ export default function Digital() {
               </div>
             </Tabs>
           </div>
+        )}
+
+        {/* Compact dashboard - only on ideas tab */}
+        {!selectedIdea && activeTab === 'ideias' && (
+          <DigitalDashboard ideas={ideas} />
         )}
 
         {/* Search & Filters - only on ideas tab */}
