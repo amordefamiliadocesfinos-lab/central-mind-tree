@@ -3,6 +3,7 @@ import { useDigital, DIGITAL_STATUS } from '@/hooks/useDigital';
 import { useIdeaTypes } from '@/hooks/useIdeaTypes';
 import { useProductsList } from '@/hooks/useProductsList';
 import { IdeaCard, IdeaEditor, KanbanBoard, MediaLibrary, MetricsChart, BatchVariationDialog, PlatformsManager, DigitalCalendar } from '@/components/digital';
+import { DigitalDashboard } from '@/components/digital/DigitalDashboard';
 import { IdeaTypesManager } from '@/components/digital/IdeaTypesManager';
 import { PlatformIcon } from '@/components/digital/PlatformsManager';
 import { TrendsPanel } from '@/components/digital/TrendsPanel';
