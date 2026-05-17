@@ -71,8 +71,8 @@ export function DigitalDashboard({ ideas }: DigitalDashboardProps) {
     { key: 'vars', label: 'Variações', value: data.totalVariations, icon: Layers, tone: 'text-primary' },
     { key: 'week', label: 'Semana', value: data.scheduledWeek, icon: CalendarClock, tone: 'text-blue-500' },
     { key: 'month', label: 'Mês', value: data.scheduledMonth, icon: CalendarClock, tone: 'text-indigo-500' },
-    { key: 'prod', label: 'Produção', value: data.inProduction, icon: Clock, tone: 'text-orange-500' },
-    { key: 'pub', label: 'Publicadas', value: data.publishedVariations, icon: Send, tone: 'text-emerald-500' },
+    { key: 'prod', label: 'Andamento', value: data.inProduction, icon: Clock, tone: 'text-orange-500' },
+    { key: 'pub', label: 'Concluídas', value: data.publishedVariations, icon: Send, tone: 'text-emerald-500' },
     { key: 'rate', label: 'Conclusão', value: `${data.completionRate}%`, icon: CheckCircle2, tone: 'text-emerald-600' },
     { key: 'media', label: 'Mídias', value: data.mediaCount, icon: ImageIcon, tone: 'text-purple-500' },
   ];
