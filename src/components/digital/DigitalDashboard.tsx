@@ -35,7 +35,7 @@ export function DigitalDashboard({ ideas }: DigitalDashboardProps) {
       statusCounts[idea.status] = (statusCounts[idea.status] || 0) + 1;
       (idea.variations || []).forEach((v) => {
         totalVariations += 1;
-        if (v.status === 'publicado') publishedVariations += 1;
+        if (v.status === 'concluido') publishedVariations += 1;
         mediaCount += (v.media_urls?.length || 0);
         const dates: string[] = [];
         if (v.scheduled_date) dates.push(v.scheduled_date);
