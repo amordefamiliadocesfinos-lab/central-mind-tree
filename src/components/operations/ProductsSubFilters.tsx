@@ -4,7 +4,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   ArrowDownAZ, ArrowUpAZ, Clock, History, TrendingUp, TrendingDown,
-  PackageMinus, CalendarIcon, X,
+  PackageMinus, CalendarIcon, X, Lightbulb, LightbulbOff,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth, subDays, isWithinInterval, parseISO } from 'date-fns';
@@ -21,11 +21,13 @@ export type ProductSortKey =
   | 'low_stock';
 
 export type ProductPeriodPreset = 'all' | 'today' | 'week' | 'month' | 'last30' | 'custom';
+export type ProductIdeaLinkFilter = 'all' | 'linked' | 'unlinked';
 
 export interface ProductsSubFiltersValue {
   sort: ProductSortKey;
   periodPreset: ProductPeriodPreset;
   range?: DateRange;
+  ideaLink?: ProductIdeaLinkFilter;
 }
 
 interface Props {
@@ -72,8 +74,16 @@ export function applyProductsSubFilters<
   products: T[],
   value: ProductsSubFiltersValue,
   getBalance: (id: string) => number,
+  hasIdea?: (id: string) => boolean,
 ): T[] {
   let result = [...products];
+
+  // Idea link filter
+  if (value.ideaLink && value.ideaLink !== 'all' && hasIdea) {
+    result = result.filter((p) =>
+      value.ideaLink === 'linked' ? hasIdea(p.id) : !hasIdea(p.id)
+    );
+  }
 
   // Period filter on created_at
   const period = resolveProductPeriod(value);
@@ -166,6 +176,26 @@ export function ProductsSubFilters({ value, onChange }: Props) {
               size="sm"
               className="shrink-0 h-9 px-3 rounded-full text-xs gap-1.5 touch-manipulation active:scale-95"
               onClick={() => onChange({ ...value, sort: key })}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+            </Button>
+          );
+        })}
+
+        {(['linked', 'unlinked'] as const).map((key) => {
+          const active = value.ideaLink === key;
+          const Icon = key === 'linked' ? Lightbulb : LightbulbOff;
+          const label = key === 'linked' ? 'Vinculado a ideia' : 'Sem ideia';
+          return (
+            <Button
+              key={key}
+              variant={active ? 'default' : 'outline'}
+              size="sm"
+              className="shrink-0 h-9 px-3 rounded-full text-xs gap-1.5 touch-manipulation active:scale-95"
+              onClick={() =>
+                onChange({ ...value, ideaLink: active ? 'all' : key })
+              }
             >
               <Icon className="h-3.5 w-3.5" />
               {label}
