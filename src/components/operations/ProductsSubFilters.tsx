@@ -74,8 +74,16 @@ export function applyProductsSubFilters<
   products: T[],
   value: ProductsSubFiltersValue,
   getBalance: (id: string) => number,
+  hasIdea?: (id: string) => boolean,
 ): T[] {
   let result = [...products];
+
+  // Idea link filter
+  if (value.ideaLink && value.ideaLink !== 'all' && hasIdea) {
+    result = result.filter((p) =>
+      value.ideaLink === 'linked' ? hasIdea(p.id) : !hasIdea(p.id)
+    );
+  }
 
   // Period filter on created_at
   const period = resolveProductPeriod(value);
