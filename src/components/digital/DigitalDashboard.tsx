@@ -59,7 +59,7 @@ export function DigitalDashboard({ ideas }: DigitalDashboardProps) {
       scheduledWeek,
       scheduledMonth,
       mediaCount,
-      inProduction: statusCounts['producao'] || 0,
+      inProduction: statusCounts['andamento'] || 0,
       completionRate: totalVariations
         ? Math.round((publishedVariations / totalVariations) * 100)
         : 0,
