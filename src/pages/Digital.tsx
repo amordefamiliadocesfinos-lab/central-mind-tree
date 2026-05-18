@@ -432,6 +432,31 @@ export default function Digital() {
 
                   <div className="space-y-2.5">
                     <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Nº de série</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-primary font-mono pointer-events-none">#</span>
+                        <Input
+                          value={serialFilter}
+                          onChange={(e) => setSerialFilter(e.target.value)}
+                          placeholder="Ex.: 001"
+                          className="h-9 pl-7 font-mono"
+                          inputMode="numeric"
+                        />
+                        {serialFilter && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                            onClick={() => setSerialFilter('')}
+                            aria-label="Limpar número de série"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Status</Label>
                       <Select value={statusFilter} onValueChange={setStatusFilter}>
                         <SelectTrigger className="h-9"><SelectValue placeholder="Todos" /></SelectTrigger>
