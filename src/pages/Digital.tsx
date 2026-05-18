@@ -84,6 +84,7 @@ export default function Digital() {
   const [nodeFilter, setNodeFilter] = useState<string>('all');
   const [productFilter, setProductFilter] = useState<string>('all');
   const [periodFilter, setPeriodFilter] = useState<string>('all');
+  const [serialFilter, setSerialFilter] = useState<string>('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [expandedByPlatforms, setExpandedByPlatforms] = useState<Set<string>>(new Set());
 
