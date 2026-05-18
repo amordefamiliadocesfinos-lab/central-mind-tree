@@ -27,6 +27,7 @@ export type IdeaType = 'conteudo' | 'anuncio' | 'cadastro' | 'campanha';
 export interface DigitalIdea {
   id: string;
   title: string;
+  serial_number: string | null;
   objective: string | null;
   target_audience: string | null;
   key_message: string | null;
@@ -42,6 +43,21 @@ export interface DigitalIdea {
   created_at: string;
   updated_at: string;
   variations?: DigitalVariation[];
+}
+
+// Compute next serial number (e.g. "001", "002") based on existing numeric serials.
+export function computeNextSerial(ideas: { serial_number?: string | null }[]): string {
+  let max = 0;
+  for (const i of ideas) {
+    const s = (i.serial_number || '').trim();
+    const m = s.match(/^\d+$/);
+    if (m) {
+      const n = parseInt(s, 10);
+      if (n > max) max = n;
+    }
+  }
+  const next = max + 1;
+  return String(next).padStart(3, '0');
 }
 
 export interface MediaTransform {
@@ -154,10 +170,12 @@ export function useDigital() {
   }, []);
 
   const createIdea = useCallback(async (idea: Partial<DigitalIdea>) => {
+    const serial = idea.serial_number ?? computeNextSerial(ideas);
     const { data, error } = await supabase
       .from('digital_ideas')
       .insert({
         title: idea.title || 'Nova Ideia',
+        serial_number: serial,
         objective: idea.objective,
         target_audience: idea.target_audience,
         key_message: idea.key_message,
@@ -167,7 +185,7 @@ export function useDigital() {
         node_id: idea.node_id,
         product_id: idea.product_id || null,
         media_urls: idea.media_urls || [],
-      })
+      } as any)
       .select()
       .single();
 
@@ -179,7 +197,7 @@ export function useDigital() {
     toast.success('Ideia criada!');
     fetchIdeas();
     return data as unknown as DigitalIdea;
-  }, [fetchIdeas]);
+  }, [fetchIdeas, ideas]);
 
   const updateIdea = useCallback(async (id: string, updates: Partial<DigitalIdea>) => {
     // Convert complex fields to JSON-compatible format
@@ -292,6 +310,7 @@ export function useDigital() {
       .from('digital_ideas')
       .insert({
         title: `${original.title} (cópia)`,
+        serial_number: computeNextSerial(ideas),
         objective: original.objective,
         target_audience: original.target_audience,
         key_message: original.key_message,
@@ -303,7 +322,7 @@ export function useDigital() {
         media_urls: original.media_urls || [],
         custom_fields: JSON.parse(JSON.stringify(original.custom_fields || [])),
         custom_field_values: JSON.parse(JSON.stringify(original.custom_field_values || {})),
-      })
+      } as any)
       .select()
       .single();
 

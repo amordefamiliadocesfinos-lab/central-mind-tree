@@ -431,6 +431,9 @@ export function IdeaEditor({
             {/* Text overlay at bottom */}
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 pt-12">
               <h3 className="text-white font-bold text-sm leading-tight line-clamp-2">
+                {idea.serial_number && (
+                  <span className="text-amber-300 font-mono mr-1.5">#{idea.serial_number}</span>
+                )}
                 {idea.title || 'Título da ideia'}
               </h3>
               {(idea.objective || idea.key_message) && (
@@ -526,14 +529,22 @@ export function IdeaEditor({
 
               <div className="space-y-2">
                 <Label>Título da Ideia</Label>
-                <DebouncedInput
-                  value={idea.title}
-                  onChange={(v) => onUpdate(idea.id, { title: v })}
-                  className="h-12 text-lg font-medium"
-                  placeholder="Ex: IPHONE 14 ORIGINAL 128 GB PERFEITO SEM DEFEITOS"
-                />
+                <div className="flex gap-2">
+                  <DebouncedInput
+                    value={idea.serial_number || ''}
+                    onChange={(v) => onUpdate(idea.id, { serial_number: v || null })}
+                    className="h-12 w-24 text-lg font-mono font-semibold text-primary text-center"
+                    placeholder="Nº"
+                  />
+                  <DebouncedInput
+                    value={idea.title}
+                    onChange={(v) => onUpdate(idea.id, { title: v })}
+                    className="h-12 text-lg font-medium flex-1"
+                    placeholder="Ex: IPHONE 14 ORIGINAL 128 GB PERFEITO SEM DEFEITOS"
+                  />
+                </div>
                 <p className="text-xs text-muted-foreground">
-                  Escreva o título e clique nos botões ✨ para gerar os campos com IA
+                  Nº de série editável (pré-preenchido). Clique nos botões ✨ para gerar campos com IA.
                 </p>
               </div>
 

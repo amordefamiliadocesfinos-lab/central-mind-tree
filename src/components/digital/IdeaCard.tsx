@@ -193,7 +193,12 @@ export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products =
       <div className="p-3.5 space-y-3">
         {/* ═══════ TITLE ═══════ */}
         <div className="space-y-0.5">
-          <h3 className="font-semibold text-[15px] leading-snug break-words tracking-tight">{displayTitle}</h3>
+          <h3 className="font-semibold text-[15px] leading-snug break-words tracking-tight">
+            {idea.serial_number && (
+              <span className="text-primary font-mono mr-1.5 opacity-80">#{idea.serial_number}</span>
+            )}
+            {displayTitle}
+          </h3>
           {showSecondaryIdea && (
             <p className="text-[11px] text-muted-foreground leading-tight truncate">
               Ideia base: {idea.title}
