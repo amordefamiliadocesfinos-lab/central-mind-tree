@@ -27,6 +27,7 @@ export type IdeaType = 'conteudo' | 'anuncio' | 'cadastro' | 'campanha';
 export interface DigitalIdea {
   id: string;
   title: string;
+  serial_number: string | null;
   objective: string | null;
   target_audience: string | null;
   key_message: string | null;
@@ -42,6 +43,21 @@ export interface DigitalIdea {
   created_at: string;
   updated_at: string;
   variations?: DigitalVariation[];
+}
+
+// Compute next serial number (e.g. "001", "002") based on existing numeric serials.
+export function computeNextSerial(ideas: { serial_number?: string | null }[]): string {
+  let max = 0;
+  for (const i of ideas) {
+    const s = (i.serial_number || '').trim();
+    const m = s.match(/^\d+$/);
+    if (m) {
+      const n = parseInt(s, 10);
+      if (n > max) max = n;
+    }
+  }
+  const next = max + 1;
+  return String(next).padStart(3, '0');
 }
 
 export interface MediaTransform {
