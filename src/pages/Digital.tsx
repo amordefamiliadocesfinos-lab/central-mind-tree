@@ -153,6 +153,13 @@ export default function Digital() {
     if (typeFilter !== 'all' && idea.idea_type !== typeFilter) return false;
     if (nodeFilter !== 'all' && idea.node_id !== nodeFilter) return false;
     if (productFilter !== 'all' && idea.product_id !== productFilter) return false;
+    if (serialFilter.trim()) {
+      const q = serialFilter.trim().toLowerCase().replace(/^#/, '');
+      const qNorm = q.replace(/^0+/, '');
+      const s = (idea.serial_number || '').toLowerCase();
+      const sNorm = s.replace(/^0+/, '');
+      if (!s.includes(q) && !(qNorm && sNorm === qNorm)) return false;
+    }
     if (periodFilter !== 'all') {
       const now = new Date();
       const vars = idea.variations || [];
