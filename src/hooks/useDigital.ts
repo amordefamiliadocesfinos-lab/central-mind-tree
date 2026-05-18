@@ -197,7 +197,7 @@ export function useDigital() {
     toast.success('Ideia criada!');
     fetchIdeas();
     return data as unknown as DigitalIdea;
-  }, [fetchIdeas]);
+  }, [fetchIdeas, ideas]);
 
   const updateIdea = useCallback(async (id: string, updates: Partial<DigitalIdea>) => {
     // Convert complex fields to JSON-compatible format
