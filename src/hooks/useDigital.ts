@@ -170,10 +170,12 @@ export function useDigital() {
   }, []);
 
   const createIdea = useCallback(async (idea: Partial<DigitalIdea>) => {
+    const serial = idea.serial_number ?? computeNextSerial(ideas);
     const { data, error } = await supabase
       .from('digital_ideas')
       .insert({
         title: idea.title || 'Nova Ideia',
+        serial_number: serial,
         objective: idea.objective,
         target_audience: idea.target_audience,
         key_message: idea.key_message,
@@ -183,7 +185,7 @@ export function useDigital() {
         node_id: idea.node_id,
         product_id: idea.product_id || null,
         media_urls: idea.media_urls || [],
-      })
+      } as any)
       .select()
       .single();
 
