@@ -84,6 +84,7 @@ export default function Digital() {
   const [nodeFilter, setNodeFilter] = useState<string>('all');
   const [productFilter, setProductFilter] = useState<string>('all');
   const [periodFilter, setPeriodFilter] = useState<string>('all');
+  const [serialFilter, setSerialFilter] = useState<string>('');
   const [searchFocused, setSearchFocused] = useState(false);
   const [expandedByPlatforms, setExpandedByPlatforms] = useState<Set<string>>(new Set());
 
@@ -152,6 +153,13 @@ export default function Digital() {
     if (typeFilter !== 'all' && idea.idea_type !== typeFilter) return false;
     if (nodeFilter !== 'all' && idea.node_id !== nodeFilter) return false;
     if (productFilter !== 'all' && idea.product_id !== productFilter) return false;
+    if (serialFilter.trim()) {
+      const q = serialFilter.trim().toLowerCase().replace(/^#/, '');
+      const qNorm = q.replace(/^0+/, '');
+      const s = (idea.serial_number || '').toLowerCase();
+      const sNorm = s.replace(/^0+/, '');
+      if (!s.includes(q) && !(qNorm && sNorm === qNorm)) return false;
+    }
     if (periodFilter !== 'all') {
       const now = new Date();
       const vars = idea.variations || [];
@@ -222,9 +230,12 @@ export default function Digital() {
     const map: Record<string, string> = { esta_semana: 'Esta semana', este_mes: 'Este mês', proximo_mes: 'Próximo mês', sem_data: 'Sem data' };
     activeFilterChips.push({ key: 'period', label: `Período: ${map[periodFilter] ?? periodFilter}`, clear: () => setPeriodFilter('all') });
   }
+  if (serialFilter.trim()) {
+    activeFilterChips.push({ key: 'serial', label: `Nº de série: ${serialFilter.trim()}`, clear: () => setSerialFilter('') });
+  }
   const clearAllFilters = () => {
     setStatusFilter('all'); setPlatformFilter('all'); setVariationFilter('all'); setTypeFilter('all');
-    setNodeFilter('all'); setProductFilter('all'); setPeriodFilter('all');
+    setNodeFilter('all'); setProductFilter('all'); setPeriodFilter('all'); setSerialFilter('');
     setSearchQuery('');
   };
 
@@ -420,6 +431,31 @@ export default function Digital() {
                   </div>
 
                   <div className="space-y-2.5">
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground">Nº de série</Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs text-primary font-mono pointer-events-none">#</span>
+                        <Input
+                          value={serialFilter}
+                          onChange={(e) => setSerialFilter(e.target.value)}
+                          placeholder="Ex.: 001"
+                          className="h-9 pl-7 font-mono"
+                          inputMode="numeric"
+                        />
+                        {serialFilter && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                            onClick={() => setSerialFilter('')}
+                            aria-label="Limpar número de série"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Status</Label>
                       <Select value={statusFilter} onValueChange={setStatusFilter}>
