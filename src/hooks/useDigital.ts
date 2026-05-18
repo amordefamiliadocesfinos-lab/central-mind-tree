@@ -444,6 +444,12 @@ export function useDigital() {
     // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
+      // Normalize query for serial number matching (strip # and leading zeros)
+      const serialQuery = query.replace(/^#/, '').replace(/^0+/, '');
+      const ideaSerial = (idea.serial_number || '').toLowerCase();
+      const ideaSerialNormalized = ideaSerial.replace(/^0+/, '');
+      const matchesSerial = ideaSerial.includes(query.replace(/^#/, '')) ||
+        (serialQuery.length > 0 && ideaSerialNormalized === serialQuery);
       const matchesIdea = idea.title.toLowerCase().includes(query) ||
         idea.objective?.toLowerCase().includes(query) ||
         idea.key_message?.toLowerCase().includes(query);
@@ -454,7 +460,7 @@ export function useDigital() {
           typeof val === 'string' && val.toLowerCase().includes(query)
         )
       );
-      if (!matchesIdea && !matchesVariation) return false;
+      if (!matchesIdea && !matchesVariation && !matchesSerial) return false;
     }
 
     // Status filter
