@@ -230,9 +230,12 @@ export default function Digital() {
     const map: Record<string, string> = { esta_semana: 'Esta semana', este_mes: 'Este mês', proximo_mes: 'Próximo mês', sem_data: 'Sem data' };
     activeFilterChips.push({ key: 'period', label: `Período: ${map[periodFilter] ?? periodFilter}`, clear: () => setPeriodFilter('all') });
   }
+  if (serialFilter.trim()) {
+    activeFilterChips.push({ key: 'serial', label: `Nº de série: ${serialFilter.trim()}`, clear: () => setSerialFilter('') });
+  }
   const clearAllFilters = () => {
     setStatusFilter('all'); setPlatformFilter('all'); setVariationFilter('all'); setTypeFilter('all');
-    setNodeFilter('all'); setProductFilter('all'); setPeriodFilter('all');
+    setNodeFilter('all'); setProductFilter('all'); setPeriodFilter('all'); setSerialFilter('');
     setSearchQuery('');
   };
 
