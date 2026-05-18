@@ -431,6 +431,9 @@ export function IdeaEditor({
             {/* Text overlay at bottom */}
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-4 pt-12">
               <h3 className="text-white font-bold text-sm leading-tight line-clamp-2">
+                {idea.serial_number && (
+                  <span className="text-amber-300 font-mono mr-1.5">#{idea.serial_number}</span>
+                )}
                 {idea.title || 'Título da ideia'}
               </h3>
               {(idea.objective || idea.key_message) && (
