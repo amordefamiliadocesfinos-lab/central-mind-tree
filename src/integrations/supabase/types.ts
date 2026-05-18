@@ -887,6 +887,7 @@ export type Database = {
           objective: string | null
           order_index: number | null
           product_id: string | null
+          serial_number: string | null
           status: string
           target_audience: string | null
           title: string
@@ -906,6 +907,7 @@ export type Database = {
           objective?: string | null
           order_index?: number | null
           product_id?: string | null
+          serial_number?: string | null
           status?: string
           target_audience?: string | null
           title: string
@@ -925,6 +927,7 @@ export type Database = {
           objective?: string | null
           order_index?: number | null
           product_id?: string | null
+          serial_number?: string | null
           status?: string
           target_audience?: string | null
           title?: string
