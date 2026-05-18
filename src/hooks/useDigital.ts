@@ -310,6 +310,7 @@ export function useDigital() {
       .from('digital_ideas')
       .insert({
         title: `${original.title} (cópia)`,
+        serial_number: computeNextSerial(ideas),
         objective: original.objective,
         target_audience: original.target_audience,
         key_message: original.key_message,
@@ -321,7 +322,7 @@ export function useDigital() {
         media_urls: original.media_urls || [],
         custom_fields: JSON.parse(JSON.stringify(original.custom_fields || [])),
         custom_field_values: JSON.parse(JSON.stringify(original.custom_field_values || {})),
-      })
+      } as any)
       .select()
       .single();
 
