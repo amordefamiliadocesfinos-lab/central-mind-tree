@@ -930,6 +930,7 @@ export function IdeaEditor({
                   <span className="text-xs hidden sm:inline">Compacto</span>
                 </Button>
               </div>
+              </div>
             </div>
           )}
 
