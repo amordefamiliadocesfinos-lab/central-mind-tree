@@ -250,10 +250,19 @@ export default function Digital() {
   if (serialFilter.trim()) {
     activeFilterChips.push({ key: 'serial', label: `Nº de série: ${serialFilter.trim()}`, clear: () => setSerialFilter('') });
   }
+  if (sortBy !== 'default') {
+    const sortLabels: Record<string, string> = {
+      title_asc: 'Título A→Z', title_desc: 'Título Z→A',
+      serial_asc: 'Nº série ↑', serial_desc: 'Nº série ↓',
+      created_desc: 'Mais recentes', created_asc: 'Mais antigas',
+      updated_desc: 'Atualizadas', variations_desc: 'Mais variações',
+    };
+    activeFilterChips.push({ key: 'sort', label: `Ordem: ${sortLabels[sortBy] ?? sortBy}`, clear: () => setSortBy('default') });
+  }
   const clearAllFilters = () => {
     setStatusFilter('all'); setPlatformFilter('all'); setVariationFilter('all'); setTypeFilter('all');
     setNodeFilter('all'); setProductFilter('all'); setPeriodFilter('all'); setSerialFilter('');
-    setSearchQuery('');
+    setSortBy('default'); setSearchQuery('');
   };
 
   // Tab groups for clearer navigation
