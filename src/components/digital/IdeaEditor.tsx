@@ -870,10 +870,28 @@ export function IdeaEditor({
 
           {/* View Mode Toggle */}
           {variations.length > 0 && (
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
               <span className="text-xs text-muted-foreground">
                 {variations.length} variação(ões)
               </span>
+              <div className="flex items-center gap-2">
+                <Select value={variationSortBy} onValueChange={setVariationSortBy}>
+                  <SelectTrigger className="h-7 px-2 text-xs gap-1 w-auto min-w-[140px]">
+                    <ArrowUpDown className="h-3 w-3 shrink-0" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent align="end">
+                    <SelectItem value="default">Padrão</SelectItem>
+                    <SelectItem value="title_asc">Título (A → Z)</SelectItem>
+                    <SelectItem value="title_desc">Título (Z → A)</SelectItem>
+                    <SelectItem value="platform_asc">Plataforma (A → Z)</SelectItem>
+                    <SelectItem value="platform_desc">Plataforma (Z → A)</SelectItem>
+                    <SelectItem value="status">Status</SelectItem>
+                    <SelectItem value="created_desc">Mais recentes</SelectItem>
+                    <SelectItem value="created_asc">Mais antigas</SelectItem>
+                    <SelectItem value="scheduled_asc">Agendamento (próximas)</SelectItem>
+                  </SelectContent>
+                </Select>
               <div className="inline-flex rounded-md border bg-muted/30 p-0.5">
                 <Button
                   variant={platformsViewMode === 'list' ? 'default' : 'ghost'}
