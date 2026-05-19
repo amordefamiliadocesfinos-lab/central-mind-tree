@@ -472,6 +472,27 @@ export default function Digital() {
                         )}
                       </div>
                     </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                        <ArrowUpDown className="h-3 w-3" />
+                        Ordenar por
+                      </Label>
+                      <Select value={sortBy} onValueChange={setSortBy}>
+                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="default">Padrão (status + ordem)</SelectItem>
+                          <SelectItem value="title_asc">Título (A → Z)</SelectItem>
+                          <SelectItem value="title_desc">Título (Z → A)</SelectItem>
+                          <SelectItem value="serial_asc">Nº de série (crescente)</SelectItem>
+                          <SelectItem value="serial_desc">Nº de série (decrescente)</SelectItem>
+                          <SelectItem value="created_desc">Mais recentes</SelectItem>
+                          <SelectItem value="created_asc">Mais antigas</SelectItem>
+                          <SelectItem value="updated_desc">Atualizadas recentemente</SelectItem>
+                          <SelectItem value="variations_desc">Mais variações</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
 
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Status</Label>
