@@ -768,16 +768,36 @@ export function VariationEditor({
                     <span className="ml-1">Gerar</span>
                   </Button>
                 </div>
-                <DebouncedTextarea
-                  value={value}
-                  onChange={(v) => handleFieldChange(v)}
-                  placeholder={field.label}
-                  rows={isTextarea ? 3 : 1}
-                  className={cn(
-                    "resize-y",
-                    !isTextarea && "min-h-[44px]"
-                  )}
-                />
+                <div className="relative">
+                  <DebouncedTextarea
+                    value={value}
+                    onChange={(v) => handleFieldChange(v)}
+                    placeholder={field.label}
+                    rows={isTextarea ? 3 : 1}
+                    className={cn(
+                      "resize-y pl-9",
+                      !isTextarea && "min-h-[44px]"
+                    )}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute top-1.5 left-1.5 h-6 w-6 text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                    title="Copiar conteúdo"
+                    disabled={!value}
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(String(value || ''));
+                        toast.success('Copiado!');
+                      } catch {
+                        toast.error('Não foi possível copiar');
+                      }
+                    }}
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
               </div>
             );
           })}
