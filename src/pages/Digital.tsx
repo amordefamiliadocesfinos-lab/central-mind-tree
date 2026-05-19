@@ -179,13 +179,29 @@ export default function Digital() {
 
   // Scope variations within each idea to the active platform filter so Kanban "Por Variação"
   // and per-platform expansions don't show variations from non-selected channels.
-  const scopedIdeas = displayedIdeas.map(idea => {
+  const scopedIdeasRaw = displayedIdeas.map(idea => {
     if (platformFilter === 'all') return idea;
     return {
       ...idea,
       variations: (idea.variations || []).filter(v => v.platform === platformFilter),
     };
   });
+
+  const collator = new Intl.Collator('pt-BR', { sensitivity: 'base', numeric: true });
+  const scopedIdeas = (() => {
+    const arr = [...scopedIdeasRaw];
+    switch (sortBy) {
+      case 'title_asc': return arr.sort((a, b) => collator.compare(a.title || '', b.title || ''));
+      case 'title_desc': return arr.sort((a, b) => collator.compare(b.title || '', a.title || ''));
+      case 'serial_asc': return arr.sort((a, b) => collator.compare(a.serial_number || '', b.serial_number || ''));
+      case 'serial_desc': return arr.sort((a, b) => collator.compare(b.serial_number || '', a.serial_number || ''));
+      case 'created_desc': return arr.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+      case 'created_asc': return arr.sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
+      case 'updated_desc': return arr.sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || ''));
+      case 'variations_desc': return arr.sort((a, b) => (b.variations?.length || 0) - (a.variations?.length || 0));
+      default: return arr;
+    }
+  })();
 
   if (loading) {
     return (
