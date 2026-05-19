@@ -17,7 +17,7 @@ import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, ArrowLeft, Search, LayoutGrid, Columns3, Image, BarChart3, Link2, Settings2, TrendingUp, MessageCircle, Book, Calendar, Headset, X, SlidersHorizontal, Sparkles, Layers } from 'lucide-react';
+import { Plus, ArrowLeft, Search, LayoutGrid, Columns3, Image, BarChart3, Link2, Settings2, TrendingUp, MessageCircle, Book, Calendar, Headset, X, SlidersHorizontal, Sparkles, Layers, ArrowUpDown } from 'lucide-react';
 import { HierarchicalPlatformSelector } from '@/components/digital/HierarchicalPlatformSelector';
 import { PlatformHierarchicalPicker } from '@/components/digital/PlatformHierarchicalPicker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -85,6 +85,7 @@ export default function Digital() {
   const [productFilter, setProductFilter] = useState<string>('all');
   const [periodFilter, setPeriodFilter] = useState<string>('all');
   const [serialFilter, setSerialFilter] = useState<string>('');
+  const [sortBy, setSortBy] = useState<string>('default');
   const [searchFocused, setSearchFocused] = useState(false);
   const [expandedByPlatforms, setExpandedByPlatforms] = useState<Set<string>>(new Set());
 
@@ -178,13 +179,29 @@ export default function Digital() {
 
   // Scope variations within each idea to the active platform filter so Kanban "Por Variação"
   // and per-platform expansions don't show variations from non-selected channels.
-  const scopedIdeas = displayedIdeas.map(idea => {
+  const scopedIdeasRaw = displayedIdeas.map(idea => {
     if (platformFilter === 'all') return idea;
     return {
       ...idea,
       variations: (idea.variations || []).filter(v => v.platform === platformFilter),
     };
   });
+
+  const collator = new Intl.Collator('pt-BR', { sensitivity: 'base', numeric: true });
+  const scopedIdeas = (() => {
+    const arr = [...scopedIdeasRaw];
+    switch (sortBy) {
+      case 'title_asc': return arr.sort((a, b) => collator.compare(a.title || '', b.title || ''));
+      case 'title_desc': return arr.sort((a, b) => collator.compare(b.title || '', a.title || ''));
+      case 'serial_asc': return arr.sort((a, b) => collator.compare(a.serial_number || '', b.serial_number || ''));
+      case 'serial_desc': return arr.sort((a, b) => collator.compare(b.serial_number || '', a.serial_number || ''));
+      case 'created_desc': return arr.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+      case 'created_asc': return arr.sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
+      case 'updated_desc': return arr.sort((a, b) => (b.updated_at || '').localeCompare(a.updated_at || ''));
+      case 'variations_desc': return arr.sort((a, b) => (b.variations?.length || 0) - (a.variations?.length || 0));
+      default: return arr;
+    }
+  })();
 
   if (loading) {
     return (
@@ -233,10 +250,19 @@ export default function Digital() {
   if (serialFilter.trim()) {
     activeFilterChips.push({ key: 'serial', label: `Nº de série: ${serialFilter.trim()}`, clear: () => setSerialFilter('') });
   }
+  if (sortBy !== 'default') {
+    const sortLabels: Record<string, string> = {
+      title_asc: 'Título A→Z', title_desc: 'Título Z→A',
+      serial_asc: 'Nº série ↑', serial_desc: 'Nº série ↓',
+      created_desc: 'Mais recentes', created_asc: 'Mais antigas',
+      updated_desc: 'Atualizadas', variations_desc: 'Mais variações',
+    };
+    activeFilterChips.push({ key: 'sort', label: `Ordem: ${sortLabels[sortBy] ?? sortBy}`, clear: () => setSortBy('default') });
+  }
   const clearAllFilters = () => {
     setStatusFilter('all'); setPlatformFilter('all'); setVariationFilter('all'); setTypeFilter('all');
     setNodeFilter('all'); setProductFilter('all'); setPeriodFilter('all'); setSerialFilter('');
-    setSearchQuery('');
+    setSortBy('default'); setSearchQuery('');
   };
 
   // Tab groups for clearer navigation
@@ -455,6 +481,27 @@ export default function Digital() {
                         )}
                       </div>
                     </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-muted-foreground flex items-center gap-1.5">
+                        <ArrowUpDown className="h-3 w-3" />
+                        Ordenar por
+                      </Label>
+                      <Select value={sortBy} onValueChange={setSortBy}>
+                        <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="default">Padrão (status + ordem)</SelectItem>
+                          <SelectItem value="title_asc">Título (A → Z)</SelectItem>
+                          <SelectItem value="title_desc">Título (Z → A)</SelectItem>
+                          <SelectItem value="serial_asc">Nº de série (crescente)</SelectItem>
+                          <SelectItem value="serial_desc">Nº de série (decrescente)</SelectItem>
+                          <SelectItem value="created_desc">Mais recentes</SelectItem>
+                          <SelectItem value="created_asc">Mais antigas</SelectItem>
+                          <SelectItem value="updated_desc">Atualizadas recentemente</SelectItem>
+                          <SelectItem value="variations_desc">Mais variações</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
 
                     <div className="space-y-1">
                       <Label className="text-xs text-muted-foreground">Status</Label>

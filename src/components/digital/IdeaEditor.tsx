@@ -16,7 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, Plus, Trash2, Settings, Calendar, Image, Copy, Layers, Link2, X, ImagePlus, Eye, EyeOff, Sparkles, Loader2, Wand2, SlidersHorizontal, List, LayoutGrid, Grid3x3 } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Settings, Calendar, Image, Copy, Layers, Link2, X, ImagePlus, Eye, EyeOff, Sparkles, Loader2, Wand2, SlidersHorizontal, List, LayoutGrid, Grid3x3, ArrowUpDown } from 'lucide-react';
 import { CustomFieldsDefinition } from './CustomFieldsDefinition';
 import { CustomFieldsRenderer } from './CustomFieldsRenderer';
 import { AIVariationsGenerator } from './AIVariationsGenerator';
@@ -114,6 +114,7 @@ export function IdeaEditor({
     all: false,
   });
   const [platformsViewMode, setPlatformsViewMode] = useState<'list' | 'kanban' | 'grid' | 'compact'>('list');
+  const [variationSortBy, setVariationSortBy] = useState<string>('default');
 
   // AI Generation function
   const generateWithAI = async (field: AIFieldType) => {
@@ -189,6 +190,23 @@ export function IdeaEditor({
 
   const statusConfig = DIGITAL_STATUS[idea.status];
   const variations = idea.variations || [];
+  const variationCollator = new Intl.Collator('pt-BR', { sensitivity: 'base', numeric: true });
+  const sortedVariations = (() => {
+    const arr = [...variations];
+    const getPlatformName = (pid: string) => platforms.find(p => p.id === pid)?.name || '';
+    const statusOrder: Record<string, number> = { estrutural: 1, andamento: 2, pendente: 3, concluido: 4 };
+    switch (variationSortBy) {
+      case 'title_asc': return arr.sort((a, b) => variationCollator.compare(a.title || '', b.title || ''));
+      case 'title_desc': return arr.sort((a, b) => variationCollator.compare(b.title || '', a.title || ''));
+      case 'platform_asc': return arr.sort((a, b) => variationCollator.compare(getPlatformName(a.platform), getPlatformName(b.platform)));
+      case 'platform_desc': return arr.sort((a, b) => variationCollator.compare(getPlatformName(b.platform), getPlatformName(a.platform)));
+      case 'status': return arr.sort((a, b) => (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99));
+      case 'created_desc': return arr.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+      case 'created_asc': return arr.sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
+      case 'scheduled_asc': return arr.sort((a, b) => (a.scheduled_date || '9999').localeCompare(b.scheduled_date || '9999'));
+      default: return arr;
+    }
+  })();
   const completedVariations = variations.filter(v => v.status === 'concluido').length;
   const progress = variations.length > 0 ? (completedVariations / variations.length) * 100 : 0;
 
@@ -852,10 +870,28 @@ export function IdeaEditor({
 
           {/* View Mode Toggle */}
           {variations.length > 0 && (
-            <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
               <span className="text-xs text-muted-foreground">
                 {variations.length} variação(ões)
               </span>
+              <div className="flex items-center gap-2">
+                <Select value={variationSortBy} onValueChange={setVariationSortBy}>
+                  <SelectTrigger className="h-7 px-2 text-xs gap-1 w-auto min-w-[140px]">
+                    <ArrowUpDown className="h-3 w-3 shrink-0" />
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent align="end">
+                    <SelectItem value="default">Padrão</SelectItem>
+                    <SelectItem value="title_asc">Título (A → Z)</SelectItem>
+                    <SelectItem value="title_desc">Título (Z → A)</SelectItem>
+                    <SelectItem value="platform_asc">Plataforma (A → Z)</SelectItem>
+                    <SelectItem value="platform_desc">Plataforma (Z → A)</SelectItem>
+                    <SelectItem value="status">Status</SelectItem>
+                    <SelectItem value="created_desc">Mais recentes</SelectItem>
+                    <SelectItem value="created_asc">Mais antigas</SelectItem>
+                    <SelectItem value="scheduled_asc">Agendamento (próximas)</SelectItem>
+                  </SelectContent>
+                </Select>
               <div className="inline-flex rounded-md border bg-muted/30 p-0.5">
                 <Button
                   variant={platformsViewMode === 'list' ? 'default' : 'ghost'}
@@ -893,6 +929,7 @@ export function IdeaEditor({
                   <Layers className="h-3.5 w-3.5" />
                   <span className="text-xs hidden sm:inline">Compacto</span>
                 </Button>
+              </div>
               </div>
             </div>
           )}
