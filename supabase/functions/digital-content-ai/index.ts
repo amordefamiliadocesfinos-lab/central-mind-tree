@@ -426,9 +426,10 @@ Retorne APENAS o JSON.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
+        // Usando modelo gratuito temporariamente (sem custo de créditos)
         model: useVisionModel
-          ? ((requestData as any).model || "google/gemini-2.5-pro")
-          : ((requestData as any).model || "google/gemini-3-flash-preview"),
+          ? ((requestData as any).model || "google/gemini-2.5-flash")
+          : ((requestData as any).model || "google/gemini-2.5-flash"),
         messages,
         ...(useVisionModel ? { max_tokens: 32000 } : {}),
       }),
