@@ -190,6 +190,23 @@ export function IdeaEditor({
 
   const statusConfig = DIGITAL_STATUS[idea.status];
   const variations = idea.variations || [];
+  const variationCollator = new Intl.Collator('pt-BR', { sensitivity: 'base', numeric: true });
+  const sortedVariations = (() => {
+    const arr = [...variations];
+    const getPlatformName = (pid: string) => platforms.find(p => p.id === pid)?.name || '';
+    const statusOrder: Record<string, number> = { estrutural: 1, andamento: 2, pendente: 3, concluido: 4 };
+    switch (variationSortBy) {
+      case 'title_asc': return arr.sort((a, b) => variationCollator.compare(a.title || '', b.title || ''));
+      case 'title_desc': return arr.sort((a, b) => variationCollator.compare(b.title || '', a.title || ''));
+      case 'platform_asc': return arr.sort((a, b) => variationCollator.compare(getPlatformName(a.platform), getPlatformName(b.platform)));
+      case 'platform_desc': return arr.sort((a, b) => variationCollator.compare(getPlatformName(b.platform), getPlatformName(a.platform)));
+      case 'status': return arr.sort((a, b) => (statusOrder[a.status] || 99) - (statusOrder[b.status] || 99));
+      case 'created_desc': return arr.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+      case 'created_asc': return arr.sort((a, b) => (a.created_at || '').localeCompare(b.created_at || ''));
+      case 'scheduled_asc': return arr.sort((a, b) => (a.scheduled_date || '9999').localeCompare(b.scheduled_date || '9999'));
+      default: return arr;
+    }
+  })();
   const completedVariations = variations.filter(v => v.status === 'concluido').length;
   const progress = variations.length > 0 ? (completedVariations / variations.length) * 100 : 0;
 
