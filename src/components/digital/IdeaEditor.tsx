@@ -898,9 +898,100 @@ export function IdeaEditor({
           {variations.length > 0 && (
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <span className="text-xs text-muted-foreground">
-                {variations.length} variação(ões)
+                {displayVariations.length === variations.length
+                  ? `${variations.length} variação(ões)`
+                  : `${displayVariations.length} de ${variations.length} variação(ões)`}
               </span>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-7 px-2 gap-1 text-xs">
+                      <Filter className="h-3 w-3" />
+                      <span className="hidden sm:inline">Filtros</span>
+                      {activeFilterCount > 0 && (
+                        <Badge variant="secondary" className="h-4 px-1 text-[10px]">{activeFilterCount}</Badge>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-72 space-y-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Buscar</Label>
+                      <div className="relative">
+                        <Search className="h-3.5 w-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          value={variationSearch}
+                          onChange={(e) => setVariationSearch(e.target.value)}
+                          placeholder="Título, legenda, plataforma..."
+                          className="h-8 pl-7 text-xs"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Tipo de plataforma</Label>
+                      <Select value={variationTypeFilter} onValueChange={setVariationTypeFilter}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos os tipos</SelectItem>
+                          {availableTypes.map(t => (
+                            <SelectItem key={t} value={t}>
+                              {GROUP_ICONS[t] || '📦'} {GROUP_LABELS[t] || t}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Plataforma</Label>
+                      <Select value={variationPlatformFilter} onValueChange={setVariationPlatformFilter}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todas as plataformas</SelectItem>
+                          {Array.from(new Set(variations.map(v => v.platform))).map(pid => {
+                            const p = platforms.find(pp => pp.id === pid);
+                            return (
+                              <SelectItem key={pid} value={pid}>
+                                {p?.icon} {p?.name || pid}
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Status</Label>
+                      <Select value={variationStatusFilter} onValueChange={setVariationStatusFilter}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos os status</SelectItem>
+                          {Object.entries(DIGITAL_STATUS).map(([k, c]) => (
+                            <SelectItem key={k} value={k}>
+                              <div className="flex items-center gap-2">
+                                <div className={cn('w-2 h-2 rounded-full', c.color)} />
+                                {c.label}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {activeFilterCount > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full h-8 text-xs"
+                        onClick={() => {
+                          setVariationTypeFilter('all');
+                          setVariationStatusFilter('all');
+                          setVariationPlatformFilter('all');
+                          setVariationSearch('');
+                        }}
+                      >
+                        <X className="h-3 w-3 mr-1" /> Limpar filtros
+                      </Button>
+                    )}
+                  </PopoverContent>
+                </Popover>
+
                 <Select value={variationSortBy} onValueChange={setVariationSortBy}>
                   <SelectTrigger className="h-7 px-2 text-xs gap-1 w-auto min-w-[140px]">
                     <ArrowUpDown className="h-3 w-3 shrink-0" />
