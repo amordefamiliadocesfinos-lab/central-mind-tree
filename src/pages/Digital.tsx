@@ -387,7 +387,10 @@ export default function Digital() {
 
         {/* Compact dashboard - only on ideas tab */}
         {!selectedIdea && activeTab === 'ideias' && (
-          <DigitalDashboard ideas={ideas} />
+          <>
+            <DigitalDashboard ideas={ideas} />
+            <DigitalPrioritiesPanel ideas={ideas} platforms={platforms} onSelectIdea={setSelectedIdea} />
+          </>
         )}
 
         {/* Search & Filters - only on ideas tab */}
