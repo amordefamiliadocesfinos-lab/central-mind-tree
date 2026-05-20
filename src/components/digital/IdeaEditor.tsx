@@ -1063,7 +1063,7 @@ export function IdeaEditor({
             </Card>
           ) : platformsViewMode === 'compact' ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
-              {variations.map((variation) => {
+              {displayVariations.map((variation) => {
                 const platformConfig = getPlatform(variation.platform);
                 const variationStatusConfig = DIGITAL_STATUS[variation.status];
                 const variationMedia = (variation.media_urls as string[] | null) || [];
@@ -1120,7 +1120,7 @@ export function IdeaEditor({
             </div>
           ) : platformsViewMode === 'grid' ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-              {variations.map((variation) => {
+              {displayVariations.map((variation) => {
                 const platformConfig = getPlatform(variation.platform);
                 const variationStatusConfig = DIGITAL_STATUS[variation.status];
                 const variationMedia = (variation.media_urls as string[] | null) || [];
@@ -1192,7 +1192,7 @@ export function IdeaEditor({
           ) : platformsViewMode === 'kanban' ? (
             <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
               {Object.entries(DIGITAL_STATUS).map(([status, config]) => {
-                const items = variations.filter(v => v.status === status);
+                const items = displayVariations.filter(v => v.status === status);
                 return (
                   <div key={status} className="flex-shrink-0 w-64">
                     <Card className="h-full">
@@ -1281,7 +1281,7 @@ export function IdeaEditor({
             </div>
           ) : (
             <div className="space-y-2">
-              {variations.map((variation) => {
+              {displayVariations.map((variation) => {
                 const platformConfig = getPlatform(variation.platform);
                 const variationStatusConfig = DIGITAL_STATUS[variation.status];
                 const checklistProgress = variation.checklist?.length
@@ -1452,7 +1452,7 @@ export function IdeaEditor({
             </p>
           ) : (
             <div className="space-y-2 max-h-[300px] overflow-y-auto">
-              {variations.map((variation) => {
+              {displayVariations.map((variation) => {
                 const platform = platforms.find(p => p.id === variation.platform);
                 return (
                   <div
