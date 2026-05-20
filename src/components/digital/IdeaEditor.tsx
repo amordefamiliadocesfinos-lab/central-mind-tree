@@ -117,6 +117,10 @@ export function IdeaEditor({
   });
   const [platformsViewMode, setPlatformsViewMode] = useState<'list' | 'kanban' | 'grid' | 'compact'>('list');
   const [variationSortBy, setVariationSortBy] = useState<string>('default');
+  const [variationTypeFilter, setVariationTypeFilter] = useState<string>('all');
+  const [variationStatusFilter, setVariationStatusFilter] = useState<string>('all');
+  const [variationPlatformFilter, setVariationPlatformFilter] = useState<string>('all');
+  const [variationSearch, setVariationSearch] = useState<string>('');
 
   // AI Generation function
   const generateWithAI = async (field: AIFieldType) => {
