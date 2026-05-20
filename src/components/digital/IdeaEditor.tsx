@@ -16,7 +16,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, Plus, Trash2, Settings, Calendar, Image, Copy, Layers, Link2, X, ImagePlus, Eye, EyeOff, Sparkles, Loader2, Wand2, SlidersHorizontal, List, LayoutGrid, Grid3x3, ArrowUpDown } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Settings, Calendar, Image, Copy, Layers, Link2, X, ImagePlus, Eye, EyeOff, Sparkles, Loader2, Wand2, SlidersHorizontal, List, LayoutGrid, Grid3x3, ArrowUpDown, Filter, Search } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { GROUP_LABELS, GROUP_ICONS } from '@/hooks/usePlatforms';
 import { CustomFieldsDefinition } from './CustomFieldsDefinition';
 import { CustomFieldsRenderer } from './CustomFieldsRenderer';
 import { AIVariationsGenerator } from './AIVariationsGenerator';
@@ -115,6 +117,10 @@ export function IdeaEditor({
   });
   const [platformsViewMode, setPlatformsViewMode] = useState<'list' | 'kanban' | 'grid' | 'compact'>('list');
   const [variationSortBy, setVariationSortBy] = useState<string>('default');
+  const [variationTypeFilter, setVariationTypeFilter] = useState<string>('all');
+  const [variationStatusFilter, setVariationStatusFilter] = useState<string>('all');
+  const [variationPlatformFilter, setVariationPlatformFilter] = useState<string>('all');
+  const [variationSearch, setVariationSearch] = useState<string>('');
 
   // AI Generation function
   const generateWithAI = async (field: AIFieldType) => {
@@ -191,8 +197,20 @@ export function IdeaEditor({
   const statusConfig = DIGITAL_STATUS[idea.status];
   const variations = idea.variations || [];
   const variationCollator = new Intl.Collator('pt-BR', { sensitivity: 'base', numeric: true });
-  const sortedVariations = (() => {
-    const arr = [...variations];
+  const filteredVariations = variations.filter(v => {
+    const platform = platforms.find(p => p.id === v.platform);
+    if (variationTypeFilter !== 'all' && (platform?.group_type || 'other') !== variationTypeFilter) return false;
+    if (variationStatusFilter !== 'all' && v.status !== variationStatusFilter) return false;
+    if (variationPlatformFilter !== 'all' && v.platform !== variationPlatformFilter) return false;
+    if (variationSearch.trim()) {
+      const q = variationSearch.toLowerCase();
+      const hay = [v.title, v.caption, v.description, v.hashtags, platform?.name].filter(Boolean).join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  const displayVariations = (() => {
+    const arr = [...filteredVariations];
     const getPlatformName = (pid: string) => platforms.find(p => p.id === pid)?.name || '';
     const statusOrder: Record<string, number> = { estrutural: 1, andamento: 2, pendente: 3, concluido: 4 };
     switch (variationSortBy) {
@@ -207,6 +225,14 @@ export function IdeaEditor({
       default: return arr;
     }
   })();
+  // Available platform types present in variations
+  const availableTypes = Array.from(new Set(variations.map(v => platforms.find(p => p.id === v.platform)?.group_type || 'other')));
+  const activeFilterCount = [
+    variationTypeFilter !== 'all',
+    variationStatusFilter !== 'all',
+    variationPlatformFilter !== 'all',
+    variationSearch.trim().length > 0,
+  ].filter(Boolean).length;
   const completedVariations = variations.filter(v => v.status === 'concluido').length;
   const progress = variations.length > 0 ? (completedVariations / variations.length) * 100 : 0;
 
@@ -872,9 +898,100 @@ export function IdeaEditor({
           {variations.length > 0 && (
             <div className="flex items-center justify-between gap-2 flex-wrap">
               <span className="text-xs text-muted-foreground">
-                {variations.length} variação(ões)
+                {displayVariations.length === variations.length
+                  ? `${variations.length} variação(ões)`
+                  : `${displayVariations.length} de ${variations.length} variação(ões)`}
               </span>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-7 px-2 gap-1 text-xs">
+                      <Filter className="h-3 w-3" />
+                      <span className="hidden sm:inline">Filtros</span>
+                      {activeFilterCount > 0 && (
+                        <Badge variant="secondary" className="h-4 px-1 text-[10px]">{activeFilterCount}</Badge>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent align="end" className="w-72 space-y-3">
+                    <div className="space-y-1">
+                      <Label className="text-xs">Buscar</Label>
+                      <div className="relative">
+                        <Search className="h-3.5 w-3.5 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          value={variationSearch}
+                          onChange={(e) => setVariationSearch(e.target.value)}
+                          placeholder="Título, legenda, plataforma..."
+                          className="h-8 pl-7 text-xs"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Tipo de plataforma</Label>
+                      <Select value={variationTypeFilter} onValueChange={setVariationTypeFilter}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos os tipos</SelectItem>
+                          {availableTypes.map(t => (
+                            <SelectItem key={t} value={t}>
+                              {GROUP_ICONS[t] || '📦'} {GROUP_LABELS[t] || t}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Plataforma</Label>
+                      <Select value={variationPlatformFilter} onValueChange={setVariationPlatformFilter}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todas as plataformas</SelectItem>
+                          {Array.from(new Set(variations.map(v => v.platform))).map(pid => {
+                            const p = platforms.find(pp => pp.id === pid);
+                            return (
+                              <SelectItem key={pid} value={pid}>
+                                {p?.icon} {p?.name || pid}
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs">Status</Label>
+                      <Select value={variationStatusFilter} onValueChange={setVariationStatusFilter}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos os status</SelectItem>
+                          {Object.entries(DIGITAL_STATUS).map(([k, c]) => (
+                            <SelectItem key={k} value={k}>
+                              <div className="flex items-center gap-2">
+                                <div className={cn('w-2 h-2 rounded-full', c.color)} />
+                                {c.label}
+                              </div>
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {activeFilterCount > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="w-full h-8 text-xs"
+                        onClick={() => {
+                          setVariationTypeFilter('all');
+                          setVariationStatusFilter('all');
+                          setVariationPlatformFilter('all');
+                          setVariationSearch('');
+                        }}
+                      >
+                        <X className="h-3 w-3 mr-1" /> Limpar filtros
+                      </Button>
+                    )}
+                  </PopoverContent>
+                </Popover>
+
                 <Select value={variationSortBy} onValueChange={setVariationSortBy}>
                   <SelectTrigger className="h-7 px-2 text-xs gap-1 w-auto min-w-[140px]">
                     <ArrowUpDown className="h-3 w-3 shrink-0" />
@@ -946,7 +1063,7 @@ export function IdeaEditor({
             </Card>
           ) : platformsViewMode === 'compact' ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
-              {variations.map((variation) => {
+              {displayVariations.map((variation) => {
                 const platformConfig = getPlatform(variation.platform);
                 const variationStatusConfig = DIGITAL_STATUS[variation.status];
                 const variationMedia = (variation.media_urls as string[] | null) || [];
@@ -1003,7 +1120,7 @@ export function IdeaEditor({
             </div>
           ) : platformsViewMode === 'grid' ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-              {variations.map((variation) => {
+              {displayVariations.map((variation) => {
                 const platformConfig = getPlatform(variation.platform);
                 const variationStatusConfig = DIGITAL_STATUS[variation.status];
                 const variationMedia = (variation.media_urls as string[] | null) || [];
@@ -1075,7 +1192,7 @@ export function IdeaEditor({
           ) : platformsViewMode === 'kanban' ? (
             <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4">
               {Object.entries(DIGITAL_STATUS).map(([status, config]) => {
-                const items = variations.filter(v => v.status === status);
+                const items = displayVariations.filter(v => v.status === status);
                 return (
                   <div key={status} className="flex-shrink-0 w-64">
                     <Card className="h-full">
@@ -1164,7 +1281,7 @@ export function IdeaEditor({
             </div>
           ) : (
             <div className="space-y-2">
-              {variations.map((variation) => {
+              {displayVariations.map((variation) => {
                 const platformConfig = getPlatform(variation.platform);
                 const variationStatusConfig = DIGITAL_STATUS[variation.status];
                 const checklistProgress = variation.checklist?.length
@@ -1335,7 +1452,7 @@ export function IdeaEditor({
             </p>
           ) : (
             <div className="space-y-2 max-h-[300px] overflow-y-auto">
-              {variations.map((variation) => {
+              {displayVariations.map((variation) => {
                 const platform = platforms.find(p => p.id === variation.platform);
                 return (
                   <div
