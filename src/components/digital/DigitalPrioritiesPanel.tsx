@@ -90,7 +90,7 @@ export function DigitalPrioritiesPanel({ ideas, platforms, onSelectIdea }: Props
               platformName: platformName(v.platform as string),
               icon: AlertTriangle,
             });
-          } else if (diff === 0 && v.status !== 'concluido') {
+          } else if (diff === 0) {
             list.push({
               id: `today-${v.id}`,
               ideaId: idea.id,
