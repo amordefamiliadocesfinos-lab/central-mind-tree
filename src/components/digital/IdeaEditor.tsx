@@ -197,8 +197,20 @@ export function IdeaEditor({
   const statusConfig = DIGITAL_STATUS[idea.status];
   const variations = idea.variations || [];
   const variationCollator = new Intl.Collator('pt-BR', { sensitivity: 'base', numeric: true });
-  const sortedVariations = (() => {
-    const arr = [...variations];
+  const filteredVariations = variations.filter(v => {
+    const platform = platforms.find(p => p.id === v.platform);
+    if (variationTypeFilter !== 'all' && (platform?.group_type || 'other') !== variationTypeFilter) return false;
+    if (variationStatusFilter !== 'all' && v.status !== variationStatusFilter) return false;
+    if (variationPlatformFilter !== 'all' && v.platform !== variationPlatformFilter) return false;
+    if (variationSearch.trim()) {
+      const q = variationSearch.toLowerCase();
+      const hay = [v.title, v.caption, v.description, v.hashtags, platform?.name].filter(Boolean).join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+  const displayVariations = (() => {
+    const arr = [...filteredVariations];
     const getPlatformName = (pid: string) => platforms.find(p => p.id === pid)?.name || '';
     const statusOrder: Record<string, number> = { estrutural: 1, andamento: 2, pendente: 3, concluido: 4 };
     switch (variationSortBy) {
@@ -213,6 +225,14 @@ export function IdeaEditor({
       default: return arr;
     }
   })();
+  // Available platform types present in variations
+  const availableTypes = Array.from(new Set(variations.map(v => platforms.find(p => p.id === v.platform)?.group_type || 'other')));
+  const activeFilterCount = [
+    variationTypeFilter !== 'all',
+    variationStatusFilter !== 'all',
+    variationPlatformFilter !== 'all',
+    variationSearch.trim().length > 0,
+  ].filter(Boolean).length;
   const completedVariations = variations.filter(v => v.status === 'concluido').length;
   const progress = variations.length > 0 ? (completedVariations / variations.length) * 100 : 0;
 
