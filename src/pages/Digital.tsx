@@ -390,7 +390,7 @@ export default function Digital() {
         {!selectedIdea && activeTab === 'ideias' && (
           <>
             <DigitalDashboard ideas={ideas} />
-            <DigitalPrioritiesPanel ideas={ideas} platforms={platforms} onSelectIdea={setSelectedIdea} />
+            <DigitalPrioritiesPanel ideas={ideas} platforms={activePlatforms} onSelectIdea={setSelectedIdea} />
           </>
         )}
 
