@@ -390,7 +390,7 @@ export default function Digital() {
         {/* Compact dashboard - only on ideas tab */}
         {!selectedIdea && activeTab === 'ideias' && (
           <>
-            <div className="flex items-center gap-2 px-4 pb-2">
+            <div className="flex items-center gap-2 pb-2">
               <div className="flex-1 min-w-0">
                 <DigitalDashboard ideas={ideas} />
               </div>
