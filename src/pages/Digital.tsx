@@ -18,7 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, ArrowLeft, Search, LayoutGrid, Columns3, Image, BarChart3, Link2, Settings2, TrendingUp, MessageCircle, Book, Calendar, Headset, X, SlidersHorizontal, Sparkles, Layers, ArrowUpDown } from 'lucide-react';
+import { Plus, ArrowLeft, Search, LayoutGrid, Columns3, Image, BarChart3, Link2, Settings2, TrendingUp, MessageCircle, Book, Calendar, Headset, X, SlidersHorizontal, Sparkles, Layers, ArrowUpDown, Zap } from 'lucide-react';
 import { HierarchicalPlatformSelector } from '@/components/digital/HierarchicalPlatformSelector';
 import { PlatformHierarchicalPicker } from '@/components/digital/PlatformHierarchicalPicker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -89,6 +89,7 @@ export default function Digital() {
   const [sortBy, setSortBy] = useState<string>('default');
   const [searchFocused, setSearchFocused] = useState(false);
   const [expandedByPlatforms, setExpandedByPlatforms] = useState<Set<string>>(new Set());
+  const [showPriorities, setShowPriorities] = useState(false);
 
   // Fetch nodes for linking
   useEffect(() => {
@@ -389,8 +390,23 @@ export default function Digital() {
         {/* Compact dashboard - only on ideas tab */}
         {!selectedIdea && activeTab === 'ideias' && (
           <>
-            <DigitalDashboard ideas={ideas} />
-            <DigitalPrioritiesPanel ideas={ideas} platforms={activePlatforms} onSelectIdea={setSelectedIdea} />
+            <div className="flex items-center gap-2 px-4 pb-2">
+              <div className="flex-1 min-w-0">
+                <DigitalDashboard ideas={ideas} />
+              </div>
+              <Button
+                variant={showPriorities ? 'secondary' : 'outline'}
+                size="sm"
+                className="shrink-0 h-9 gap-1.5"
+                onClick={() => setShowPriorities(v => !v)}
+              >
+                <Zap className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Prioridades</span>
+              </Button>
+            </div>
+            {showPriorities && (
+              <DigitalPrioritiesPanel ideas={ideas} platforms={activePlatforms} onSelectIdea={setSelectedIdea} />
+            )}
           </>
         )}
 

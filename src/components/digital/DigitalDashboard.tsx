@@ -78,7 +78,7 @@ export function DigitalDashboard({ ideas }: DigitalDashboardProps) {
   ];
 
   return (
-    <div className="px-4 pb-2">
+    <div className="pb-2">
       <div
         className="flex gap-2 overflow-x-auto scrollbar-none -mx-1 px-1"
         role="list"
