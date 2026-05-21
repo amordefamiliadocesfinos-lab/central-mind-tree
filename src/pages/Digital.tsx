@@ -390,8 +390,23 @@ export default function Digital() {
         {/* Compact dashboard - only on ideas tab */}
         {!selectedIdea && activeTab === 'ideias' && (
           <>
-            <DigitalDashboard ideas={ideas} />
-            <DigitalPrioritiesPanel ideas={ideas} platforms={activePlatforms} onSelectIdea={setSelectedIdea} />
+            <div className="flex items-center gap-2 px-4 pb-2">
+              <div className="flex-1 min-w-0">
+                <DigitalDashboard ideas={ideas} />
+              </div>
+              <Button
+                variant={showPriorities ? 'secondary' : 'outline'}
+                size="sm"
+                className="shrink-0 h-9 gap-1.5"
+                onClick={() => setShowPriorities(v => !v)}
+              >
+                <Zap className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Prioridades</span>
+              </Button>
+            </div>
+            {showPriorities && (
+              <DigitalPrioritiesPanel ideas={ideas} platforms={activePlatforms} onSelectIdea={setSelectedIdea} />
+            )}
           </>
         )}
 
