@@ -89,6 +89,7 @@ export default function Digital() {
   const [sortBy, setSortBy] = useState<string>('default');
   const [searchFocused, setSearchFocused] = useState(false);
   const [expandedByPlatforms, setExpandedByPlatforms] = useState<Set<string>>(new Set());
+  const [showPriorities, setShowPriorities] = useState(false);
 
   // Fetch nodes for linking
   useEffect(() => {
