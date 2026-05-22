@@ -693,6 +693,16 @@ export default function Digital() {
                   >
                     <Columns3 className="h-4 w-4" />
                   </Button>
+                  <Button
+                    variant={viewMode === 'spreadsheet' ? 'secondary' : 'ghost'}
+                    size="icon"
+                    className="h-9 w-9 touch-manipulation"
+                    aria-label="Planilha"
+                    aria-pressed={viewMode === 'spreadsheet'}
+                    onClick={() => setViewMode('spreadsheet')}
+                  >
+                    <TableIcon className="h-4 w-4" />
+                  </Button>
                 </div>
               )}
             </div>
