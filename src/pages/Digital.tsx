@@ -343,6 +343,16 @@ export default function Digital() {
                 >
                   <Columns3 className="h-4 w-4" />
                 </Button>
+                <Button
+                  variant={viewMode === 'spreadsheet' ? 'secondary' : 'ghost'}
+                  size="icon"
+                  className="h-8 w-8"
+                  aria-label="Visualizar em planilha"
+                  aria-pressed={viewMode === 'spreadsheet'}
+                  onClick={() => setViewMode('spreadsheet')}
+                >
+                  <TableIcon className="h-4 w-4" />
+                </Button>
               </div>
             )}
 
