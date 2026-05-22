@@ -75,7 +75,7 @@ export default function Digital() {
   const [newIdea, setNewIdea] = useState({ title: '', objective: '', node_id: '', idea_type: 'conteudo', product_id: '' });
   const [newIdeaPlatformIds, setNewIdeaPlatformIds] = useState<string[]>([]);
   const [showNewIdeaPlatformPicker, setShowNewIdeaPlatformPicker] = useState(false);
-  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'kanban' | 'spreadsheet'>('list');
   const [activeTab, setActiveTab] = useState<'ideias' | 'calendario' | 'midia' | 'metricas' | 'plataformas' | 'tendencias' | 'engajamento' | 'faq' | 'atendimento'>('ideias');
   const [kanbanMode, setKanbanMode] = useState<'ideas' | 'variations'>('ideas');
   const [nodes, setNodes] = useState<Node[]>([]);
