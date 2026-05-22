@@ -18,7 +18,8 @@ import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, ArrowLeft, Search, LayoutGrid, Columns3, Image, BarChart3, Link2, Settings2, TrendingUp, MessageCircle, Book, Calendar, Headset, X, SlidersHorizontal, Sparkles, Layers, ArrowUpDown, Zap } from 'lucide-react';
+import { Plus, ArrowLeft, Search, LayoutGrid, Columns3, Image, BarChart3, Link2, Settings2, TrendingUp, MessageCircle, Book, Calendar, Headset, X, SlidersHorizontal, Sparkles, Layers, ArrowUpDown, Zap, Table as TableIcon } from 'lucide-react';
+import { IdeasSpreadsheetView } from '@/components/digital/IdeasSpreadsheetView';
 import { HierarchicalPlatformSelector } from '@/components/digital/HierarchicalPlatformSelector';
 import { PlatformHierarchicalPicker } from '@/components/digital/PlatformHierarchicalPicker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -74,7 +75,7 @@ export default function Digital() {
   const [newIdea, setNewIdea] = useState({ title: '', objective: '', node_id: '', idea_type: 'conteudo', product_id: '' });
   const [newIdeaPlatformIds, setNewIdeaPlatformIds] = useState<string[]>([]);
   const [showNewIdeaPlatformPicker, setShowNewIdeaPlatformPicker] = useState(false);
-  const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
+  const [viewMode, setViewMode] = useState<'list' | 'kanban' | 'spreadsheet'>('list');
   const [activeTab, setActiveTab] = useState<'ideias' | 'calendario' | 'midia' | 'metricas' | 'plataformas' | 'tendencias' | 'engajamento' | 'faq' | 'atendimento'>('ideias');
   const [kanbanMode, setKanbanMode] = useState<'ideas' | 'variations'>('ideas');
   const [nodes, setNodes] = useState<Node[]>([]);
@@ -341,6 +342,16 @@ export default function Digital() {
                   onClick={() => setViewMode('kanban')}
                 >
                   <Columns3 className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={viewMode === 'spreadsheet' ? 'secondary' : 'ghost'}
+                  size="icon"
+                  className="h-8 w-8"
+                  aria-label="Visualizar em planilha"
+                  aria-pressed={viewMode === 'spreadsheet'}
+                  onClick={() => setViewMode('spreadsheet')}
+                >
+                  <TableIcon className="h-4 w-4" />
                 </Button>
               </div>
             )}
@@ -682,6 +693,16 @@ export default function Digital() {
                   >
                     <Columns3 className="h-4 w-4" />
                   </Button>
+                  <Button
+                    variant={viewMode === 'spreadsheet' ? 'secondary' : 'ghost'}
+                    size="icon"
+                    className="h-9 w-9 touch-manipulation"
+                    aria-label="Planilha"
+                    aria-pressed={viewMode === 'spreadsheet'}
+                    onClick={() => setViewMode('spreadsheet')}
+                  >
+                    <TableIcon className="h-4 w-4" />
+                  </Button>
                 </div>
               )}
             </div>
@@ -772,7 +793,13 @@ export default function Digital() {
               onUpdatePlatform={updatePlatform}
             />
           ) : activeTab === 'ideias' ? (
-            viewMode === 'kanban' ? (
+            viewMode === 'spreadsheet' ? (
+              <IdeasSpreadsheetView
+                ideas={scopedIdeas}
+                platforms={activePlatforms}
+                onSelectIdea={setSelectedIdea}
+              />
+            ) : viewMode === 'kanban' ? (
               <KanbanBoard
                 ideas={scopedIdeas}
                 onUpdateIdea={updateIdea}
