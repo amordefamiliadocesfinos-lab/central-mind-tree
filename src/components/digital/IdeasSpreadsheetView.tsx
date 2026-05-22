@@ -170,14 +170,15 @@ export function IdeasSpreadsheetView({ ideas, platforms, onSelectIdea }: Props) 
                       {ideaPlatformIds.slice(0, 5).map((pid) => {
                         const p = platformsMap.get(pid as string);
                         if (!p) return null;
+                        const isUrl = typeof p.icon === 'string' && /^https?:\/\//.test(p.icon);
                         return (
                           <div
                             key={pid}
-                            title={p.label}
+                            title={p.name}
                             className="h-6 w-6 rounded-full ring-2 ring-background bg-muted flex items-center justify-center text-xs overflow-hidden"
                           >
-                            {p.icon_url ? (
-                              <img src={p.icon_url} alt={p.label} className="h-full w-full object-cover" />
+                            {isUrl ? (
+                              <img src={p.icon} alt={p.name} className="h-full w-full object-cover" />
                             ) : (
                               <span>{p.icon || '·'}</span>
                             )}
