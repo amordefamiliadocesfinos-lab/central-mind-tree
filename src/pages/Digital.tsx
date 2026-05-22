@@ -793,7 +793,13 @@ export default function Digital() {
               onUpdatePlatform={updatePlatform}
             />
           ) : activeTab === 'ideias' ? (
-            viewMode === 'kanban' ? (
+            viewMode === 'spreadsheet' ? (
+              <IdeasSpreadsheetView
+                ideas={scopedIdeas}
+                platforms={activePlatforms}
+                onSelectIdea={setSelectedIdea}
+              />
+            ) : viewMode === 'kanban' ? (
               <KanbanBoard
                 ideas={scopedIdeas}
                 onUpdateIdea={updateIdea}
