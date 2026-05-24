@@ -1047,6 +1047,15 @@ export function IdeaEditor({
                   <Layers className="h-3.5 w-3.5" />
                   <span className="text-xs hidden sm:inline">Compacto</span>
                 </Button>
+                <Button
+                  variant={platformsViewMode === 'spreadsheet' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="h-7 px-2 gap-1"
+                  onClick={() => setPlatformsViewMode('spreadsheet')}
+                >
+                  <TableIcon className="h-3.5 w-3.5" />
+                  <span className="text-xs hidden sm:inline">Planilha</span>
+                </Button>
               </div>
               </div>
             </div>
