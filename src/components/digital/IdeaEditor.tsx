@@ -16,7 +16,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { ArrowLeft, Plus, Trash2, Settings, Calendar, Image, Copy, Layers, Link2, X, ImagePlus, Eye, EyeOff, Sparkles, Loader2, Wand2, SlidersHorizontal, List, LayoutGrid, Grid3x3, ArrowUpDown, Filter, Search } from 'lucide-react';
+import { ArrowLeft, Plus, Trash2, Settings, Calendar, Image, Copy, Layers, Link2, X, ImagePlus, Eye, EyeOff, Sparkles, Loader2, Wand2, SlidersHorizontal, List, LayoutGrid, Grid3x3, ArrowUpDown, Filter, Search, Table as TableIcon } from 'lucide-react';
+import { VariationsSpreadsheetView } from './VariationsSpreadsheetView';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { GROUP_LABELS, GROUP_ICONS } from '@/hooks/usePlatforms';
 import { CustomFieldsDefinition } from './CustomFieldsDefinition';
@@ -115,7 +116,7 @@ export function IdeaEditor({
     kpi: false,
     all: false,
   });
-  const [platformsViewMode, setPlatformsViewMode] = useState<'list' | 'kanban' | 'grid' | 'compact'>('list');
+  const [platformsViewMode, setPlatformsViewMode] = useState<'list' | 'kanban' | 'grid' | 'compact' | 'spreadsheet'>('list');
   const [variationSortBy, setVariationSortBy] = useState<string>('default');
   const [variationTypeFilter, setVariationTypeFilter] = useState<string>('all');
   const [variationStatusFilter, setVariationStatusFilter] = useState<string>('all');
@@ -1046,6 +1047,15 @@ export function IdeaEditor({
                   <Layers className="h-3.5 w-3.5" />
                   <span className="text-xs hidden sm:inline">Compacto</span>
                 </Button>
+                <Button
+                  variant={platformsViewMode === 'spreadsheet' ? 'default' : 'ghost'}
+                  size="sm"
+                  className="h-7 px-2 gap-1"
+                  onClick={() => setPlatformsViewMode('spreadsheet')}
+                >
+                  <TableIcon className="h-3.5 w-3.5" />
+                  <span className="text-xs hidden sm:inline">Planilha</span>
+                </Button>
               </div>
               </div>
             </div>
@@ -1061,6 +1071,13 @@ export function IdeaEditor({
                 Adicione plataformas para criar variações do conteúdo.
               </p>
             </Card>
+          ) : platformsViewMode === 'spreadsheet' ? (
+            <VariationsSpreadsheetView
+              idea={idea}
+              variations={displayVariations}
+              platforms={platforms}
+              onSelectVariation={(v) => setSelectedVariation(v)}
+            />
           ) : platformsViewMode === 'compact' ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
               {displayVariations.map((variation) => {
