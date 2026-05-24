@@ -1071,6 +1071,13 @@ export function IdeaEditor({
                 Adicione plataformas para criar variações do conteúdo.
               </p>
             </Card>
+          ) : platformsViewMode === 'spreadsheet' ? (
+            <VariationsSpreadsheetView
+              idea={idea}
+              variations={displayVariations}
+              platforms={platforms}
+              onSelectVariation={(v) => setSelectedVariation(v)}
+            />
           ) : platformsViewMode === 'compact' ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
               {displayVariations.map((variation) => {
