@@ -116,7 +116,7 @@ export function IdeaEditor({
     kpi: false,
     all: false,
   });
-  const [platformsViewMode, setPlatformsViewMode] = useState<'list' | 'kanban' | 'grid' | 'compact'>('list');
+  const [platformsViewMode, setPlatformsViewMode] = useState<'list' | 'kanban' | 'grid' | 'compact' | 'spreadsheet'>('list');
   const [variationSortBy, setVariationSortBy] = useState<string>('default');
   const [variationTypeFilter, setVariationTypeFilter] = useState<string>('all');
   const [variationStatusFilter, setVariationStatusFilter] = useState<string>('all');
