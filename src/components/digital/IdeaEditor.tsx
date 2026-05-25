@@ -60,6 +60,7 @@ interface IdeaEditorProps {
   nodes?: Node[];
   platforms?: Platform[];
   onUpdatePlatform?: (id: string, updates: Partial<Platform>) => void | Promise<void>;
+  initialVariationId?: string | null;
 }
 
 export function IdeaEditor({
@@ -77,7 +78,9 @@ export function IdeaEditor({
   nodes = [],
   platforms = [],
   onUpdatePlatform,
+  initialVariationId,
 }: IdeaEditorProps) {
+
   const isMobile = useIsMobile();
   const { products } = useProductsList();
   const { ideaTypes } = useIdeaTypes();
