@@ -72,6 +72,11 @@ export default function Digital() {
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedIdea, setSelectedIdea] = useState<string | null>(null);
+  const [pendingVariationId, setPendingVariationId] = useState<string | null>(null);
+  const openIdeaWithVariation = (ideaId: string, variationId?: string) => {
+    setPendingVariationId(variationId || null);
+    setSelectedIdea(ideaId);
+  };
   const [newIdea, setNewIdea] = useState({ title: '', objective: '', node_id: '', idea_type: 'conteudo', product_id: '' });
   const [newIdeaPlatformIds, setNewIdeaPlatformIds] = useState<string[]>([]);
   const [showNewIdeaPlatformPicker, setShowNewIdeaPlatformPicker] = useState(false);
@@ -416,7 +421,7 @@ export default function Digital() {
               </Button>
             </div>
             {showPriorities && (
-              <DigitalPrioritiesPanel ideas={ideas} platforms={activePlatforms} onSelectIdea={setSelectedIdea} />
+              <DigitalPrioritiesPanel ideas={ideas} platforms={activePlatforms} onSelectIdea={openIdeaWithVariation} />
             )}
           </>
         )}
@@ -775,7 +780,7 @@ export default function Digital() {
           {selectedIdeaData ? (
             <IdeaEditor
               idea={selectedIdeaData}
-              onBack={() => setSelectedIdea(null)}
+              onBack={() => { setSelectedIdea(null); setPendingVariationId(null); }}
               onUpdate={updateIdea}
               onDelete={deleteIdea}
               onDuplicate={async (id) => {
@@ -791,6 +796,7 @@ export default function Digital() {
               nodes={nodes}
               platforms={activePlatforms}
               onUpdatePlatform={updatePlatform}
+              initialVariationId={pendingVariationId}
             />
           ) : activeTab === 'ideias' ? (
             viewMode === 'spreadsheet' ? (

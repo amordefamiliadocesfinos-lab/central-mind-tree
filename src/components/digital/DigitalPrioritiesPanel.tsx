@@ -13,6 +13,7 @@ type Severity = 'critical' | 'high' | 'medium' | 'low';
 interface PriorityItem {
   id: string;
   ideaId: string;
+  variationId?: string;
   ideaTitle: string;
   serial?: string | null;
   type: 'overdue' | 'in_progress_pending' | 'unscheduled' | 'no_media' | 'concluido_no_metric' | 'stuck_structural';
@@ -34,8 +35,15 @@ const SEVERITY_STYLES: Record<Severity, { badge: string; bar: string; label: str
 interface Props {
   ideas: DigitalIdea[];
   platforms: Platform[];
-  onSelectIdea: (id: string) => void;
+  onSelectIdea: (id: string, variationId?: string) => void;
 }
+
+const isVariationDone = (v: DigitalVariation) => {
+  if (v.status === 'concluido' || v.is_posted) return true;
+  const extras = v.additional_dates || [];
+  if (extras.length > 0 && extras.every(e => e.posted)) return true;
+  return false;
+};
 
 export function DigitalPrioritiesPanel({ ideas, platforms, onSelectIdea }: Props) {
   const [expanded, setExpanded] = useState(false);
@@ -53,11 +61,12 @@ export function DigitalPrioritiesPanel({ ideas, platforms, onSelectIdea }: Props
 
       // 1) Idea em andamento mas variações pendentes
       if (idea.status === 'andamento') {
-        const pendentes = vars.filter(v => v.status === 'pendente' || v.status === 'estrutural');
+        const pendentes = vars.filter(v => !isVariationDone(v) && (v.status === 'pendente' || v.status === 'estrutural'));
         for (const v of pendentes) {
           list.push({
             id: `inprog-${v.id}`,
             ideaId: idea.id,
+            variationId: v.id,
             ideaTitle: idea.title,
             serial: idea.serial_number,
             type: 'in_progress_pending',
@@ -73,13 +82,14 @@ export function DigitalPrioritiesPanel({ ideas, platforms, onSelectIdea }: Props
 
       // 2) Variações com data agendada vencida e não concluídas
       for (const v of vars) {
-        if (v.status === 'concluido' || !v.scheduled_date) continue;
+        if (isVariationDone(v) || !v.scheduled_date) continue;
         try {
           const diff = differenceInCalendarDays(today, parseISO(v.scheduled_date));
           if (diff > 0) {
             list.push({
               id: `overdue-${v.id}`,
               ideaId: idea.id,
+              variationId: v.id,
               ideaTitle: idea.title,
               serial: idea.serial_number,
               type: 'overdue',
@@ -94,6 +104,7 @@ export function DigitalPrioritiesPanel({ ideas, platforms, onSelectIdea }: Props
             list.push({
               id: `today-${v.id}`,
               ideaId: idea.id,
+              variationId: v.id,
               ideaTitle: idea.title,
               serial: idea.serial_number,
               type: 'overdue',
@@ -110,11 +121,12 @@ export function DigitalPrioritiesPanel({ ideas, platforms, onSelectIdea }: Props
 
       // 3) Variações sem agendamento (idea em andamento)
       if (idea.status === 'andamento') {
-        const semData = vars.filter(v => v.status !== 'concluido' && !v.scheduled_date);
+        const semData = vars.filter(v => !isVariationDone(v) && !v.scheduled_date);
         if (semData.length > 0) {
           list.push({
             id: `unscheduled-${idea.id}`,
             ideaId: idea.id,
+            variationId: semData[0].id,
             ideaTitle: idea.title,
             serial: idea.serial_number,
             type: 'unscheduled',
@@ -128,11 +140,12 @@ export function DigitalPrioritiesPanel({ ideas, platforms, onSelectIdea }: Props
       }
 
       // 4) Variações sem mídia
-      const semMidia = vars.filter(v => v.status !== 'concluido' && (!v.media_urls || v.media_urls.length === 0));
+      const semMidia = vars.filter(v => !isVariationDone(v) && (!v.media_urls || v.media_urls.length === 0));
       if (semMidia.length > 0 && idea.status !== 'estrutural') {
         list.push({
           id: `nomedia-${idea.id}`,
           ideaId: idea.id,
+          variationId: semMidia[0].id,
           ideaTitle: idea.title,
           serial: idea.serial_number,
           type: 'no_media',
@@ -165,13 +178,14 @@ export function DigitalPrioritiesPanel({ ideas, platforms, onSelectIdea }: Props
 
       // 6) Variação concluída sem métrica registrada
       const concluidasSemMetrica = vars.filter(v =>
-        v.status === 'concluido' &&
+        isVariationDone(v) &&
         !v.metric_reach && !v.metric_engagement && !v.metric_clicks
       );
       if (concluidasSemMetrica.length > 0) {
         list.push({
           id: `metrics-${idea.id}`,
           ideaId: idea.id,
+          variationId: concluidasSemMetrica[0].id,
           ideaTitle: idea.title,
           serial: idea.serial_number,
           type: 'concluido_no_metric',
@@ -186,6 +200,7 @@ export function DigitalPrioritiesPanel({ ideas, platforms, onSelectIdea }: Props
 
     return list.sort((a, b) => b.score - a.score);
   }, [ideas, platforms]);
+
 
   const counts = useMemo(() => {
     const c: Record<Severity, number> = { critical: 0, high: 0, medium: 0, low: 0 };
@@ -254,7 +269,7 @@ export function DigitalPrioritiesPanel({ ideas, platforms, onSelectIdea }: Props
               <li key={item.id}>
                 <button
                   type="button"
-                  onClick={() => onSelectIdea(item.ideaId)}
+                  onClick={() => onSelectIdea(item.ideaId, item.variationId)}
                   className={cn(
                     'w-full flex items-start gap-3 p-3 text-left border-l-4 transition-colors',
                     'hover:bg-muted/40 active:bg-muted/60 touch-manipulation',
