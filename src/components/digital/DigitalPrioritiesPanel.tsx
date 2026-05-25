@@ -35,8 +35,15 @@ const SEVERITY_STYLES: Record<Severity, { badge: string; bar: string; label: str
 interface Props {
   ideas: DigitalIdea[];
   platforms: Platform[];
-  onSelectIdea: (id: string) => void;
+  onSelectIdea: (id: string, variationId?: string) => void;
 }
+
+const isVariationDone = (v: DigitalVariation) => {
+  if (v.status === 'concluido' || v.is_posted) return true;
+  const extras = v.additional_dates || [];
+  if (extras.length > 0 && extras.every(e => e.posted)) return true;
+  return false;
+};
 
 export function DigitalPrioritiesPanel({ ideas, platforms, onSelectIdea }: Props) {
   const [expanded, setExpanded] = useState(false);
