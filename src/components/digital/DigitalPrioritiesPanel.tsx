@@ -13,10 +13,17 @@ type Severity = 'critical' | 'high' | 'medium' | 'low';
 interface PriorityItem {
   id: string;
   ideaId: string;
+  variationId?: string;
   ideaTitle: string;
   serial?: string | null;
   type: 'overdue' | 'in_progress_pending' | 'unscheduled' | 'no_media' | 'concluido_no_metric' | 'stuck_structural';
   severity: Severity;
+  score: number;
+  title: string;
+  description: string;
+  platformName?: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
   score: number;
   title: string;
   description: string;
