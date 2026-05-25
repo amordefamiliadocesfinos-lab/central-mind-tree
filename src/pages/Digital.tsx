@@ -780,7 +780,7 @@ export default function Digital() {
           {selectedIdeaData ? (
             <IdeaEditor
               idea={selectedIdeaData}
-              onBack={() => setSelectedIdea(null)}
+              onBack={() => { setSelectedIdea(null); setPendingVariationId(null); }}
               onUpdate={updateIdea}
               onDelete={deleteIdea}
               onDuplicate={async (id) => {
@@ -796,6 +796,7 @@ export default function Digital() {
               nodes={nodes}
               platforms={activePlatforms}
               onUpdatePlatform={updatePlatform}
+              initialVariationId={pendingVariationId}
             />
           ) : activeTab === 'ideias' ? (
             viewMode === 'spreadsheet' ? (
