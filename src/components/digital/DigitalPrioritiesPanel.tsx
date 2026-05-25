@@ -269,7 +269,7 @@ export function DigitalPrioritiesPanel({ ideas, platforms, onSelectIdea }: Props
               <li key={item.id}>
                 <button
                   type="button"
-                  onClick={() => onSelectIdea(item.ideaId)}
+                  onClick={() => onSelectIdea(item.ideaId, item.variationId)}
                   className={cn(
                     'w-full flex items-start gap-3 p-3 text-left border-l-4 transition-colors',
                     'hover:bg-muted/40 active:bg-muted/60 touch-manipulation',
