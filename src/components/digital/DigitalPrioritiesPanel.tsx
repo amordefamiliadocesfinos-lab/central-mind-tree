@@ -24,12 +24,6 @@ interface PriorityItem {
   platformName?: string;
   icon: React.ComponentType<{ className?: string }>;
 }
-  score: number;
-  title: string;
-  description: string;
-  platformName?: string;
-  icon: React.ComponentType<{ className?: string }>;
-}
 
 const SEVERITY_STYLES: Record<Severity, { badge: string; bar: string; label: string }> = {
   critical: { badge: 'bg-red-500/15 text-red-700 dark:text-red-400 border-red-500/30', bar: 'border-l-red-500', label: 'Crítico' },
