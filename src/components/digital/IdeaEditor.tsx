@@ -105,6 +105,16 @@ export function IdeaEditor({
     onUpdate(idea.id, { media_urls: [...existing, ...missing] });
   }, [idea.product_id, idea.id, products, idea.media_urls, onUpdate]);
   const [selectedVariation, setSelectedVariation] = useState<DigitalVariation | null>(null);
+  const lastInitialVariationRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!initialVariationId) return;
+    if (lastInitialVariationRef.current === initialVariationId) return;
+    const v = (idea.variations || []).find(x => x.id === initialVariationId);
+    if (v) {
+      setSelectedVariation(v);
+      lastInitialVariationRef.current = initialVariationId;
+    }
+  }, [initialVariationId, idea.variations]);
   const [showAddPlatform, setShowAddPlatform] = useState(false);
   const [showBatchDialog, setShowBatchDialog] = useState(false);
   const [duplicatingVariation, setDuplicatingVariation] = useState<string | null>(null);
