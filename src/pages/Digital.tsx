@@ -72,6 +72,11 @@ export default function Digital() {
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedIdea, setSelectedIdea] = useState<string | null>(null);
+  const [pendingVariationId, setPendingVariationId] = useState<string | null>(null);
+  const openIdeaWithVariation = (ideaId: string, variationId?: string) => {
+    setPendingVariationId(variationId || null);
+    setSelectedIdea(ideaId);
+  };
   const [newIdea, setNewIdea] = useState({ title: '', objective: '', node_id: '', idea_type: 'conteudo', product_id: '' });
   const [newIdeaPlatformIds, setNewIdeaPlatformIds] = useState<string[]>([]);
   const [showNewIdeaPlatformPicker, setShowNewIdeaPlatformPicker] = useState(false);
