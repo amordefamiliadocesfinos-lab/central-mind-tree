@@ -421,7 +421,7 @@ export default function Digital() {
               </Button>
             </div>
             {showPriorities && (
-              <DigitalPrioritiesPanel ideas={ideas} platforms={activePlatforms} onSelectIdea={setSelectedIdea} />
+              <DigitalPrioritiesPanel ideas={ideas} platforms={activePlatforms} onSelectIdea={openIdeaWithVariation} />
             )}
           </>
         )}
