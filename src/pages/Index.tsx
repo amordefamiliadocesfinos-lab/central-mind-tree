@@ -54,6 +54,7 @@ const Index = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [showHorizontalOrgChart, setShowHorizontalOrgChart] = useState(false);
+  const [showSpreadsheet, setShowSpreadsheet] = useState(false);
   
   // Touch handling for mobile
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
