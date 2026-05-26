@@ -308,6 +308,48 @@ const Index = () => {
     }, 500);
   };
 
+  // Função para expandir toda a cadeia de ancestrais de um nó
+  const ensureNodeAndAncestorsVisible = async (nodeId: string) => {
+    try {
+      // Buscar o nó para encontrar seu parent_id
+      const { data: node } = await supabase
+        .from("nodes")
+        .select("id, parent_id")
+        .eq("id", nodeId)
+        .maybeSingle();
+
+      if (!node) return;
+
+      // Coletar todos os ancestrais
+      const ancestorIds: string[] = [];
+      let currentId: string | null = node.parent_id;
+      const seen = new Set<string>();
+
+      while (currentId && !seen.has(currentId)) {
+        seen.add(currentId);
+        ancestorIds.push(currentId);
+        const { data: parent } = await supabase
+          .from("nodes")
+          .select("parent_id")
+          .eq("id", currentId)
+          .maybeSingle();
+        currentId = parent?.parent_id ?? null;
+      }
+
+      if (ancestorIds.length > 0) {
+        // Tornar todos os ancestrais visíveis
+        await supabase
+          .from("nodes")
+          .update({ is_visible: true })
+          .in("id", ancestorIds);
+        // Trigger refresh para re-renderizar a árvore
+        setRefreshKey((prev) => prev + 1);
+      }
+    } catch (error) {
+      console.error("Erro ao expandir ancestrais:", error);
+    }
+  };
+
   // Handle search result click
   const handleSearchResultClick = (result: { type: "node" | "task"; id: string; nodeId?: string; title: string; parentTitle?: string }) => {
     if (result.type === "node") {
@@ -604,9 +646,12 @@ const Index = () => {
       {showSpreadsheet && (
         <NodesSpreadsheetView
           onClose={() => setShowSpreadsheet(false)}
-          onNodeClick={(nodeId) => {
+          onNodeClick={async (nodeId) => {
             setShowSpreadsheet(false);
-            setTimeout(() => centerOnNode(nodeId), 100);
+            // Expandir toda a cadeia de ancestrais para garantir que o nó esteja no DOM
+            await ensureNodeAndAncestorsVisible(nodeId);
+            // Aguardar o DOM re-renderizar após a expansão
+            setTimeout(() => centerOnNode(nodeId), 350);
           }}
         />
       )}
