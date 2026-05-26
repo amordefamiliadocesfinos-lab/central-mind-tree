@@ -604,9 +604,12 @@ const Index = () => {
       {showSpreadsheet && (
         <NodesSpreadsheetView
           onClose={() => setShowSpreadsheet(false)}
-          onNodeClick={(nodeId) => {
+          onNodeClick={async (nodeId) => {
             setShowSpreadsheet(false);
-            setTimeout(() => centerOnNode(nodeId), 100);
+            // Expandir toda a cadeia de ancestrais para garantir que o nó esteja no DOM
+            await ensureNodeAndAncestorsVisible(nodeId);
+            // Aguardar o DOM re-renderizar após a expansão
+            setTimeout(() => centerOnNode(nodeId), 350);
           }}
         />
       )}
