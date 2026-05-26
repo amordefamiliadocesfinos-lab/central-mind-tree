@@ -599,6 +599,17 @@ const Index = () => {
           }}
         />
       )}
+
+      {/* Planilha Overlay */}
+      {showSpreadsheet && (
+        <NodesSpreadsheetView
+          onClose={() => setShowSpreadsheet(false)}
+          onNodeClick={(nodeId) => {
+            setShowSpreadsheet(false);
+            setTimeout(() => centerOnNode(nodeId), 100);
+          }}
+        />
+      )}
     </>
   );
 };
