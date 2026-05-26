@@ -188,6 +188,10 @@ function QueueList({ tasks, activeTaskId, queue, setQueue, onSelect, onRemove }:
 
 export default function Foco() {
   const navigate = useNavigate();
+  const [viewMode, setViewMode] = useState<'cards' | 'spreadsheet'>(() => {
+    return (localStorage.getItem('pc.focus.viewMode') as 'cards' | 'spreadsheet') || 'cards';
+  });
+  useEffect(() => { localStorage.setItem('pc.focus.viewMode', viewMode); }, [viewMode]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [nodes, setNodes] = useState<Record<string, Node>>({});
   const [dependencyTasks, setDependencyTasks] = useState<Record<string, { id: string; title: string; status: string }>>({});
