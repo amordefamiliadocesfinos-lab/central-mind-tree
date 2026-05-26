@@ -557,11 +557,7 @@ const Planejamento = () => {
           </CardContent>
         </Card>
 
-        {/* Block 2: Seleção de Tarefas */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-base sm:text-lg">Seleção de Tarefas</CardTitle>
-        {/* Block 2: Seleção de Tarefas */}
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2 gap-2">
             <CardTitle className="text-base sm:text-lg">Seleção de Tarefas</CardTitle>
