@@ -588,19 +588,41 @@ export default function Foco() {
             </Button>
             <h1 className="text-lg sm:text-2xl font-bold text-foreground truncate">Foco</h1>
           </div>
-          <Button 
-            variant={isReplanningDay() ? "default" : "outline"} 
-            size="sm"
-            onClick={() => navigate('/planejamento')}
-            className="h-10 px-3"
-          >
-            <CalendarCheck className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Replanejar</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <div className="inline-flex rounded-md border bg-muted/30 p-0.5">
+              <Button
+                variant={viewMode === 'cards' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('cards')}
+                className="h-8 px-2"
+                title="Visualização em cards"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'spreadsheet' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('spreadsheet')}
+                className="h-8 px-2"
+                title="Visualização em planilha"
+              >
+                <TableIcon className="h-4 w-4" />
+              </Button>
+            </div>
+            <Button 
+              variant={isReplanningDay() ? "default" : "outline"} 
+              size="sm"
+              onClick={() => navigate('/planejamento')}
+              className="h-10 px-3"
+            >
+              <CalendarCheck className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Replanejar</span>
+            </Button>
+          </div>
         </div>
       </div>
 
-      <div className="p-4 max-w-2xl mx-auto space-y-4">
+      <div className={cn("p-4 space-y-4", viewMode === 'spreadsheet' ? "max-w-[1600px] mx-auto" : "max-w-2xl mx-auto")}>
         <Card className="p-4 mb-6 bg-destructive/10 border-destructive/30">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
