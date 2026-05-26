@@ -10,11 +10,12 @@ import { DueDateBanner } from "@/components/DueDateBanner";
 import { FollowUpBanner } from "@/components/FollowUpBanner";
 import { CEOLegend } from "@/components/CEOLegend";
 import { HorizontalOrgChart } from "@/components/HorizontalOrgChart";
+import { NodesSpreadsheetView } from "@/components/NodesSpreadsheetView";
 import { useToast } from "@/hooks/use-toast";
 import { useLinesMode } from "@/contexts/LinesModeContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Crosshair, Network, GitBranch } from "lucide-react";
+import { RefreshCw, Crosshair, Network, GitBranch, Table as TableIcon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
