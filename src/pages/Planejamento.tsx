@@ -21,7 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Plus, Trash2, Star, Check, Save, RotateCcw, Pencil, GripVertical, ChevronUp, ChevronDown, CalendarIcon, X } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Star, Check, Save, RotateCcw, Pencil, GripVertical, ChevronUp, ChevronDown, CalendarIcon, X, LayoutGrid, Table as TableIcon } from "lucide-react";
+import { SelectionSpreadsheetView } from "@/components/planejamento/SelectionSpreadsheetView";
 import { SortableList, SortableHandle } from "@/components/ui/sortable-list";
 import { toast } from "sonner";
 import { format, subWeeks, parseISO } from "date-fns";
@@ -125,6 +126,12 @@ const Planejamento = () => {
   });
 
   const [newAreaName, setNewAreaName] = useState("");
+  const [selectionView, setSelectionView] = useState<"cards" | "spreadsheet">(() => {
+    return (localStorage.getItem("planejamento:selectionView") as any) || "cards";
+  });
+  useEffect(() => {
+    localStorage.setItem("planejamento:selectionView", selectionView);
+  }, [selectionView]);
 
   // Drag & drop state for priority reordering
   const [draggedPriorityIndex, setDraggedPriorityIndex] = useState<number | null>(null);
@@ -550,16 +557,50 @@ const Planejamento = () => {
           </CardContent>
         </Card>
 
-        {/* Block 2: Seleção de Tarefas */}
+
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardHeader className="flex flex-row items-center justify-between pb-2 gap-2">
             <CardTitle className="text-base sm:text-lg">Seleção de Tarefas</CardTitle>
-            <Button size="sm" onClick={() => openNewTaskForm()} className="h-9">
-              <Plus className="h-4 w-4 sm:mr-1" />
-              <span className="hidden sm:inline">Nova tarefa</span>
-            </Button>
+            <div className="flex items-center gap-2">
+              <div className="inline-flex rounded-md border bg-muted/30 p-0.5">
+                <Button
+                  variant={selectionView === "cards" ? "default" : "ghost"}
+                  size="sm"
+                  className="h-8 px-2"
+                  onClick={() => setSelectionView("cards")}
+                  title="Visualização em cards"
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant={selectionView === "spreadsheet" ? "default" : "ghost"}
+                  size="sm"
+                  className="h-8 px-2"
+                  onClick={() => setSelectionView("spreadsheet")}
+                  title="Visualização em planilha"
+                >
+                  <TableIcon className="h-4 w-4" />
+                </Button>
+              </div>
+              <Button size="sm" onClick={() => openNewTaskForm()} className="h-9">
+                <Plus className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Nova tarefa</span>
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
+            {selectionView === "spreadsheet" ? (
+              <SelectionSpreadsheetView
+                tasks={Object.values(tasksByNode).flat()}
+                nodesMap={nodesMap}
+                selectedIds={currentPlan.selectedTaskIds}
+                prioritizedIds={currentPlan.prioritizedTaskIds}
+                onToggleSelected={toggleTaskSelected}
+                onTogglePrioritized={toggleTaskPrioritized}
+                onEdit={openEditTaskForm}
+              />
+            ) : (
+              <>
             {Object.entries(tasksByNode).map(([nodeId, nodeTasks]) => {
               const node = nodesMap[nodeId];
               if (!node) return null;
@@ -636,8 +677,11 @@ const Planejamento = () => {
                 Nenhuma tarefa em andamento ou pendente.
               </p>
             )}
+              </>
+            )}
           </CardContent>
         </Card>
+
 
         {/* Block 3: Plano da Semana */}
         <Card>
