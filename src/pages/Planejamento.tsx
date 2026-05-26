@@ -21,7 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Plus, Trash2, Star, Check, Save, RotateCcw, Pencil, GripVertical, ChevronUp, ChevronDown, CalendarIcon, X } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Star, Check, Save, RotateCcw, Pencil, GripVertical, ChevronUp, ChevronDown, CalendarIcon, X, LayoutGrid, Table as TableIcon } from "lucide-react";
+import { SelectionSpreadsheetView } from "@/components/planejamento/SelectionSpreadsheetView";
 import { SortableList, SortableHandle } from "@/components/ui/sortable-list";
 import { toast } from "sonner";
 import { format, subWeeks, parseISO } from "date-fns";
