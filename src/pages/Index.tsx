@@ -487,6 +487,19 @@ const Index = () => {
         >
           <GitBranch className="h-4 w-4" />
         </Button>
+
+        <Button
+          type="button"
+          variant="secondary"
+          size="icon"
+          className="h-9 w-9 rounded-md shadow-none"
+          onClick={() => setShowSpreadsheet(true)}
+          disabled={isDialogOpen}
+          aria-label="Visualização em Planilha"
+          title="Planilha"
+        >
+          <TableIcon className="h-4 w-4" />
+        </Button>
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
