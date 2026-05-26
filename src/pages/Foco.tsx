@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, RotateCcw, ArrowLeft, CalendarCheck, Plus, X, Check, Clock, ExternalLink, AlertTriangle, Timer, GripVertical } from "lucide-react";
+import { Play, Pause, RotateCcw, ArrowLeft, CalendarCheck, Plus, X, Check, Clock, ExternalLink, AlertTriangle, Timer, GripVertical, LayoutGrid, Table as TableIcon } from "lucide-react";
+import { TasksSpreadsheetView } from "@/components/foco/TasksSpreadsheetView";
 import { 
   DndContext, 
   closestCenter, 
@@ -187,6 +188,10 @@ function QueueList({ tasks, activeTaskId, queue, setQueue, onSelect, onRemove }:
 
 export default function Foco() {
   const navigate = useNavigate();
+  const [viewMode, setViewMode] = useState<'cards' | 'spreadsheet'>(() => {
+    return (localStorage.getItem('pc.focus.viewMode') as 'cards' | 'spreadsheet') || 'cards';
+  });
+  useEffect(() => { localStorage.setItem('pc.focus.viewMode', viewMode); }, [viewMode]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [nodes, setNodes] = useState<Record<string, Node>>({});
   const [dependencyTasks, setDependencyTasks] = useState<Record<string, { id: string; title: string; status: string }>>({});
@@ -583,19 +588,41 @@ export default function Foco() {
             </Button>
             <h1 className="text-lg sm:text-2xl font-bold text-foreground truncate">Foco</h1>
           </div>
-          <Button 
-            variant={isReplanningDay() ? "default" : "outline"} 
-            size="sm"
-            onClick={() => navigate('/planejamento')}
-            className="h-10 px-3"
-          >
-            <CalendarCheck className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Replanejar</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <div className="inline-flex rounded-md border bg-muted/30 p-0.5">
+              <Button
+                variant={viewMode === 'cards' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('cards')}
+                className="h-8 px-2"
+                title="Visualização em cards"
+              >
+                <LayoutGrid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant={viewMode === 'spreadsheet' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('spreadsheet')}
+                className="h-8 px-2"
+                title="Visualização em planilha"
+              >
+                <TableIcon className="h-4 w-4" />
+              </Button>
+            </div>
+            <Button 
+              variant={isReplanningDay() ? "default" : "outline"} 
+              size="sm"
+              onClick={() => navigate('/planejamento')}
+              className="h-10 px-3"
+            >
+              <CalendarCheck className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Replanejar</span>
+            </Button>
+          </div>
         </div>
       </div>
 
-      <div className="p-4 max-w-2xl mx-auto space-y-4">
+      <div className={cn("p-4 space-y-4", viewMode === 'spreadsheet' ? "max-w-[1600px] mx-auto" : "max-w-2xl mx-auto")}>
         <Card className="p-4 mb-6 bg-destructive/10 border-destructive/30">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -718,7 +745,22 @@ export default function Foco() {
           />
         )}
 
-        {/* Lista de tarefas - touch-friendly cards */}
+        {/* Lista de tarefas */}
+        {viewMode === 'spreadsheet' ? (
+          <TasksSpreadsheetView
+            tasks={tasks}
+            nodes={nodes}
+            dependencyTasks={dependencyTasks}
+            queue={queue}
+            activeTaskId={activeTaskId}
+            onSelectTask={handleSelectTask}
+            onAddToQueue={(id) => !queue.includes(id) && setQueue([...queue, id])}
+            onRemoveFromQueue={handleRemoveFromQueue}
+            onComplete={async (id) => { setActiveTaskId(id); await handleCompleteTask(); }}
+            onMoveToPending={async (id) => { setActiveTaskId(id); await handleMoveToPending(); }}
+            onOpenEdit={(id) => window.open(`/task/${id}`, '_blank')}
+          />
+        ) : (
         <div className="space-y-3">
           {tasks.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
@@ -790,6 +832,7 @@ export default function Foco() {
             ))
           )}
         </div>
+        )}
 
         <ReplanningBanner />
         <DueDateBanner />
