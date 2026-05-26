@@ -10,11 +10,12 @@ import { DueDateBanner } from "@/components/DueDateBanner";
 import { FollowUpBanner } from "@/components/FollowUpBanner";
 import { CEOLegend } from "@/components/CEOLegend";
 import { HorizontalOrgChart } from "@/components/HorizontalOrgChart";
+import { NodesSpreadsheetView } from "@/components/NodesSpreadsheetView";
 import { useToast } from "@/hooks/use-toast";
 import { useLinesMode } from "@/contexts/LinesModeContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Crosshair, Network, GitBranch } from "lucide-react";
+import { RefreshCw, Crosshair, Network, GitBranch, Table as TableIcon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -53,6 +54,7 @@ const Index = () => {
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [showHorizontalOrgChart, setShowHorizontalOrgChart] = useState(false);
+  const [showSpreadsheet, setShowSpreadsheet] = useState(false);
   
   // Touch handling for mobile
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
@@ -485,6 +487,19 @@ const Index = () => {
         >
           <GitBranch className="h-4 w-4" />
         </Button>
+
+        <Button
+          type="button"
+          variant="secondary"
+          size="icon"
+          className="h-9 w-9 rounded-md shadow-none"
+          onClick={() => setShowSpreadsheet(true)}
+          disabled={isDialogOpen}
+          aria-label="Visualização em Planilha"
+          title="Planilha"
+        >
+          <TableIcon className="h-4 w-4" />
+        </Button>
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -580,6 +595,17 @@ const Index = () => {
           onClose={() => setShowHorizontalOrgChart(false)}
           onNodeClick={(nodeId) => {
             setShowHorizontalOrgChart(false);
+            setTimeout(() => centerOnNode(nodeId), 100);
+          }}
+        />
+      )}
+
+      {/* Planilha Overlay */}
+      {showSpreadsheet && (
+        <NodesSpreadsheetView
+          onClose={() => setShowSpreadsheet(false)}
+          onNodeClick={(nodeId) => {
+            setShowSpreadsheet(false);
             setTimeout(() => centerOnNode(nodeId), 100);
           }}
         />
