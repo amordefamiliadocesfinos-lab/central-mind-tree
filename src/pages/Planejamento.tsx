@@ -126,6 +126,12 @@ const Planejamento = () => {
   });
 
   const [newAreaName, setNewAreaName] = useState("");
+  const [selectionView, setSelectionView] = useState<"cards" | "spreadsheet">(() => {
+    return (localStorage.getItem("planejamento:selectionView") as any) || "cards";
+  });
+  useEffect(() => {
+    localStorage.setItem("planejamento:selectionView", selectionView);
+  }, [selectionView]);
 
   // Drag & drop state for priority reordering
   const [draggedPriorityIndex, setDraggedPriorityIndex] = useState<number | null>(null);
