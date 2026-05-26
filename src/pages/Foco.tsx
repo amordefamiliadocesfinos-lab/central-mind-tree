@@ -745,7 +745,22 @@ export default function Foco() {
           />
         )}
 
-        {/* Lista de tarefas - touch-friendly cards */}
+        {/* Lista de tarefas */}
+        {viewMode === 'spreadsheet' ? (
+          <TasksSpreadsheetView
+            tasks={tasks}
+            nodes={nodes}
+            dependencyTasks={dependencyTasks}
+            queue={queue}
+            activeTaskId={activeTaskId}
+            onSelectTask={handleSelectTask}
+            onAddToQueue={(id) => !queue.includes(id) && setQueue([...queue, id])}
+            onRemoveFromQueue={handleRemoveFromQueue}
+            onComplete={async (id) => { setActiveTaskId(id); await handleCompleteTask(); }}
+            onMoveToPending={async (id) => { setActiveTaskId(id); await handleMoveToPending(); }}
+            onOpenEdit={(id) => window.open(`/task/${id}`, '_blank')}
+          />
+        ) : (
         <div className="space-y-3">
           {tasks.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
@@ -817,6 +832,7 @@ export default function Foco() {
             ))
           )}
         </div>
+        )}
 
         <ReplanningBanner />
         <DueDateBanner />
