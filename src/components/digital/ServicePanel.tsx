@@ -266,10 +266,33 @@ export function ServicePanel() {
 
           {/* Conversations list */}
           <div className="col-span-3 border rounded-lg overflow-hidden">
-            <div className="p-3 border-b bg-muted/50">
-              <h3 className="text-sm font-semibold">Conversas</h3>
+            <div className="p-3 border-b bg-muted/50 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold">Conversas</h3>
+                {searchQuery && (
+                  <span className="text-[10px] text-muted-foreground">{filteredConversations.length} resultado(s)</span>
+                )}
+              </div>
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Buscar contato, telefone, mensagem..."
+                  className="h-8 pl-7 pr-7 text-xs"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    aria-label="Limpar busca"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
             </div>
-            <ScrollArea className="h-[calc(100%-48px)]">
+            <ScrollArea className="h-[calc(100%-92px)]">
               <ConversationList
                 conversations={filteredConversations}
                 platforms={activePlatforms}
