@@ -75,6 +75,20 @@ export function ServicePanel() {
   const filteredConversations = conversations.filter(c => {
     if (filterPlatform !== 'all' && c.platform_id !== filterPlatform) return false;
     if (filterStatus !== 'all' && c.status !== filterStatus) return false;
+    const q = searchQuery.trim().toLowerCase();
+    if (q) {
+      const contact = c.contact_id ? contacts.find(x => x.id === c.contact_id) : null;
+      const hay = [
+        c.contact_name,
+        c.contact_handle,
+        c.last_message_preview,
+        contact?.name,
+        contact?.whatsapp,
+        contact?.phone,
+        (contact as any)?.email,
+      ].filter(Boolean).join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
     return true;
   });
 
