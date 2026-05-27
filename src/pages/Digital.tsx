@@ -20,6 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, ArrowLeft, Search, LayoutGrid, Columns3, Image, BarChart3, Link2, Settings2, TrendingUp, MessageCircle, Book, Calendar, Headset, X, SlidersHorizontal, Sparkles, Layers, ArrowUpDown, Zap, Table as TableIcon } from 'lucide-react';
 import { IdeasSpreadsheetView } from '@/components/digital/IdeasSpreadsheetView';
+import { AllVariationsSpreadsheetView } from '@/components/digital/AllVariationsSpreadsheetView';
 import { HierarchicalPlatformSelector } from '@/components/digital/HierarchicalPlatformSelector';
 import { PlatformHierarchicalPicker } from '@/components/digital/PlatformHierarchicalPicker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -800,11 +801,19 @@ export default function Digital() {
             />
           ) : activeTab === 'ideias' ? (
             viewMode === 'spreadsheet' ? (
-              <IdeasSpreadsheetView
-                ideas={scopedIdeas}
-                platforms={activePlatforms}
-                onSelectIdea={setSelectedIdea}
-              />
+              kanbanMode === 'variations' ? (
+                <AllVariationsSpreadsheetView
+                  ideas={scopedIdeas}
+                  platforms={activePlatforms}
+                  onSelectIdea={setSelectedIdea}
+                />
+              ) : (
+                <IdeasSpreadsheetView
+                  ideas={scopedIdeas}
+                  platforms={activePlatforms}
+                  onSelectIdea={setSelectedIdea}
+                />
+              )
             ) : viewMode === 'kanban' ? (
               <KanbanBoard
                 ideas={scopedIdeas}
