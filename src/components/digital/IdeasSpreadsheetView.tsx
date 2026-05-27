@@ -266,9 +266,10 @@ export function IdeasSpreadsheetView({ ideas, platforms, onSelectIdea }: Props) 
               return (
                 <tr
                   key={idea.id}
-                  onClick={() => onSelectIdea(idea.id)}
+                  onDoubleClick={() => onSelectIdea(idea.id)}
+                  title="Clique duplo para abrir"
                   className={cn(
-                    'group cursor-pointer transition-colors',
+                    'group cursor-pointer transition-colors select-none',
                     idx % 2 === 0 ? 'bg-background' : 'bg-muted/20',
                     'hover:bg-primary/5'
                   )}
