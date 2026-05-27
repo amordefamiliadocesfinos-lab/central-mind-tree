@@ -20,7 +20,7 @@ import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import {
   Plus, MessageCircle, Send, Sparkles, Check, X, Trash2,
   Loader2, ArrowLeft, ChevronRight, AlertTriangle, User,
-  Bot, Copy, Archive, Link2, ExternalLink, Crown,
+  Bot, Copy, Archive, Link2, ExternalLink, Crown, Search,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
