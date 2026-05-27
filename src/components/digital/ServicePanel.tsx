@@ -49,6 +49,7 @@ export function ServicePanel() {
 
   const [filterPlatform, setFilterPlatform] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('open');
+  const [searchQuery, setSearchQuery] = useState('');
   const [showNewConv, setShowNewConv] = useState(false);
   const [newConv, setNewConv] = useState<{ platform_id: string; contact_id: string | null; contact_name: string; contact_handle: string }>({ platform_id: '', contact_id: null, contact_name: '', contact_handle: '' });
   const [inputMessage, setInputMessage] = useState('');
