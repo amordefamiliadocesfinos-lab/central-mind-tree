@@ -287,7 +287,7 @@ export function AllVariationsSpreadsheetView({ ideas, platforms, onSelectIdea }:
                   onDoubleClick={() => onSelectIdea(idea.id)}
                   title="Clique duplo para abrir"
                   className={cn(
-                    'group cursor-pointer transition-colors select-none',
+                    'group transition-colors',
                     idx % 2 === 0 ? 'bg-background' : 'bg-muted/20',
                     'hover:bg-primary/5'
                   )}
