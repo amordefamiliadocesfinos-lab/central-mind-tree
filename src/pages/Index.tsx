@@ -543,6 +543,8 @@ const Index = () => {
           title="Planilha"
         >
           <TableIcon className="h-4 w-4" />
+        </Button>
+
         <Button
           type="button"
           variant="secondary"
