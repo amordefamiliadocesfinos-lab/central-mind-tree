@@ -543,7 +543,20 @@ const Index = () => {
           title="Planilha"
         >
           <TableIcon className="h-4 w-4" />
+        <Button
+          type="button"
+          variant="secondary"
+          size="icon"
+          className="h-9 w-9 rounded-md shadow-none"
+          onClick={() => setShowMultiView(true)}
+          disabled={isDialogOpen}
+          aria-label="MULTI - Múltiplas telas"
+          title="MULTI"
+        >
+          <LayoutGrid className="h-4 w-4" />
         </Button>
+
+        
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
