@@ -11,6 +11,7 @@ import { FollowUpBanner } from "@/components/FollowUpBanner";
 import { CEOLegend } from "@/components/CEOLegend";
 import { HorizontalOrgChart } from "@/components/HorizontalOrgChart";
 import { NodesSpreadsheetView } from "@/components/NodesSpreadsheetView";
+import { MultiView } from "@/components/MultiView";
 import { useToast } from "@/hooks/use-toast";
 import { useLinesMode } from "@/contexts/LinesModeContext";
 import { useIsMobile } from "@/hooks/use-mobile";
