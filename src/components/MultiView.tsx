@@ -152,9 +152,8 @@ export function MultiView({ onClose }: MultiViewProps) {
             {panes.map((pane, idx) => {
               const mod = MODULES.find((m) => m.id === pane.moduleId) ?? MODULES[0];
               return (
-                <>
+                <Fragment key={pane.uid}>
                   <ResizablePanel
-                    key={pane.uid}
                     defaultSize={100 / panes.length}
                     minSize={15}
                   >
@@ -203,7 +202,7 @@ export function MultiView({ onClose }: MultiViewProps) {
                     </div>
                   </ResizablePanel>
                   {idx < panes.length - 1 && <ResizableHandle withHandle />}
-                </>
+                </Fragment>
               );
             })}
           </ResizablePanelGroup>
