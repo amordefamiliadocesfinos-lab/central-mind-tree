@@ -11,11 +11,12 @@ import { FollowUpBanner } from "@/components/FollowUpBanner";
 import { CEOLegend } from "@/components/CEOLegend";
 import { HorizontalOrgChart } from "@/components/HorizontalOrgChart";
 import { NodesSpreadsheetView } from "@/components/NodesSpreadsheetView";
+import { MultiView } from "@/components/MultiView";
 import { useToast } from "@/hooks/use-toast";
 import { useLinesMode } from "@/contexts/LinesModeContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Crosshair, Network, GitBranch, Table as TableIcon } from "lucide-react";
+import { RefreshCw, Crosshair, Network, GitBranch, Table as TableIcon, LayoutGrid } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -55,6 +56,7 @@ const Index = () => {
   const isMobile = useIsMobile();
   const [showHorizontalOrgChart, setShowHorizontalOrgChart] = useState(false);
   const [showSpreadsheet, setShowSpreadsheet] = useState(false);
+  const [showMultiView, setShowMultiView] = useState(false);
   
   // Touch handling for mobile
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
@@ -542,6 +544,21 @@ const Index = () => {
         >
           <TableIcon className="h-4 w-4" />
         </Button>
+
+        <Button
+          type="button"
+          variant="secondary"
+          size="icon"
+          className="h-9 w-9 rounded-md shadow-none"
+          onClick={() => setShowMultiView(true)}
+          disabled={isDialogOpen}
+          aria-label="MULTI - Múltiplas telas"
+          title="MULTI"
+        >
+          <LayoutGrid className="h-4 w-4" />
+        </Button>
+
+        
         
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -654,6 +671,11 @@ const Index = () => {
             setTimeout(() => centerOnNode(nodeId), 350);
           }}
         />
+      )}
+
+      {/* MULTI - Múltiplas telas */}
+      {showMultiView && (
+        <MultiView onClose={() => setShowMultiView(false)} />
       )}
     </>
   );
