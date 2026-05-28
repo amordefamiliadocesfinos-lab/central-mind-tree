@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLinesMode } from "@/contexts/LinesModeContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Crosshair, Network, GitBranch, Table as TableIcon } from "lucide-react";
+import { RefreshCw, Crosshair, Network, GitBranch, Table as TableIcon, LayoutGrid } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
