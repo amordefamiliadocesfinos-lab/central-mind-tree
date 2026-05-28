@@ -3,6 +3,7 @@ import { useRoutine, RoutineBlock, FOCUS_TYPES, FocusType } from '@/hooks/useRou
 import { RoutineDayView } from '@/components/routine/RoutineDayView';
 import { RoutineWeekView } from '@/components/routine/RoutineWeekView';
 import { RoutineMonthView } from '@/components/routine/RoutineMonthView';
+import { CustomAlarmsPanel } from '@/components/routine/CustomAlarmsPanel';
 import { BlockEditDialog } from '@/components/routine/BlockEditDialog';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
