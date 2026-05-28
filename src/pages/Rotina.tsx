@@ -3,6 +3,7 @@ import { useRoutine, RoutineBlock, FOCUS_TYPES, FocusType } from '@/hooks/useRou
 import { RoutineDayView } from '@/components/routine/RoutineDayView';
 import { RoutineWeekView } from '@/components/routine/RoutineWeekView';
 import { RoutineMonthView } from '@/components/routine/RoutineMonthView';
+import { CustomAlarmsPanel } from '@/components/routine/CustomAlarmsPanel';
 import { BlockEditDialog } from '@/components/routine/BlockEditDialog';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -224,7 +225,9 @@ export default function Rotina() {
       </div>
 
       {/* Content */}
-      <div className="p-4">
+      <div className="p-4 space-y-4">
+        <CustomAlarmsPanel />
+
         {viewMode === 'day' && (
           <RoutineDayView
             date={selectedDate}
