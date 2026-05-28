@@ -672,6 +672,11 @@ const Index = () => {
           }}
         />
       )}
+
+      {/* MULTI - Múltiplas telas */}
+      {showMultiView && (
+        <MultiView onClose={() => setShowMultiView(false)} />
+      )}
     </>
   );
 };
