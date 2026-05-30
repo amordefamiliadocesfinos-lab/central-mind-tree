@@ -30,6 +30,7 @@ import Assistente from "./pages/Assistente";
 import Contatos from "./pages/Contatos";
 import ContatosInbox from "./pages/ContatosInbox";
 import Rotas from "./pages/Rotas";
+import Academia from "./pages/Academia";
 import NotFound from "./pages/NotFound";
 import { QuickConversationFAB } from "@/components/crm/QuickConversationFAB";
 import { useScheduledTaskPromotion } from "./hooks/useScheduledTaskPromotion";
@@ -90,6 +91,7 @@ function AnimatedRoutes() {
           <Route path="/contatos" element={<Contatos />} />
           <Route path="/contatos/inbox" element={<ContatosInbox />} />
           <Route path="/rotas" element={<Rotas />} />
+          <Route path="/academia" element={<Academia />} />
           <Route path="/task/:id" element={<TaskEdit />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
