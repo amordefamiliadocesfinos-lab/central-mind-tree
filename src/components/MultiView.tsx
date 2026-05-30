@@ -40,6 +40,7 @@ const MODULES: ModuleDef[] = [
   { id: "contatos", label: "CRM / Contatos", path: "/contatos" },
   { id: "atendimento", label: "Atendimento", path: "/contatos/inbox" },
   { id: "rotas", label: "Rotas", path: "/rotas" },
+  { id: "academia", label: "Academia", path: "/academia" },
   { id: "minha-area", label: "Minha Área", path: "/minha-area" },
   { id: "dashboard", label: "Dashboard", path: "/dashboard" },
   { id: "planilhas", label: "Planilhas", path: "/planilhas" },
