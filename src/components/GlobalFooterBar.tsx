@@ -18,7 +18,7 @@ import {
   Play, Pause, RotateCcw, Clock, Focus, Calendar, Timer, 
   ShoppingCart, FileText, Undo2, Redo2, Home, FileSpreadsheet,
   Users, User, UsersRound, DollarSign, Brain, LayoutDashboard,
-  UserPlus, MoreHorizontal, Truck, Settings2, Eye, EyeOff,
+  UserPlus, MoreHorizontal, Truck, Settings2, Eye, EyeOff, GraduationCap,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
