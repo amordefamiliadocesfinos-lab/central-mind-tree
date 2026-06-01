@@ -2065,7 +2065,7 @@ export type Database = {
           month: number
           target_value: number
           updated_at: string
-          user_id: string
+          user_id: string | null
           year: number
         }
         Insert: {
@@ -2076,7 +2076,7 @@ export type Database = {
           month: number
           target_value?: number
           updated_at?: string
-          user_id: string
+          user_id?: string | null
           year: number
         }
         Update: {
@@ -2087,7 +2087,7 @@ export type Database = {
           month?: number
           target_value?: number
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
           year?: number
         }
         Relationships: []
