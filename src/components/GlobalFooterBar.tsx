@@ -18,7 +18,7 @@ import {
   Play, Pause, RotateCcw, Clock, Focus, Calendar, Timer, 
   ShoppingCart, FileText, Undo2, Redo2, Home, FileSpreadsheet,
   Users, User, UsersRound, DollarSign, Brain, LayoutDashboard,
-  UserPlus, MoreHorizontal, Truck, Settings2, Eye, EyeOff, GraduationCap,
+  UserPlus, MoreHorizontal, Truck, Settings2, Eye, EyeOff, GraduationCap, Target,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -49,6 +49,7 @@ const NAV_ITEMS = [
   { path: "/rotas", label: "Rotas", shortLabel: "Rotas", icon: Truck },
   { path: "/financeiro", label: "Financeiro", shortLabel: "Financeiro", icon: DollarSign },
   { path: "/academia", label: "Academia", shortLabel: "Academia", icon: GraduationCap },
+  { path: "/metas", label: "Metas", shortLabel: "Metas", icon: Target },
 ] as const;
 
 const MOBILE_PRIMARY_PATHS = ["/", "/dashboard", "/foco", "/operacoes", "/rotas"] as const;

@@ -2056,6 +2056,42 @@ export type Database = {
           },
         ]
       }
+      monthly_goals: {
+        Row: {
+          achieved_value: number
+          created_at: string
+          goal_type: string
+          id: string
+          month: number
+          target_value: number
+          updated_at: string
+          user_id: string
+          year: number
+        }
+        Insert: {
+          achieved_value?: number
+          created_at?: string
+          goal_type: string
+          id?: string
+          month: number
+          target_value?: number
+          updated_at?: string
+          user_id: string
+          year: number
+        }
+        Update: {
+          achieved_value?: number
+          created_at?: string
+          goal_type?: string
+          id?: string
+          month?: number
+          target_value?: number
+          updated_at?: string
+          user_id?: string
+          year?: number
+        }
+        Relationships: []
+      }
       nodes: {
         Row: {
           color: string
