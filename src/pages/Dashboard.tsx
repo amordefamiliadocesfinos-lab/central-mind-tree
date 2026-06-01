@@ -38,6 +38,7 @@ import { QuickFinance } from '@/components/dashboard/QuickFinance';
 import { CampaignResults } from '@/components/dashboard/CampaignResults';
 import { CompanyStatus } from '@/components/dashboard/CompanyStatus';
 import { BottleneckCard } from '@/components/dashboard/BottleneckCard';
+import { NextActionsCard } from '@/components/dashboard/NextActionsCard';
 
 interface DashboardData {
   // Foco
