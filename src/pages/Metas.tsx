@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 type GoalType = 'faturamento' | 'producao' | 'lucro' | 'novos_clientes';
@@ -70,7 +70,7 @@ export default function Metas() {
       .eq('month', selectedMonth);
 
     if (!error && data) {
-      setGoals(data as MonthlyGoal[]);
+      setGoals(data as unknown as MonthlyGoal[]);
     }
     setLoading(false);
   }, [selectedYear, selectedMonth]);
@@ -98,25 +98,25 @@ export default function Metas() {
     const production = productionResult.data || [];
 
     const faturamento = orders.reduce((sum, o) => sum + (o.total_value || 0), 0);
-    const lucro = entries.reduce((sum, e) => sum + (e.value || 0), 0) * 0.25; // simplified profit estimation
+    const lucro = entries.reduce((sum, e) => sum + (e.value || 0), 0) * 0.25;
     const novosClientes = contacts.length;
     const producaoCount = production.length;
 
-    // Update achieved values in DB for each existing goal
-    const updates = goals.map(async (g) => {
-      let achieved = 0;
-      if (g.goal_type === 'faturamento') achieved = faturamento;
-      else if (g.goal_type === 'lucro') achieved = lucro;
-      else if (g.goal_type === 'novos_clientes') achieved = novosClientes;
-      else if (g.goal_type === 'producao') achieved = producaoCount;
+    const updated = await Promise.all(
+      goals.map(async (g) => {
+        let achieved = 0;
+        if (g.goal_type === 'faturamento') achieved = faturamento;
+        else if (g.goal_type === 'lucro') achieved = lucro;
+        else if (g.goal_type === 'novos_clientes') achieved = novosClientes;
+        else if (g.goal_type === 'producao') achieved = producaoCount;
 
-      if (g.achieved_value !== achieved) {
-        await supabase.from('monthly_goals').update({ achieved_value: achieved }).eq('id', g.id);
-      }
-      return { ...g, achieved_value: achieved };
-    });
+        if (g.achieved_value !== achieved) {
+          await supabase.from('monthly_goals').update({ achieved_value: achieved }).eq('id', g.id);
+        }
+        return { ...g, achieved_value: achieved };
+      })
+    );
 
-    const updated = await Promise.all(updates);
     setGoals(updated);
   }, [selectedYear, selectedMonth, goals]);
 
@@ -137,13 +137,15 @@ export default function Metas() {
       return;
     }
 
-    const { error } = await supabase.from('monthly_goals').insert({
+    const payload = {
       year: selectedYear,
       month: selectedMonth,
       goal_type: newGoalType,
       target_value: target,
       achieved_value: 0,
-    });
+    };
+
+    const { error } = await supabase.from('monthly_goals').insert(payload as any);
 
     if (error) {
       toast({ title: 'Erro ao criar meta', description: error.message, variant: 'destructive' });
@@ -161,7 +163,7 @@ export default function Metas() {
 
     const { error } = await supabase
       .from('monthly_goals')
-      .update({ target_value: target })
+      .update({ target_value: target } as any)
       .eq('id', id);
 
     if (error) {
@@ -396,8 +398,4 @@ export default function Metas() {
       </div>
     </div>
   );
-}
-
-function cn(...classes: (string | false | undefined)[]) {
-  return classes.filter(Boolean).join(' ');
 }
