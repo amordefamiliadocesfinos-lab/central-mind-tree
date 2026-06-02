@@ -898,8 +898,9 @@ function SpreadsheetGrid({ sheetId, tabId, readOnly = false }: SpreadsheetGridPr
                     >
                       {colIndexToLetter(i)}
                       <div
-                        className="absolute top-0 right-0 h-full w-1 cursor-col-resize hover:bg-primary z-30"
+                        className="absolute top-0 -right-1 h-full w-2 cursor-col-resize hover:bg-primary/60 z-30"
                         onMouseDown={(e) => startColResize(i, e)}
+                        onClick={(e) => e.stopPropagation()}
                       />
                     </div>
                   </ContextMenuTrigger>
