@@ -253,24 +253,52 @@ export function IdeasSpreadsheetView({ ideas, platforms, onSelectIdea }: Props) 
       <div className="overflow-auto max-h-[calc(100vh-22rem)]">
         <table
           className="text-sm border-separate border-spacing-0"
-          style={{ width: COLUMNS.reduce((sum, c) => sum + (widths[c.key] ?? c.default), 0), tableLayout: 'fixed' }}
+          style={{ width: orderedColumns.reduce((sum, c) => sum + (widths[c.key] ?? c.default), 0), tableLayout: 'fixed' }}
         >
           <colgroup>
-            {COLUMNS.map((c) => (
+            {orderedColumns.map((c) => (
               <col key={c.key} style={{ width: `${widths[c.key] ?? c.default}px` }} />
             ))}
           </colgroup>
           <thead>
             <tr>
-              {COLUMNS.map((c) => (
+              {orderedColumns.map((c) => (
                 <th
                   key={c.key}
+                  draggable
+                  onDragStart={(e) => {
+                    setDragCol(c.key);
+                    e.dataTransfer.effectAllowed = 'move';
+                    try { e.dataTransfer.setData('text/plain', c.key); } catch {}
+                  }}
+                  onDragOver={(e) => {
+                    if (!dragCol || dragCol === c.key) return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    if (dragOverCol !== c.key) setDragOverCol(c.key);
+                  }}
+                  onDragLeave={() => {
+                    if (dragOverCol === c.key) setDragOverCol(null);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (dragCol && dragCol !== c.key) moveColumn(dragCol, c.key);
+                    setDragCol(null);
+                    setDragOverCol(null);
+                  }}
+                  onDragEnd={() => {
+                    setDragCol(null);
+                    setDragOverCol(null);
+                  }}
                   onClick={() => toggleSort(c.key)}
                   className={cn(
-                    'group relative sticky top-0 z-10 bg-muted/60 backdrop-blur supports-[backdrop-filter]:bg-muted/40 px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground select-none border-b border-border/60',
+                    'group relative sticky top-0 z-10 bg-muted/60 backdrop-blur supports-[backdrop-filter]:bg-muted/40 px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground select-none border-b border-border/60 overflow-hidden',
                     c.sortable === false ? 'cursor-default' : 'cursor-pointer hover:text-foreground transition-colors',
-                    c.align === 'center' ? 'text-center' : 'text-left'
+                    c.align === 'center' ? 'text-center' : 'text-left',
+                    dragCol === c.key && 'opacity-40',
+                    dragOverCol === c.key && 'ring-2 ring-inset ring-primary/60'
                   )}
+                  title="Arraste para reordenar · Clique para ordenar"
                 >
                   <span
                     className={cn(
@@ -285,6 +313,8 @@ export function IdeasSpreadsheetView({ ideas, platforms, onSelectIdea }: Props) 
                     onMouseDown={(e) => onResizeStart(e, c.key)}
                     onClick={(e) => e.stopPropagation()}
                     onDoubleClick={(e) => e.stopPropagation()}
+                    draggable={false}
+                    onDragStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
                     className="absolute top-0 -right-[3px] h-full w-[7px] cursor-col-resize hover:bg-primary/40 active:bg-primary/60 transition-colors z-20"
                     title="Arraste para redimensionar"
                   />
