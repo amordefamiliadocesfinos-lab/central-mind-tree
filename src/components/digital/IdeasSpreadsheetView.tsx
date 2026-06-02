@@ -210,7 +210,7 @@ export function IdeasSpreadsheetView({ ideas, platforms, onSelectIdea }: Props) 
       <div className="overflow-auto max-h-[calc(100vh-22rem)]">
         <table
           className="text-sm border-separate border-spacing-0"
-          style={{ width: 'max-content', minWidth: '100%', tableLayout: 'fixed' }}
+          style={{ width: COLUMNS.reduce((sum, c) => sum + (widths[c.key] ?? c.default), 0), tableLayout: 'fixed' }}
         >
           <colgroup>
             {COLUMNS.map((c) => (
