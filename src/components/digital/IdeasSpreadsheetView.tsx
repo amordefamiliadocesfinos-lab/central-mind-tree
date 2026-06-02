@@ -67,6 +67,7 @@ const COLUMNS: ColDef[] = [
 ];
 
 const STORAGE_KEY = 'digital:spreadsheet:widths:v1';
+const ORDER_STORAGE_KEY = 'digital:spreadsheet:order:v1';
 
 export function IdeasSpreadsheetView({ ideas, platforms, onSelectIdea }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>('serial');
@@ -80,13 +81,55 @@ export function IdeasSpreadsheetView({ ideas, platforms, onSelectIdea }: Props) 
     return Object.fromEntries(COLUMNS.map((c) => [c.key, c.default]));
   });
 
+  const [columnOrder, setColumnOrder] = useState<SortKey[]>(() => {
+    try {
+      const raw = localStorage.getItem(ORDER_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as SortKey[];
+        const known = COLUMNS.map((c) => c.key);
+        const valid = parsed.filter((k) => known.includes(k));
+        const missing = known.filter((k) => !valid.includes(k));
+        return [...valid, ...missing];
+      }
+    } catch {}
+    return COLUMNS.map((c) => c.key);
+  });
+
+  const orderedColumns = useMemo(
+    () => columnOrder.map((k) => COLUMNS.find((c) => c.key === k)!).filter(Boolean),
+    [columnOrder]
+  );
+
+  const [dragCol, setDragCol] = useState<SortKey | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<SortKey | null>(null);
+
+  const moveColumn = (from: SortKey, to: SortKey) => {
+    if (from === to) return;
+    setColumnOrder((prev) => {
+      const next = [...prev];
+      const fromIdx = next.indexOf(from);
+      const toIdx = next.indexOf(to);
+      if (fromIdx < 0 || toIdx < 0) return prev;
+      next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, from);
+      return next;
+    });
+  };
+
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(widths));
     } catch {}
   }, [widths]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(columnOrder));
+    } catch {}
+  }, [columnOrder]);
+
   const resizing = useRef<{ key: string; startX: number; startW: number } | null>(null);
+
 
   const onResizeStart = (e: React.MouseEvent, key: string) => {
     e.preventDefault();
