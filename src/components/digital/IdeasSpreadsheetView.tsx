@@ -67,6 +67,7 @@ const COLUMNS: ColDef[] = [
 ];
 
 const STORAGE_KEY = 'digital:spreadsheet:widths:v1';
+const ORDER_STORAGE_KEY = 'digital:spreadsheet:order:v1';
 
 export function IdeasSpreadsheetView({ ideas, platforms, onSelectIdea }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>('serial');
@@ -80,13 +81,55 @@ export function IdeasSpreadsheetView({ ideas, platforms, onSelectIdea }: Props) 
     return Object.fromEntries(COLUMNS.map((c) => [c.key, c.default]));
   });
 
+  const [columnOrder, setColumnOrder] = useState<SortKey[]>(() => {
+    try {
+      const raw = localStorage.getItem(ORDER_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as SortKey[];
+        const known = COLUMNS.map((c) => c.key);
+        const valid = parsed.filter((k) => known.includes(k));
+        const missing = known.filter((k) => !valid.includes(k));
+        return [...valid, ...missing];
+      }
+    } catch {}
+    return COLUMNS.map((c) => c.key);
+  });
+
+  const orderedColumns = useMemo(
+    () => columnOrder.map((k) => COLUMNS.find((c) => c.key === k)!).filter(Boolean),
+    [columnOrder]
+  );
+
+  const [dragCol, setDragCol] = useState<SortKey | null>(null);
+  const [dragOverCol, setDragOverCol] = useState<SortKey | null>(null);
+
+  const moveColumn = (from: SortKey, to: SortKey) => {
+    if (from === to) return;
+    setColumnOrder((prev) => {
+      const next = [...prev];
+      const fromIdx = next.indexOf(from);
+      const toIdx = next.indexOf(to);
+      if (fromIdx < 0 || toIdx < 0) return prev;
+      next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, from);
+      return next;
+    });
+  };
+
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(widths));
     } catch {}
   }, [widths]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(columnOrder));
+    } catch {}
+  }, [columnOrder]);
+
   const resizing = useRef<{ key: string; startX: number; startW: number } | null>(null);
+
 
   const onResizeStart = (e: React.MouseEvent, key: string) => {
     e.preventDefault();
@@ -210,24 +253,52 @@ export function IdeasSpreadsheetView({ ideas, platforms, onSelectIdea }: Props) 
       <div className="overflow-auto max-h-[calc(100vh-22rem)]">
         <table
           className="text-sm border-separate border-spacing-0"
-          style={{ width: 'max-content', minWidth: '100%', tableLayout: 'fixed' }}
+          style={{ width: orderedColumns.reduce((sum, c) => sum + (widths[c.key] ?? c.default), 0), tableLayout: 'fixed' }}
         >
           <colgroup>
-            {COLUMNS.map((c) => (
+            {orderedColumns.map((c) => (
               <col key={c.key} style={{ width: `${widths[c.key] ?? c.default}px` }} />
             ))}
           </colgroup>
           <thead>
             <tr>
-              {COLUMNS.map((c) => (
+              {orderedColumns.map((c) => (
                 <th
                   key={c.key}
+                  draggable
+                  onDragStart={(e) => {
+                    setDragCol(c.key);
+                    e.dataTransfer.effectAllowed = 'move';
+                    try { e.dataTransfer.setData('text/plain', c.key); } catch {}
+                  }}
+                  onDragOver={(e) => {
+                    if (!dragCol || dragCol === c.key) return;
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    if (dragOverCol !== c.key) setDragOverCol(c.key);
+                  }}
+                  onDragLeave={() => {
+                    if (dragOverCol === c.key) setDragOverCol(null);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    if (dragCol && dragCol !== c.key) moveColumn(dragCol, c.key);
+                    setDragCol(null);
+                    setDragOverCol(null);
+                  }}
+                  onDragEnd={() => {
+                    setDragCol(null);
+                    setDragOverCol(null);
+                  }}
                   onClick={() => toggleSort(c.key)}
                   className={cn(
-                    'group relative sticky top-0 z-10 bg-muted/60 backdrop-blur supports-[backdrop-filter]:bg-muted/40 px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground select-none border-b border-border/60',
+                    'group relative sticky top-0 z-10 bg-muted/60 backdrop-blur supports-[backdrop-filter]:bg-muted/40 px-3 py-2.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground select-none border-b border-border/60 overflow-hidden',
                     c.sortable === false ? 'cursor-default' : 'cursor-pointer hover:text-foreground transition-colors',
-                    c.align === 'center' ? 'text-center' : 'text-left'
+                    c.align === 'center' ? 'text-center' : 'text-left',
+                    dragCol === c.key && 'opacity-40',
+                    dragOverCol === c.key && 'ring-2 ring-inset ring-primary/60'
                   )}
+                  title="Arraste para reordenar · Clique para ordenar"
                 >
                   <span
                     className={cn(
@@ -241,7 +312,10 @@ export function IdeasSpreadsheetView({ ideas, platforms, onSelectIdea }: Props) 
                   <span
                     onMouseDown={(e) => onResizeStart(e, c.key)}
                     onClick={(e) => e.stopPropagation()}
-                    className="absolute top-0 right-0 h-full w-1.5 cursor-col-resize hover:bg-primary/40 active:bg-primary/60 transition-colors"
+                    onDoubleClick={(e) => e.stopPropagation()}
+                    draggable={false}
+                    onDragStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    className="absolute top-0 -right-[3px] h-full w-[7px] cursor-col-resize hover:bg-primary/40 active:bg-primary/60 transition-colors z-20"
                     title="Arraste para redimensionar"
                   />
                 </th>
@@ -263,6 +337,175 @@ export function IdeasSpreadsheetView({ ideas, platforms, onSelectIdea }: Props) 
               const cover = getCover(idea);
               const isVideo = cover ? /\.(mp4|webm|mov|m4v)(\?|$)/i.test(cover) : false;
 
+              const cellTd = (key: SortKey) => {
+                const baseTd = 'px-3 py-3 border-b border-border/40 align-middle overflow-hidden';
+                switch (key) {
+                  case 'cover':
+                    return (
+                      <td key={key} className="px-2 py-2 border-b border-border/40 align-middle overflow-hidden">
+                        <div className="mx-auto h-12 w-12 rounded-md overflow-hidden bg-muted ring-1 ring-border/60 flex items-center justify-center">
+                          {cover ? (
+                            isVideo ? (
+                              <div className="relative h-full w-full bg-black/80 flex items-center justify-center">
+                                <Film className="h-4 w-4 text-white/80" />
+                              </div>
+                            ) : (
+                              <img src={cover} alt={idea.title || 'capa'} className="h-full w-full object-cover" loading="lazy" />
+                            )
+                          ) : (
+                            <ImageIcon className="h-4 w-4 text-muted-foreground/60" />
+                          )}
+                        </div>
+                      </td>
+                    );
+                  case 'serial':
+                    return (
+                      <td key={key} className={baseTd}>
+                        <span className="font-mono text-xs font-semibold text-muted-foreground tabular-nums">
+                          {idea.serial_number || '—'}
+                        </span>
+                      </td>
+                    );
+                  case 'title':
+                    return (
+                      <td key={key} className={baseTd}>
+                        <span className="font-medium text-foreground truncate block group-hover:text-primary transition-colors">
+                          {idea.title || 'Sem título'}
+                        </span>
+                      </td>
+                    );
+                  case 'status':
+                    return (
+                      <td key={key} className={baseTd}>
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/60 px-2 py-1 text-xs font-medium max-w-full truncate">
+                          <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', status?.color || 'bg-muted-foreground')} />
+                          <span className="truncate">{status?.label || idea.status}</span>
+                        </span>
+                      </td>
+                    );
+                  case 'type':
+                    return (
+                      <td key={key} className={baseTd}>
+                        <Badge variant="outline" className="text-xs font-normal capitalize truncate max-w-full">
+                          {idea.idea_type}
+                        </Badge>
+                      </td>
+                    );
+                  case 'objective':
+                    return (
+                      <td key={key} className={baseTd}>
+                        {idea.objective ? (
+                          <span className="inline-flex items-center gap-1.5 text-xs text-foreground/80 truncate max-w-full">
+                            <Target className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span className="truncate">{idea.objective}</span>
+                          </span>
+                        ) : (<span className="text-xs text-muted-foreground/60 italic">—</span>)}
+                      </td>
+                    );
+                  case 'audience':
+                    return (
+                      <td key={key} className={baseTd}>
+                        {idea.target_audience ? (
+                          <span className="inline-flex items-center gap-1.5 text-xs text-foreground/80 truncate max-w-full">
+                            <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span className="truncate">{idea.target_audience}</span>
+                          </span>
+                        ) : (<span className="text-xs text-muted-foreground/60 italic">—</span>)}
+                      </td>
+                    );
+                  case 'message':
+                    return (
+                      <td key={key} className={baseTd}>
+                        {idea.key_message ? (
+                          <span className="inline-flex items-center gap-1.5 text-xs text-foreground/80 truncate max-w-full">
+                            <MessageSquare className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span className="truncate">{idea.key_message}</span>
+                          </span>
+                        ) : (<span className="text-xs text-muted-foreground/60 italic">—</span>)}
+                      </td>
+                    );
+                  case 'kpi':
+                    return (
+                      <td key={key} className={baseTd}>
+                        {idea.kpi ? (
+                          <span className="inline-flex items-center gap-1.5 text-xs text-foreground/80 truncate max-w-full">
+                            <TrendingUp className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                            <span className="truncate">{idea.kpi}</span>
+                          </span>
+                        ) : (<span className="text-xs text-muted-foreground/60 italic">—</span>)}
+                      </td>
+                    );
+                  case 'platforms':
+                    return (
+                      <td key={key} className={baseTd}>
+                        <div className="flex items-center -space-x-1.5">
+                          {ideaPlatformIds.slice(0, 5).map((pid) => {
+                            const p = platformsMap.get(pid as string);
+                            if (!p) return null;
+                            const isUrl = typeof p.icon === 'string' && /^https?:\/\//.test(p.icon);
+                            return (
+                              <div key={pid} title={p.name} className="h-6 w-6 rounded-full ring-2 ring-background bg-muted flex items-center justify-center text-xs overflow-hidden shrink-0">
+                                {isUrl ? (
+                                  <img src={p.icon} alt={p.name} className="h-full w-full object-cover" />
+                                ) : (<span>{p.icon || '·'}</span>)}
+                              </div>
+                            );
+                          })}
+                          {ideaPlatformIds.length > 5 && (
+                            <div className="h-6 w-6 rounded-full ring-2 ring-background bg-muted flex items-center justify-center text-[10px] font-medium text-muted-foreground shrink-0">
+                              +{ideaPlatformIds.length - 5}
+                            </div>
+                          )}
+                          {ideaPlatformIds.length === 0 && (
+                            <span className="text-xs text-muted-foreground italic">—</span>
+                          )}
+                        </div>
+                      </td>
+                    );
+                  case 'variations':
+                    return (
+                      <td key={key} className={baseTd}>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Layers className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          <span className="text-xs tabular-nums font-medium shrink-0">{doneCount}/{variationCount}</span>
+                          {variationCount > 0 && (
+                            <div className="flex-1 min-w-[24px] h-1 rounded-full bg-muted overflow-hidden">
+                              <div className="h-full bg-primary transition-all" style={{ width: `${progress}%` }} />
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                    );
+                  case 'media':
+                    return (
+                      <td key={key} className={baseTd}>
+                        <div className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                          <ImageIcon className="h-3.5 w-3.5" />
+                          <span className="tabular-nums">{mediaCount}</span>
+                        </div>
+                      </td>
+                    );
+                  case 'created':
+                    return (
+                      <td key={key} className={baseTd}>
+                        <span className="text-xs text-muted-foreground tabular-nums truncate block">
+                          {formatDisplayDate(idea.created_at)}
+                        </span>
+                      </td>
+                    );
+                  case 'updated':
+                    return (
+                      <td key={key} className={baseTd}>
+                        <span className="text-xs text-muted-foreground tabular-nums truncate block">
+                          {formatDisplayDate(idea.updated_at)}
+                        </span>
+                      </td>
+                    );
+                  default:
+                    return <td key={key} className={baseTd} />;
+                }
+              };
+
               return (
                 <tr
                   key={idea.id}
@@ -274,176 +517,7 @@ export function IdeasSpreadsheetView({ ideas, platforms, onSelectIdea }: Props) 
                     'hover:bg-primary/5'
                   )}
                 >
-                  {/* Capa */}
-                  <td className="px-2 py-2 border-b border-border/40 align-middle">
-                    <div className="mx-auto h-12 w-12 rounded-md overflow-hidden bg-muted ring-1 ring-border/60 flex items-center justify-center">
-                      {cover ? (
-                        isVideo ? (
-                          <div className="relative h-full w-full bg-black/80 flex items-center justify-center">
-                            <Film className="h-4 w-4 text-white/80" />
-                          </div>
-                        ) : (
-                          <img
-                            src={cover}
-                            alt={idea.title || 'capa'}
-                            className="h-full w-full object-cover"
-                            loading="lazy"
-                          />
-                        )
-                      ) : (
-                        <ImageIcon className="h-4 w-4 text-muted-foreground/60" />
-                      )}
-                    </div>
-                  </td>
-
-                  {/* Serial */}
-                  <td className="px-3 py-3 border-b border-border/40 align-middle">
-                    <span className="font-mono text-xs font-semibold text-muted-foreground tabular-nums">
-                      {idea.serial_number || '—'}
-                    </span>
-                  </td>
-
-                  {/* Title */}
-                  <td className="px-3 py-3 border-b border-border/40 align-middle">
-                    <span className="font-medium text-foreground truncate block group-hover:text-primary transition-colors">
-                      {idea.title || 'Sem título'}
-                    </span>
-                  </td>
-
-                  {/* Status */}
-                  <td className="px-3 py-3 border-b border-border/40 align-middle">
-                    <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/60 px-2 py-1 text-xs font-medium max-w-full truncate">
-                      <span className={cn('w-1.5 h-1.5 rounded-full shrink-0', status?.color || 'bg-muted-foreground')} />
-                      <span className="truncate">{status?.label || idea.status}</span>
-                    </span>
-                  </td>
-
-                  {/* Type */}
-                  <td className="px-3 py-3 border-b border-border/40 align-middle">
-                    <Badge variant="outline" className="text-xs font-normal capitalize truncate max-w-full">
-                      {idea.idea_type}
-                    </Badge>
-                  </td>
-
-                  {/* Objective */}
-                  <td className="px-3 py-3 border-b border-border/40 align-middle">
-                    {idea.objective ? (
-                      <span className="inline-flex items-center gap-1.5 text-xs text-foreground/80 truncate max-w-full">
-                        <Target className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        <span className="truncate">{idea.objective}</span>
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground/60 italic">—</span>
-                    )}
-                  </td>
-
-                  {/* Audience */}
-                  <td className="px-3 py-3 border-b border-border/40 align-middle">
-                    {idea.target_audience ? (
-                      <span className="inline-flex items-center gap-1.5 text-xs text-foreground/80 truncate max-w-full">
-                        <Users className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        <span className="truncate">{idea.target_audience}</span>
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground/60 italic">—</span>
-                    )}
-                  </td>
-
-                  {/* Key Message */}
-                  <td className="px-3 py-3 border-b border-border/40 align-middle">
-                    {idea.key_message ? (
-                      <span className="inline-flex items-center gap-1.5 text-xs text-foreground/80 truncate max-w-full">
-                        <MessageSquare className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        <span className="truncate">{idea.key_message}</span>
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground/60 italic">—</span>
-                    )}
-                  </td>
-
-                  {/* KPI */}
-                  <td className="px-3 py-3 border-b border-border/40 align-middle">
-                    {idea.kpi ? (
-                      <span className="inline-flex items-center gap-1.5 text-xs text-foreground/80 truncate max-w-full">
-                        <TrendingUp className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        <span className="truncate">{idea.kpi}</span>
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground/60 italic">—</span>
-                    )}
-                  </td>
-
-                  {/* Platforms */}
-                  <td className="px-3 py-3 border-b border-border/40 align-middle">
-                    <div className="flex items-center -space-x-1.5">
-                      {ideaPlatformIds.slice(0, 5).map((pid) => {
-                        const p = platformsMap.get(pid as string);
-                        if (!p) return null;
-                        const isUrl = typeof p.icon === 'string' && /^https?:\/\//.test(p.icon);
-                        return (
-                          <div
-                            key={pid}
-                            title={p.name}
-                            className="h-6 w-6 rounded-full ring-2 ring-background bg-muted flex items-center justify-center text-xs overflow-hidden shrink-0"
-                          >
-                            {isUrl ? (
-                              <img src={p.icon} alt={p.name} className="h-full w-full object-cover" />
-                            ) : (
-                              <span>{p.icon || '·'}</span>
-                            )}
-                          </div>
-                        );
-                      })}
-                      {ideaPlatformIds.length > 5 && (
-                        <div className="h-6 w-6 rounded-full ring-2 ring-background bg-muted flex items-center justify-center text-[10px] font-medium text-muted-foreground shrink-0">
-                          +{ideaPlatformIds.length - 5}
-                        </div>
-                      )}
-                      {ideaPlatformIds.length === 0 && (
-                        <span className="text-xs text-muted-foreground italic">—</span>
-                      )}
-                    </div>
-                  </td>
-
-                  {/* Variations */}
-                  <td className="px-3 py-3 border-b border-border/40 align-middle">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <Layers className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      <span className="text-xs tabular-nums font-medium shrink-0">
-                        {doneCount}/{variationCount}
-                      </span>
-                      {variationCount > 0 && (
-                        <div className="flex-1 min-w-[24px] h-1 rounded-full bg-muted overflow-hidden">
-                          <div
-                            className="h-full bg-primary transition-all"
-                            style={{ width: `${progress}%` }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </td>
-
-                  {/* Media count */}
-                  <td className="px-3 py-3 border-b border-border/40 align-middle">
-                    <div className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                      <ImageIcon className="h-3.5 w-3.5" />
-                      <span className="tabular-nums">{mediaCount}</span>
-                    </div>
-                  </td>
-
-                  {/* Created */}
-                  <td className="px-3 py-3 border-b border-border/40 align-middle">
-                    <span className="text-xs text-muted-foreground tabular-nums truncate block">
-                      {formatDisplayDate(idea.created_at)}
-                    </span>
-                  </td>
-
-                  {/* Updated */}
-                  <td className="px-3 py-3 border-b border-border/40 align-middle">
-                    <span className="text-xs text-muted-foreground tabular-nums truncate block">
-                      {formatDisplayDate(idea.updated_at)}
-                    </span>
-                  </td>
+                  {columnOrder.map((k) => cellTd(k))}
                 </tr>
               );
             })}
@@ -455,7 +529,7 @@ export function IdeasSpreadsheetView({ ideas, platforms, onSelectIdea }: Props) 
           {sorted.length} {sorted.length === 1 ? 'ideia' : 'ideias'}
         </span>
         <span className="hidden sm:inline">
-          Clique nas colunas para ordenar · Arraste a borda direita para redimensionar · Clique duplo na linha para abrir
+          Clique para ordenar · Arraste o cabeçalho para reordenar · Arraste a borda direita para redimensionar · Duplo clique na linha para abrir
         </span>
       </div>
     </div>

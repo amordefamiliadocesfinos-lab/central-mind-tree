@@ -563,34 +563,30 @@ function SpreadsheetGrid({ sheetId, tabId, readOnly = false }: SpreadsheetGridPr
   }, [isFilling, fillEnd, performFill]);
 
   // ─── Column resize ────────────────────────────────────────────
-  useEffect(() => {
-    if (resizingCol === null) return;
-    const startX = (window as any).__resizeStartX || 0;
-    const startW = colWidths[resizingCol] || DEFAULT_COL_WIDTH;
-    const onMove = (e: MouseEvent) => {
-      const newW = Math.max(40, startW + (e.clientX - startX));
-      setColWidths((prev) => ({ ...prev, [resizingCol]: newW }));
+  const startColResize = useCallback((col: number, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startW = colWidths[col] || DEFAULT_COL_WIDTH;
+    setResizingCol(col);
+    let lastW = startW;
+    const onMove = (ev: MouseEvent) => {
+      lastW = Math.max(40, startW + (ev.clientX - startX));
+      setColWidths((prev) => ({ ...prev, [col]: lastW }));
     };
-    const onUp = async () => {
-      const finalWidths = { ...colWidths };
-      finalWidths[resizingCol] = (window as any).__lastResizeWidth || finalWidths[resizingCol];
-      await updateSheetMeta({ col_widths: colWidths });
+    const onUp = () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
       setResizingCol(null);
+      setColWidths((prev) => {
+        const next = { ...prev, [col]: lastW };
+        updateSheetMeta({ col_widths: next });
+        return next;
+      });
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
-    return () => {
-      window.removeEventListener('mousemove', onMove);
-      window.removeEventListener('mouseup', onUp);
-    };
-  }, [resizingCol, colWidths, updateSheetMeta]);
-
-  const startColResize = (col: number, e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    (window as any).__resizeStartX = e.clientX;
-    setResizingCol(col);
-  };
+  }, [colWidths, updateSheetMeta]);
 
   // ─── Keyboard ─────────────────────────────────────────────────
   const handleContainerKeyDown = useCallback((e: KeyboardEvent<HTMLDivElement>) => {
@@ -902,8 +898,9 @@ function SpreadsheetGrid({ sheetId, tabId, readOnly = false }: SpreadsheetGridPr
                     >
                       {colIndexToLetter(i)}
                       <div
-                        className="absolute top-0 right-0 h-full w-1 cursor-col-resize hover:bg-primary z-30"
+                        className="absolute top-0 -right-1 h-full w-2 cursor-col-resize hover:bg-primary/60 z-30"
                         onMouseDown={(e) => startColResize(i, e)}
+                        onClick={(e) => e.stopPropagation()}
                       />
                     </div>
                   </ContextMenuTrigger>
