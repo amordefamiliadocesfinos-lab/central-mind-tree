@@ -241,7 +241,8 @@ export function IdeasSpreadsheetView({ ideas, platforms, onSelectIdea }: Props) 
                   <span
                     onMouseDown={(e) => onResizeStart(e, c.key)}
                     onClick={(e) => e.stopPropagation()}
-                    className="absolute top-0 right-0 h-full w-1.5 cursor-col-resize hover:bg-primary/40 active:bg-primary/60 transition-colors"
+                    onDoubleClick={(e) => e.stopPropagation()}
+                    className="absolute top-0 -right-[3px] h-full w-[7px] cursor-col-resize hover:bg-primary/40 active:bg-primary/60 transition-colors z-20"
                     title="Arraste para redimensionar"
                   />
                 </th>
