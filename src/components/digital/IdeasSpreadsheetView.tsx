@@ -529,7 +529,7 @@ export function IdeasSpreadsheetView({ ideas, platforms, onSelectIdea }: Props) 
           {sorted.length} {sorted.length === 1 ? 'ideia' : 'ideias'}
         </span>
         <span className="hidden sm:inline">
-          Clique nas colunas para ordenar · Arraste a borda direita para redimensionar · Clique duplo na linha para abrir
+          Clique para ordenar · Arraste o cabeçalho para reordenar · Arraste a borda direita para redimensionar · Duplo clique na linha para abrir
         </span>
       </div>
     </div>
