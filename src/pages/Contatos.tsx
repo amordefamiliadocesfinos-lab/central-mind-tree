@@ -102,7 +102,7 @@ import { Zap } from 'lucide-react';
 import { differenceInDays, parseISO, format, isSameDay, isBefore, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { openWhatsApp } from '@/lib/whatsapp';
+import { CommercialDashboard } from '@/components/dashboard/CommercialDashboard';
 import { useWhatsAppWithLog } from '@/hooks/useWhatsAppWithLog';
 
 
