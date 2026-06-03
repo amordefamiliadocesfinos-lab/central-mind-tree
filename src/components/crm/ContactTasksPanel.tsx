@@ -83,7 +83,7 @@ export function ContactTasksPanel({ contactId }: { contactId: string }) {
     if (!title.trim()) { toast.error('Informe um título'); return; }
     const payload: any = {
       title: title.trim(),
-      status: 'todo',
+      status: 'pendente',
       contact_id: contactId,
       node_id: ROOT_NODE_ID,
       scheduled_date: date ? format(date, 'yyyy-MM-dd') : null,
@@ -99,7 +99,7 @@ export function ContactTasksPanel({ contactId }: { contactId: string }) {
   };
 
   const toggleDone = async (task: Task) => {
-    const newStatus = task.status === 'done' ? 'todo' : 'done';
+    const newStatus = task.status === 'concluído' ? 'pendente' : 'concluído';
     await supabase.from('tasks').update({ status: newStatus }).eq('id', task.id);
     fetchTasks();
   };
@@ -110,7 +110,7 @@ export function ContactTasksPanel({ contactId }: { contactId: string }) {
   };
 
   const today = startOfDay(new Date());
-  const overdueCount = tasks.filter(t => t.status !== 'done' && t.scheduled_date && isBefore(parseISO(t.scheduled_date), today)).length;
+  const overdueCount = tasks.filter(t => t.status !== 'concluído' && t.scheduled_date && isBefore(parseISO(t.scheduled_date), today)).length;
 
   return (
     <div className="space-y-3">
@@ -209,7 +209,7 @@ export function ContactTasksPanel({ contactId }: { contactId: string }) {
       ) : (
         <div className="space-y-1.5">
           {tasks.map(t => {
-            const isDone = t.status === 'done';
+            const isDone = t.status === 'concluído';
             const overdue = !isDone && t.scheduled_date && isBefore(parseISO(t.scheduled_date), today);
             const userName = users.find(u => u.id === t.assigned_to)?.name;
             return (
