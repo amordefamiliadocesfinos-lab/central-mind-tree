@@ -222,7 +222,7 @@ export function ContactCard({
 
                 {/* Task indicator (Kommo) */}
                 {(() => {
-                  const next = contact.next_action_date || contact.next_contact_date;
+                  const next = nextTaskDate || contact.next_action_date || contact.next_contact_date;
                   if (next) {
                     try {
                       const days = differenceInDays(parseISO(next), new Date());
