@@ -98,6 +98,7 @@ import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { ContactCard } from '@/components/crm/ContactCard';
 import { LeadDetailDrawer } from '@/components/crm/LeadDetailDrawer';
 import { FunnelAutomationsPanel } from '@/components/crm/FunnelAutomationsPanel';
+import { PosVendaPanel } from '@/components/crm/PosVendaPanel';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Zap } from 'lucide-react';
 import { differenceInDays, parseISO, format, isSameDay, isBefore, startOfDay } from 'date-fns';
