@@ -34,7 +34,7 @@ const TEMPLATES = {
 };
 
 export function PosVendaPanel({ open, onOpenChange }: Props) {
-  const { contacts, refetch } = useContacts();
+  const { contacts, fetchContacts } = useContacts();
   const [search, setSearch] = useState('');
   const [bucket, setBucket] = useState<BucketKey>('30');
   const [historyContact, setHistoryContact] = useState<Contact | null>(null);
