@@ -110,7 +110,7 @@ export function ContactTasksPanel({ contactId }: { contactId: string }) {
   };
 
   const today = startOfDay(new Date());
-  const overdueCount = tasks.filter(t => t.status !== 'done' && t.scheduled_date && isBefore(parseISO(t.scheduled_date), today)).length;
+  const overdueCount = tasks.filter(t => t.status !== 'concluído' && t.scheduled_date && isBefore(parseISO(t.scheduled_date), today)).length;
 
   return (
     <div className="space-y-3">
