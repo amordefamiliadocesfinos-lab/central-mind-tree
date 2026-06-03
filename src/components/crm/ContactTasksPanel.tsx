@@ -209,7 +209,7 @@ export function ContactTasksPanel({ contactId }: { contactId: string }) {
       ) : (
         <div className="space-y-1.5">
           {tasks.map(t => {
-            const isDone = t.status === 'done';
+            const isDone = t.status === 'concluído';
             const overdue = !isDone && t.scheduled_date && isBefore(parseISO(t.scheduled_date), today);
             const userName = users.find(u => u.id === t.assigned_to)?.name;
             return (
