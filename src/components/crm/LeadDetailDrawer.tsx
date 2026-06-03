@@ -213,6 +213,16 @@ export function LeadDetailDrawer({ contact, open, onOpenChange, onSave }: LeadDe
             <ContactTasksPanel contactId={contact.id} />
           </TabsContent>
 
+          <TabsContent value="atendimento" className="p-4 mt-0">
+            <ContactChatPanel
+              contactId={contact.id}
+              contactName={contact.name}
+              contactHandle={contact.whatsapp || contact.phone || contact.mobile || contact.email}
+              contactAvatar={contact.photo_url}
+            />
+          </TabsContent>
+
+
           <TabsContent value="historico" className="p-4 mt-0">
             <ContactTimeline contactId={contact.id} createdAt={contact.created_at} searchable />
           </TabsContent>
