@@ -1081,7 +1081,13 @@ export default function Contatos() {
             })}
           </div>
         ) : viewMode === 'funnel' ? (
-          <FunnelView contacts={contacts} />
+          <KommoFunnelView
+            contacts={contacts}
+            onLeadClick={(c) => { setEditingContact(c); setFormOpen(true); }}
+            onStageChange={(c, newStage) => handleStatusChange(c, newStage)}
+            onCreateLead={() => { setEditingContact(null); setFormOpen(true); }}
+          />
+
         ) : (
           <Card className="overflow-hidden">
             <Table>
