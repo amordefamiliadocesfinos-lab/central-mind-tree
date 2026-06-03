@@ -122,6 +122,7 @@ export function ContactCard({
   onSendSuggestion,
   onSmartAttend,
   hasPhone,
+  nextTaskDate,
 }: ContactCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [showFollowUp, setShowFollowUp] = useState(false);
