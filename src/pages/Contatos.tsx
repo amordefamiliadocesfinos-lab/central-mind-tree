@@ -74,6 +74,7 @@ import {
   Phone,
   Lightbulb,
   Send,
+  Heart,
 } from 'lucide-react';
 import { useContacts, Contact } from '@/hooks/useContacts';
 import { useContactHistory } from '@/hooks/useContactHistory';
@@ -97,6 +98,7 @@ import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { ContactCard } from '@/components/crm/ContactCard';
 import { LeadDetailDrawer } from '@/components/crm/LeadDetailDrawer';
 import { FunnelAutomationsPanel } from '@/components/crm/FunnelAutomationsPanel';
+import { PosVendaPanel } from '@/components/crm/PosVendaPanel';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Zap } from 'lucide-react';
 import { differenceInDays, parseISO, format, isSameDay, isBefore, startOfDay } from 'date-fns';
@@ -113,6 +115,7 @@ const FUNNEL_STAGES = [
   { key: 'proposta_enviada', label: 'Proposta Enviada', color: 'bg-amber-500', textColor: 'text-amber-700', bgLight: 'bg-amber-50/80 border-amber-200', headerBg: 'bg-gradient-to-r from-amber-500 to-amber-400' },
   { key: 'negociacao', label: 'Negociação', color: 'bg-orange-500', textColor: 'text-orange-700', bgLight: 'bg-orange-50/80 border-orange-200', headerBg: 'bg-gradient-to-r from-orange-500 to-orange-400' },
   { key: 'fechado', label: 'Fechado', color: 'bg-green-500', textColor: 'text-green-700', bgLight: 'bg-green-50/80 border-green-200', headerBg: 'bg-gradient-to-r from-green-500 to-green-400' },
+  { key: 'pos_venda', label: 'Pós-Venda', color: 'bg-pink-500', textColor: 'text-pink-700', bgLight: 'bg-pink-50/80 border-pink-200', headerBg: 'bg-gradient-to-r from-pink-500 to-pink-400' },
   { key: 'perdido', label: 'Perdido', color: 'bg-red-500', textColor: 'text-red-700', bgLight: 'bg-red-50/80 border-red-200', headerBg: 'bg-gradient-to-r from-red-500 to-red-400' },
 ];
 
@@ -230,6 +233,7 @@ export default function Contatos() {
   const [editingContact, setEditingContact] = useState<Contact | undefined>();
   const [detailOpen, setDetailOpen] = useState(false);
   const [automationsOpen, setAutomationsOpen] = useState(false);
+  const [posVendaOpen, setPosVendaOpen] = useState(false);
   const [detailContact, setDetailContact] = useState<Contact | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
@@ -967,7 +971,12 @@ export default function Contatos() {
             </SelectContent>
           </Select>
 
-          <Button variant="outline" size="sm" className="h-9 gap-1.5 ml-auto mr-2" onClick={() => setAutomationsOpen(true)} title="Automações do Funil">
+          <Button variant="outline" size="sm" className="h-9 gap-1.5 ml-auto" onClick={() => setPosVendaOpen(true)} title="Pós-Venda">
+            <Heart className="h-4 w-4 text-pink-600" />
+            <span className="hidden sm:inline text-xs">Pós-Venda</span>
+          </Button>
+
+          <Button variant="outline" size="sm" className="h-9 gap-1.5 mr-2" onClick={() => setAutomationsOpen(true)} title="Automações do Funil">
             <Zap className="h-4 w-4 text-primary" />
             <span className="hidden sm:inline text-xs">Automações</span>
           </Button>
@@ -1399,6 +1408,8 @@ export default function Contatos() {
           <FunnelAutomationsPanel onClose={() => setAutomationsOpen(false)} />
         </DialogContent>
       </Dialog>
+
+      <PosVendaPanel open={posVendaOpen} onOpenChange={setPosVendaOpen} />
 
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
