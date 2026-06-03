@@ -98,6 +98,7 @@ interface ContactCardProps {
   onSendSuggestion: () => Promise<void>;
   onSmartAttend: () => Promise<void>;
   hasPhone: boolean;
+  nextTaskDate?: string | null;
 }
 
 export function ContactCard({
