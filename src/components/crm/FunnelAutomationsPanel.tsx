@@ -19,6 +19,7 @@ const STAGES = [
   { key: 'negociacao', label: 'Negociação', color: 'bg-orange-500' },
   { key: 'fechado', label: 'Pedido Realizado', color: 'bg-yellow-500' },
   { key: 'pos_venda', label: 'Pós-Venda', color: 'bg-emerald-500' },
+  { key: 'cadencia', label: 'Cadência', color: 'bg-violet-500' },
   { key: 'perdido', label: 'Perdido', color: 'bg-rose-500' },
 ];
 
