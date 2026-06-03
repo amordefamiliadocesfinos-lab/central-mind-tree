@@ -1372,6 +1372,13 @@ export default function Contatos() {
       {/* Dialogs */}
       <ContactFormDialog open={formOpen} onOpenChange={setFormOpen} contact={editingContact} onSave={handleSave} />
 
+      <LeadDetailDrawer
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        contact={(detailContact && contacts.find(c => c.id === detailContact.id)) || detailContact || null}
+        onSave={updateContact}
+      />
+
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
