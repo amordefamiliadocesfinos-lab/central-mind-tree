@@ -20,6 +20,9 @@ const FUNNEL_STAGES = [
   { key: 'proposta_enviada', label: 'Proposta Enviada', color: 'bg-amber-500', textColor: 'text-amber-700', bgLight: 'bg-amber-50 border-amber-200' },
   { key: 'negociacao', label: 'Negociação', color: 'bg-orange-500', textColor: 'text-orange-700', bgLight: 'bg-orange-50 border-orange-200' },
   { key: 'fechado', label: 'Fechado', color: 'bg-green-500', textColor: 'text-green-700', bgLight: 'bg-green-50 border-green-200' },
+  { key: 'pos_venda', label: 'Pós-Venda', color: 'bg-pink-500', textColor: 'text-pink-700', bgLight: 'bg-pink-50 border-pink-200' },
+  { key: 'cadencia', label: 'Cadência', color: 'bg-violet-500', textColor: 'text-violet-700', bgLight: 'bg-violet-50 border-violet-200' },
+  { key: 'perdido', label: 'Perdido', color: 'bg-red-500', textColor: 'text-red-700', bgLight: 'bg-red-50 border-red-200' },
 ];
 
 function formatCurrency(v: number) {

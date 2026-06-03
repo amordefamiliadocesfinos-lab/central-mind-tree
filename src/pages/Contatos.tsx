@@ -116,6 +116,7 @@ const FUNNEL_STAGES = [
   { key: 'negociacao', label: 'Negociação', color: 'bg-orange-500', textColor: 'text-orange-700', bgLight: 'bg-orange-50/80 border-orange-200', headerBg: 'bg-gradient-to-r from-orange-500 to-orange-400' },
   { key: 'fechado', label: 'Fechado', color: 'bg-green-500', textColor: 'text-green-700', bgLight: 'bg-green-50/80 border-green-200', headerBg: 'bg-gradient-to-r from-green-500 to-green-400' },
   { key: 'pos_venda', label: 'Pós-Venda', color: 'bg-pink-500', textColor: 'text-pink-700', bgLight: 'bg-pink-50/80 border-pink-200', headerBg: 'bg-gradient-to-r from-pink-500 to-pink-400' },
+  { key: 'cadencia', label: 'Cadência', color: 'bg-violet-500', textColor: 'text-violet-700', bgLight: 'bg-violet-50/80 border-violet-200', headerBg: 'bg-gradient-to-r from-violet-500 to-violet-400' },
   { key: 'perdido', label: 'Perdido', color: 'bg-red-500', textColor: 'text-red-700', bgLight: 'bg-red-50/80 border-red-200', headerBg: 'bg-gradient-to-r from-red-500 to-red-400' },
 ];
 

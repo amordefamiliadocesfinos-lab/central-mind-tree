@@ -31,6 +31,8 @@ const KOMMO_STAGES: Stage[] = [
   { key: 'proposta_enviada',   label: 'ORÇAMENTO ENVIADO', bar: 'bg-amber-400' },
   { key: 'negociacao',         label: 'NEGOCIAÇÃO',        bar: 'bg-orange-400' },
   { key: 'fechado',            label: 'PEDIDO REALIZADO',  bar: 'bg-yellow-400' },
+  { key: 'pos_venda',          label: 'PÓS-VENDA',         bar: 'bg-pink-400' },
+  { key: 'cadencia',           label: 'CADÊNCIA',          bar: 'bg-violet-400' },
   { key: 'perdido',            label: 'PERDIDO',           bar: 'bg-rose-400' },
 ];
 
