@@ -302,7 +302,7 @@ export function KommoFunnelView({ contacts, onLeadClick, onStageChange, onCreate
                           )}
                         >
                           <div className="flex items-start gap-2">
-                            <ContactAvatar contact={c} size="sm" />
+                            <ContactAvatar photoUrl={c.photo_url} name={c.name} size="sm" />
                             <div className="flex-1 min-w-0">
                               <div className="flex items-start justify-between gap-2">
                                 <div className="text-[12px] text-muted-foreground truncate">{c.name || 'Sem nome'}</div>
@@ -381,7 +381,7 @@ function KommoLeadsList({ contacts, onLeadClick }: { contacts: Contact[]; onLead
                 </td>
                 <td className="px-4 py-2.5">
                   <div className="flex items-center gap-2">
-                    <ContactAvatar contact={c} size="sm" />
+                    <ContactAvatar photoUrl={c.photo_url} name={c.name} size="sm" />
                     <div>
                       <div className="text-[13px]">{c.name || 'Sem nome'}</div>
                       <div className="text-[11px] text-muted-foreground">{c.whatsapp || c.phone || c.email || ''}</div>
