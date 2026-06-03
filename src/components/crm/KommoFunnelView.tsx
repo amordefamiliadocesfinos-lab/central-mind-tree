@@ -138,7 +138,7 @@ export function KommoFunnelView({ contacts, onLeadClick, onStageChange, onCreate
     });
 
     return { comHoje, semTarefa, atrasadas, novoHoje, novoOntem };
-  }, [filtered]);
+  }, [filtered, nextTaskByContact]);
 
   const handleDragStart = (e: React.DragEvent, c: Contact) => {
     setDragId(c.id);
