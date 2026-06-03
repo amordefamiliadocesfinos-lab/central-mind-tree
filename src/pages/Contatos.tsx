@@ -1409,6 +1409,8 @@ export default function Contatos() {
         </DialogContent>
       </Dialog>
 
+      <PosVendaPanel open={posVendaOpen} onOpenChange={setPosVendaOpen} />
+
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
