@@ -1383,6 +1383,13 @@ export default function Contatos() {
         onSave={updateContact}
       />
 
+      <Dialog open={automationsOpen} onOpenChange={setAutomationsOpen}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <FunnelAutomationsPanel onClose={() => setAutomationsOpen(false)} />
+        </DialogContent>
+      </Dialog>
+
+
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
