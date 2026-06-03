@@ -45,14 +45,16 @@ const EVENT_ICONS: Record<string, { icon: React.ElementType; className: string }
 interface Props {
   contactId: string;
   createdAt?: string;
+  searchable?: boolean;
 }
 
-export function ContactTimeline({ contactId, createdAt }: Props) {
+export function ContactTimeline({ contactId, createdAt, searchable = false }: Props) {
   const { entries, loading, fetchHistory, addEntry } = useContactHistory();
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [noteText, setNoteText] = useState('');
   const [saving, setSaving] = useState(false);
   const [filter, setFilter] = useState<FilterType>('all');
+  const [search, setSearch] = useState('');
   const [aiOpen, setAiOpen] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSummary, setAiSummary] = useState('');
