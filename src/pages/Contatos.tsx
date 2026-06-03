@@ -92,6 +92,7 @@ import { ContactActivitiesPanel } from '@/components/crm/ContactActivitiesPanel'
 import { LeadsNeedContactPanel } from '@/components/crm/LeadsNeedContactPanel';
 import { cn } from '@/lib/utils';
 import { FunnelView } from '@/components/FunnelView';
+import { KommoFunnelView } from '@/components/crm/KommoFunnelView';
 import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { ContactCard } from '@/components/crm/ContactCard';
 import { differenceInDays, parseISO, format, isSameDay, isBefore, startOfDay } from 'date-fns';
@@ -1080,7 +1081,13 @@ export default function Contatos() {
             })}
           </div>
         ) : viewMode === 'funnel' ? (
-          <FunnelView contacts={contacts} />
+          <KommoFunnelView
+            contacts={contacts}
+            onLeadClick={(c) => { setEditingContact(c); setFormOpen(true); }}
+            onStageChange={(c, newStage) => handleStatusChange(c, newStage)}
+            onCreateLead={() => { setEditingContact(null); setFormOpen(true); }}
+          />
+
         ) : (
           <Card className="overflow-hidden">
             <Table>
