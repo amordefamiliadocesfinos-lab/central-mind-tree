@@ -163,11 +163,11 @@ export function ContactCard({
         )}
         draggable
         onDragStart={onDragStart}
-        onDoubleClick={(e) => {
+        onClick={(e) => {
           e.stopPropagation();
           onEdit();
         }}
-        title="Duplo clique para editar"
+        title="Clique para editar"
       >
         {/* ═══════ KOMMO-STYLE COMPACT HEADER ═══════ */}
         <div className="p-3">
