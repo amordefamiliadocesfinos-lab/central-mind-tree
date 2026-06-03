@@ -103,6 +103,7 @@ import { differenceInDays, parseISO, format, isSameDay, isBefore, startOfDay } f
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CommercialDashboard } from '@/components/dashboard/CommercialDashboard';
+import { openWhatsApp } from '@/lib/whatsapp';
 import { useWhatsAppWithLog } from '@/hooks/useWhatsAppWithLog';
 
 
