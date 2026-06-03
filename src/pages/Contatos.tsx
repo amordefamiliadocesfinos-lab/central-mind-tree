@@ -683,6 +683,7 @@ export default function Contatos() {
         scoreInfo={scoreInfo}
         isDragged={draggedContact?.id === contact.id}
         hasPhone={!!phone}
+        nextTaskDate={nextTaskByContact[contact.id] || null}
         onEdit={() => { setDetailContact(contact); setDetailOpen(true); }}
         onWhatsApp={() => handleWhatsApp(contact)}
         onViewOrders={() => { setHistoryContact(contact); setHistoryOpen(true); }}
