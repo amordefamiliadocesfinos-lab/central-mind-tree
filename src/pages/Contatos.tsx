@@ -228,6 +228,7 @@ export default function Contatos() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | undefined>();
   const [detailOpen, setDetailOpen] = useState(false);
+  const [automationsOpen, setAutomationsOpen] = useState(false);
   const [detailContact, setDetailContact] = useState<Contact | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
