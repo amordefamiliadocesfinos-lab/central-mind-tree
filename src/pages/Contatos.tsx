@@ -99,6 +99,8 @@ import { differenceInDays, parseISO, format, isSameDay, isBefore, startOfDay } f
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { openWhatsApp } from '@/lib/whatsapp';
+import { useWhatsAppWithLog } from '@/hooks/useWhatsAppWithLog';
+
 
 const FUNNEL_STAGES = [
   { key: 'novo_lead', label: 'Novo Lead', color: 'bg-blue-500', textColor: 'text-blue-700', bgLight: 'bg-blue-50/80 border-blue-200', headerBg: 'bg-gradient-to-r from-blue-500 to-blue-400' },
@@ -193,6 +195,7 @@ export default function Contatos() {
   const contactIds = useMemo(() => contacts.filter(c => c.is_active).map(c => c.id), [contacts]);
   const { checklistMap, refetchChecklists } = useContactChecklist(contactIds);
   const { dailyMetrics, refetchDaily } = useDailyMetrics();
+  const { logAndOpen } = useWhatsAppWithLog();
   const [searchQuery, setSearchQuery] = useState('');
 
   // Deep-link: abrir contato selecionado vindo de outras telas (ex.: Atendimento)
@@ -486,12 +489,18 @@ export default function Contatos() {
   const handleWhatsAppSend = async (message: string, templateLabel: string) => {
     if (!whatsAppContact) return;
     const phone = whatsAppContact.whatsapp || whatsAppContact.mobile || whatsAppContact.phone;
-    if (phone) {
-      const now = new Date().toISOString();
-      await addEntry(whatsAppContact.id, 'whatsapp', `💬 Mensagem iniciada via WhatsApp (${templateLabel})`, now);
-      openWhatsApp(phone, message);
-      setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);
-    }
+    if (!phone) return;
+
+    await logAndOpen({
+      contactId: whatsAppContact.id,
+      contactName: whatsAppContact.name,
+      phone,
+      message,
+      templateLabel,
+      source: 'crm_card',
+    });
+
+    setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);
     setWhatsAppContact(null);
   };
 
@@ -613,21 +622,22 @@ export default function Contatos() {
     if (!phone) return;
 
     const { message, approach } = getSmartMessage(contact);
-    const now = new Date().toISOString();
 
-    // Log to timeline
-    await addEntry(contact.id, 'whatsapp', `⚡ Atendimento iniciado via ação inteligente · ${approach}`, now);
+    await logAndOpen({
+      contactId: contact.id,
+      contactName: contact.name,
+      phone,
+      message,
+      approach,
+      source: 'crm_smart_attend',
+    });
 
     // Update último contato
-    await updateContact(contact.id, { ultimo_contato: now.split('T')[0] });
+    await updateContact(contact.id, { ultimo_contato: new Date().toISOString().split('T')[0] });
 
-    // Open WhatsApp (helper detecta mobile/desktop)
-    openWhatsApp(phone, message);
-
-    // Refresh data
     setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);
     toast.success(`⚡ Atendimento inteligente: ${approach}`);
-  }, [getSmartMessage, addEntry, updateContact, refreshNoResponse, refetchChecklists, refetchDaily]);
+  }, [getSmartMessage, logAndOpen, updateContact, refreshNoResponse, refetchChecklists, refetchDaily]);
 
   const handleCreateOrder = useCallback((contact: Contact) => {
     const params = new URLSearchParams({
@@ -675,15 +685,20 @@ export default function Contatos() {
         }}
         onSendSuggestion={async () => {
           if (!phone || !noResponseInfo) return;
-          const now = new Date().toISOString();
-          await addEntry(contact.id, 'whatsapp', `💬 Follow-up enviado automaticamente (sugerido pelo sistema · ${noResponseInfo.suggestedLabel})`, now);
-          openWhatsApp(phone, noResponseInfo.suggestedMessage);
+          await logAndOpen({
+            contactId: contact.id,
+            contactName: contact.name,
+            phone,
+            message: noResponseInfo.suggestedMessage,
+            approach: noResponseInfo.suggestedLabel,
+            source: 'crm_follow_up',
+          });
           setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);
         }}
         onSmartAttend={async () => handleSmartAttend(contact)}
       />
     );
-  }, [getUrgencyLevel, getNoResponseInfo, getScore, hasOrders, checklistMap, draggedContact, handleWhatsApp, handleTempChange, addEntry, refreshNoResponse, refetchChecklists, refetchDaily, handleSmartAttend, handleCreateOrder]);
+  }, [getUrgencyLevel, getNoResponseInfo, getScore, hasOrders, checklistMap, draggedContact, handleWhatsApp, handleTempChange, addEntry, refreshNoResponse, refetchChecklists, refetchDaily, handleSmartAttend, handleCreateOrder, logAndOpen]);
 
   const { tags } = useContactTags();
 
