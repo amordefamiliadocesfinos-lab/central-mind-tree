@@ -215,17 +215,11 @@ export function PosVendaPanel({ open, onOpenChange }: Props) {
       </Dialog>
 
       {historyContact && (
-        <Dialog open={!!historyContact} onOpenChange={(v) => !v && setHistoryContact(null)}>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <History className="h-5 w-5" />
-                Histórico de compras — {historyContact.name}
-              </DialogTitle>
-            </DialogHeader>
-            <ContactOrderHistory contact={historyContact as any} />)
-          </DialogContent>
-        </Dialog>
+        <ContactOrderHistory
+          contact={historyContact as any}
+          open={!!historyContact}
+          onOpenChange={(v) => !v && setHistoryContact(null)}
+        />
       )}
     </>
   );
