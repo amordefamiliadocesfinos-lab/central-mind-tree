@@ -1128,7 +1128,7 @@ export default function Contatos() {
           </div>
         ) : viewMode === 'funnel' ? (
           <KommoFunnelView
-            contacts={contacts}
+            contacts={filteredContacts}
             nextTaskByContact={nextTaskByContact}
             onLeadClick={(c) => { setDetailContact(c); setDetailOpen(true); }}
             onStageChange={(c, newStage) => handleStatusChange(c, newStage)}
