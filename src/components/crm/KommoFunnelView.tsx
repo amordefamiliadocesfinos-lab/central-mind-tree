@@ -66,9 +66,10 @@ interface KommoFunnelViewProps {
   onLeadClick: (contact: Contact) => void;
   onStageChange: (contact: Contact, newStage: string) => void;
   onCreateLead?: () => void;
+  nextTaskByContact?: Record<string, string>;
 }
 
-export function KommoFunnelView({ contacts, onLeadClick, onStageChange, onCreateLead }: KommoFunnelViewProps) {
+export function KommoFunnelView({ contacts, onLeadClick, onStageChange, onCreateLead, nextTaskByContact = {} }: KommoFunnelViewProps) {
   const [tab, setTab] = useState<'funnel' | 'list'>('funnel');
   const [query, setQuery] = useState('');
   const [dragId, setDragId] = useState<string | null>(null);
