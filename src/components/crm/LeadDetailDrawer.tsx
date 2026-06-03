@@ -197,6 +197,10 @@ export function LeadDetailDrawer({ contact, open, onOpenChange, onSave }: LeadDe
           </p>
 
           <div className="pt-4 border-t">
+            <ContactTasksPanel contactId={contact.id} />
+          </div>
+
+          <div className="pt-4 border-t">
             <h3 className="text-sm font-semibold mb-3">Timeline do Lead</h3>
             <ContactTimeline contactId={contact.id} createdAt={contact.created_at} />
           </div>
