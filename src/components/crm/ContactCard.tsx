@@ -169,36 +169,97 @@ export function ContactCard({
         }}
         title="Duplo clique para editar"
       >
-        {/* ═══════ TOP — Always visible ═══════ */}
-        <div className="p-3 space-y-2">
-          {/* Row 1: Avatar + Name + Temp + Priority + Menu */}
+        {/* ═══════ KOMMO-STYLE COMPACT HEADER ═══════ */}
+        <div className="p-3">
           <div className="flex items-start gap-2.5">
             <ContactAvatar photoUrl={contact.photo_url} name={contact.name} size="sm" />
+
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm leading-tight break-words">{contact.name}</p>
-              {contact.fantasy_name && (
-                <p className="text-[10px] text-muted-foreground break-words mt-0.5">{contact.fantasy_name}</p>
-              )}
-              {/* Inline badges: Temp + Priority */}
-              <div className="flex items-center gap-1 mt-1">
-                <span className={cn('inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold', tempCfg.className)}>
-                  <TempIcon className="h-2.5 w-2.5" />
-                  {tempCfg.label}
-                </span>
-                <span className={cn('inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold', urgencyCfg.className)}>
-                  {urgencyCfg.emoji} {urgencyCfg.label}
+              {/* Row 1: Name + Date */}
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-semibold text-[13px] leading-tight text-foreground truncate">
+                  {contact.name}
+                </p>
+                <span className="text-[10px] text-muted-foreground shrink-0 whitespace-nowrap mt-0.5">
+                  {(() => { try { return format(parseISO(contact.created_at), 'dd/MM/yyyy'); } catch { return ''; } })()}
                 </span>
               </div>
+
+              {/* Row 2: Topic in blue (Kommo style) */}
+              <p
+                className="text-[12px] font-medium text-blue-600 dark:text-blue-400 leading-snug mt-0.5 truncate"
+                title={contact.fantasy_name || contact.notes || contact.name}
+              >
+                {contact.fantasy_name
+                  || (contact.notes ? contact.notes.split('\n')[0] : null)
+                  || `Lead #${contact.id.slice(0, 7)}`}
+              </p>
+
+              {/* Row 3: Value + small tags + task indicator */}
+              <div className="flex items-center justify-between gap-2 mt-1.5">
+                <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                  {contact.valor_estimado && contact.valor_estimado > 0 ? (
+                    <span className="text-[12px] font-bold text-foreground tabular-nums">
+                      {contact.valor_estimado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                    </span>
+                  ) : null}
+
+                  {contact.client_classification === 'vip' && (
+                    <span className="inline-flex items-center rounded border border-border px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">VIP</span>
+                  )}
+                  {urgencyLevel === 'urgente' && (
+                    <span className="inline-flex items-center rounded border border-border px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">Urgent</span>
+                  )}
+                  {urgencyLevel === 'medio' && (
+                    <span className="inline-flex items-center rounded border border-border px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">Priority</span>
+                  )}
+                  {subtypeCfg && (
+                    <span className="inline-flex items-center rounded border border-border px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">{subtypeCfg.label}</span>
+                  )}
+                </div>
+
+                {/* Task indicator (Kommo) */}
+                {(() => {
+                  const next = contact.next_action_date || contact.next_contact_date;
+                  if (next) {
+                    try {
+                      const days = differenceInDays(parseISO(next), new Date());
+                      if (days < 0) return (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-600 dark:text-red-400 whitespace-nowrap shrink-0">
+                          {Math.abs(days)}d <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                        </span>
+                      );
+                      if (days === 0) return (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-green-600 dark:text-green-400 whitespace-nowrap shrink-0">
+                          Hoje <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+                        </span>
+                      );
+                      return (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground whitespace-nowrap shrink-0">
+                          {days}d <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" />
+                        </span>
+                      );
+                    } catch { return null; }
+                  }
+                  return (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground whitespace-nowrap shrink-0">
+                      Sem tarefas <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                    </span>
+                  );
+                })()}
+              </div>
             </div>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 -mt-0.5 -mr-1">
+                <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0 -mt-1 -mr-1 opacity-50 hover:opacity-100">
                   <MoreVertical className="h-3.5 w-3.5" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                 <DropdownMenuItem onClick={onEdit}><Edit className="h-4 w-4 mr-2" /> Editar</DropdownMenuItem>
                 <DropdownMenuItem onClick={onWhatsApp}><MessageCircle className="h-4 w-4 mr-2" /> WhatsApp</DropdownMenuItem>
+                <DropdownMenuItem onClick={async () => { await onSmartAttend(); }}><Send className="h-4 w-4 mr-2" /> Atender agora</DropdownMenuItem>
                 <DropdownMenuItem onClick={onViewOrders}><ShoppingCart className="h-4 w-4 mr-2" /> Pedidos</DropdownMenuItem>
                 <DropdownMenuItem onClick={onCreateOrder} className="text-green-700 dark:text-green-500 font-medium"><ShoppingCart className="h-4 w-4 mr-2" /> Novo Pedido</DropdownMenuItem>
                 <DropdownMenuItem onClick={onViewHistory}><History className="h-4 w-4 mr-2" /> Histórico</DropdownMenuItem>
@@ -223,80 +284,27 @@ export function ContactCard({
             </DropdownMenu>
           </div>
 
-          {/* ═══════ MIDDLE — Key info ═══════ */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {subtypeCfg && (
-              <span className={cn('inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold', subtypeCfg.className)}>
-                {subtypeCfg.label}
-              </span>
-            )}
-            {contactHasOrders && (
-              <span className="inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold bg-green-100 text-green-800 border-green-300 dark:bg-green-950/40 dark:text-green-400 dark:border-green-700">
-                <ShoppingCart className="h-2.5 w-2.5" /> Cliente
-              </span>
-            )}
-            {contact.client_classification && CLIENT_CLASSIFICATION_CONFIG[contact.client_classification] && (
-              <span className={cn('inline-flex items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold', CLIENT_CLASSIFICATION_CONFIG[contact.client_classification].className)}>
-                {CLIENT_CLASSIFICATION_CONFIG[contact.client_classification].emoji} {CLIENT_CLASSIFICATION_CONFIG[contact.client_classification].label}
-              </span>
-            )}
-            {/* Time without response */}
-            {daysSinceContact !== null && daysSinceContact >= 2 && (
-              <span className={cn(
-                'inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold',
-                daysSinceContact >= 7 ? 'bg-red-100 text-red-700 border-red-300 dark:bg-red-950/40 dark:text-red-400 dark:border-red-700'
-                  : daysSinceContact >= 3 ? 'bg-amber-100 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-700'
-                  : 'bg-muted text-muted-foreground border-border'
-              )}>
-                <Clock className="h-2.5 w-2.5" />
-                {daysSinceContact}d sem resposta
-              </span>
-            )}
-            {/* Linked conversations from Atendimento */}
-            {linkedConvos.length > 0 && (
-              <Link
-                to="/digital?tab=atendimento"
-                onClick={(e) => e.stopPropagation()}
-                className="inline-flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-semibold bg-violet-100 text-violet-700 border-violet-300 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-700 hover:opacity-80 transition-opacity"
-                title={`${linkedConvos.length} conversa(s) vinculada(s) — abrir Atendimento`}
-              >
-                <MessageCircle className="h-2.5 w-2.5" />
-                {linkedConvos.length}
-                {openConvCount > 0 && <span className="opacity-80">· {openConvCount} ab.</span>}
-                {totalUnread > 0 && (
-                  <span className="ml-0.5 inline-flex items-center justify-center bg-red-500 text-white rounded-full h-3 min-w-3 px-1 text-[8px] font-bold">{totalUnread}</span>
-                )}
-              </Link>
-            )}
-          </div>
-
-          {/* ═══════ PRIMARY ACTION ═══════ */}
-          <Button
-            size="sm"
-            className="w-full h-8 text-xs font-semibold gap-1.5 bg-primary hover:bg-primary/90"
-            onClick={async (e) => {
-              e.stopPropagation();
-              if (hasPhone) {
-                await onSmartAttend();
-              } else {
-                onEdit();
-              }
-            }}
-          >
-            <Send className="h-3.5 w-3.5" />
-            ⚡ Atender agora
-          </Button>
+          {totalUnread > 0 && (
+            <Link
+              to="/digital?tab=atendimento"
+              onClick={(e) => e.stopPropagation()}
+              className="mt-2 inline-flex items-center gap-1 text-[10px] text-violet-700 dark:text-violet-300 hover:underline"
+            >
+              <MessageCircle className="h-2.5 w-2.5" />
+              {totalUnread} nova(s)
+            </Link>
+          )}
 
           {/* ═══════ EXPANDABLE — "Ver mais" ═══════ */}
-          <Collapsible open={expanded} onOpenChange={setExpanded}>
+          <Collapsible open={expanded} onOpenChange={setExpanded} className="mt-2">
             <CollapsibleTrigger asChild>
               <button
-                className="flex items-center justify-center gap-1 w-full text-[11px] text-muted-foreground hover:text-foreground transition-colors py-0.5"
+                className="flex items-center justify-center gap-1 w-full text-[10px] text-muted-foreground hover:text-foreground transition-colors py-1 border-t border-border/50"
                 onClick={(e) => e.stopPropagation()}
               >
-                <Eye className="h-3 w-3" />
+                <Eye className="h-2.5 w-2.5" />
                 {expanded ? 'Ver menos' : 'Ver mais'}
-                <ChevronDown className={cn('h-3 w-3 transition-transform', expanded && 'rotate-180')} />
+                <ChevronDown className={cn('h-2.5 w-2.5 transition-transform', expanded && 'rotate-180')} />
               </button>
             </CollapsibleTrigger>
             <CollapsibleContent>
