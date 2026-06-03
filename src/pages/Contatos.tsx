@@ -195,6 +195,7 @@ export default function Contatos() {
   const contactIds = useMemo(() => contacts.filter(c => c.is_active).map(c => c.id), [contacts]);
   const { checklistMap, refetchChecklists } = useContactChecklist(contactIds);
   const { dailyMetrics, refetchDaily } = useDailyMetrics();
+  const { logAndOpen } = useWhatsAppWithLog();
   const [searchQuery, setSearchQuery] = useState('');
 
   // Deep-link: abrir contato selecionado vindo de outras telas (ex.: Atendimento)
