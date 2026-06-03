@@ -9,6 +9,7 @@ import { Loader2, Check, MessageCircle, Phone } from 'lucide-react';
 import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { ContactTimeline } from '@/components/crm/ContactTimeline';
 import { ContactTasksPanel } from '@/components/crm/ContactTasksPanel';
+import { ContactChatPanel } from '@/components/crm/ContactChatPanel';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Contact } from '@/hooks/useContacts';
@@ -137,9 +138,10 @@ export function LeadDetailDrawer({ contact, open, onOpenChange, onSave }: LeadDe
 
         <Tabs defaultValue="detalhes" className="w-full">
           <div className="px-4 pt-3">
-            <TabsList className="grid w-full grid-cols-3 h-9">
+            <TabsList className="grid w-full grid-cols-4 h-9">
               <TabsTrigger value="detalhes" className="text-xs">Detalhes</TabsTrigger>
               <TabsTrigger value="tarefas" className="text-xs">Tarefas</TabsTrigger>
+              <TabsTrigger value="atendimento" className="text-xs">Atendimento</TabsTrigger>
               <TabsTrigger value="historico" className="text-xs">Histórico</TabsTrigger>
             </TabsList>
           </div>
@@ -210,6 +212,16 @@ export function LeadDetailDrawer({ contact, open, onOpenChange, onSave }: LeadDe
           <TabsContent value="tarefas" className="p-4 mt-0">
             <ContactTasksPanel contactId={contact.id} />
           </TabsContent>
+
+          <TabsContent value="atendimento" className="p-4 mt-0">
+            <ContactChatPanel
+              contactId={contact.id}
+              contactName={contact.name}
+              contactHandle={contact.whatsapp || contact.phone || contact.mobile || contact.email}
+              contactAvatar={contact.photo_url}
+            />
+          </TabsContent>
+
 
           <TabsContent value="historico" className="p-4 mt-0">
             <ContactTimeline contactId={contact.id} createdAt={contact.created_at} searchable />
