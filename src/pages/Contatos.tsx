@@ -685,9 +685,14 @@ export default function Contatos() {
         }}
         onSendSuggestion={async () => {
           if (!phone || !noResponseInfo) return;
-          const now = new Date().toISOString();
-          await addEntry(contact.id, 'whatsapp', `💬 Follow-up enviado automaticamente (sugerido pelo sistema · ${noResponseInfo.suggestedLabel})`, now);
-          openWhatsApp(phone, noResponseInfo.suggestedMessage);
+          await logAndOpen({
+            contactId: contact.id,
+            contactName: contact.name,
+            phone,
+            message: noResponseInfo.suggestedMessage,
+            approach: noResponseInfo.suggestedLabel,
+            source: 'crm_follow_up',
+          });
           setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);
         }}
         onSmartAttend={async () => handleSmartAttend(contact)}
