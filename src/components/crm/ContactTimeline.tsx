@@ -166,6 +166,28 @@ export function ContactTimeline({ contactId, createdAt, searchable = false }: Pr
         Resumir contato com IA
       </Button>
 
+      {/* Search */}
+      {searchable && (
+        <div className="relative">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+          <Input
+            placeholder="Pesquisar no histórico..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-8 pl-7 pr-8 text-xs"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+      )}
+
+
       {/* Filters */}
       <div className="flex flex-wrap gap-1.5">
         {FILTERS.map(f => (
