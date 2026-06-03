@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react';
 import { useContactHistory, INTERACTION_TYPES } from '@/hooks/useContactHistory';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { UserPlus, MessageCircle, Phone, FileText, Handshake, DollarSign, StickyNote, Clock, ArrowRightLeft, Trophy, Plus, X, Send, CalendarClock, Thermometer, Filter, Sparkles, Loader2 } from 'lucide-react';
+import { UserPlus, MessageCircle, Phone, FileText, Handshake, DollarSign, StickyNote, Clock, ArrowRightLeft, Trophy, Plus, X, Send, CalendarClock, Thermometer, Filter, Sparkles, Loader2, Search, Mail } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -45,14 +46,16 @@ const EVENT_ICONS: Record<string, { icon: React.ElementType; className: string }
 interface Props {
   contactId: string;
   createdAt?: string;
+  searchable?: boolean;
 }
 
-export function ContactTimeline({ contactId, createdAt }: Props) {
+export function ContactTimeline({ contactId, createdAt, searchable = false }: Props) {
   const { entries, loading, fetchHistory, addEntry } = useContactHistory();
   const [showNoteInput, setShowNoteInput] = useState(false);
   const [noteText, setNoteText] = useState('');
   const [saving, setSaving] = useState(false);
   const [filter, setFilter] = useState<FilterType>('all');
+  const [search, setSearch] = useState('');
   const [aiOpen, setAiOpen] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSummary, setAiSummary] = useState('');
@@ -109,11 +112,19 @@ export function ContactTimeline({ contactId, createdAt }: Props) {
     }] : []),
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-  const filteredEvents = filter === 'all'
+  const baseFiltered = filter === 'all'
     ? allEvents
     : filter === 'temperatura'
       ? allEvents.filter(e => e.type === 'stage_change' && e.description?.toLowerCase().includes('temperatura'))
       : allEvents.filter(e => FILTER_TYPES[filter].includes(e.type));
+
+  const q = search.trim().toLowerCase();
+  const filteredEvents = q
+    ? baseFiltered.filter(e =>
+        (e.description || '').toLowerCase().includes(q) ||
+        getLabel(e.type).toLowerCase().includes(q)
+      )
+    : baseFiltered;
 
   const getIcon = (type: string) => {
     return EVENT_ICONS[type] || { icon: Clock, className: 'text-muted-foreground bg-muted border-border' };
@@ -154,6 +165,28 @@ export function ContactTimeline({ contactId, createdAt }: Props) {
         {aiLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5 text-primary" />}
         Resumir contato com IA
       </Button>
+
+      {/* Search */}
+      {searchable && (
+        <div className="relative">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+          <Input
+            placeholder="Pesquisar no histórico..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="h-8 pl-7 pr-8 text-xs"
+          />
+          {search && (
+            <button
+              onClick={() => setSearch('')}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          )}
+        </div>
+      )}
+
 
       {/* Filters */}
       <div className="flex flex-wrap gap-1.5">

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -134,77 +135,86 @@ export function LeadDetailDrawer({ contact, open, onOpenChange, onSave }: LeadDe
           </SheetHeader>
         </div>
 
-        <div className="p-4 space-y-4">
-          <Field label="Nome" status={<FieldStatus field="name" />}>
-            <Input value={form.name} onChange={(e) => handleChange('name', e.target.value)} onBlur={() => handleBlur('name')} placeholder="Nome do lead" />
-          </Field>
-
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Telefone" status={<FieldStatus field="phone" />} icon={<Phone className="h-3 w-3" />}>
-              <Input value={form.phone} onChange={(e) => handleChange('phone', e.target.value)} onBlur={() => handleBlur('phone')} placeholder="(00) 0000-0000" />
-            </Field>
-            <Field label="WhatsApp" status={<FieldStatus field="whatsapp" />} icon={<MessageCircle className="h-3 w-3" />}>
-              <Input value={form.whatsapp} onChange={(e) => handleChange('whatsapp', e.target.value)} onBlur={() => handleBlur('whatsapp')} placeholder="(00) 90000-0000" />
-            </Field>
+        <Tabs defaultValue="detalhes" className="w-full">
+          <div className="px-4 pt-3">
+            <TabsList className="grid w-full grid-cols-3 h-9">
+              <TabsTrigger value="detalhes" className="text-xs">Detalhes</TabsTrigger>
+              <TabsTrigger value="tarefas" className="text-xs">Tarefas</TabsTrigger>
+              <TabsTrigger value="historico" className="text-xs">Histórico</TabsTrigger>
+            </TabsList>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Cidade" status={<FieldStatus field="city" />}>
-              <Input value={form.city} onChange={(e) => handleChange('city', e.target.value)} onBlur={() => handleBlur('city')} placeholder="Cidade" />
+          <TabsContent value="detalhes" className="p-4 space-y-4 mt-0">
+            <Field label="Nome" status={<FieldStatus field="name" />}>
+              <Input value={form.name} onChange={(e) => handleChange('name', e.target.value)} onBlur={() => handleBlur('name')} placeholder="Nome do lead" />
             </Field>
-            <Field label="Empresa" status={<FieldStatus field="company_name" />}>
-              <Input value={form.company_name} onChange={(e) => handleChange('company_name', e.target.value)} onBlur={() => handleBlur('company_name')} placeholder="Empresa" />
+
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Telefone" status={<FieldStatus field="phone" />} icon={<Phone className="h-3 w-3" />}>
+                <Input value={form.phone} onChange={(e) => handleChange('phone', e.target.value)} onBlur={() => handleBlur('phone')} placeholder="(00) 0000-0000" />
+              </Field>
+              <Field label="WhatsApp" status={<FieldStatus field="whatsapp" />} icon={<MessageCircle className="h-3 w-3" />}>
+                <Input value={form.whatsapp} onChange={(e) => handleChange('whatsapp', e.target.value)} onBlur={() => handleBlur('whatsapp')} placeholder="(00) 90000-0000" />
+              </Field>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Cidade" status={<FieldStatus field="city" />}>
+                <Input value={form.city} onChange={(e) => handleChange('city', e.target.value)} onBlur={() => handleBlur('city')} placeholder="Cidade" />
+              </Field>
+              <Field label="Empresa" status={<FieldStatus field="company_name" />}>
+                <Input value={form.company_name} onChange={(e) => handleChange('company_name', e.target.value)} onBlur={() => handleBlur('company_name')} placeholder="Empresa" />
+              </Field>
+            </div>
+
+            <Field label="Origem do Lead" status={<FieldStatus field="origem_lead" />}>
+              <Input value={form.origem_lead} onChange={(e) => handleChange('origem_lead', e.target.value)} onBlur={() => handleBlur('origem_lead')} placeholder="Instagram, indicação, site..." />
             </Field>
-          </div>
 
-          <Field label="Origem do Lead" status={<FieldStatus field="origem_lead" />}>
-            <Input value={form.origem_lead} onChange={(e) => handleChange('origem_lead', e.target.value)} onBlur={() => handleBlur('origem_lead')} placeholder="Instagram, indicação, site..." />
-          </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Valor potencial (R$)" status={<FieldStatus field="valor_estimado" />}>
+                <Input
+                  type="number"
+                  inputMode="decimal"
+                  value={form.valor_estimado}
+                  onChange={(e) => handleChange('valor_estimado', e.target.value)}
+                  onBlur={() => handleBlur('valor_estimado')}
+                  placeholder="0,00"
+                />
+              </Field>
+              <Field label="Responsável" status={<FieldStatus field="salesperson" />}>
+                <Input value={form.salesperson} onChange={(e) => handleChange('salesperson', e.target.value)} onBlur={() => handleBlur('salesperson')} placeholder="Nome" />
+              </Field>
+            </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Field label="Valor potencial (R$)" status={<FieldStatus field="valor_estimado" />}>
-              <Input
-                type="number"
-                inputMode="decimal"
-                value={form.valor_estimado}
-                onChange={(e) => handleChange('valor_estimado', e.target.value)}
-                onBlur={() => handleBlur('valor_estimado')}
-                placeholder="0,00"
+            <div className="grid grid-cols-2 gap-3 pt-1">
+              <ReadOnly label="Criado em" value={formatDate(contact.created_at)} />
+              <ReadOnly label="Último contato" value={formatDateShort(contact.ultimo_contato)} />
+            </div>
+
+            <Field label="Observações" status={<FieldStatus field="notes" />}>
+              <Textarea
+                value={form.notes}
+                onChange={(e) => handleChange('notes', e.target.value, 1000)}
+                onBlur={() => handleBlur('notes')}
+                placeholder="Notas internas sobre o lead..."
+                rows={5}
               />
             </Field>
-            <Field label="Responsável" status={<FieldStatus field="salesperson" />}>
-              <Input value={form.salesperson} onChange={(e) => handleChange('salesperson', e.target.value)} onBlur={() => handleBlur('salesperson')} placeholder="Nome" />
-            </Field>
-          </div>
 
-          <div className="grid grid-cols-2 gap-3 pt-1">
-            <ReadOnly label="Criado em" value={formatDate(contact.created_at)} />
-            <ReadOnly label="Último contato" value={formatDateShort(contact.ultimo_contato)} />
-          </div>
+            <p className="text-[10px] text-muted-foreground text-center pt-2">
+              As alterações são salvas automaticamente.
+            </p>
+          </TabsContent>
 
-          <Field label="Observações" status={<FieldStatus field="notes" />}>
-            <Textarea
-              value={form.notes}
-              onChange={(e) => handleChange('notes', e.target.value, 1000)}
-              onBlur={() => handleBlur('notes')}
-              placeholder="Notas internas sobre o lead..."
-              rows={5}
-            />
-          </Field>
-
-          <p className="text-[10px] text-muted-foreground text-center pt-2">
-            As alterações são salvas automaticamente.
-          </p>
-
-          <div className="pt-4 border-t">
+          <TabsContent value="tarefas" className="p-4 mt-0">
             <ContactTasksPanel contactId={contact.id} />
-          </div>
+          </TabsContent>
 
-          <div className="pt-4 border-t">
-            <h3 className="text-sm font-semibold mb-3">Timeline do Lead</h3>
-            <ContactTimeline contactId={contact.id} createdAt={contact.created_at} />
-          </div>
-        </div>
+          <TabsContent value="historico" className="p-4 mt-0">
+            <ContactTimeline contactId={contact.id} createdAt={contact.created_at} searchable />
+          </TabsContent>
+        </Tabs>
       </SheetContent>
     </Sheet>
   );
