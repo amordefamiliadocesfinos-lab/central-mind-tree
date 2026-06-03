@@ -102,6 +102,7 @@ import { Zap } from 'lucide-react';
 import { differenceInDays, parseISO, format, isSameDay, isBefore, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
+import { CommercialDashboard } from '@/components/dashboard/CommercialDashboard';
 import { openWhatsApp } from '@/lib/whatsapp';
 import { useWhatsAppWithLog } from '@/hooks/useWhatsAppWithLog';
 
@@ -735,6 +736,11 @@ export default function Contatos() {
               Novo
             </Button>
           </div>
+        </div>
+
+        {/* Dashboard Comercial - tempo real */}
+        <div className="px-4 pt-2 pb-1">
+          <CommercialDashboard />
         </div>
 
         {/* Indicadores do CRM */}

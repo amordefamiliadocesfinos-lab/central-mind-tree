@@ -39,7 +39,7 @@ import { CampaignResults } from '@/components/dashboard/CampaignResults';
 import { CompanyStatus } from '@/components/dashboard/CompanyStatus';
 import { BottleneckCard } from '@/components/dashboard/BottleneckCard';
 import { NextActionsCard } from '@/components/dashboard/NextActionsCard';
-import { CommercialDashboard } from '@/components/dashboard/CommercialDashboard';
+
 
 interface DashboardData {
   // Foco
@@ -359,8 +359,6 @@ export default function Dashboard() {
           </Button>
         </div>
 
-        {/* Dashboard Comercial - tempo real */}
-        <CommercialDashboard />
 
         {/* Situação da Empresa - status geral em tempo real */}
         <CompanyStatus />
