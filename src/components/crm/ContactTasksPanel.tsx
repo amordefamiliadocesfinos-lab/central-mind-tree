@@ -99,7 +99,7 @@ export function ContactTasksPanel({ contactId }: { contactId: string }) {
   };
 
   const toggleDone = async (task: Task) => {
-    const newStatus = task.status === 'done' ? 'todo' : 'done';
+    const newStatus = task.status === 'concluído' ? 'pendente' : 'concluído';
     await supabase.from('tasks').update({ status: newStatus }).eq('id', task.id);
     fetchTasks();
   };
