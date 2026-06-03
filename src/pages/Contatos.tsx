@@ -671,7 +671,7 @@ export default function Contatos() {
         scoreInfo={scoreInfo}
         isDragged={draggedContact?.id === contact.id}
         hasPhone={!!phone}
-        onEdit={() => { setEditingContact(contact); setFormOpen(true); }}
+        onEdit={() => { setDetailContact(contact); setDetailOpen(true); }}
         onWhatsApp={() => handleWhatsApp(contact)}
         onViewOrders={() => { setHistoryContact(contact); setHistoryOpen(true); }}
         onViewHistory={() => { setTimelineContact(contact); setTimelineOpen(true); }}
