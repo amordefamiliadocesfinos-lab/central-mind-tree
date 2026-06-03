@@ -96,6 +96,9 @@ import { KommoFunnelView } from '@/components/crm/KommoFunnelView';
 import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { ContactCard } from '@/components/crm/ContactCard';
 import { LeadDetailDrawer } from '@/components/crm/LeadDetailDrawer';
+import { FunnelAutomationsPanel } from '@/components/crm/FunnelAutomationsPanel';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Zap } from 'lucide-react';
 import { differenceInDays, parseISO, format, isSameDay, isBefore, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -225,6 +228,7 @@ export default function Contatos() {
   const [formOpen, setFormOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | undefined>();
   const [detailOpen, setDetailOpen] = useState(false);
+  const [automationsOpen, setAutomationsOpen] = useState(false);
   const [detailContact, setDetailContact] = useState<Contact | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
@@ -957,7 +961,12 @@ export default function Contatos() {
             </SelectContent>
           </Select>
 
-          <div className="flex border rounded-lg ml-auto overflow-hidden">
+          <Button variant="outline" size="sm" className="h-9 gap-1.5 ml-auto mr-2" onClick={() => setAutomationsOpen(true)} title="Automações do Funil">
+            <Zap className="h-4 w-4 text-primary" />
+            <span className="hidden sm:inline text-xs">Automações</span>
+          </Button>
+
+          <div className="flex border rounded-lg overflow-hidden">
             <Button variant={viewMode === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 rounded-none" onClick={() => setViewMode('kanban')} title="Kanban">
               <LayoutGrid className="h-4 w-4" />
             </Button>
@@ -1378,6 +1387,13 @@ export default function Contatos() {
         contact={(detailContact && contacts.find(c => c.id === detailContact.id)) || detailContact || null}
         onSave={updateContact}
       />
+
+      <Dialog open={automationsOpen} onOpenChange={setAutomationsOpen}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          <FunnelAutomationsPanel onClose={() => setAutomationsOpen(false)} />
+        </DialogContent>
+      </Dialog>
+
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
