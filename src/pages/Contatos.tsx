@@ -961,7 +961,12 @@ export default function Contatos() {
             </SelectContent>
           </Select>
 
-          <div className="flex border rounded-lg ml-auto overflow-hidden">
+          <Button variant="outline" size="sm" className="h-9 gap-1.5 ml-auto mr-2" onClick={() => setAutomationsOpen(true)} title="Automações do Funil">
+            <Zap className="h-4 w-4 text-primary" />
+            <span className="hidden sm:inline text-xs">Automações</span>
+          </Button>
+
+          <div className="flex border rounded-lg overflow-hidden">
             <Button variant={viewMode === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 rounded-none" onClick={() => setViewMode('kanban')} title="Kanban">
               <LayoutGrid className="h-4 w-4" />
             </Button>
