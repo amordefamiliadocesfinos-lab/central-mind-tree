@@ -698,7 +698,7 @@ export default function Contatos() {
         onSmartAttend={async () => handleSmartAttend(contact)}
       />
     );
-  }, [getUrgencyLevel, getNoResponseInfo, getScore, hasOrders, checklistMap, draggedContact, handleWhatsApp, handleTempChange, addEntry, refreshNoResponse, refetchChecklists, refetchDaily, handleSmartAttend, handleCreateOrder]);
+  }, [getUrgencyLevel, getNoResponseInfo, getScore, hasOrders, checklistMap, draggedContact, handleWhatsApp, handleTempChange, addEntry, refreshNoResponse, refetchChecklists, refetchDaily, handleSmartAttend, handleCreateOrder, logAndOpen]);
 
   const { tags } = useContactTags();
 
