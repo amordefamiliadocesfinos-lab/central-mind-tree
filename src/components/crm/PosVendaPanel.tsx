@@ -223,7 +223,7 @@ export function PosVendaPanel({ open, onOpenChange }: Props) {
                 Histórico de compras — {historyContact.name}
               </DialogTitle>
             </DialogHeader>
-            <ContactOrderHistory contactId={historyContact.id} />
+            <ContactOrderHistory contact={historyContact as any} />)
           </DialogContent>
         </Dialog>
       )}
