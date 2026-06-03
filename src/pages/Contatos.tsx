@@ -968,7 +968,12 @@ export default function Contatos() {
             </SelectContent>
           </Select>
 
-          <Button variant="outline" size="sm" className="h-9 gap-1.5 ml-auto mr-2" onClick={() => setAutomationsOpen(true)} title="Automações do Funil">
+          <Button variant="outline" size="sm" className="h-9 gap-1.5 ml-auto" onClick={() => setPosVendaOpen(true)} title="Pós-Venda">
+            <Heart className="h-4 w-4 text-pink-600" />
+            <span className="hidden sm:inline text-xs">Pós-Venda</span>
+          </Button>
+
+          <Button variant="outline" size="sm" className="h-9 gap-1.5 mr-2" onClick={() => setAutomationsOpen(true)} title="Automações do Funil">
             <Zap className="h-4 w-4 text-primary" />
             <span className="hidden sm:inline text-xs">Automações</span>
           </Button>
