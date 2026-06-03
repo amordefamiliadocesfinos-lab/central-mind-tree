@@ -95,6 +95,7 @@ import { FunnelView } from '@/components/FunnelView';
 import { KommoFunnelView } from '@/components/crm/KommoFunnelView';
 import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { ContactCard } from '@/components/crm/ContactCard';
+import { LeadDetailDrawer } from '@/components/crm/LeadDetailDrawer';
 import { differenceInDays, parseISO, format, isSameDay, isBefore, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
