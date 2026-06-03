@@ -99,6 +99,8 @@ import { differenceInDays, parseISO, format, isSameDay, isBefore, startOfDay } f
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import { openWhatsApp } from '@/lib/whatsapp';
+import { useWhatsAppWithLog } from '@/hooks/useWhatsAppWithLog';
+
 
 const FUNNEL_STAGES = [
   { key: 'novo_lead', label: 'Novo Lead', color: 'bg-blue-500', textColor: 'text-blue-700', bgLight: 'bg-blue-50/80 border-blue-200', headerBg: 'bg-gradient-to-r from-blue-500 to-blue-400' },
