@@ -738,6 +738,11 @@ export default function Contatos() {
           </div>
         </div>
 
+        {/* Dashboard Comercial - tempo real */}
+        <div className="px-4 pt-2 pb-1">
+          <CommercialDashboard />
+        </div>
+
         {/* Indicadores do CRM */}
         <div className="grid grid-cols-4 gap-2">
           <Card className="p-2.5 text-center border-0 shadow-sm bg-card">
