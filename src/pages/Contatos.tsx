@@ -84,6 +84,7 @@ import { useContactChecklist } from '@/hooks/useContactChecklist';
 import { useDailyMetrics } from '@/hooks/useDailyMetrics';
 import { useLeadScore } from '@/hooks/useLeadScore';
 import { useContactTags } from '@/hooks/useContactTags';
+import { useContactNextTasks } from '@/hooks/useContactNextTasks';
 import { ContactFormDialog } from '@/components/financial/ContactFormDialog';
 import { WhatsAppMessageSelector } from '@/components/crm/WhatsAppMessageSelector';
 import { ContactOrderHistory } from '@/components/financial/ContactOrderHistory';
