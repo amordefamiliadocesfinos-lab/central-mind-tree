@@ -50,7 +50,26 @@ import {
   Eye,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { differenceInDays, parseISO, format } from 'date-fns';
+import { differenceInDays, parseISO, format, isToday, isYesterday } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
+function fmtKommoDate(iso?: string | null): string {
+  if (!iso) return '';
+  try {
+    const d = parseISO(iso);
+    if (isToday(d)) return `Hoje ${format(d, 'HH:mm')}`;
+    if (isYesterday(d)) return `Ontem ${format(d, 'HH:mm')}`;
+    const diff = Math.abs(differenceInDays(new Date(), d));
+    if (diff < 7) return format(d, 'EEE HH:mm', { locale: ptBR });
+    return format(d, 'dd MMM', { locale: ptBR });
+  } catch { return ''; }
+}
+
+function leadIdShort(id: string): string {
+  const hex = id.replace(/-/g, '');
+  const n = parseInt(hex.slice(0, 8), 16);
+  return `#${(n % 90000000 + 10000000).toString()}`;
+}
 
 const TEMP_CONFIG = {
   frio: { label: 'Frio', icon: Snowflake, className: 'bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-950/40 dark:text-sky-400 dark:border-sky-700', dot: 'bg-sky-500' },
