@@ -106,7 +106,7 @@ export function PosVendaPanel({ open, onOpenChange }: Props) {
   const markAsPosVenda = async (c: Contact) => {
     await supabase.from('contacts').update({ funnel_status: 'pos_venda' as any }).eq('id', c.id);
     toast.success(`${c.name} movido para Pós-Venda`);
-    refetch();
+    fetchContacts();
   };
 
   const renderContact = (c: Contact) => {
