@@ -50,7 +50,26 @@ import {
   Eye,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { differenceInDays, parseISO, format } from 'date-fns';
+import { differenceInDays, parseISO, format, isToday, isYesterday } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
+function fmtKommoDate(iso?: string | null): string {
+  if (!iso) return '';
+  try {
+    const d = parseISO(iso);
+    if (isToday(d)) return `Hoje ${format(d, 'HH:mm')}`;
+    if (isYesterday(d)) return `Ontem ${format(d, 'HH:mm')}`;
+    const diff = Math.abs(differenceInDays(new Date(), d));
+    if (diff < 7) return format(d, 'EEE HH:mm', { locale: ptBR });
+    return format(d, 'dd MMM', { locale: ptBR });
+  } catch { return ''; }
+}
+
+function leadIdShort(id: string): string {
+  const hex = id.replace(/-/g, '');
+  const n = parseInt(hex.slice(0, 8), 16);
+  return `#${(n % 90000000 + 10000000).toString()}`;
+}
 
 const TEMP_CONFIG = {
   frio: { label: 'Frio', icon: Snowflake, className: 'bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-950/40 dark:text-sky-400 dark:border-sky-700', dot: 'bg-sky-500' },
@@ -171,81 +190,60 @@ export function ContactCard({
         }}
         title="Clique para editar"
       >
-        {/* ═══════ KOMMO-STYLE COMPACT HEADER ═══════ */}
-        <div className="p-3">
-          <div className="flex items-start gap-2.5">
+        {/* ═══════ KOMMO ANÁLISE-FUNIL STYLE HEADER ═══════ */}
+        <div className="p-2.5">
+          <div className="flex items-start gap-2">
             <ContactAvatar photoUrl={contact.photo_url} name={contact.name} size="sm" />
 
             <div className="flex-1 min-w-0">
-              {/* Row 1: Name + Date */}
+              {/* Row 1: Name (muted) + relative date */}
               <div className="flex items-start justify-between gap-2">
-                <p className="font-semibold text-[13px] leading-tight text-foreground truncate">
-                  {contact.name}
-                </p>
-                <span className="text-[10px] text-muted-foreground shrink-0 whitespace-nowrap mt-0.5">
-                  {(() => { try { return format(parseISO(contact.created_at), 'dd/MM/yyyy'); } catch { return ''; } })()}
+                <span className="text-[12px] text-muted-foreground truncate">
+                  {contact.name || 'Sem nome'}
+                </span>
+                <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">
+                  {fmtKommoDate(contact.updated_at || contact.created_at)}
                 </span>
               </div>
 
-              {/* Row 2: Topic in blue (Kommo style) */}
-              <p
-                className="text-[12px] font-medium text-blue-600 dark:text-blue-400 leading-snug mt-0.5 truncate"
-                title={contact.fantasy_name || contact.notes || contact.name}
-              >
-                {contact.fantasy_name
-                  || (contact.notes ? contact.notes.split('\n')[0] : null)
-                  || `Lead #${contact.id.slice(0, 7)}`}
-              </p>
+              {/* Row 2: Lead #ID in sky */}
+              <div className="mt-0.5">
+                <span className="text-[13px] font-medium text-sky-600 dark:text-sky-400 truncate">
+                  Lead {leadIdShort(contact.id)}
+                </span>
+              </div>
 
-              {/* Row 3: Value + small tags + task indicator */}
-              <div className="flex items-center justify-between gap-2 mt-1.5">
-                <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-                  {contact.valor_estimado && contact.valor_estimado > 0 ? (
-                    <span className="text-[12px] font-bold text-foreground tabular-nums">
-                      {contact.valor_estimado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-                    </span>
-                  ) : null}
-
-                  {contact.client_classification === 'vip' && (
-                    <span className="inline-flex items-center rounded border border-border px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">VIP</span>
-                  )}
-                  {urgencyLevel === 'urgente' && (
-                    <span className="inline-flex items-center rounded border border-border px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">Urgent</span>
-                  )}
-                  {urgencyLevel === 'medio' && (
-                    <span className="inline-flex items-center rounded border border-border px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">Priority</span>
-                  )}
-                  {subtypeCfg && (
-                    <span className="inline-flex items-center rounded border border-border px-1.5 py-px text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">{subtypeCfg.label}</span>
-                  )}
+              {/* Optional value */}
+              {contact.valor_estimado != null && Number(contact.valor_estimado) > 0 && (
+                <div className="text-[11px] text-foreground/80 mt-0.5 tabular-nums">
+                  {Number(contact.valor_estimado).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </div>
+              )}
 
-                {/* Task indicator (Kommo) */}
+              {/* Row 3: city/fantasy + task indicator */}
+              <div className="flex items-center justify-between gap-2 mt-1">
+                <span className="text-[10px] text-muted-foreground truncate uppercase tracking-wide">
+                  {contact.fantasy_name || contact.city || ''}
+                </span>
                 {(() => {
                   const next = nextTaskDate || contact.next_action_date || contact.next_contact_date;
+                  let label = 'Sem Tarefas';
+                  let dot = 'bg-amber-500';
+                  let cls = 'text-amber-600';
                   if (next) {
                     try {
-                      const days = differenceInDays(parseISO(next), new Date());
-                      if (days < 0) return (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-red-600 dark:text-red-400 whitespace-nowrap shrink-0">
-                          {Math.abs(days)}d <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                        </span>
-                      );
-                      if (days === 0) return (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-green-600 dark:text-green-400 whitespace-nowrap shrink-0">
-                          Hoje <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                        </span>
-                      );
-                      return (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground whitespace-nowrap shrink-0">
-                          {days}d <span className="h-1.5 w-1.5 rounded-full bg-muted-foreground/60" />
-                        </span>
-                      );
-                    } catch { return null; }
+                      const d = parseISO(next);
+                      const diff = differenceInDays(d, new Date());
+                      if (diff === 0) { label = 'Hoje'; dot = 'bg-emerald-500'; cls = 'text-emerald-600'; }
+                      else if (diff < 0) { label = `${Math.abs(diff)}d atrasada`; dot = 'bg-rose-500'; cls = 'text-rose-600'; }
+                      else if (diff < 7) { label = `Em ${diff}d`; dot = 'bg-sky-500'; cls = 'text-sky-600'; }
+                      else { label = format(d, 'dd MMM', { locale: ptBR }); dot = 'bg-muted-foreground'; cls = 'text-muted-foreground'; }
+                    } catch {}
                   }
                   return (
-                    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-muted-foreground whitespace-nowrap shrink-0">
-                      Sem tarefas <span className="h-1.5 w-1.5 rounded-full bg-red-400" />
+                    <span className={cn('inline-flex items-center gap-1 text-[10px] whitespace-nowrap shrink-0', cls)}>
+                      {label}
+                      <span className={cn('inline-block h-1.5 w-1.5 rounded-full', dot)} />
                     </span>
                   );
                 })()}
@@ -297,18 +295,18 @@ export function ContactCard({
             </Link>
           )}
 
-          {/* ═══════ EXPANDABLE — "Ver mais" ═══════ */}
-          <Collapsible open={expanded} onOpenChange={setExpanded} className="mt-2">
+          {/* ═══════ EXPANDABLE — arrow only ═══════ */}
+          <Collapsible open={expanded} onOpenChange={setExpanded} className="mt-1.5">
             <CollapsibleTrigger asChild>
               <button
-                className="flex items-center justify-center gap-1 w-full text-[10px] text-muted-foreground hover:text-foreground transition-colors py-1 border-t border-border/50"
+                className="flex items-center justify-center w-full text-muted-foreground hover:text-foreground transition-colors py-0.5"
                 onClick={(e) => e.stopPropagation()}
+                aria-label={expanded ? 'Ver menos' : 'Ver mais'}
               >
-                <Eye className="h-2.5 w-2.5" />
-                {expanded ? 'Ver menos' : 'Ver mais'}
-                <ChevronDown className={cn('h-2.5 w-2.5 transition-transform', expanded && 'rotate-180')} />
+                <ChevronDown className={cn('h-3.5 w-3.5 transition-transform', expanded && 'rotate-180')} />
               </button>
             </CollapsibleTrigger>
+
             <CollapsibleContent>
               <div className="space-y-2 pt-2 border-t border-border/50 animate-in fade-in-0 slide-in-from-top-1 duration-200">
                 {/* No-response suggestion */}
