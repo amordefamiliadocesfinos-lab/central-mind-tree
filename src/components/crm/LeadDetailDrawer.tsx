@@ -135,7 +135,6 @@ export function LeadDetailDrawer({ contact, open, onOpenChange, onSave }: LeadDe
           </SheetHeader>
         </div>
 
-        <div className="p-4 space-y-4">
         <Tabs defaultValue="detalhes" className="w-full">
           <div className="px-4 pt-3">
             <TabsList className="grid w-full grid-cols-3 h-9">
