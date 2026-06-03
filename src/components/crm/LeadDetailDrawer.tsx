@@ -138,9 +138,10 @@ export function LeadDetailDrawer({ contact, open, onOpenChange, onSave }: LeadDe
 
         <Tabs defaultValue="detalhes" className="w-full">
           <div className="px-4 pt-3">
-            <TabsList className="grid w-full grid-cols-3 h-9">
+            <TabsList className="grid w-full grid-cols-4 h-9">
               <TabsTrigger value="detalhes" className="text-xs">Detalhes</TabsTrigger>
               <TabsTrigger value="tarefas" className="text-xs">Tarefas</TabsTrigger>
+              <TabsTrigger value="atendimento" className="text-xs">Atendimento</TabsTrigger>
               <TabsTrigger value="historico" className="text-xs">Histórico</TabsTrigger>
             </TabsList>
           </div>
