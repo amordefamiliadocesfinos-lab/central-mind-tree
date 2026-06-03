@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, Check, MessageCircle, Phone } from 'lucide-react';
-import { ContactAvatar } from '@/components/contacts/ContactAvatar';
+import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Contact } from '@/hooks/useContacts';
