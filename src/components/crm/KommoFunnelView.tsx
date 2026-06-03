@@ -120,7 +120,7 @@ export function KommoFunnelView({ contacts, onLeadClick, onStageChange, onCreate
     let comHoje = 0, semTarefa = 0, atrasadas = 0, novoHoje = 0, novoOntem = 0;
 
     filtered.forEach(c => {
-      const next = c.next_action_date || c.next_contact_date;
+      const next = nextTaskByContact[c.id] || c.next_action_date || c.next_contact_date;
       if (!next) { semTarefa++; }
       else {
         try {
