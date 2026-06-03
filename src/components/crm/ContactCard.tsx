@@ -98,6 +98,7 @@ interface ContactCardProps {
   onSendSuggestion: () => Promise<void>;
   onSmartAttend: () => Promise<void>;
   hasPhone: boolean;
+  nextTaskDate?: string | null;
 }
 
 export function ContactCard({
@@ -121,6 +122,7 @@ export function ContactCard({
   onSendSuggestion,
   onSmartAttend,
   hasPhone,
+  nextTaskDate,
 }: ContactCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [showFollowUp, setShowFollowUp] = useState(false);
@@ -220,7 +222,7 @@ export function ContactCard({
 
                 {/* Task indicator (Kommo) */}
                 {(() => {
-                  const next = contact.next_action_date || contact.next_contact_date;
+                  const next = nextTaskDate || contact.next_action_date || contact.next_contact_date;
                   if (next) {
                     try {
                       const days = differenceInDays(parseISO(next), new Date());

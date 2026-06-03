@@ -66,9 +66,10 @@ interface KommoFunnelViewProps {
   onLeadClick: (contact: Contact) => void;
   onStageChange: (contact: Contact, newStage: string) => void;
   onCreateLead?: () => void;
+  nextTaskByContact?: Record<string, string>;
 }
 
-export function KommoFunnelView({ contacts, onLeadClick, onStageChange, onCreateLead }: KommoFunnelViewProps) {
+export function KommoFunnelView({ contacts, onLeadClick, onStageChange, onCreateLead, nextTaskByContact = {} }: KommoFunnelViewProps) {
   const [tab, setTab] = useState<'funnel' | 'list'>('funnel');
   const [query, setQuery] = useState('');
   const [dragId, setDragId] = useState<string | null>(null);
@@ -119,7 +120,7 @@ export function KommoFunnelView({ contacts, onLeadClick, onStageChange, onCreate
     let comHoje = 0, semTarefa = 0, atrasadas = 0, novoHoje = 0, novoOntem = 0;
 
     filtered.forEach(c => {
-      const next = c.next_action_date || c.next_contact_date;
+      const next = nextTaskByContact[c.id] || c.next_action_date || c.next_contact_date;
       if (!next) { semTarefa++; }
       else {
         try {
@@ -137,7 +138,7 @@ export function KommoFunnelView({ contacts, onLeadClick, onStageChange, onCreate
     });
 
     return { comHoje, semTarefa, atrasadas, novoHoje, novoOntem };
-  }, [filtered]);
+  }, [filtered, nextTaskByContact]);
 
   const handleDragStart = (e: React.DragEvent, c: Contact) => {
     setDragId(c.id);
@@ -277,7 +278,7 @@ export function KommoFunnelView({ contacts, onLeadClick, onStageChange, onCreate
                       </p>
                     )}
                     {list.map((c) => {
-                      const next = c.next_action_date || c.next_contact_date;
+                      const next = nextTaskByContact[c.id] || c.next_action_date || c.next_contact_date;
                       let taskLabel = 'Sem Tarefas';
                       let taskDotClass = 'bg-amber-500';
                       if (next) {

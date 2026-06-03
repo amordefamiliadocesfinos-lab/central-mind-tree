@@ -84,6 +84,7 @@ import { useContactChecklist } from '@/hooks/useContactChecklist';
 import { useDailyMetrics } from '@/hooks/useDailyMetrics';
 import { useLeadScore } from '@/hooks/useLeadScore';
 import { useContactTags } from '@/hooks/useContactTags';
+import { useContactNextTasks } from '@/hooks/useContactNextTasks';
 import { ContactFormDialog } from '@/components/financial/ContactFormDialog';
 import { WhatsAppMessageSelector } from '@/components/crm/WhatsAppMessageSelector';
 import { ContactOrderHistory } from '@/components/financial/ContactOrderHistory';
@@ -199,6 +200,7 @@ export default function Contatos() {
   const { addEntry } = useContactHistory();
   const { getTagsForContact } = useContactTags();
   const { hasOrders } = useContactsWithOrders();
+  const { nextTaskByContact } = useContactNextTasks();
   const { getNoResponseInfo, refreshNoResponse } = useNoResponseDetection();
   const { getScore } = useLeadScore(contacts, getNoResponseInfo, hasOrders);
   const contactIds = useMemo(() => contacts.filter(c => c.is_active).map(c => c.id), [contacts]);
@@ -681,6 +683,7 @@ export default function Contatos() {
         scoreInfo={scoreInfo}
         isDragged={draggedContact?.id === contact.id}
         hasPhone={!!phone}
+        nextTaskDate={nextTaskByContact[contact.id] || null}
         onEdit={() => { setDetailContact(contact); setDetailOpen(true); }}
         onWhatsApp={() => handleWhatsApp(contact)}
         onViewOrders={() => { setHistoryContact(contact); setHistoryOpen(true); }}
@@ -1126,10 +1129,12 @@ export default function Contatos() {
         ) : viewMode === 'funnel' ? (
           <KommoFunnelView
             contacts={contacts}
+            nextTaskByContact={nextTaskByContact}
             onLeadClick={(c) => { setDetailContact(c); setDetailOpen(true); }}
             onStageChange={(c, newStage) => handleStatusChange(c, newStage)}
             onCreateLead={() => { setEditingContact(null); setFormOpen(true); }}
           />
+
 
         ) : (
           <Card className="overflow-hidden">
