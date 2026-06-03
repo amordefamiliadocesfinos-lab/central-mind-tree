@@ -3804,6 +3804,7 @@ export type Database = {
           active_time_entry_id: string | null
           assigned_to: string | null
           checklist: Json | null
+          contact_id: string | null
           created_at: string
           deleted_at: string | null
           dependency_id: string | null
@@ -3821,6 +3822,7 @@ export type Database = {
           order_index: number
           progress: number
           scheduled_date: string | null
+          scheduled_time: string | null
           status: string
           title: string
           updated_at: string
@@ -3830,6 +3832,7 @@ export type Database = {
           active_time_entry_id?: string | null
           assigned_to?: string | null
           checklist?: Json | null
+          contact_id?: string | null
           created_at?: string
           deleted_at?: string | null
           dependency_id?: string | null
@@ -3847,6 +3850,7 @@ export type Database = {
           order_index?: number
           progress?: number
           scheduled_date?: string | null
+          scheduled_time?: string | null
           status?: string
           title: string
           updated_at?: string
@@ -3856,6 +3860,7 @@ export type Database = {
           active_time_entry_id?: string | null
           assigned_to?: string | null
           checklist?: Json | null
+          contact_id?: string | null
           created_at?: string
           deleted_at?: string | null
           dependency_id?: string | null
@@ -3873,6 +3878,7 @@ export type Database = {
           order_index?: number
           progress?: number
           scheduled_date?: string | null
+          scheduled_time?: string | null
           status?: string
           title?: string
           updated_at?: string
@@ -3884,6 +3890,13 @@ export type Database = {
             columns: ["assigned_to"]
             isOneToOne: false
             referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
             referencedColumns: ["id"]
           },
           {
