@@ -622,21 +622,22 @@ export default function Contatos() {
     if (!phone) return;
 
     const { message, approach } = getSmartMessage(contact);
-    const now = new Date().toISOString();
 
-    // Log to timeline
-    await addEntry(contact.id, 'whatsapp', `⚡ Atendimento iniciado via ação inteligente · ${approach}`, now);
+    await logAndOpen({
+      contactId: contact.id,
+      contactName: contact.name,
+      phone,
+      message,
+      approach,
+      source: 'crm_smart_attend',
+    });
 
     // Update último contato
-    await updateContact(contact.id, { ultimo_contato: now.split('T')[0] });
+    await updateContact(contact.id, { ultimo_contato: new Date().toISOString().split('T')[0] });
 
-    // Open WhatsApp (helper detecta mobile/desktop)
-    openWhatsApp(phone, message);
-
-    // Refresh data
     setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);
     toast.success(`⚡ Atendimento inteligente: ${approach}`);
-  }, [getSmartMessage, addEntry, updateContact, refreshNoResponse, refetchChecklists, refetchDaily]);
+  }, [getSmartMessage, logAndOpen, updateContact, refreshNoResponse, refetchChecklists, refetchDaily]);
 
   const handleCreateOrder = useCallback((contact: Contact) => {
     const params = new URLSearchParams({
