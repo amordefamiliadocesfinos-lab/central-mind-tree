@@ -194,6 +194,11 @@ export function LeadDetailDrawer({ contact, open, onOpenChange, onSave }: LeadDe
           <p className="text-[10px] text-muted-foreground text-center pt-2">
             As alterações são salvas automaticamente.
           </p>
+
+          <div className="pt-4 border-t">
+            <h3 className="text-sm font-semibold mb-3">Timeline do Lead</h3>
+            <ContactTimeline contactId={contact.id} createdAt={contact.created_at} />
+          </div>
         </div>
       </SheetContent>
     </Sheet>
