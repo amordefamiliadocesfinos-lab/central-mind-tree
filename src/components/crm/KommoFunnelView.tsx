@@ -278,7 +278,7 @@ export function KommoFunnelView({ contacts, onLeadClick, onStageChange, onCreate
                       </p>
                     )}
                     {list.map((c) => {
-                      const next = c.next_action_date || c.next_contact_date;
+                      const next = nextTaskByContact[c.id] || c.next_action_date || c.next_contact_date;
                       let taskLabel = 'Sem Tarefas';
                       let taskDotClass = 'bg-amber-500';
                       if (next) {
