@@ -489,12 +489,18 @@ export default function Contatos() {
   const handleWhatsAppSend = async (message: string, templateLabel: string) => {
     if (!whatsAppContact) return;
     const phone = whatsAppContact.whatsapp || whatsAppContact.mobile || whatsAppContact.phone;
-    if (phone) {
-      const now = new Date().toISOString();
-      await addEntry(whatsAppContact.id, 'whatsapp', `💬 Mensagem iniciada via WhatsApp (${templateLabel})`, now);
-      openWhatsApp(phone, message);
-      setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);
-    }
+    if (!phone) return;
+
+    await logAndOpen({
+      contactId: whatsAppContact.id,
+      contactName: whatsAppContact.name,
+      phone,
+      message,
+      templateLabel,
+      source: 'crm_card',
+    });
+
+    setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);
     setWhatsAppContact(null);
   };
 
