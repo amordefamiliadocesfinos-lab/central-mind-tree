@@ -1,0 +1,222 @@
+import { useEffect, useRef, useState } from 'react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Badge } from '@/components/ui/badge';
+import { Loader2, Check, MessageCircle, Phone } from 'lucide-react';
+import { ContactAvatar } from '@/components/crm/ContactAvatar';
+import { format, parseISO } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import type { Contact } from '@/hooks/useContacts';
+
+interface LeadDetailDrawerProps {
+  contact: Contact | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSave: (id: string, updates: Partial<Contact>) => Promise<any>;
+  onOpenFull?: () => void;
+}
+
+type FormState = {
+  name: string;
+  phone: string;
+  whatsapp: string;
+  city: string;
+  company_name: string;
+  origem_lead: string;
+  valor_estimado: string;
+  salesperson: string;
+  notes: string;
+};
+
+const toForm = (c: Contact): FormState => ({
+  name: c.name || '',
+  phone: c.phone || '',
+  whatsapp: c.whatsapp || '',
+  city: c.city || '',
+  company_name: c.company_name || '',
+  origem_lead: c.origem_lead || '',
+  valor_estimado: c.valor_estimado != null ? String(c.valor_estimado) : '',
+  salesperson: c.salesperson || '',
+  notes: c.notes || '',
+});
+
+const formatDate = (s?: string) => {
+  if (!s) return '—';
+  try { return format(parseISO(s), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }); } catch { return s; }
+};
+
+const formatDateShort = (s?: string) => {
+  if (!s) return '—';
+  try { return format(parseISO(s), 'dd/MM/yyyy', { locale: ptBR }); } catch { return s; }
+};
+
+export function LeadDetailDrawer({ contact, open, onOpenChange, onSave }: LeadDetailDrawerProps) {
+  const [form, setForm] = useState<FormState>(() => contact ? toForm(contact) : toForm({} as Contact));
+  const [savingField, setSavingField] = useState<string | null>(null);
+  const [savedField, setSavedField] = useState<string | null>(null);
+  const debounceRef = useRef<Record<string, any>>({});
+  const baselineRef = useRef<FormState | null>(null);
+
+  useEffect(() => {
+    if (contact) {
+      const next = toForm(contact);
+      setForm(next);
+      baselineRef.current = next;
+    }
+  }, [contact?.id]);
+
+  if (!contact) return null;
+
+  const commit = async (field: keyof FormState, value: string) => {
+    if (!contact) return;
+    if (baselineRef.current && baselineRef.current[field] === value) return;
+    setSavingField(field);
+    const updates: Partial<Contact> = {};
+    if (field === 'valor_estimado') {
+      const num = value === '' ? undefined : Number(value.replace(',', '.'));
+      (updates as any).valor_estimado = Number.isFinite(num) ? num : undefined;
+    } else {
+      (updates as any)[field] = value;
+    }
+    try {
+      await onSave(contact.id, updates);
+      if (baselineRef.current) baselineRef.current = { ...baselineRef.current, [field]: value };
+      setSavedField(field);
+      setTimeout(() => setSavedField((f) => (f === field ? null : f)), 1200);
+    } finally {
+      setSavingField((f) => (f === field ? null : f));
+    }
+  };
+
+  const handleChange = (field: keyof FormState, value: string, debounceMs = 700) => {
+    setForm((s) => ({ ...s, [field]: value }));
+    if (debounceRef.current[field]) clearTimeout(debounceRef.current[field]);
+    debounceRef.current[field] = setTimeout(() => commit(field, value), debounceMs);
+  };
+
+  const handleBlur = (field: keyof FormState) => {
+    if (debounceRef.current[field]) {
+      clearTimeout(debounceRef.current[field]);
+      delete debounceRef.current[field];
+    }
+    commit(field, form[field]);
+  };
+
+  const FieldStatus = ({ field }: { field: keyof FormState }) => {
+    if (savingField === field) return <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />;
+    if (savedField === field) return <Check className="h-3 w-3 text-emerald-600" />;
+    return null;
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto p-0">
+        <div className="sticky top-0 z-10 bg-background border-b">
+          <SheetHeader className="p-4">
+            <div className="flex items-start gap-3">
+              <ContactAvatar photoUrl={contact.photo_url} name={contact.name} size="md" />
+              <div className="flex-1 min-w-0">
+                <SheetTitle className="text-left text-base truncate">{form.name || 'Lead'}</SheetTitle>
+                <SheetDescription className="text-left text-xs">
+                  Edição rápida • salvamento automático
+                </SheetDescription>
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {contact.funnel_status && <Badge variant="secondary" className="text-[10px]">{contact.funnel_status}</Badge>}
+                  {contact.temperatura_lead && <Badge variant="outline" className="text-[10px] capitalize">{contact.temperatura_lead}</Badge>}
+                  {contact.client_classification && <Badge variant="outline" className="text-[10px] capitalize">{contact.client_classification}</Badge>}
+                </div>
+              </div>
+            </div>
+          </SheetHeader>
+        </div>
+
+        <div className="p-4 space-y-4">
+          <Field label="Nome" status={<FieldStatus field="name" />}>
+            <Input value={form.name} onChange={(e) => handleChange('name', e.target.value)} onBlur={() => handleBlur('name')} placeholder="Nome do lead" />
+          </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Telefone" status={<FieldStatus field="phone" />} icon={<Phone className="h-3 w-3" />}>
+              <Input value={form.phone} onChange={(e) => handleChange('phone', e.target.value)} onBlur={() => handleBlur('phone')} placeholder="(00) 0000-0000" />
+            </Field>
+            <Field label="WhatsApp" status={<FieldStatus field="whatsapp" />} icon={<MessageCircle className="h-3 w-3" />}>
+              <Input value={form.whatsapp} onChange={(e) => handleChange('whatsapp', e.target.value)} onBlur={() => handleBlur('whatsapp')} placeholder="(00) 90000-0000" />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Cidade" status={<FieldStatus field="city" />}>
+              <Input value={form.city} onChange={(e) => handleChange('city', e.target.value)} onBlur={() => handleBlur('city')} placeholder="Cidade" />
+            </Field>
+            <Field label="Empresa" status={<FieldStatus field="company_name" />}>
+              <Input value={form.company_name} onChange={(e) => handleChange('company_name', e.target.value)} onBlur={() => handleBlur('company_name')} placeholder="Empresa" />
+            </Field>
+          </div>
+
+          <Field label="Origem do Lead" status={<FieldStatus field="origem_lead" />}>
+            <Input value={form.origem_lead} onChange={(e) => handleChange('origem_lead', e.target.value)} onBlur={() => handleBlur('origem_lead')} placeholder="Instagram, indicação, site..." />
+          </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Valor potencial (R$)" status={<FieldStatus field="valor_estimado" />}>
+              <Input
+                type="number"
+                inputMode="decimal"
+                value={form.valor_estimado}
+                onChange={(e) => handleChange('valor_estimado', e.target.value)}
+                onBlur={() => handleBlur('valor_estimado')}
+                placeholder="0,00"
+              />
+            </Field>
+            <Field label="Responsável" status={<FieldStatus field="salesperson" />}>
+              <Input value={form.salesperson} onChange={(e) => handleChange('salesperson', e.target.value)} onBlur={() => handleBlur('salesperson')} placeholder="Nome" />
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <ReadOnly label="Criado em" value={formatDate(contact.created_at)} />
+            <ReadOnly label="Último contato" value={formatDateShort(contact.ultimo_contato)} />
+          </div>
+
+          <Field label="Observações" status={<FieldStatus field="notes" />}>
+            <Textarea
+              value={form.notes}
+              onChange={(e) => handleChange('notes', e.target.value, 1000)}
+              onBlur={() => handleBlur('notes')}
+              placeholder="Notas internas sobre o lead..."
+              rows={5}
+            />
+          </Field>
+
+          <p className="text-[10px] text-muted-foreground text-center pt-2">
+            As alterações são salvas automaticamente.
+          </p>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function Field({ label, children, status, icon }: { label: string; children: React.ReactNode; status?: React.ReactNode; icon?: React.ReactNode }) {
+  return (
+    <div className="space-y-1">
+      <Label className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+        {icon}
+        <span>{label}</span>
+        <span className="ml-auto">{status}</span>
+      </Label>
+      {children}
+    </div>
+  );
+}
+
+function ReadOnly({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="space-y-1">
+      <Label className="text-[11px] text-muted-foreground">{label}</Label>
+      <div className="h-9 px-3 flex items-center text-sm rounded-md border bg-muted/30 text-foreground/80">{value}</div>
+    </div>
+  );
+}

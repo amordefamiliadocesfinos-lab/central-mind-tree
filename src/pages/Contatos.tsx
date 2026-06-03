@@ -95,6 +95,7 @@ import { FunnelView } from '@/components/FunnelView';
 import { KommoFunnelView } from '@/components/crm/KommoFunnelView';
 import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { ContactCard } from '@/components/crm/ContactCard';
+import { LeadDetailDrawer } from '@/components/crm/LeadDetailDrawer';
 import { differenceInDays, parseISO, format, isSameDay, isBefore, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -223,6 +224,8 @@ export default function Contatos() {
   const [viewMode, setViewMode] = useState<'kanban' | 'funnel' | 'list' | 'sales_funnel'>('kanban');
   const [formOpen, setFormOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | undefined>();
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailContact, setDetailContact] = useState<Contact | undefined>();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -668,7 +671,7 @@ export default function Contatos() {
         scoreInfo={scoreInfo}
         isDragged={draggedContact?.id === contact.id}
         hasPhone={!!phone}
-        onEdit={() => { setEditingContact(contact); setFormOpen(true); }}
+        onEdit={() => { setDetailContact(contact); setDetailOpen(true); }}
         onWhatsApp={() => handleWhatsApp(contact)}
         onViewOrders={() => { setHistoryContact(contact); setHistoryOpen(true); }}
         onViewHistory={() => { setTimelineContact(contact); setTimelineOpen(true); }}
@@ -1368,6 +1371,13 @@ export default function Contatos() {
 
       {/* Dialogs */}
       <ContactFormDialog open={formOpen} onOpenChange={setFormOpen} contact={editingContact} onSave={handleSave} />
+
+      <LeadDetailDrawer
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        contact={(detailContact && contacts.find(c => c.id === detailContact.id)) || detailContact || null}
+        onSave={updateContact}
+      />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
