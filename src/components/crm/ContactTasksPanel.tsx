@@ -83,7 +83,7 @@ export function ContactTasksPanel({ contactId }: { contactId: string }) {
     if (!title.trim()) { toast.error('Informe um título'); return; }
     const payload: any = {
       title: title.trim(),
-      status: 'todo',
+      status: 'pendente',
       contact_id: contactId,
       node_id: ROOT_NODE_ID,
       scheduled_date: date ? format(date, 'yyyy-MM-dd') : null,
