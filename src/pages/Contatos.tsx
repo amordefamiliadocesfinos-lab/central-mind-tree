@@ -1465,6 +1465,14 @@ export default function Contatos() {
         funnelStatus={whatsAppContact?.funnel_status || ''}
         onSend={handleWhatsAppSend}
       />
+
+      <LostReasonDialog
+        open={!!lostDialogContact}
+        contactName={lostDialogContact?.name}
+        onCancel={() => setLostDialogContact(null)}
+        onConfirm={handleConfirmLost}
+      />
+
     </div>
   );
 }
