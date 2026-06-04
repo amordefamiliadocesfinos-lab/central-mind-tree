@@ -87,6 +87,7 @@ import { useContactTags } from '@/hooks/useContactTags';
 import { useContactNextTasks } from '@/hooks/useContactNextTasks';
 import { ContactFormDialog } from '@/components/financial/ContactFormDialog';
 import { WhatsAppMessageSelector } from '@/components/crm/WhatsAppMessageSelector';
+import { LostReasonDialog } from '@/components/crm/LostReasonDialog';
 import { ContactOrderHistory } from '@/components/financial/ContactOrderHistory';
 import { ContactHistoryDialog } from '@/components/ContactHistoryDialog';
 import { ContactTagsManager } from '@/components/crm/ContactTagsManager';
