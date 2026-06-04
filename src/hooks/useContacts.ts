@@ -98,6 +98,11 @@ export interface Contact {
   last_purchase_date?: string;
   last_payment_date?: string;
 
+  // Lost lead
+  lost_reason?: string;
+  lost_reason_detail?: string;
+  lost_at?: string;
+
   // Other
   company_name?: string;
   notes?: string;
