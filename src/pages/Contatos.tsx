@@ -1015,55 +1015,38 @@ export default function Contatos() {
             ))}
           </div>
         ) : viewMode === 'kanban' ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="flex gap-0 overflow-x-auto">
             {FUNNEL_STAGES.map((stage) => {
               const stageContacts = groupedByStage[stage.key] || [];
-              const stageSum = stageSums[stage.key];
+              const stageSum = stageSums[stage.key] || 0;
               const isDragOver = dragOverStage === stage.key;
               return (
                 <div
                   key={stage.key}
-                  className="min-w-[200px]"
+                  className={cn(
+                    'flex flex-col w-[290px] flex-shrink-0 border-r border-border/60 bg-transparent transition-colors',
+                    isDragOver && 'bg-primary/5',
+                  )}
                   onDragOver={(e) => handleDragOver(e, stage.key)}
                   onDragLeave={handleDragLeave}
                   onDrop={(e) => handleDrop(e, stage.key)}
                 >
-                  {/* Stage header */}
-                  <div className={cn(
-                    "rounded-xl p-2.5 mb-2 transition-all",
-                    isDragOver ? "ring-2 ring-primary ring-offset-1 shadow-lg" : "",
-                    stage.headerBg,
-                  )}>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-white drop-shadow-sm">{stage.label}</span>
-                      <Badge className="bg-white/30 text-white border-0 text-xs h-5 px-1.5 font-bold backdrop-blur-sm">
-                        {stageContacts.length}
-                      </Badge>
+                  {/* Kommo-style column header */}
+                  <div className="px-3 pt-3 pb-2 text-center bg-background sticky top-0 z-10">
+                    <div className="text-[11px] font-bold tracking-wider text-muted-foreground uppercase">{stage.label}</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">
+                      {stageContacts.length} leads: {formatCurrencyShort(stageSum)}
                     </div>
-                    {stageSum > 0 && (
-                      <p className="text-[11px] font-bold text-white/90 mt-1 drop-shadow-sm">
-                        {formatCurrencyShort(stageSum)}
-                      </p>
-                    )}
-                    {/* Progress bar */}
-                    <div className="mt-1.5 h-1 rounded-full bg-white/20 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-white/60 transition-all"
-                        style={{ width: `${Math.min(100, (stageContacts.length / Math.max(filteredContacts.length, 1)) * 100)}%` }}
-                      />
-                    </div>
+                    <div className={cn('h-[3px] mt-2 rounded-full', stage.color)} />
                   </div>
 
-                  <div className={cn(
-                    "space-y-2 max-h-[calc(100vh-380px)] overflow-y-auto rounded-lg transition-colors p-0.5",
-                    isDragOver && "bg-primary/5"
-                  )}>
+                  <div className="flex-1 px-2 py-2 space-y-1.5 min-h-[300px] max-h-[calc(100vh-340px)] overflow-y-auto">
                     <AnimatePresence>
                       {stageContacts.map(contact => renderContactCard(contact))}
                     </AnimatePresence>
                     {stageContacts.length === 0 && (
-                      <p className="text-xs text-muted-foreground text-center py-8 opacity-60">
-                        {isDragOver ? "Soltar aqui" : "Nenhum contato"}
+                      <p className="text-[11px] text-muted-foreground text-center py-6 opacity-60">
+                        {isDragOver ? 'Soltar aqui' : 'Sem leads'}
                       </p>
                     )}
                   </div>
