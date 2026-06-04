@@ -484,6 +484,9 @@ export type Database = {
           last_payment_date: string | null
           last_purchase_date: string | null
           lifetime_value: number
+          lost_at: string | null
+          lost_reason: string | null
+          lost_reason_detail: string | null
           marital_status: string | null
           mobile: string | null
           mobile_carrier: string | null
@@ -564,6 +567,9 @@ export type Database = {
           last_payment_date?: string | null
           last_purchase_date?: string | null
           lifetime_value?: number
+          lost_at?: string | null
+          lost_reason?: string | null
+          lost_reason_detail?: string | null
           marital_status?: string | null
           mobile?: string | null
           mobile_carrier?: string | null
@@ -644,6 +650,9 @@ export type Database = {
           last_payment_date?: string | null
           last_purchase_date?: string | null
           lifetime_value?: number
+          lost_at?: string | null
+          lost_reason?: string | null
+          lost_reason_detail?: string | null
           marital_status?: string | null
           mobile?: string | null
           mobile_carrier?: string | null

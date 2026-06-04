@@ -87,6 +87,7 @@ import { useContactTags } from '@/hooks/useContactTags';
 import { useContactNextTasks } from '@/hooks/useContactNextTasks';
 import { ContactFormDialog } from '@/components/financial/ContactFormDialog';
 import { WhatsAppMessageSelector } from '@/components/crm/WhatsAppMessageSelector';
+import { LostReasonDialog } from '@/components/crm/LostReasonDialog';
 import { ContactOrderHistory } from '@/components/financial/ContactOrderHistory';
 import { ContactHistoryDialog } from '@/components/ContactHistoryDialog';
 import { ContactTagsManager } from '@/components/crm/ContactTagsManager';
@@ -478,18 +479,42 @@ export default function Contatos() {
     setEditingContact(undefined);
   };
 
-  const handleStatusChange = async (contact: Contact, newStatus: string) => {
+  const [lostDialogContact, setLostDialogContact] = useState<Contact | null>(null);
+
+  const applyStatusChange = async (contact: Contact, newStatus: string, extra: Partial<Contact> = {}, historyDesc?: string) => {
     const oldStage = FUNNEL_STAGES.find(s => s.key === contact.funnel_status);
     const newStage = FUNNEL_STAGES.find(s => s.key === newStatus);
-    const updates: Partial<Contact> = { funnel_status: newStatus };
+    const updates: Partial<Contact> = { funnel_status: newStatus, ...extra };
     if (newStatus === 'fechado' && contact.funnel_status !== 'fechado') {
       updates.converted_at = new Date().toISOString();
       await addEntry(contact.id, 'conversion', `Negócio Fechado!`, new Date().toISOString());
       toast.success('🎉 Negócio fechado!');
     } else {
-      await addEntry(contact.id, 'stage_change', `Movido de "${oldStage?.label || contact.funnel_status}" para "${newStage?.label || newStatus}"`, new Date().toISOString());
+      await addEntry(contact.id, 'stage_change', historyDesc || `Movido de "${oldStage?.label || contact.funnel_status}" para "${newStage?.label || newStatus}"`, new Date().toISOString());
     }
     await updateContact(contact.id, updates);
+  };
+
+  const handleStatusChange = async (contact: Contact, newStatus: string) => {
+    if (newStatus === 'perdido' && contact.funnel_status !== 'perdido') {
+      setLostDialogContact(contact);
+      return;
+    }
+    await applyStatusChange(contact, newStatus);
+  };
+
+  const handleConfirmLost = async (reason: string, reasonLabel: string, detail: string) => {
+    const contact = lostDialogContact;
+    if (!contact) return;
+    const oldStage = FUNNEL_STAGES.find(s => s.key === contact.funnel_status);
+    const desc = `Movido de "${oldStage?.label || contact.funnel_status}" para "Perdido" — Motivo: ${reasonLabel}${detail ? ` (${detail})` : ''}`;
+    await applyStatusChange(contact, 'perdido', {
+      lost_reason: reason,
+      lost_reason_detail: detail || null,
+      lost_at: new Date().toISOString(),
+    } as any, desc);
+    setLostDialogContact(null);
+    toast.success('Lead marcado como perdido');
   };
 
   const [whatsAppContact, setWhatsAppContact] = useState<Contact | null>(null);
@@ -1440,6 +1465,14 @@ export default function Contatos() {
         funnelStatus={whatsAppContact?.funnel_status || ''}
         onSend={handleWhatsAppSend}
       />
+
+      <LostReasonDialog
+        open={!!lostDialogContact}
+        contactName={lostDialogContact?.name}
+        onCancel={() => setLostDialogContact(null)}
+        onConfirm={handleConfirmLost}
+      />
+
     </div>
   );
 }
