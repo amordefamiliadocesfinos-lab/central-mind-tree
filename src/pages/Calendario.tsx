@@ -120,6 +120,39 @@ const Calendario = () => {
   const [editingSeasonal, setEditingSeasonal] = useState<SeasonalDay | null>(null);
   const [seasonalDefaultDate, setSeasonalDefaultDate] = useState<string>("");
   const [seasonalFilterImportance, setSeasonalFilterImportance] = useState<number | null>(null);
+  const [seasonalEventDialogOpen, setSeasonalEventDialogOpen] = useState(false);
+  const [seasonalEventDate, setSeasonalEventDate] = useState<string>("");
+  const [seasonalEventActive, setSeasonalEventActive] = useState<SeasonalDay | null>(null);
+  const [seasonalEventList, setSeasonalEventList] = useState<SeasonalDay[]>([]);
+  const [ideaCountsBySeasonal, setIdeaCountsBySeasonal] = useState<Record<string, number>>({});
+
+  const fetchIdeaCounts = async () => {
+    const { data } = await supabase
+      .from('digital_ideas')
+      .select('seasonal_day_id')
+      .not('seasonal_day_id', 'is', null);
+    const counts: Record<string, number> = {};
+    (data || []).forEach((r: any) => {
+      counts[r.seasonal_day_id] = (counts[r.seasonal_day_id] || 0) + 1;
+    });
+    setIdeaCountsBySeasonal(counts);
+  };
+
+  useEffect(() => {
+    fetchIdeaCounts();
+    const ch = supabase
+      .channel('cal-seasonal-ideas')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'digital_ideas' }, fetchIdeaCounts)
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, []);
+
+  const openSeasonalEventDialog = (dateKey: string, events: SeasonalDay[]) => {
+    setSeasonalEventDate(dateKey);
+    setSeasonalEventList(events);
+    setSeasonalEventActive(events[0] || null);
+    setSeasonalEventDialogOpen(true);
+  };
 
   useEffect(() => {
     loadData();
