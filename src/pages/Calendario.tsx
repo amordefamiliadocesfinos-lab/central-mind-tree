@@ -26,7 +26,7 @@ import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { useSeasonalDays, SeasonalDay, SeasonalOccurrence } from "@/hooks/useSeasonalDays";
-import { SeasonalDayModal, SeasonalDaysList, SeasonalBadge } from "@/components/seasonal";
+import { SeasonalDayModal, SeasonalDaysList, SeasonalBadge, SeasonalEventDialog } from "@/components/seasonal";
 
 interface Task {
   id: string;
