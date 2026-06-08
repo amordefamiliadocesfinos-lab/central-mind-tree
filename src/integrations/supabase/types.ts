@@ -896,6 +896,8 @@ export type Database = {
           objective: string | null
           order_index: number | null
           product_id: string | null
+          seasonal_date: string | null
+          seasonal_day_id: string | null
           serial_number: string | null
           status: string
           target_audience: string | null
@@ -916,6 +918,8 @@ export type Database = {
           objective?: string | null
           order_index?: number | null
           product_id?: string | null
+          seasonal_date?: string | null
+          seasonal_day_id?: string | null
           serial_number?: string | null
           status?: string
           target_audience?: string | null
@@ -936,6 +940,8 @@ export type Database = {
           objective?: string | null
           order_index?: number | null
           product_id?: string | null
+          seasonal_date?: string | null
+          seasonal_day_id?: string | null
           serial_number?: string | null
           status?: string
           target_audience?: string | null
@@ -955,6 +961,13 @@ export type Database = {
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "digital_ideas_seasonal_day_id_fkey"
+            columns: ["seasonal_day_id"]
+            isOneToOne: false
+            referencedRelation: "seasonal_days"
             referencedColumns: ["id"]
           },
         ]
