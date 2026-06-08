@@ -751,6 +751,23 @@ const Calendario = () => {
         onDelete={deleteSeasonalDay}
       />
 
+      {/* Seasonal Event → Digital integration */}
+      <SeasonalEventDialog
+        open={seasonalEventDialogOpen}
+        onOpenChange={setSeasonalEventDialogOpen}
+        date={seasonalEventDate}
+        seasonalDay={seasonalEventActive}
+        allEvents={seasonalEventList}
+        onEditEvent={(sd) => {
+          setSeasonalEventDialogOpen(false);
+          handleOpenSeasonalModal(seasonalEventDate, sd);
+        }}
+        onCreateEvent={() => {
+          setSeasonalEventDialogOpen(false);
+          handleOpenSeasonalModal(seasonalEventDate);
+        }}
+      />
+
       {/* Create Task Dialog */}
       <ResponsiveDialog
         open={createDialogOpen}
