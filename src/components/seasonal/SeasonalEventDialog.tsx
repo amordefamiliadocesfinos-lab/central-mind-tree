@@ -124,12 +124,7 @@ export const SeasonalEventDialog = ({
     <ResponsiveDialog
       open={open}
       onOpenChange={onOpenChange}
-      title={
-        <span className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-primary" />
-          Evento Sazonal · {formatDisplayDate(date)}
-        </span> as any
-      }
+      title={`✨ Evento Sazonal · ${formatDisplayDate(date)}`}
     >
       <div className="space-y-5">
         {/* Event selector */}
