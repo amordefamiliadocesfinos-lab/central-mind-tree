@@ -95,6 +95,7 @@ function AnimatedRoutes() {
           <Route path="/rotas" element={<Rotas />} />
           <Route path="/academia" element={<Academia />} />
           <Route path="/metas" element={<Metas />} />
+          <Route path="/oportunidades" element={<Oportunidades />} />
           <Route path="/task/:id" element={<TaskEdit />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
