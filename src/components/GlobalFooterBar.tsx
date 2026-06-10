@@ -51,6 +51,7 @@ const NAV_ITEMS = [
   { path: "/financeiro", label: "Financeiro", shortLabel: "Financeiro", icon: DollarSign },
   { path: "/academia", label: "Academia", shortLabel: "Academia", icon: GraduationCap },
   { path: "/metas", label: "Metas", shortLabel: "Metas", icon: Target },
+  { path: "/oportunidades", label: "Oportunidades", shortLabel: "Oportunidades", icon: Lightbulb },
 ] as const;
 
 const MOBILE_PRIMARY_PATHS = ["/", "/dashboard", "/foco", "/operacoes", "/rotas"] as const;
