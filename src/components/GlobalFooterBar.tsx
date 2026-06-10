@@ -19,6 +19,7 @@ import {
   ShoppingCart, FileText, Undo2, Redo2, Home, FileSpreadsheet,
   Users, User, UsersRound, DollarSign, Brain, LayoutDashboard,
   UserPlus, MoreHorizontal, Truck, Settings2, Eye, EyeOff, GraduationCap, Target,
+  Lightbulb,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
