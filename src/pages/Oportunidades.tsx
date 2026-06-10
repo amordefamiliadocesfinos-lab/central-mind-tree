@@ -4,14 +4,14 @@ import { differenceInCalendarDays, parseISO } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { useSeasonalDays } from '@/hooks/useSeasonalDays';
 import { useDigital } from '@/hooks/useDigital';
 import { supabase } from '@/integrations/supabase/client';
 import { formatDisplayDate, getNowSaoPaulo, getTodayISO } from '@/lib/dateUtils';
 import { toast } from 'sonner';
-import { Calendar, Megaphone, FileText, X, Sparkles, ArrowLeft } from 'lucide-react';
+import { Calendar, Megaphone, FileText, X, Sparkles, ArrowLeft, Flame } from 'lucide-react';
 
-type Priority = 'alta' | 'media' | 'baixa';
 type OppKind = 'create_campaign' | 'create_content' | 'plan_more_content';
 
 interface Opportunity {
@@ -21,9 +21,12 @@ interface Opportunity {
   description: string;
   date: string;
   daysUntil: number;
-  priority: Priority;
+  score: number;
   seasonalDayId: string;
   seasonalDayName: string;
+  campaignCount: number;
+  contentCount: number;
+  publishedCount: number;
 }
 
 const MIN_CONTENT_THRESHOLD = 3;
@@ -44,17 +47,74 @@ function saveIgnored(set: Set<string>) {
   localStorage.setItem(IGNORE_KEY, JSON.stringify([...set]));
 }
 
-function priorityFromDays(days: number): Priority {
-  if (days <= 15) return 'alta';
-  if (days <= 30) return 'media';
-  return 'baixa';
+function calculateScore(
+  daysUntil: number,
+  campaignCount: number,
+  contentCount: number,
+  publishedCount: number,
+  kind: OppKind
+): number {
+  // 1. Proximidade da data (0-35 pts)
+  let proximityScore = 15;
+  if (daysUntil <= 15) proximityScore = 35;
+  else if (daysUntil <= 30) proximityScore = 25;
+
+  // 2. Existência de campanha (0-30 pts)
+  // Sem campanha = urgência máxima em criar uma
+  let campaignScore = campaignCount === 0 ? 30 : 0;
+
+  // 3. Quantidade de conteúdos planejados (0-20 pts)
+  // Quanto menos conteúdo, maior a oportunidade de planejar mais
+  let plannedScore = 0;
+  if (contentCount < MIN_CONTENT_THRESHOLD) {
+    plannedScore = (MIN_CONTENT_THRESHOLD - contentCount) * 7;
+  }
+  if (plannedScore > 20) plannedScore = 20;
+
+  // 4. Quantidade de conteúdos publicados (0-15 pts)
+  // Quanto menos publicado, maior a oportunidade de agir
+  let publishedScore = 0;
+  if (publishedCount === 0) publishedScore = 15;
+  else if (publishedCount === 1) publishedScore = 8;
+  else if (publishedCount === 2) publishedScore = 3;
+
+  const total = proximityScore + campaignScore + plannedScore + publishedScore;
+  return Math.min(100, Math.max(0, total));
 }
 
-const PRIORITY_META: Record<Priority, { label: string; dot: string; badge: string }> = {
-  alta: { label: 'Alta', dot: 'bg-red-500', badge: 'bg-red-500/10 text-red-600 border-red-500/30' },
-  media: { label: 'Média', dot: 'bg-yellow-500', badge: 'bg-yellow-500/10 text-yellow-600 border-yellow-500/30' },
-  baixa: { label: 'Baixa', dot: 'bg-emerald-500', badge: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30' },
-};
+function scoreMeta(score: number) {
+  if (score >= 90) {
+    return {
+      emoji: '🔥',
+      icon: Flame,
+      label: 'Crítico',
+      badgeClass: 'bg-red-500/10 text-red-600 border-red-500/30',
+      barColor: 'bg-red-500',
+      textColor: 'text-red-600',
+      cardBorder: 'border-red-500/30',
+    };
+  }
+  if (score >= 60) {
+    return {
+      emoji: '🟡',
+      icon: null as any,
+      label: 'Importante',
+      badgeClass: 'bg-amber-500/10 text-amber-600 border-amber-500/30',
+      barColor: 'bg-amber-500',
+      textColor: 'text-amber-600',
+      cardBorder: 'border-amber-500/30',
+    };
+  }
+  return {
+    emoji: '⚪',
+    icon: null as any,
+    label: 'Baixa',
+    badgeClass: 'bg-slate-500/10 text-slate-600 border-slate-500/30',
+    barColor: 'bg-slate-400',
+    textColor: 'text-slate-500',
+    cardBorder: 'border-slate-500/20',
+  };
+}
 
 export default function Oportunidades() {
   const navigate = useNavigate();
@@ -76,7 +136,6 @@ export default function Oportunidades() {
     const occurrencesNext = getOccurrencesForYear(year + 1);
     const all = [...occurrencesThisYear, ...occurrencesNext].filter((o) => !o.isPrepDay);
 
-    // Dedupe by seasonal_day + date (range may produce duplicates)
     const seen = new Set<string>();
     const upcoming = all.filter((o) => {
       const key = `${o.seasonalDay.id}_${o.date}`;
@@ -93,10 +152,14 @@ export default function Oportunidades() {
       const linkedIdeas = ideas.filter((i: any) => i.seasonal_day_id === sd.id);
       const campaigns = linkedIdeas.filter((i) => i.idea_type === 'campanha');
       const contents = linkedIdeas.filter((i) => i.idea_type === 'conteudo');
+      const publishedCount = contents.filter((c: any) => {
+        const variations = c.digital_variations || [];
+        return variations.some((v: any) => v.status === 'publicado');
+      }).length;
       const days = differenceInCalendarDays(parseISO(occ.date), today);
-      const priority = priorityFromDays(days);
 
       if (campaigns.length === 0) {
+        const score = calculateScore(days, 0, contents.length, publishedCount, 'create_campaign');
         result.push({
           id: `camp_${sd.id}_${occ.date}`,
           kind: 'create_campaign',
@@ -104,11 +167,15 @@ export default function Oportunidades() {
           description: `📅 ${sd.name} em ${days} dia${days === 1 ? '' : 's'}. Nenhuma campanha encontrada.`,
           date: occ.date,
           daysUntil: days,
-          priority,
+          score,
           seasonalDayId: sd.id,
           seasonalDayName: sd.name,
+          campaignCount: 0,
+          contentCount: contents.length,
+          publishedCount,
         });
       } else if (contents.length === 0) {
+        const score = calculateScore(days, campaigns.length, 0, publishedCount, 'create_content');
         result.push({
           id: `cont_${sd.id}_${occ.date}`,
           kind: 'create_content',
@@ -116,11 +183,15 @@ export default function Oportunidades() {
           description: `📅 ${sd.name}. Campanha criada, mas nenhum conteúdo planejado.`,
           date: occ.date,
           daysUntil: days,
-          priority,
+          score,
           seasonalDayId: sd.id,
           seasonalDayName: sd.name,
+          campaignCount: campaigns.length,
+          contentCount: 0,
+          publishedCount,
         });
       } else if (contents.length < MIN_CONTENT_THRESHOLD) {
+        const score = calculateScore(days, campaigns.length, contents.length, publishedCount, 'plan_more_content');
         result.push({
           id: `more_${sd.id}_${occ.date}`,
           kind: 'plan_more_content',
@@ -128,16 +199,20 @@ export default function Oportunidades() {
           description: `📅 ${sd.name}. Apenas ${contents.length} conteúdo${contents.length === 1 ? '' : 's'} cadastrado${contents.length === 1 ? '' : 's'}.`,
           date: occ.date,
           daysUntil: days,
-          priority,
+          score,
           seasonalDayId: sd.id,
           seasonalDayName: sd.name,
+          campaignCount: campaigns.length,
+          contentCount: contents.length,
+          publishedCount,
         });
       }
     }
 
+    // Ordenar por score DESC (maior oportunidade primeiro)
     return result
       .filter((o) => !ignored.has(o.id))
-      .sort((a, b) => a.daysUntil - b.daysUntil);
+      .sort((a, b) => b.score - a.score);
   }, [ideas, getOccurrencesForYear, loadingIdeas, loadingSeasonal, ignored]);
 
   const handleIgnore = (id: string) => {
@@ -186,10 +261,15 @@ export default function Oportunidades() {
 
   const counts = useMemo(() => {
     return {
-      alta: opportunities.filter((o) => o.priority === 'alta').length,
-      media: opportunities.filter((o) => o.priority === 'media').length,
-      baixa: opportunities.filter((o) => o.priority === 'baixa').length,
+      critico: opportunities.filter((o) => o.score >= 90).length,
+      importante: opportunities.filter((o) => o.score >= 60 && o.score < 90).length,
+      baixa: opportunities.filter((o) => o.score < 60).length,
     };
+  }, [opportunities]);
+
+  const averageScore = useMemo(() => {
+    if (opportunities.length === 0) return 0;
+    return Math.round(opportunities.reduce((sum, o) => sum + o.score, 0) / opportunities.length);
   }, [opportunities]);
 
   return (
@@ -212,19 +292,46 @@ export default function Oportunidades() {
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-5 space-y-4">
+        {/* Score médio */}
+        {opportunities.length > 0 && (
+          <Card className="overflow-hidden">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">Score médio das oportunidades</span>
+                <span className={`text-lg font-bold ${scoreMeta(averageScore).textColor}`}>
+                  {averageScore}/100
+                </span>
+              </div>
+              <Progress value={averageScore} className="h-2" />
+            </CardContent>
+          </Card>
+        )}
+
         <div className="grid grid-cols-3 gap-3">
-          <Card><CardContent className="p-3 text-center">
-            <div className="text-2xl font-bold text-red-600">{counts.alta}</div>
-            <div className="text-xs text-muted-foreground">Alta prioridade</div>
-          </CardContent></Card>
-          <Card><CardContent className="p-3 text-center">
-            <div className="text-2xl font-bold text-yellow-600">{counts.media}</div>
-            <div className="text-xs text-muted-foreground">Média</div>
-          </CardContent></Card>
-          <Card><CardContent className="p-3 text-center">
-            <div className="text-2xl font-bold text-emerald-600">{counts.baixa}</div>
-            <div className="text-xs text-muted-foreground">Baixa</div>
-          </CardContent></Card>
+          <Card className="border-red-500/20">
+            <CardContent className="p-3 text-center">
+              <div className="text-2xl font-bold text-red-600 flex items-center justify-center gap-1">
+                🔥 {counts.critico}
+              </div>
+              <div className="text-xs text-muted-foreground">Crítico (90-100)</div>
+            </CardContent>
+          </Card>
+          <Card className="border-amber-500/20">
+            <CardContent className="p-3 text-center">
+              <div className="text-2xl font-bold text-amber-600 flex items-center justify-center gap-1">
+                🟡 {counts.importante}
+              </div>
+              <div className="text-xs text-muted-foreground">Importante (60-89)</div>
+            </CardContent>
+          </Card>
+          <Card className="border-slate-500/20">
+            <CardContent className="p-3 text-center">
+              <div className="text-2xl font-bold text-slate-500 flex items-center justify-center gap-1">
+                ⚪ {counts.baixa}
+              </div>
+              <div className="text-xs text-muted-foreground">Baixa (0-59)</div>
+            </CardContent>
+          </Card>
         </div>
 
         {(loadingIdeas || loadingSeasonal) && (
@@ -254,16 +361,15 @@ export default function Oportunidades() {
         )}
 
         {opportunities.map((opp) => {
-          const meta = PRIORITY_META[opp.priority];
+          const meta = scoreMeta(opp.score);
           return (
-            <Card key={opp.id} className="overflow-hidden">
+            <Card key={opp.id} className={`overflow-hidden ${meta.cardBorder}`}>
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className={`h-2 w-2 rounded-full ${meta.dot}`} />
-                      <Badge variant="outline" className={`text-[10px] ${meta.badge}`}>
-                        {meta.label}
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <Badge variant="outline" className={`text-[10px] ${meta.badgeClass}`}>
+                        {meta.emoji} {meta.label} · {opp.score}/100
                       </Badge>
                       <span className="text-xs text-muted-foreground flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
@@ -272,6 +378,36 @@ export default function Oportunidades() {
                     </div>
                     <CardTitle className="text-base">{opp.title}</CardTitle>
                     <p className="text-sm text-muted-foreground mt-1">{opp.description}</p>
+
+                    {/* Score bar */}
+                    <div className="mt-2">
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="text-muted-foreground">Score de oportunidade</span>
+                        <span className={`font-semibold ${meta.textColor}`}>{opp.score}/100</span>
+                      </div>
+                      <Progress value={opp.score} className={`h-1.5 ${meta.barColor}`} />
+                    </div>
+
+                    {/* Detalhes dos critérios */}
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {opp.campaignCount === 0 ? (
+                        <Badge variant="secondary" className="text-[10px] bg-red-500/10 text-red-600">
+                          Sem campanha
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary" className="text-[10px]">
+                          {opp.campaignCount} campanha{opp.campaignCount === 1 ? '' : 's'}
+                        </Badge>
+                      )}
+                      <Badge variant="secondary" className="text-[10px]">
+                        {opp.contentCount} conteúdo{opp.contentCount === 1 ? '' : 's'} planejado{opp.contentCount === 1 ? '' : 's'}
+                      </Badge>
+                      {opp.publishedCount > 0 && (
+                        <Badge variant="secondary" className="text-[10px] bg-emerald-500/10 text-emerald-600">
+                          {opp.publishedCount} publicado{opp.publishedCount === 1 ? '' : 's'}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
               </CardHeader>
