@@ -32,6 +32,7 @@ import ContatosInbox from "./pages/ContatosInbox";
 import Rotas from "./pages/Rotas";
 import Academia from "./pages/Academia";
 import Metas from "./pages/Metas";
+import Oportunidades from "./pages/Oportunidades";
 import NotFound from "./pages/NotFound";
 import { QuickConversationFAB } from "@/components/crm/QuickConversationFAB";
 import { useScheduledTaskPromotion } from "./hooks/useScheduledTaskPromotion";
