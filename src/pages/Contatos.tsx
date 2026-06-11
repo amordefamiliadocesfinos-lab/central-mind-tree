@@ -91,6 +91,7 @@ import { LostReasonDialog } from '@/components/crm/LostReasonDialog';
 import { ContactOrderHistory } from '@/components/financial/ContactOrderHistory';
 import { ContactHistoryDialog } from '@/components/ContactHistoryDialog';
 import { ContactTagsManager } from '@/components/crm/ContactTagsManager';
+import { LeadImportDialog } from '@/components/crm/LeadImportDialog';
 import { ContactActivitiesPanel } from '@/components/crm/ContactActivitiesPanel';
 import { LeadsNeedContactPanel } from '@/components/crm/LeadsNeedContactPanel';
 import { cn } from '@/lib/utils';
