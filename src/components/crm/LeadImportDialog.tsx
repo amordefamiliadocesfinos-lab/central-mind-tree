@@ -258,6 +258,36 @@ export function LeadImportDialog({ open, onOpenChange, funnelStages, onImported 
             <div className="text-xs text-muted-foreground bg-muted/40 rounded-md p-3">
               💡 Dica: a primeira linha deve conter os títulos das colunas (Nome, Telefone, E-mail, Cidade, Empresa, Observações).
             </div>
+            <div className="border rounded-md p-4 space-y-3">
+              <p className="text-sm font-medium">Baixar modelo de planilha</p>
+              <p className="text-xs text-muted-foreground">
+                Use o modelo abaixo para garantir que suas colunas sejam reconhecidas automaticamente pelo sistema.
+              </p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={downloadTemplateXLSX}>
+                  <Download className="h-4 w-4 mr-1" /> Modelo .xlsx
+                </Button>
+                <Button variant="outline" size="sm" onClick={downloadTemplateCSV}>
+                  <Download className="h-4 w-4 mr-1" /> Modelo .csv
+                </Button>
+              </div>
+              <div className="border rounded-md overflow-x-auto mt-2">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted/60">
+                    <tr>
+                      {TEMPLATE_HEADERS.map(h => <th key={h} className="text-left p-2 whitespace-nowrap">{h}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {TEMPLATE_EXAMPLE_ROWS.map((row, i) => (
+                      <tr key={i} className="border-t">
+                        {row.map((cell, j) => <td key={j} className="p-2 whitespace-nowrap text-muted-foreground">{cell}</td>)}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
 
