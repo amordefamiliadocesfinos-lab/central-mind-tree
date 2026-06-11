@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Users, X } from 'lucide-react';
+import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Users, X, Download } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useEffect } from 'react';
@@ -44,6 +44,47 @@ function autoMap(header: string): FieldKey {
 function normalizePhone(v: any): string {
   if (v === null || v === undefined) return '';
   return String(v).replace(/\D/g, '');
+}
+
+const TEMPLATE_HEADERS = ['Nome', 'Telefone/WhatsApp', 'E-mail', 'Cidade', 'Empresa', 'Observações'];
+
+const TEMPLATE_EXAMPLE_ROWS = [
+  ['João Silva', '(11) 98765-4321', 'joao@email.com', 'São Paulo', 'Silva Ltda', 'Cliente indicado por parceiro'],
+  ['Maria Souza', '(21) 91234-5678', 'maria@email.com', 'Rio de Janeiro', '', 'Interessada em orçamento'],
+  ['Carlos Pereira', '(31) 99876-5432', 'carlos@empresa.com.br', 'Belo Horizonte', 'Pereira & Cia', ''],
+];
+
+function downloadTemplateXLSX() {
+  const ws = XLSX.utils.aoa_to_sheet([TEMPLATE_HEADERS, ...TEMPLATE_EXAMPLE_ROWS]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Leads');
+  const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'modelo_importacao_leads.xlsx';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast.success('Modelo XLSX baixado');
+}
+
+function downloadTemplateCSV() {
+  const csvContent = [TEMPLATE_HEADERS, ...TEMPLATE_EXAMPLE_ROWS]
+    .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    .join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'modelo_importacao_leads.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast.success('Modelo CSV baixado');
 }
 
 export function LeadImportDialog({ open, onOpenChange, funnelStages, onImported }: LeadImportDialogProps) {
@@ -216,6 +257,36 @@ export function LeadImportDialog({ open, onOpenChange, funnelStages, onImported 
             />
             <div className="text-xs text-muted-foreground bg-muted/40 rounded-md p-3">
               💡 Dica: a primeira linha deve conter os títulos das colunas (Nome, Telefone, E-mail, Cidade, Empresa, Observações).
+            </div>
+            <div className="border rounded-md p-4 space-y-3">
+              <p className="text-sm font-medium">Baixar modelo de planilha</p>
+              <p className="text-xs text-muted-foreground">
+                Use o modelo abaixo para garantir que suas colunas sejam reconhecidas automaticamente pelo sistema.
+              </p>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={downloadTemplateXLSX}>
+                  <Download className="h-4 w-4 mr-1" /> Modelo .xlsx
+                </Button>
+                <Button variant="outline" size="sm" onClick={downloadTemplateCSV}>
+                  <Download className="h-4 w-4 mr-1" /> Modelo .csv
+                </Button>
+              </div>
+              <div className="border rounded-md overflow-x-auto mt-2">
+                <table className="w-full text-xs">
+                  <thead className="bg-muted/60">
+                    <tr>
+                      {TEMPLATE_HEADERS.map(h => <th key={h} className="text-left p-2 whitespace-nowrap">{h}</th>)}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {TEMPLATE_EXAMPLE_ROWS.map((row, i) => (
+                      <tr key={i} className="border-t">
+                        {row.map((cell, j) => <td key={j} className="p-2 whitespace-nowrap text-muted-foreground">{cell}</td>)}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         )}
