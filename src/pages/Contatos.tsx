@@ -766,6 +766,10 @@ export default function Contatos() {
               <Tag className="h-3.5 w-3.5 mr-1" />
               Tags
             </Button>
+            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+              <Users className="h-3.5 w-3.5 mr-1" />
+              Importar Leads
+            </Button>
             <Button onClick={() => { setEditingContact(undefined); setFormOpen(true); }} size="sm" className="bg-green-600 hover:bg-green-700 shadow-sm">
               <Plus className="h-4 w-4 mr-1" />
               Novo
