@@ -247,6 +247,7 @@ export default function Contatos() {
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [timelineContact, setTimelineContact] = useState<Contact | null>(null);
   const [tagsManagerOpen, setTagsManagerOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [activitiesOpen, setActivitiesOpen] = useState(false);
   const [activitiesContact, setActivitiesContact] = useState<Contact | null>(null);
   const [sortField, setSortField] = useState<SortField>('name');
