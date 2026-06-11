@@ -46,6 +46,47 @@ function normalizePhone(v: any): string {
   return String(v).replace(/\D/g, '');
 }
 
+const TEMPLATE_HEADERS = ['Nome', 'Telefone/WhatsApp', 'E-mail', 'Cidade', 'Empresa', 'Observações'];
+
+const TEMPLATE_EXAMPLE_ROWS = [
+  ['João Silva', '(11) 98765-4321', 'joao@email.com', 'São Paulo', 'Silva Ltda', 'Cliente indicado por parceiro'],
+  ['Maria Souza', '(21) 91234-5678', 'maria@email.com', 'Rio de Janeiro', '', 'Interessada em orçamento'],
+  ['Carlos Pereira', '(31) 99876-5432', 'carlos@empresa.com.br', 'Belo Horizonte', 'Pereira & Cia', ''],
+];
+
+function downloadTemplateXLSX() {
+  const ws = XLSX.utils.aoa_to_sheet([TEMPLATE_HEADERS, ...TEMPLATE_EXAMPLE_ROWS]);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Leads');
+  const buf = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+  const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'modelo_importacao_leads.xlsx';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast.success('Modelo XLSX baixado');
+}
+
+function downloadTemplateCSV() {
+  const csvContent = [TEMPLATE_HEADERS, ...TEMPLATE_EXAMPLE_ROWS]
+    .map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(','))
+    .join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'modelo_importacao_leads.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast.success('Modelo CSV baixado');
+}
+
 export function LeadImportDialog({ open, onOpenChange, funnelStages, onImported }: LeadImportDialogProps) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<'upload' | 'map' | 'importing' | 'done'>('upload');
