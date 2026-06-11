@@ -1457,6 +1457,12 @@ export default function Contatos() {
       />
 
       <ContactTagsManager open={tagsManagerOpen} onOpenChange={setTagsManagerOpen} />
+      <LeadImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        funnelStages={FUNNEL_STAGES.map(s => ({ key: s.key, label: s.label }))}
+        onImported={fetchContacts}
+      />
 
       <ContactActivitiesPanel
         open={activitiesOpen}
