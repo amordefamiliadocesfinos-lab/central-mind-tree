@@ -91,6 +91,7 @@ import { LostReasonDialog } from '@/components/crm/LostReasonDialog';
 import { ContactOrderHistory } from '@/components/financial/ContactOrderHistory';
 import { ContactHistoryDialog } from '@/components/ContactHistoryDialog';
 import { ContactTagsManager } from '@/components/crm/ContactTagsManager';
+import { LeadImportDialog } from '@/components/crm/LeadImportDialog';
 import { ContactActivitiesPanel } from '@/components/crm/ContactActivitiesPanel';
 import { LeadsNeedContactPanel } from '@/components/crm/LeadsNeedContactPanel';
 import { cn } from '@/lib/utils';
@@ -197,7 +198,7 @@ type SortDir = 'asc' | 'desc';
 export default function Contatos() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { contacts, loading, createContact, updateContact, deleteContact } = useContacts();
+  const { contacts, loading, createContact, updateContact, deleteContact, fetchContacts } = useContacts();
   const { addEntry } = useContactHistory();
   const { getTagsForContact } = useContactTags();
   const { hasOrders } = useContactsWithOrders();
@@ -246,6 +247,7 @@ export default function Contatos() {
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [timelineContact, setTimelineContact] = useState<Contact | null>(null);
   const [tagsManagerOpen, setTagsManagerOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [activitiesOpen, setActivitiesOpen] = useState(false);
   const [activitiesContact, setActivitiesContact] = useState<Contact | null>(null);
   const [sortField, setSortField] = useState<SortField>('name');
@@ -763,6 +765,10 @@ export default function Contatos() {
             <Button variant="outline" size="sm" onClick={() => setTagsManagerOpen(true)}>
               <Tag className="h-3.5 w-3.5 mr-1" />
               Tags
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+              <Users className="h-3.5 w-3.5 mr-1" />
+              Importar Leads
             </Button>
             <Button onClick={() => { setEditingContact(undefined); setFormOpen(true); }} size="sm" className="bg-green-600 hover:bg-green-700 shadow-sm">
               <Plus className="h-4 w-4 mr-1" />
@@ -1451,6 +1457,12 @@ export default function Contatos() {
       />
 
       <ContactTagsManager open={tagsManagerOpen} onOpenChange={setTagsManagerOpen} />
+      <LeadImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        funnelStages={FUNNEL_STAGES.map(s => ({ key: s.key, label: s.label }))}
+        onImported={fetchContacts}
+      />
 
       <ContactActivitiesPanel
         open={activitiesOpen}
