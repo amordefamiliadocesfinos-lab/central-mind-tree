@@ -10,6 +10,7 @@ import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Users, X, Download 
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useEffect } from 'react';
+import { LeadOriginPicker } from '@/components/crm/LeadOriginPicker';
 
 interface LeadImportDialogProps {
   open: boolean;
