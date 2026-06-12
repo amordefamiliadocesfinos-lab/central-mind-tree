@@ -149,6 +149,8 @@ export function LeadDetailDrawer({ contact, open, onOpenChange, onSave }: LeadDe
           </div>
 
           <TabsContent value="detalhes" className="p-4 space-y-4 mt-0">
+            <NextBestAction contact={contact} />
+
             <Field label="Nome" status={<FieldStatus field="name" />}>
               <Input value={form.name} onChange={(e) => handleChange('name', e.target.value)} onBlur={() => handleBlur('name')} placeholder="Nome do lead" />
             </Field>
