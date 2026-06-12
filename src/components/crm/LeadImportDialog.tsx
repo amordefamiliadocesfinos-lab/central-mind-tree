@@ -97,6 +97,7 @@ export function LeadImportDialog({ open, onOpenChange, funnelStages, onImported 
   const [mapping, setMapping] = useState<Record<string, FieldKey>>({});
   const [stage, setStage] = useState<string>('novo_lead');
   const [assignedTo, setAssignedTo] = useState<string>('none');
+  const [origin, setOrigin] = useState<string>('Importação');
   const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
   const [progress, setProgress] = useState(0);
   const [report, setReport] = useState({ imported: 0, duplicated: 0, errors: 0 });
