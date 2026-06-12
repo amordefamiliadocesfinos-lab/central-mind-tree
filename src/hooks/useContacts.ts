@@ -212,7 +212,7 @@ export function useContacts() {
           temperatura_lead: contact.temperatura_lead || 'morno',
           valor_estimado: cleanNumber(contact.valor_estimado),
           ultimo_contato: cleanValue(contact.ultimo_contato),
-          origem_lead: cleanValue(contact.origem_lead),
+          origem_lead: cleanValue(contact.origem_lead) || 'Não Informado',
           is_active: contact.is_active ?? true,
           campaign_idea_id: cleanValue(contact.campaign_idea_id),
           client_classification: cleanValue(contact.client_classification),
