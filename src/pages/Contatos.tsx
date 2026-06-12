@@ -289,6 +289,10 @@ export default function Contatos() {
       }
       // Próximo Contato filters
       if (classificationFilter !== 'all' && c.client_classification !== classificationFilter) return false;
+      if (originFilter !== 'all') {
+        const o = (c.origem_lead || 'Não Informado').trim();
+        if (o !== originFilter) return false;
+      }
       if (contactDateFilter === 'hoje_contato') {
         if (!c.next_contact_date) return false;
         try {
