@@ -916,6 +916,34 @@ export default function Contatos() {
             </Select>
           )}
 
+          {/* Origin filter (lead source tracking) */}
+          {(() => {
+            const origins = Array.from(new Set(
+              contacts
+                .filter(c => c.is_active)
+                .map(c => (c.origem_lead || 'Não Informado').trim())
+                .filter(Boolean)
+            )).sort();
+            if (origins.length === 0) return null;
+            return (
+              <Select value={originFilter} onValueChange={setOriginFilter}>
+                <SelectTrigger className="w-40 h-9">
+                  <SelectValue placeholder="Origem" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas origens</SelectItem>
+                  {origins.map(o => (
+                    <SelectItem key={o} value={o}>
+                      {o.startsWith('Campanha:') ? `📣 ${o.replace(/^Campanha:\s*/, '')}` : o}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            );
+          })()}
+
+
+
           {/* Temperature filter chips */}
           <div className="flex gap-0.5 bg-muted/50 rounded-lg p-0.5">
             {[
