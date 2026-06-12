@@ -233,6 +233,7 @@ export default function Contatos() {
   const [actionFilter, setActionFilter] = useState<string>('all');
   const [contactDateFilter, setContactDateFilter] = useState<string>('all');
   const [classificationFilter, setClassificationFilter] = useState<string>('all');
+  const [originFilter, setOriginFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'kanban' | 'funnel' | 'list' | 'sales_funnel'>('kanban');
   const [formOpen, setFormOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | undefined>();
@@ -288,6 +289,10 @@ export default function Contatos() {
       }
       // Próximo Contato filters
       if (classificationFilter !== 'all' && c.client_classification !== classificationFilter) return false;
+      if (originFilter !== 'all') {
+        const o = (c.origem_lead || 'Não Informado').trim();
+        if (o !== originFilter) return false;
+      }
       if (contactDateFilter === 'hoje_contato') {
         if (!c.next_contact_date) return false;
         try {
@@ -311,7 +316,7 @@ export default function Contatos() {
       }
       return true;
     });
-  }, [contacts, searchQuery, statusFilter, tempFilter, typeFilter, tagFilter, actionFilter, contactDateFilter, classificationFilter, getTagsForContact, isNextActionOverdue]);
+  }, [contacts, searchQuery, statusFilter, tempFilter, typeFilter, tagFilter, actionFilter, contactDateFilter, classificationFilter, originFilter, getTagsForContact, isNextActionOverdue]);
 
   const sortedContacts = useMemo(() => {
     return [...filteredContacts].sort((a, b) => {
@@ -910,6 +915,34 @@ export default function Contatos() {
               </SelectContent>
             </Select>
           )}
+
+          {/* Origin filter (lead source tracking) */}
+          {(() => {
+            const origins = Array.from(new Set(
+              contacts
+                .filter(c => c.is_active)
+                .map(c => (c.origem_lead || 'Não Informado').trim())
+                .filter(Boolean)
+            )).sort();
+            if (origins.length === 0) return null;
+            return (
+              <Select value={originFilter} onValueChange={setOriginFilter}>
+                <SelectTrigger className="w-40 h-9">
+                  <SelectValue placeholder="Origem" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas origens</SelectItem>
+                  {origins.map(o => (
+                    <SelectItem key={o} value={o}>
+                      {o.startsWith('Campanha:') ? `📣 ${o.replace(/^Campanha:\s*/, '')}` : o}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            );
+          })()}
+
+
 
           {/* Temperature filter chips */}
           <div className="flex gap-0.5 bg-muted/50 rounded-lg p-0.5">

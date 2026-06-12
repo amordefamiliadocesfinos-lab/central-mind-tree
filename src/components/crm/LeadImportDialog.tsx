@@ -10,6 +10,7 @@ import { Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Users, X, Download 
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useEffect } from 'react';
+import { LeadOriginPicker } from '@/components/crm/LeadOriginPicker';
 
 interface LeadImportDialogProps {
   open: boolean;
@@ -96,6 +97,7 @@ export function LeadImportDialog({ open, onOpenChange, funnelStages, onImported 
   const [mapping, setMapping] = useState<Record<string, FieldKey>>({});
   const [stage, setStage] = useState<string>('novo_lead');
   const [assignedTo, setAssignedTo] = useState<string>('none');
+  const [origin, setOrigin] = useState<string>('Importação');
   const [users, setUsers] = useState<{ id: string; name: string }[]>([]);
   const [progress, setProgress] = useState(0);
   const [report, setReport] = useState({ imported: 0, duplicated: 0, errors: 0 });
@@ -110,7 +112,7 @@ export function LeadImportDialog({ open, onOpenChange, funnelStages, onImported 
   const reset = () => {
     setStep('upload');
     setFileName(''); setHeaders([]); setRows([]); setMapping({});
-    setStage('novo_lead'); setAssignedTo('none'); setProgress(0);
+    setStage('novo_lead'); setAssignedTo('none'); setOrigin('Importação'); setProgress(0);
     setReport({ imported: 0, duplicated: 0, errors: 0 });
     if (fileRef.current) fileRef.current.value = '';
   };
@@ -206,7 +208,7 @@ export function LeadImportDialog({ open, onOpenChange, funnelStages, onImported 
           temperatura_lead: 'morno',
           is_active: true,
           salesperson: assignedTo !== 'none' ? assignedTo : null,
-          origem_lead: 'importacao',
+          origem_lead: origin?.trim() || 'Não Informado',
         });
       }
 
@@ -322,6 +324,14 @@ export function LeadImportDialog({ open, onOpenChange, funnelStages, onImported 
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-1 block">Origem do Lead (rastreamento interno)</label>
+              <LeadOriginPicker value={origin} onChange={setOrigin} compact />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Será aplicada a todos os leads desta importação. Visível apenas na ficha completa.
+              </p>
             </div>
 
             <div>

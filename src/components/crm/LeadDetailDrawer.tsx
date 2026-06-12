@@ -10,6 +10,7 @@ import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { ContactTimeline } from '@/components/crm/ContactTimeline';
 import { ContactTasksPanel } from '@/components/crm/ContactTasksPanel';
 import { ContactChatPanel } from '@/components/crm/ContactChatPanel';
+import { LeadOriginPicker } from '@/components/crm/LeadOriginPicker';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Contact } from '@/hooks/useContacts';
@@ -169,8 +170,15 @@ export function LeadDetailDrawer({ contact, open, onOpenChange, onSave }: LeadDe
               </Field>
             </div>
 
-            <Field label="Origem do Lead" status={<FieldStatus field="origem_lead" />}>
-              <Input value={form.origem_lead} onChange={(e) => handleChange('origem_lead', e.target.value)} onBlur={() => handleBlur('origem_lead')} placeholder="Instagram, indicação, site..." />
+            <Field label="Origem do Lead (interno)" status={<FieldStatus field="origem_lead" />}>
+              <LeadOriginPicker
+                value={form.origem_lead}
+                onChange={(v) => handleChange('origem_lead', v, 300)}
+                onBlur={() => handleBlur('origem_lead')}
+              />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Rastreado internamente. Não aparece nos cards do funil.
+              </p>
             </Field>
 
             <div className="grid grid-cols-2 gap-3">
