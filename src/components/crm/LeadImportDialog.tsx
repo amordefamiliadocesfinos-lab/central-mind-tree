@@ -112,7 +112,7 @@ export function LeadImportDialog({ open, onOpenChange, funnelStages, onImported 
   const reset = () => {
     setStep('upload');
     setFileName(''); setHeaders([]); setRows([]); setMapping({});
-    setStage('novo_lead'); setAssignedTo('none'); setProgress(0);
+    setStage('novo_lead'); setAssignedTo('none'); setOrigin('Importação'); setProgress(0);
     setReport({ imported: 0, duplicated: 0, errors: 0 });
     if (fileRef.current) fileRef.current.value = '';
   };
