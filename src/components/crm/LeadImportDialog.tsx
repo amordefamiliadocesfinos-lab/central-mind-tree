@@ -327,6 +327,14 @@ export function LeadImportDialog({ open, onOpenChange, funnelStages, onImported 
             </div>
 
             <div>
+              <label className="text-sm font-medium mb-1 block">Origem do Lead (rastreamento interno)</label>
+              <LeadOriginPicker value={origin} onChange={setOrigin} compact />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                Será aplicada a todos os leads desta importação. Visível apenas na ficha completa.
+              </p>
+            </div>
+
+            <div>
               <h4 className="text-sm font-semibold mb-2">Mapeamento de Colunas</h4>
               <div className="border rounded-md overflow-hidden">
                 <table className="w-full text-sm">
