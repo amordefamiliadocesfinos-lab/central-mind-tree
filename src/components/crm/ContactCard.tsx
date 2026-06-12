@@ -397,13 +397,7 @@ export function ContactCard({
                   </div>
                 )}
 
-                {/* Origin */}
-                {contact.origem_lead && (
-                  <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-                    <Megaphone className="h-3 w-3 shrink-0" />
-                    <span>Origem: {contact.origem_lead}</span>
-                  </div>
-                )}
+                {/* Origem do lead é rastreada internamente; exibida apenas na ficha completa */}
 
                 {/* Estimated value */}
                 {contact.valor_estimado !== undefined && contact.valor_estimado !== null && contact.valor_estimado > 0 && (
