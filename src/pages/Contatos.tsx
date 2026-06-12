@@ -233,6 +233,7 @@ export default function Contatos() {
   const [actionFilter, setActionFilter] = useState<string>('all');
   const [contactDateFilter, setContactDateFilter] = useState<string>('all');
   const [classificationFilter, setClassificationFilter] = useState<string>('all');
+  const [originFilter, setOriginFilter] = useState<string>('all');
   const [viewMode, setViewMode] = useState<'kanban' | 'funnel' | 'list' | 'sales_funnel'>('kanban');
   const [formOpen, setFormOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | undefined>();
