@@ -10,6 +10,7 @@ import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { ContactTimeline } from '@/components/crm/ContactTimeline';
 import { ContactTasksPanel } from '@/components/crm/ContactTasksPanel';
 import { ContactChatPanel } from '@/components/crm/ContactChatPanel';
+import { LeadOriginPicker } from '@/components/crm/LeadOriginPicker';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Contact } from '@/hooks/useContacts';
