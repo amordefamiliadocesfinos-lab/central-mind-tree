@@ -208,7 +208,7 @@ export function LeadImportDialog({ open, onOpenChange, funnelStages, onImported 
           temperatura_lead: 'morno',
           is_active: true,
           salesperson: assignedTo !== 'none' ? assignedTo : null,
-          origem_lead: 'importacao',
+          origem_lead: origin?.trim() || 'Não Informado',
         });
       }
 
