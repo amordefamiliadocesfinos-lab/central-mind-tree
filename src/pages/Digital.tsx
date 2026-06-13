@@ -1116,6 +1116,12 @@ export default function Digital() {
           onCancel={() => setShowNewIdeaPlatformPicker(false)}
         />
       </ResponsiveDialog>
+
+      <QuickActionWizard
+        open={showQuickWizard}
+        onOpenChange={setShowQuickWizard}
+        onCreated={(id) => setSelectedIdea(id)}
+      />
     </div>
   );
 }
