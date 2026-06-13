@@ -366,6 +366,17 @@ export default function Digital() {
             )}
 
             <Button
+              onClick={() => setShowQuickWizard(true)}
+              variant="secondary"
+              size={isMobile ? 'icon' : 'default'}
+              className="h-10 shrink-0 shadow-sm"
+              aria-label="Começar nova ação"
+            >
+              <Wand2 className="h-5 w-5" />
+              {!isMobile && <span className="ml-2 font-medium">Começar Nova Ação</span>}
+            </Button>
+
+            <Button
               onClick={() => setShowCreateDialog(true)}
               size={isMobile ? 'icon' : 'default'}
               className="h-10 shrink-0 shadow-sm"
