@@ -36,6 +36,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useIdeaActions } from '@/hooks/useIdeaActions';
+import { NextStepHint } from './NextStepHint';
 
 type AIFieldType = 'objective' | 'target_audience' | 'key_message' | 'kpi' | 'all';
 
