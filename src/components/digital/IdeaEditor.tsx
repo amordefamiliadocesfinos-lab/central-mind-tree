@@ -117,6 +117,7 @@ export function IdeaEditor({
     }
   }, [initialVariationId, idea.variations]);
   const [showAddPlatform, setShowAddPlatform] = useState(false);
+  const [activeEditorTab, setActiveEditorTab] = useState<'idea' | 'platforms' | 'calendar'>('idea');
   const [showBatchDialog, setShowBatchDialog] = useState(false);
   const [duplicatingVariation, setDuplicatingVariation] = useState<string | null>(null);
   const [showMediaLibrary, setShowMediaLibrary] = useState(false);
