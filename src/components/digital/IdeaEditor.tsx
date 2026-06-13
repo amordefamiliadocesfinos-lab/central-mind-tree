@@ -524,8 +524,11 @@ export function IdeaEditor({
         )}
       </Card>
 
+      {/* Next step hint */}
+      <NextStepHint idea={idea} onNavigate={setActiveEditorTab} />
+
       {/* ====== SECONDARY CONTENT IN TABS ====== */}
-      <Tabs defaultValue="idea">
+      <Tabs value={activeEditorTab} onValueChange={(v) => setActiveEditorTab(v as any)}>
         <TabsList className="grid w-full grid-cols-3 h-12">
           <TabsTrigger value="idea" className="h-10">
             <Settings className="h-4 w-4 mr-2" />
