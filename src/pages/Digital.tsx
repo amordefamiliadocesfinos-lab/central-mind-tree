@@ -99,6 +99,7 @@ export default function Digital() {
   const [searchFocused, setSearchFocused] = useState(false);
   const [expandedByPlatforms, setExpandedByPlatforms] = useState<Set<string>>(new Set());
   const [showPriorities, setShowPriorities] = useState(false);
+  const [showQuickWizard, setShowQuickWizard] = useState(false);
 
   // Fetch nodes for linking
   useEffect(() => {
