@@ -20,6 +20,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, ArrowLeft, Search, LayoutGrid, Columns3, Image, BarChart3, Link2, Settings2, TrendingUp, MessageCircle, Book, Calendar, Headset, X, SlidersHorizontal, Sparkles, Layers, ArrowUpDown, Zap, Table as TableIcon } from 'lucide-react';
 import { IdeasSpreadsheetView } from '@/components/digital/IdeasSpreadsheetView';
+import { QuickActionWizard } from '@/components/digital/QuickActionWizard';
+import { Wand2 } from 'lucide-react';
 import { AllVariationsSpreadsheetView } from '@/components/digital/AllVariationsSpreadsheetView';
 import { HierarchicalPlatformSelector } from '@/components/digital/HierarchicalPlatformSelector';
 import { PlatformHierarchicalPicker } from '@/components/digital/PlatformHierarchicalPicker';
