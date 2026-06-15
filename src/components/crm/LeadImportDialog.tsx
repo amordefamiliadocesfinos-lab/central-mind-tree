@@ -156,22 +156,31 @@ export function LeadImportDialog({ open, onOpenChange, funnelStages, onImported 
     setStep('importing');
     setProgress(0);
 
-    // Fetch existing phones for duplicate check
-    const { data: existing } = await supabase
-      .from('contacts')
-      .select('whatsapp,phone,mobile')
-      .eq('is_active', true);
+    // Fetch ALL existing phones for duplicate check (paginated — Supabase caps at 1000 per request)
     const existingPhones = new Set<string>();
-    (existing || []).forEach((c: any) => {
-      [c.whatsapp, c.phone, c.mobile].forEach(p => {
-        const n = normalizePhone(p);
-        if (n.length >= 8) existingPhones.add(n);
+    const PAGE = 1000;
+    let from = 0;
+    while (true) {
+      const { data: page, error: pageErr } = await supabase
+        .from('contacts')
+        .select('whatsapp,phone,mobile')
+        .eq('is_active', true)
+        .range(from, from + PAGE - 1);
+      if (pageErr) { console.error('Dedup fetch error:', pageErr); break; }
+      if (!page || page.length === 0) break;
+      page.forEach((c: any) => {
+        [c.whatsapp, c.phone, c.mobile].forEach(p => {
+          const n = normalizePhone(p);
+          if (n.length >= 8) existingPhones.add(n);
+        });
       });
-    });
+      if (page.length < PAGE) break;
+      from += PAGE;
+    }
 
     let imported = 0, duplicated = 0, errors = 0;
     const batchSize = 100;
-    const seenInBatch = new Set<string>();
+    const seenInFile = new Set<string>();
 
     for (let i = 0; i < rows.length; i += batchSize) {
       const slice = rows.slice(i, i + batchSize);
@@ -186,11 +195,11 @@ export function LeadImportDialog({ open, onOpenChange, funnelStages, onImported 
         if (!name && !phone && !email) continue;
 
         if (phone && phone.length >= 8) {
-          if (existingPhones.has(phone) || seenInBatch.has(phone)) {
+          if (existingPhones.has(phone) || seenInFile.has(phone)) {
             duplicated++;
             continue;
           }
-          seenInBatch.add(phone);
+          seenInFile.add(phone);
         }
 
         inserts.push({
@@ -215,14 +224,25 @@ export function LeadImportDialog({ open, onOpenChange, funnelStages, onImported 
       if (inserts.length) {
         const { error, data } = await supabase.from('contacts').insert(inserts).select('id');
         if (error) {
-          console.error('Import batch error:', error);
-          errors += inserts.length;
+          console.error('Import batch error, retrying row by row:', error);
+          // Fallback: try one by one so a single bad row doesn't kill the batch
+          for (const single of inserts) {
+            const { error: e2, data: d2 } = await supabase.from('contacts').insert(single).select('id');
+            if (e2) {
+              console.error('Row error:', e2, single);
+              errors++;
+            } else {
+              imported += d2?.length || 1;
+            }
+          }
         } else {
           imported += data?.length || 0;
         }
       }
       setProgress(Math.round(((i + slice.length) / rows.length) * 100));
     }
+
+    console.log(`[Import] total rows=${rows.length} imported=${imported} duplicated=${duplicated} errors=${errors}`);
 
     setReport({ imported, duplicated, errors });
     setStep('done');
