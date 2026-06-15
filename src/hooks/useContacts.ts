@@ -119,13 +119,23 @@ export function useContacts() {
   const fetchContacts = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('contacts')
-        .select('*')
-        .order('name');
-      
-      if (error) throw error;
-      setContacts((data || []) as unknown as Contact[]);
+      // Paginate to bypass PostgREST's 1000-row default cap
+      const PAGE = 1000;
+      let from = 0;
+      const all: any[] = [];
+      while (true) {
+        const { data, error } = await supabase
+          .from('contacts')
+          .select('*')
+          .order('name')
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        if (!data || data.length === 0) break;
+        all.push(...data);
+        if (data.length < PAGE) break;
+        from += PAGE;
+      }
+      setContacts(all as unknown as Contact[]);
     } catch (error: any) {
       console.error('Error fetching contacts:', error);
       toast.error('Erro ao carregar contatos');
@@ -133,6 +143,7 @@ export function useContacts() {
       setLoading(false);
     }
   };
+
 
   const createContact = async (contact: Partial<Contact>) => {
     try {
