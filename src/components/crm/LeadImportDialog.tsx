@@ -156,7 +156,8 @@ export function LeadImportDialog({ open, onOpenChange, funnelStages, onImported 
     setStep('importing');
     setProgress(0);
 
-    // Fetch ALL existing phones for duplicate check (paginated — Supabase caps at 1000 per request)
+    // ÚNICO CRITÉRIO DE DUPLICIDADE: número de telefone/WhatsApp (apenas dígitos).
+    // Nomes, e-mails e demais campos NÃO são considerados para deduplicação.
     const existingPhones = new Set<string>();
     const PAGE = 1000;
     let from = 0;
@@ -194,6 +195,8 @@ export function LeadImportDialog({ open, onOpenChange, funnelStages, onImported 
 
         if (!name && !phone && !email) continue;
 
+        // Duplicidade SOMENTE por número. Nome NÃO conta.
+        // Linha sem número válido (>=8 dígitos) sempre é importada.
         if (phone && phone.length >= 8) {
           if (existingPhones.has(phone) || seenInFile.has(phone)) {
             duplicated++;
@@ -201,6 +204,7 @@ export function LeadImportDialog({ open, onOpenChange, funnelStages, onImported 
           }
           seenInFile.add(phone);
         }
+
 
         inserts.push({
           name: name || phoneRaw || email || 'Sem nome',
