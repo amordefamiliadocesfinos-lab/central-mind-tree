@@ -99,21 +99,33 @@ export function CommercialDashboard() {
     const monthStart = format(startOfMonth(new Date()), 'yyyy-MM-dd');
     const monthEnd = format(endOfMonth(new Date()), 'yyyy-MM-dd');
 
-    const [contactsRes, ordersRes] = await Promise.all([
-      supabase
+    // Paginate contacts to bypass PostgREST's 1000-row cap
+    const PAGE = 1000;
+    const contactsAll: any[] = [];
+    let cFrom = 0;
+    while (true) {
+      const { data, error } = await supabase
         .from('contacts')
         .select('id, funnel_status, valor_estimado')
-        .eq('is_active', true),
-      supabase
-        .from('orders')
-        .select('id, status, total_value, order_date')
-        .gte('order_date', monthStart)
-        .lte('order_date', monthEnd)
-        .is('deleted_at', null),
-    ]);
+        .eq('is_active', true)
+        .range(cFrom, cFrom + PAGE - 1);
+      if (error) { console.error(error); break; }
+      if (!data || data.length === 0) break;
+      contactsAll.push(...data);
+      if (data.length < PAGE) break;
+      cFrom += PAGE;
+    }
 
-    const contacts = contactsRes.data || [];
+    const ordersRes = await supabase
+      .from('orders')
+      .select('id, status, total_value, order_date')
+      .gte('order_date', monthStart)
+      .lte('order_date', monthEnd)
+      .is('deleted_at', null);
+
+    const contacts = contactsAll;
     const orders = ordersRes.data || [];
+
 
     const novosLeads = contacts.filter(c => c.funnel_status === 'novo_lead').length;
     const emNegociacao = contacts.filter(c =>
