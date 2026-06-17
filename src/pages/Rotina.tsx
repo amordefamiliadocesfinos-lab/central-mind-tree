@@ -237,6 +237,7 @@ export default function Rotina() {
             onStartBlock={startBlock}
             onCompleteBlock={completeBlock}
             onSkipBlock={skipBlock}
+            onPauseBlock={pauseBlock}
             onEditBlock={handleEditBlock}
             onDeleteBlock={deleteBlock}
             onReorderBlocks={reorderBlocks}
