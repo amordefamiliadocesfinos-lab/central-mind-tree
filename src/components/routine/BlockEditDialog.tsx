@@ -175,6 +175,7 @@ export function BlockEditDialog({
               Ao concluir, o próximo horário é agendado automaticamente.
             </p>
           )}
+        </div>
 
         {/* Notes */}
         <div>
