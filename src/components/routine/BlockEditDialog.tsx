@@ -40,6 +40,7 @@ export function BlockEditDialog({
         duration_minutes: block.duration_minutes,
         planned_start: block.planned_start || '',
         notes: block.notes || '',
+        recurrence: (block.recurrence as RecurrenceType | null) || '',
       });
     } else {
       // Default values for new block
@@ -55,13 +56,16 @@ export function BlockEditDialog({
         duration_minutes: 25,
         planned_start: `${adjustedHours}:${adjustedMins}`,
         notes: '',
+        recurrence: '',
       });
     }
   }, [block, open]);
 
   const handleSubmit = () => {
+    const { recurrence, ...rest } = formData;
     onSave({
-      ...formData,
+      ...rest,
+      recurrence: (recurrence === '' ? null : recurrence) as RecurrenceType | null,
       date: block?.date || defaultDate,
     });
     onOpenChange(false);
