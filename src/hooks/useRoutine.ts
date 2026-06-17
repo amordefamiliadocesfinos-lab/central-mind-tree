@@ -132,7 +132,7 @@ export function useRoutine(options: UseRoutineOptions = {}) {
   const [loading, setLoading] = useState(true);
   const [activeBlock, setActiveBlock] = useState<RoutineBlock | null>(null);
   
-  const { scheduleNotification, requestPermission } = useNotifications();
+  const { scheduleNotification, requestPermission, notify } = useNotifications();
 
   // Date range based on view mode
   const dateRange = useMemo(() => {
