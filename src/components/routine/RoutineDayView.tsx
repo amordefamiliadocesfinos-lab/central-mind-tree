@@ -381,6 +381,7 @@ function BlockCardContent({
   onStart,
   onComplete,
   onSkip,
+  onPause,
   onEdit,
   onDelete,
   dragHandleProps = {},
