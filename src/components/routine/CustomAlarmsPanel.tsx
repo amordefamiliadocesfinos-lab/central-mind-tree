@@ -139,6 +139,15 @@ export function CustomAlarmsPanel() {
         firedRef.current[key] = true;
         changed = true;
 
+        // Adiciona à lista de pendentes (persistente até dispensar)
+        setPending(prev => {
+          const already = prev.some(p => p.id === a.id && p.time === hhmm && p.date === today);
+          if (already) return prev;
+          const next = [...prev, { id: a.id, name: a.name, message: a.message, time: hhmm, date: today }];
+          savePending(next);
+          return next;
+        });
+
         // Dispara
         speak(a.message || a.name);
         toast({ title: `⏰ ${a.name}`, description: a.message || `Alarme das ${hhmm}` });
