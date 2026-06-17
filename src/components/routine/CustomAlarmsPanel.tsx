@@ -25,6 +25,15 @@ export type CustomAlarm = {
 
 const STORAGE_KEY = 'pc.routine.customAlarms.v2';
 const FIRED_KEY = 'pc.routine.customAlarms.fired'; // map alarmId|HH:MM|YYYY-MM-DD => true
+const PENDING_KEY = 'pc.routine.customAlarms.pending'; // alarmes não dispensados
+
+export type PendingAlarm = {
+  id: string;         // alarm.id
+  name: string;
+  message: string;
+  time: string;       // HH:MM
+  date: string;       // YYYY-MM-DD
+};
 
 function loadAlarms(): CustomAlarm[] {
   try {
@@ -52,6 +61,13 @@ function loadFired(): Record<string, boolean> {
 }
 function saveFired(v: Record<string, boolean>) {
   localStorage.setItem(FIRED_KEY, JSON.stringify(v));
+}
+
+function loadPending(): PendingAlarm[] {
+  try { return JSON.parse(localStorage.getItem(PENDING_KEY) || '[]'); } catch { return []; }
+}
+function savePending(v: PendingAlarm[]) {
+  localStorage.setItem(PENDING_KEY, JSON.stringify(v));
 }
 
 function speak(text: string) {
@@ -91,10 +107,12 @@ export function CustomAlarmsPanel() {
   });
   const [newTime, setNewTime] = useState('08:00');
   const firedRef = useRef<Record<string, boolean>>({});
+  const [pending, setPending] = useState<PendingAlarm[]>([]);
 
   useEffect(() => {
     setAlarms(loadAlarms());
     firedRef.current = loadFired();
+    setPending(loadPending());
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission().catch(() => {});
     }
@@ -120,6 +138,15 @@ export function CustomAlarmsPanel() {
         if (firedRef.current[key]) continue;
         firedRef.current[key] = true;
         changed = true;
+
+        // Adiciona à lista de pendentes (persistente até dispensar)
+        setPending(prev => {
+          const already = prev.some(p => p.id === a.id && p.time === hhmm && p.date === today);
+          if (already) return prev;
+          const next = [...prev, { id: a.id, name: a.name, message: a.message, time: hhmm, date: today }];
+          savePending(next);
+          return next;
+        });
 
         // Dispara
         speak(a.message || a.name);
@@ -192,8 +219,40 @@ export function CustomAlarmsPanel() {
     saveAlarms(next);
   }
 
+  function dismissPending(id: string, time: string, date: string) {
+    setPending(prev => {
+      const next = prev.filter(p => !(p.id === id && p.time === time && p.date === date));
+      savePending(next);
+      return next;
+    });
+  }
+
   return (
     <Card className="p-4 space-y-3">
+      {/* Alarmes pendentes — visíveis até serem dispensados */}
+      {pending.length > 0 && (
+        <div className="space-y-2">
+          {pending.map(p => (
+            <div key={`${p.id}-${p.time}-${p.date}`} className="flex items-start gap-3 rounded-lg border border-amber-500/50 bg-amber-500/10 p-3">
+              <Bell className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                  ⏰ {p.name} — {p.time}
+                </div>
+                {p.message && (
+                  <div className="text-xs text-amber-700/80 dark:text-amber-300/80 mt-0.5">
+                    {p.message}
+                  </div>
+                )}
+              </div>
+              <Button size="sm" variant="secondary" onClick={() => dismissPending(p.id, p.time, p.date)}>
+                OK
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Bell className="h-4 w-4 text-primary" />
