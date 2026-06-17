@@ -315,6 +315,7 @@ interface SortableBlockCardProps {
   onStart: () => void;
   onComplete: () => void;
   onSkip: () => void;
+  onPause?: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }
