@@ -784,6 +784,7 @@ export function useRoutine(options: UseRoutineOptions = {}) {
     addBlock,
     updateBlock,
     deleteBlock,
+    pauseBlock,
     reorderBlocks,
     
     // Planning
