@@ -25,6 +25,15 @@ export type CustomAlarm = {
 
 const STORAGE_KEY = 'pc.routine.customAlarms.v2';
 const FIRED_KEY = 'pc.routine.customAlarms.fired'; // map alarmId|HH:MM|YYYY-MM-DD => true
+const PENDING_KEY = 'pc.routine.customAlarms.pending'; // alarmes não dispensados
+
+export type PendingAlarm = {
+  id: string;         // alarm.id
+  name: string;
+  message: string;
+  time: string;       // HH:MM
+  date: string;       // YYYY-MM-DD
+};
 
 function loadAlarms(): CustomAlarm[] {
   try {
@@ -52,6 +61,13 @@ function loadFired(): Record<string, boolean> {
 }
 function saveFired(v: Record<string, boolean>) {
   localStorage.setItem(FIRED_KEY, JSON.stringify(v));
+}
+
+function loadPending(): PendingAlarm[] {
+  try { return JSON.parse(localStorage.getItem(PENDING_KEY) || '[]'); } catch { return []; }
+}
+function savePending(v: PendingAlarm[]) {
+  localStorage.setItem(PENDING_KEY, JSON.stringify(v));
 }
 
 function speak(text: string) {
