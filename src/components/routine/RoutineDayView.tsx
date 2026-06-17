@@ -517,14 +517,36 @@ function BlockCardContent({
             )}
             
             {isActive && (
-              <Button
-                size="sm"
-                variant="default"
-                onClick={onComplete}
-                className="h-9 px-3"
-              >
-                <Check className="h-4 w-4 mr-1" /> Concluir
-              </Button>
+              <>
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={onComplete}
+                  className="h-9 px-3"
+                >
+                  <Check className="h-4 w-4 mr-1" /> Concluir
+                </Button>
+                {onPause && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={onPause}
+                    className="h-9 w-9 p-0"
+                    title="Pausar"
+                  >
+                    <Pause className="h-4 w-4" />
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={onEdit}
+                  className="h-9 w-9 p-0"
+                  title="Editar"
+                >
+                  <Pencil className="h-3 w-3" />
+                </Button>
+              </>
             )}
             
             {block.status !== 'andamento' && (
