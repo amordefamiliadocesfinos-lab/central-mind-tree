@@ -5,6 +5,20 @@ import { toast } from 'sonner';
 import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, parseISO, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
+export type RecurrenceType = '1h' | '2h' | '4h' | '6h' | '12h' | 'daily' | 'weekly' | 'monthly';
+
+export const RECURRENCE_OPTIONS: { value: RecurrenceType | ''; label: string }[] = [
+  { value: '', label: 'Sem recorrência' },
+  { value: '1h', label: 'A cada 1 hora' },
+  { value: '2h', label: 'A cada 2 horas' },
+  { value: '4h', label: 'A cada 4 horas' },
+  { value: '6h', label: 'A cada 6 horas' },
+  { value: '12h', label: 'A cada 12 horas' },
+  { value: 'daily', label: 'Diário' },
+  { value: 'weekly', label: 'Semanal' },
+  { value: 'monthly', label: 'Mensal' },
+];
+
 export interface RoutineBlock {
   id: string;
   template_id: string | null;
@@ -21,7 +35,35 @@ export interface RoutineBlock {
   node_id: string | null;
   task_id: string | null;
   notes: string | null;
+  recurrence: RecurrenceType | null;
+  recurrence_parent_id: string | null;
   created_at: string;
+}
+
+export function getNextRecurrence(date: string, time: string | null, recurrence: RecurrenceType): { date: string; time: string } {
+  const t = time || '08:00';
+  const base = parseISO(`${date}T${t}:00`);
+  let next: Date;
+  switch (recurrence) {
+    case '1h': next = new Date(base.getTime() + 1 * 3600 * 1000); break;
+    case '2h': next = new Date(base.getTime() + 2 * 3600 * 1000); break;
+    case '4h': next = new Date(base.getTime() + 4 * 3600 * 1000); break;
+    case '6h': next = new Date(base.getTime() + 6 * 3600 * 1000); break;
+    case '12h': next = new Date(base.getTime() + 12 * 3600 * 1000); break;
+    case 'daily': next = addDays(base, 1); break;
+    case 'weekly': next = addDays(base, 7); break;
+    case 'monthly': {
+      const d = new Date(base);
+      d.setMonth(d.getMonth() + 1);
+      next = d;
+      break;
+    }
+    default: next = base;
+  }
+  return {
+    date: format(next, 'yyyy-MM-dd'),
+    time: format(next, 'HH:mm'),
+  };
 }
 
 export interface RoutineTemplate {
