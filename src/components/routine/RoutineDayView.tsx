@@ -68,6 +68,7 @@ export function RoutineDayView({
   onStartBlock,
   onCompleteBlock,
   onSkipBlock,
+  onPauseBlock,
   onEditBlock,
   onDeleteBlock,
   onReorderBlocks,
