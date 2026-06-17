@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { 
   Play, Check, SkipForward, Pencil, Trash2, 
-  GripVertical, Plus, Clock, Target, Sparkles
+  GripVertical, Plus, Clock, Target, Sparkles, Pause, Repeat, AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
