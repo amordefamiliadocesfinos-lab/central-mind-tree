@@ -36,6 +36,7 @@ export default function Rotina() {
     addBlock,
     updateBlock,
     deleteBlock,
+    pauseBlock,
     reorderBlocks,
     
     autoPlanDay,
@@ -236,6 +237,7 @@ export default function Rotina() {
             onStartBlock={startBlock}
             onCompleteBlock={completeBlock}
             onSkipBlock={skipBlock}
+            onPauseBlock={pauseBlock}
             onEditBlock={handleEditBlock}
             onDeleteBlock={deleteBlock}
             onReorderBlocks={reorderBlocks}

@@ -3190,6 +3190,8 @@ export type Database = {
           notes: string | null
           planned_end: string | null
           planned_start: string | null
+          recurrence: string | null
+          recurrence_parent_id: string | null
           status: string
           task_id: string | null
           template_id: string | null
@@ -3208,6 +3210,8 @@ export type Database = {
           notes?: string | null
           planned_end?: string | null
           planned_start?: string | null
+          recurrence?: string | null
+          recurrence_parent_id?: string | null
           status?: string
           task_id?: string | null
           template_id?: string | null
@@ -3226,6 +3230,8 @@ export type Database = {
           notes?: string | null
           planned_end?: string | null
           planned_start?: string | null
+          recurrence?: string | null
+          recurrence_parent_id?: string | null
           status?: string
           task_id?: string | null
           template_id?: string | null
@@ -3237,6 +3243,13 @@ export type Database = {
             columns: ["node_id"]
             isOneToOne: false
             referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "routine_blocks_recurrence_parent_id_fkey"
+            columns: ["recurrence_parent_id"]
+            isOneToOne: false
+            referencedRelation: "routine_blocks"
             referencedColumns: ["id"]
           },
           {

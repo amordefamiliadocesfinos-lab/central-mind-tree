@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { 
   Play, Check, SkipForward, Pencil, Trash2, 
-  GripVertical, Plus, Clock, Target, Sparkles
+  GripVertical, Plus, Clock, Target, Sparkles, Pause, Repeat, AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -39,6 +39,7 @@ interface RoutineDayViewProps {
   onStartBlock: (id: string) => void;
   onCompleteBlock: (id: string) => void;
   onSkipBlock: (id: string) => void;
+  onPauseBlock?: (id: string) => void;
   onEditBlock: (block: RoutineBlock) => void;
   onDeleteBlock: (id: string) => void;
   onReorderBlocks: (blocks: RoutineBlock[]) => void;
@@ -67,6 +68,7 @@ export function RoutineDayView({
   onStartBlock,
   onCompleteBlock,
   onSkipBlock,
+  onPauseBlock,
   onEditBlock,
   onDeleteBlock,
   onReorderBlocks,
@@ -269,6 +271,7 @@ export function RoutineDayView({
                   onStart={() => onStartBlock(block.id)}
                   onComplete={() => onCompleteBlock(block.id)}
                   onSkip={() => onSkipBlock(block.id)}
+                  onPause={onPauseBlock ? () => onPauseBlock(block.id) : undefined}
                   onEdit={() => onEditBlock(block)}
                   onDelete={() => onDeleteBlock(block.id)}
                 />
@@ -313,6 +316,7 @@ interface SortableBlockCardProps {
   onStart: () => void;
   onComplete: () => void;
   onSkip: () => void;
+  onPause?: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }
@@ -363,6 +367,7 @@ interface BlockCardContentProps {
   onStart: () => void;
   onComplete: () => void;
   onSkip: () => void;
+  onPause?: () => void;
   onEdit: () => void;
   onDelete: () => void;
   dragHandleProps?: Record<string, unknown>;
@@ -377,11 +382,26 @@ function BlockCardContent({
   onStart,
   onComplete,
   onSkip,
+  onPause,
   onEdit,
   onDelete,
   dragHandleProps = {},
 }: BlockCardContentProps) {
   const focusInfo = FOCUS_TYPES[block.focus as FocusType] || FOCUS_TYPES.trabalho_profundo;
+
+  // Compute "overdue": pending block whose planned_start has already passed today
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const nowHHMM = format(new Date(), 'HH:mm');
+  const isOverdue =
+    block.status === 'pendente' &&
+    block.date === todayStr &&
+    !!block.planned_start &&
+    block.planned_start <= nowHHMM;
+
+  const recurrenceLabel: Record<string, string> = {
+    '1h': '1h', '2h': '2h', '4h': '4h', '6h': '6h', '12h': '12h',
+    daily: 'Diário', weekly: 'Semanal', monthly: 'Mensal',
+  };
 
   return (
     <Card
@@ -390,6 +410,7 @@ function BlockCardContent({
         isActive && 'ring-2 ring-primary shadow-lg',
         block.status === 'concluido' && 'opacity-60 bg-muted/30',
         block.status === 'pulado' && 'opacity-40',
+        isOverdue && 'ring-2 ring-amber-500 shadow-md bg-amber-50/40 dark:bg-amber-950/20',
         isDragging && 'ring-2 ring-primary shadow-2xl'
       )}
     >
@@ -432,6 +453,18 @@ function BlockCardContent({
               <Badge variant="outline" className="text-xs">
                 {focusInfo.label}
               </Badge>
+              {block.recurrence && (
+                <Badge variant="secondary" className="text-xs gap-1">
+                  <Repeat className="h-3 w-3" />
+                  {recurrenceLabel[block.recurrence] || block.recurrence}
+                </Badge>
+              )}
+              {isOverdue && (
+                <Badge className="text-xs gap-1 bg-amber-500 text-white hover:bg-amber-600">
+                  <AlertCircle className="h-3 w-3" />
+                  Pendente agora
+                </Badge>
+              )}
             </div>
             
             {isActive && (
@@ -484,14 +517,36 @@ function BlockCardContent({
             )}
             
             {isActive && (
-              <Button
-                size="sm"
-                variant="default"
-                onClick={onComplete}
-                className="h-9 px-3"
-              >
-                <Check className="h-4 w-4 mr-1" /> Concluir
-              </Button>
+              <>
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={onComplete}
+                  className="h-9 px-3"
+                >
+                  <Check className="h-4 w-4 mr-1" /> Concluir
+                </Button>
+                {onPause && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={onPause}
+                    className="h-9 w-9 p-0"
+                    title="Pausar"
+                  >
+                    <Pause className="h-4 w-4" />
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={onEdit}
+                  className="h-9 w-9 p-0"
+                  title="Editar"
+                >
+                  <Pencil className="h-3 w-3" />
+                </Button>
+              </>
             )}
             
             {block.status !== 'andamento' && (

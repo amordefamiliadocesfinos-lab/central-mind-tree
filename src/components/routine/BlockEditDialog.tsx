@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { RoutineBlock, FOCUS_TYPES, FocusType } from '@/hooks/useRoutine';
+import { RoutineBlock, FOCUS_TYPES, FocusType, RECURRENCE_OPTIONS, RecurrenceType } from '@/hooks/useRoutine';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,6 +29,7 @@ export function BlockEditDialog({
     duration_minutes: 25,
     planned_start: '',
     notes: '',
+    recurrence: '' as RecurrenceType | '',
   });
 
   useEffect(() => {
@@ -39,6 +40,7 @@ export function BlockEditDialog({
         duration_minutes: block.duration_minutes,
         planned_start: block.planned_start || '',
         notes: block.notes || '',
+        recurrence: (block.recurrence as RecurrenceType | null) || '',
       });
     } else {
       // Default values for new block
@@ -54,13 +56,16 @@ export function BlockEditDialog({
         duration_minutes: 25,
         planned_start: `${adjustedHours}:${adjustedMins}`,
         notes: '',
+        recurrence: '',
       });
     }
   }, [block, open]);
 
   const handleSubmit = () => {
+    const { recurrence, ...rest } = formData;
     onSave({
-      ...formData,
+      ...rest,
+      recurrence: (recurrence === '' ? null : recurrence) as RecurrenceType | null,
       date: block?.date || defaultDate,
     });
     onOpenChange(false);
@@ -145,6 +150,31 @@ export function BlockEditDialog({
             value={formData.planned_start}
             onChange={(e) => setFormData({ ...formData, planned_start: e.target.value })}
           />
+        </div>
+
+        {/* Recurrence */}
+        <div>
+          <Label>Recorrência</Label>
+          <Select
+            value={formData.recurrence || 'none'}
+            onValueChange={(v) => setFormData({ ...formData, recurrence: (v === 'none' ? '' : v) as RecurrenceType | '' })}
+          >
+            <SelectTrigger className="h-12">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {RECURRENCE_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value || 'none'} value={opt.value || 'none'}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {formData.recurrence && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Ao concluir, o próximo horário é agendado automaticamente.
+            </p>
+          )}
         </div>
 
         {/* Notes */}
