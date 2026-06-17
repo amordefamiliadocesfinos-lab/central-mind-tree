@@ -389,6 +389,20 @@ function BlockCardContent({
 }: BlockCardContentProps) {
   const focusInfo = FOCUS_TYPES[block.focus as FocusType] || FOCUS_TYPES.trabalho_profundo;
 
+  // Compute "overdue": pending block whose planned_start has already passed today
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const nowHHMM = format(new Date(), 'HH:mm');
+  const isOverdue =
+    block.status === 'pendente' &&
+    block.date === todayStr &&
+    !!block.planned_start &&
+    block.planned_start <= nowHHMM;
+
+  const recurrenceLabel: Record<string, string> = {
+    '1h': '1h', '2h': '2h', '4h': '4h', '6h': '6h', '12h': '12h',
+    daily: 'Diário', weekly: 'Semanal', monthly: 'Mensal',
+  };
+
   return (
     <Card
       className={cn(
@@ -396,6 +410,7 @@ function BlockCardContent({
         isActive && 'ring-2 ring-primary shadow-lg',
         block.status === 'concluido' && 'opacity-60 bg-muted/30',
         block.status === 'pulado' && 'opacity-40',
+        isOverdue && 'ring-2 ring-amber-500 shadow-md animate-pulse-slow bg-amber-50/40 dark:bg-amber-950/20',
         isDragging && 'ring-2 ring-primary shadow-2xl'
       )}
     >
