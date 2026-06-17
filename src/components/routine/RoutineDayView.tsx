@@ -366,6 +366,7 @@ interface BlockCardContentProps {
   onStart: () => void;
   onComplete: () => void;
   onSkip: () => void;
+  onPause?: () => void;
   onEdit: () => void;
   onDelete: () => void;
   dragHandleProps?: Record<string, unknown>;
