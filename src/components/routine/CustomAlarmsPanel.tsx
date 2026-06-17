@@ -219,8 +219,40 @@ export function CustomAlarmsPanel() {
     saveAlarms(next);
   }
 
+  function dismissPending(id: string, time: string, date: string) {
+    setPending(prev => {
+      const next = prev.filter(p => !(p.id === id && p.time === time && p.date === date));
+      savePending(next);
+      return next;
+    });
+  }
+
   return (
     <Card className="p-4 space-y-3">
+      {/* Alarmes pendentes — visíveis até serem dispensados */}
+      {pending.length > 0 && (
+        <div className="space-y-2">
+          {pending.map(p => (
+            <div key={`${p.id}-${p.time}-${p.date}`} className="flex items-start gap-3 rounded-lg border border-amber-500/50 bg-amber-500/10 p-3">
+              <Bell className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                  ⏰ {p.name} — {p.time}
+                </div>
+                {p.message && (
+                  <div className="text-xs text-amber-700/80 dark:text-amber-300/80 mt-0.5">
+                    {p.message}
+                  </div>
+                )}
+              </div>
+              <Button size="sm" variant="secondary" onClick={() => dismissPending(p.id, p.time, p.date)}>
+                OK
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Bell className="h-4 w-4 text-primary" />
