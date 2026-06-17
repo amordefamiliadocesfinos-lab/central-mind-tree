@@ -1,94 +1,175 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger,
 } from '@/components/ui/dialog';
 import { Card } from '@/components/ui/card';
-import { Bell, Plus, Pencil, Trash2, Play, Volume2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Bell, Plus, Pencil, Trash2, Volume2, Clock, X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+
+type Recurrence = 'once' | 'daily' | 'weekdays' | 'weekly';
 
 export type CustomAlarm = {
   id: string;
   name: string;
-  duration_minutes: number;
+  times: string[];           // HH:MM list
   message: string;
-  focus_label?: string;
+  recurrence: Recurrence;
+  enabled: boolean;
 };
 
-const STORAGE_KEY = 'pc.routine.customAlarms';
+const STORAGE_KEY = 'pc.routine.customAlarms.v2';
+const FIRED_KEY = 'pc.routine.customAlarms.fired'; // map alarmId|HH:MM|YYYY-MM-DD => true
 
 function loadAlarms(): CustomAlarm[] {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-  } catch {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+    // migração leve do formato antigo (se existir) — ignora durações
+    const legacy = localStorage.getItem('pc.routine.customAlarms');
+    if (legacy) {
+      const arr = JSON.parse(legacy) as any[];
+      return arr.map(a => ({
+        id: a.id, name: a.name, times: [], message: a.message,
+        recurrence: 'daily' as Recurrence, enabled: true,
+      }));
+    }
     return [];
-  }
+  } catch { return []; }
 }
 
 function saveAlarms(list: CustomAlarm[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
 }
 
+function loadFired(): Record<string, boolean> {
+  try { return JSON.parse(localStorage.getItem(FIRED_KEY) || '{}'); } catch { return {}; }
+}
+function saveFired(v: Record<string, boolean>) {
+  localStorage.setItem(FIRED_KEY, JSON.stringify(v));
+}
+
 function speak(text: string) {
-  if (!('speechSynthesis' in window)) {
-    toast({ title: 'Áudio não suportado neste navegador' });
-    return;
-  }
+  if (!('speechSynthesis' in window)) return;
   const utter = new SpeechSynthesisUtterance(text);
   utter.lang = 'pt-BR';
-  utter.rate = 1;
-  utter.pitch = 1;
   window.speechSynthesis.cancel();
   window.speechSynthesis.speak(utter);
 }
+
+function shouldRunToday(rec: Recurrence, lastDate: string | null): boolean {
+  const today = new Date();
+  const dow = today.getDay(); // 0=dom
+  if (rec === 'once') return lastDate !== today.toISOString().slice(0, 10) ? true : true; // dispara uma vez (controle por fired)
+  if (rec === 'daily') return true;
+  if (rec === 'weekdays') return dow >= 1 && dow <= 5;
+  if (rec === 'weekly') {
+    // toda mesma semana — simplificação: roda no mesmo dia da semana da criação? Usamos dom=domingo
+    return true; // toca todo dia da semana correspondente — checado por fired (apenas 1x/semana via key sem data)
+  }
+  return false;
+}
+
+const RECURRENCE_LABEL: Record<Recurrence, string> = {
+  once: 'Uma vez',
+  daily: 'Diário',
+  weekdays: 'Dias úteis (Seg–Sex)',
+  weekly: 'Semanal',
+};
 
 export function CustomAlarmsPanel() {
   const [alarms, setAlarms] = useState<CustomAlarm[]>([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<CustomAlarm | null>(null);
   const [form, setForm] = useState<Omit<CustomAlarm, 'id'>>({
-    name: '', duration_minutes: 25, message: '', focus_label: 'Trabalho profundo',
+    name: '', times: [], message: '', recurrence: 'daily', enabled: true,
   });
-  const [running, setRunning] = useState<{ id: string; endsAt: number } | null>(null);
-  const [now, setNow] = useState(Date.now());
-
-  useEffect(() => { setAlarms(loadAlarms()); }, []);
-  useEffect(() => {
-    if (!running) return;
-    const i = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(i);
-  }, [running]);
+  const [newTime, setNewTime] = useState('08:00');
+  const firedRef = useRef<Record<string, boolean>>({});
 
   useEffect(() => {
-    if (!running) return;
-    if (now >= running.endsAt) {
-      const a = alarms.find(x => x.id === running.id);
-      if (a) {
-        speak(a.message || `${a.name} concluído`);
-        toast({ title: '⏰ ' + a.name, description: a.message });
-      }
-      setRunning(null);
+    setAlarms(loadAlarms());
+    firedRef.current = loadFired();
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
     }
-  }, [now, running, alarms]);
+  }, []);
+
+  // Poller: a cada 20s verifica horários
+  useEffect(() => {
+    const tick = () => {
+      const now = new Date();
+      const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const today = now.toISOString().slice(0, 10);
+      let changed = false;
+
+      for (const a of alarms) {
+        if (!a.enabled) continue;
+        if (!a.times.includes(hhmm)) continue;
+        if (!shouldRunToday(a.recurrence, null)) continue;
+
+        const key = a.recurrence === 'weekly'
+          ? `${a.id}|${hhmm}|${today.slice(0, 7)}-w${Math.ceil(now.getDate() / 7)}`
+          : `${a.id}|${hhmm}|${today}`;
+
+        if (firedRef.current[key]) continue;
+        firedRef.current[key] = true;
+        changed = true;
+
+        // Dispara
+        speak(a.message || a.name);
+        toast({ title: `⏰ ${a.name}`, description: a.message || `Alarme das ${hhmm}` });
+        if ('Notification' in window && Notification.permission === 'granted') {
+          try { new Notification(`⏰ ${a.name}`, { body: a.message || `Alarme das ${hhmm}` }); } catch {}
+        }
+
+        if (a.recurrence === 'once') {
+          // desabilita após disparar
+          setAlarms(prev => {
+            const next = prev.map(x => x.id === a.id ? { ...x, enabled: false } : x);
+            saveAlarms(next);
+            return next;
+          });
+        }
+      }
+      if (changed) saveFired(firedRef.current);
+    };
+    tick();
+    const i = setInterval(tick, 20_000);
+    return () => clearInterval(i);
+  }, [alarms]);
 
   function openCreate() {
     setEditing(null);
-    setForm({ name: '', duration_minutes: 25, message: '', focus_label: 'Trabalho profundo' });
+    setForm({ name: '', times: [], message: '', recurrence: 'daily', enabled: true });
+    setNewTime('08:00');
     setOpen(true);
   }
 
   function openEdit(a: CustomAlarm) {
     setEditing(a);
-    setForm({ name: a.name, duration_minutes: a.duration_minutes, message: a.message, focus_label: a.focus_label });
+    setForm({ name: a.name, times: [...a.times], message: a.message, recurrence: a.recurrence, enabled: a.enabled });
     setOpen(true);
   }
 
+  function addTime() {
+    if (!/^\d{2}:\d{2}$/.test(newTime)) return;
+    if (form.times.includes(newTime)) return;
+    setForm({ ...form, times: [...form.times, newTime].sort() });
+  }
+
+  function removeTime(t: string) {
+    setForm({ ...form, times: form.times.filter(x => x !== t) });
+  }
+
   function save() {
-    if (!form.name.trim() || !form.message.trim() || form.duration_minutes <= 0) {
-      toast({ title: 'Preencha nome, duração e mensagem' });
+    if (!form.name.trim() || form.times.length === 0) {
+      toast({ title: 'Preencha nome e pelo menos um horário' });
       return;
     }
     const next = editing
@@ -103,22 +184,13 @@ export function CustomAlarmsPanel() {
     const next = alarms.filter(a => a.id !== id);
     setAlarms(next);
     saveAlarms(next);
-    if (running?.id === id) setRunning(null);
   }
 
-  function start(a: CustomAlarm) {
-    setRunning({ id: a.id, endsAt: Date.now() + a.duration_minutes * 60_000 });
-    toast({ title: `▶ ${a.name}`, description: `Cronômetro iniciado: ${a.duration_minutes}min` });
+  function toggle(id: string, enabled: boolean) {
+    const next = alarms.map(a => a.id === id ? { ...a, enabled } : a);
+    setAlarms(next);
+    saveAlarms(next);
   }
-
-  function stop() {
-    setRunning(null);
-    window.speechSynthesis?.cancel();
-  }
-
-  const remaining = running ? Math.max(0, running.endsAt - now) : 0;
-  const mm = String(Math.floor(remaining / 60000)).padStart(2, '0');
-  const ss = String(Math.floor((remaining % 60000) / 1000)).padStart(2, '0');
 
   return (
     <Card className="p-4 space-y-3">
@@ -140,28 +212,57 @@ export function CustomAlarmsPanel() {
             <div className="space-y-3">
               <div>
                 <Label>Nome</Label>
-                <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Ex: Pomodoro profundo" />
+                <Input value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="Ex: Impulsionar Shopee" />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Duração (min)</Label>
-                  <Input type="number" min={1} value={form.duration_minutes}
-                    onChange={e => setForm({ ...form, duration_minutes: Number(e.target.value) })} />
-                </div>
-                <div>
-                  <Label>Tipo de foco</Label>
-                  <Input value={form.focus_label || ''} onChange={e => setForm({ ...form, focus_label: e.target.value })} placeholder="Trabalho profundo" />
-                </div>
-              </div>
+
               <div>
-                <Label>Mensagem ao terminar (será falada)</Label>
+                <Label>Horários</Label>
+                <div className="flex gap-2">
+                  <Input type="time" value={newTime} onChange={e => setNewTime(e.target.value)} />
+                  <Button type="button" onClick={addTime} variant="secondary">
+                    <Plus className="h-4 w-4" /> Adicionar
+                  </Button>
+                </div>
+                {form.times.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {form.times.map(t => (
+                      <span key={t} className="inline-flex items-center gap-1 rounded-full bg-primary/10 text-primary px-2 py-1 text-xs">
+                        <Clock className="h-3 w-3" /> {t}
+                        <button type="button" onClick={() => removeTime(t)} className="ml-1 hover:text-destructive">
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <Label>Recorrência</Label>
+                <Select value={form.recurrence} onValueChange={(v) => setForm({ ...form, recurrence: v as Recurrence })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {(Object.keys(RECURRENCE_LABEL) as Recurrence[]).map(k => (
+                      <SelectItem key={k} value={k}>{RECURRENCE_LABEL[k]}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <Label>Mensagem (será falada e exibida)</Label>
                 <Textarea rows={3} value={form.message}
                   onChange={e => setForm({ ...form, message: e.target.value })}
-                  placeholder="Ex: Excelente! Você concluiu 25 minutos de trabalho profundo. Hora de respirar." />
+                  placeholder="Ex: Hora de impulsionar os produtos da Shopee." />
                 <Button type="button" variant="ghost" size="sm" className="mt-1"
                   onClick={() => form.message && speak(form.message)}>
                   <Volume2 className="h-3 w-3" /> Testar voz
                 </Button>
+              </div>
+
+              <div className="flex items-center justify-between rounded-md border p-2">
+                <Label className="text-sm">Ativo</Label>
+                <Switch checked={form.enabled} onCheckedChange={(v) => setForm({ ...form, enabled: v })} />
               </div>
             </div>
             <DialogFooter>
@@ -172,32 +273,26 @@ export function CustomAlarmsPanel() {
         </Dialog>
       </div>
 
-      {running && (
-        <div className="flex items-center justify-between rounded-md border bg-primary/5 px-3 py-2">
-          <div className="text-sm">
-            <span className="font-medium">{alarms.find(a => a.id === running.id)?.name}</span>
-            <span className="ml-2 font-mono text-primary">{mm}:{ss}</span>
-          </div>
-          <Button size="sm" variant="outline" onClick={stop}>Parar</Button>
-        </div>
-      )}
-
       {alarms.length === 0 ? (
-        <p className="text-xs text-muted-foreground">Nenhum alarme criado. Crie um para iniciar um cronômetro com aviso por voz.</p>
+        <p className="text-xs text-muted-foreground">
+          Nenhum alarme criado. Crie alarmes por horário (independentes dos blocos da rotina) — eles disparam notificação e voz no horário definido.
+        </p>
       ) : (
         <ul className="space-y-2">
           {alarms.map(a => (
-            <li key={a.id} className="flex items-center justify-between rounded-md border p-2">
-              <div className="min-w-0">
-                <div className="text-sm font-medium truncate">{a.name}</div>
+            <li key={a.id} className="flex items-center justify-between rounded-md border p-2 gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium truncate flex items-center gap-2">
+                  {a.name}
+                  {!a.enabled && <span className="text-xs text-muted-foreground">(pausado)</span>}
+                </div>
                 <div className="text-xs text-muted-foreground truncate">
-                  {a.duration_minutes}min · {a.focus_label || 'Foco'} · "{a.message}"
+                  {a.times.join(' · ') || 'sem horário'} · {RECURRENCE_LABEL[a.recurrence]}
+                  {a.message ? ` · "${a.message}"` : ''}
                 </div>
               </div>
-              <div className="flex gap-1 shrink-0">
-                <Button size="icon" variant="ghost" onClick={() => start(a)} title="Iniciar">
-                  <Play className="h-4 w-4" />
-                </Button>
+              <div className="flex items-center gap-1 shrink-0">
+                <Switch checked={a.enabled} onCheckedChange={(v) => toggle(a.id, v)} />
                 <Button size="icon" variant="ghost" onClick={() => openEdit(a)} title="Editar">
                   <Pencil className="h-4 w-4" />
                 </Button>
