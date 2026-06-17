@@ -152,6 +152,30 @@ export function BlockEditDialog({
           />
         </div>
 
+        {/* Recurrence */}
+        <div>
+          <Label>Recorrência</Label>
+          <Select
+            value={formData.recurrence || 'none'}
+            onValueChange={(v) => setFormData({ ...formData, recurrence: (v === 'none' ? '' : v) as RecurrenceType | '' })}
+          >
+            <SelectTrigger className="h-12">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {RECURRENCE_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value || 'none'} value={opt.value || 'none'}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {formData.recurrence && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Ao concluir, o próximo horário é agendado automaticamente.
+            </p>
+          )}
+
         {/* Notes */}
         <div>
           <Label>Observações (opcional)</Label>
