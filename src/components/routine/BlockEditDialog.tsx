@@ -29,6 +29,7 @@ export function BlockEditDialog({
     duration_minutes: 25,
     planned_start: '',
     notes: '',
+    recurrence: '' as RecurrenceType | '',
   });
 
   useEffect(() => {
