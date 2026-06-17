@@ -410,7 +410,7 @@ function BlockCardContent({
         isActive && 'ring-2 ring-primary shadow-lg',
         block.status === 'concluido' && 'opacity-60 bg-muted/30',
         block.status === 'pulado' && 'opacity-40',
-        isOverdue && 'ring-2 ring-amber-500 shadow-md animate-pulse-slow bg-amber-50/40 dark:bg-amber-950/20',
+        isOverdue && 'ring-2 ring-amber-500 shadow-md bg-amber-50/40 dark:bg-amber-950/20',
         isDragging && 'ring-2 ring-primary shadow-2xl'
       )}
     >
