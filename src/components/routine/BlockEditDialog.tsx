@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { RoutineBlock, FOCUS_TYPES, FocusType } from '@/hooks/useRoutine';
+import { RoutineBlock, FOCUS_TYPES, FocusType, RECURRENCE_OPTIONS, RecurrenceType } from '@/hooks/useRoutine';
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
