@@ -36,6 +36,7 @@ export default function Rotina() {
     addBlock,
     updateBlock,
     deleteBlock,
+    pauseBlock,
     reorderBlocks,
     
     autoPlanDay,
