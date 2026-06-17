@@ -107,10 +107,12 @@ export function CustomAlarmsPanel() {
   });
   const [newTime, setNewTime] = useState('08:00');
   const firedRef = useRef<Record<string, boolean>>({});
+  const [pending, setPending] = useState<PendingAlarm[]>([]);
 
   useEffect(() => {
     setAlarms(loadAlarms());
     firedRef.current = loadFired();
+    setPending(loadPending());
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission().catch(() => {});
     }
