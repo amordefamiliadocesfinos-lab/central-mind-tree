@@ -734,6 +734,34 @@ export function useRoutine(options: UseRoutineOptions = {}) {
     fetchStats();
   }, [dateRange, fetchBlocks, fetchStats]);
 
+  // Notification poller: alert when a pending block's planned_start arrives
+  useEffect(() => {
+    const STORAGE_KEY = 'pc.routine.notified';
+    const check = () => {
+      const today = format(new Date(), 'yyyy-MM-dd');
+      const nowHHMM = format(new Date(), 'HH:mm');
+      const notified: Record<string, string> = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+      blocks.forEach((b) => {
+        if (b.date !== today) return;
+        if (b.status !== 'pendente') return;
+        if (!b.planned_start) return;
+        if (b.planned_start > nowHHMM) return;
+        const key = `${b.id}:${b.date}:${b.planned_start}`;
+        if (notified[key]) return;
+        notify(`⏰ ${b.title}`, { body: `Rotina agendada para ${b.planned_start}` });
+        try {
+          toast.warning(`⏰ Rotina pendente: ${b.title}`, { description: `Programada para ${b.planned_start}`, duration: 8000 });
+        } catch {}
+        notified[key] = new Date().toISOString();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(notified));
+      });
+    };
+    check();
+    const id = setInterval(check, 30000);
+    return () => clearInterval(id);
+  }, [blocks, notify]);
+
+
   return {
     // State
     selectedDate,
