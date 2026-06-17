@@ -453,6 +453,18 @@ function BlockCardContent({
               <Badge variant="outline" className="text-xs">
                 {focusInfo.label}
               </Badge>
+              {block.recurrence && (
+                <Badge variant="secondary" className="text-xs gap-1">
+                  <Repeat className="h-3 w-3" />
+                  {recurrenceLabel[block.recurrence] || block.recurrence}
+                </Badge>
+              )}
+              {isOverdue && (
+                <Badge className="text-xs gap-1 bg-amber-500 text-white hover:bg-amber-600">
+                  <AlertCircle className="h-3 w-3" />
+                  Pendente agora
+                </Badge>
+              )}
             </div>
             
             {isActive && (
