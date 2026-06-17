@@ -347,6 +347,30 @@ export function useRoutine(options: UseRoutineOptions = {}) {
     }
 
     setActiveBlock(null);
+
+    // Auto-schedule next recurrence
+    if (block?.recurrence) {
+      const next = getNextRecurrence(block.date, block.planned_start, block.recurrence);
+      const { error: recErr } = await supabase.from('routine_blocks').insert({
+        date: next.date,
+        title: block.title,
+        block_type: block.block_type,
+        focus: block.focus,
+        duration_minutes: block.duration_minutes,
+        planned_start: next.time,
+        node_id: block.node_id,
+        task_id: block.task_id,
+        template_id: block.template_id,
+        notes: block.notes,
+        recurrence: block.recurrence,
+        recurrence_parent_id: block.recurrence_parent_id || block.id,
+        status: 'pendente',
+      });
+      if (!recErr) {
+        toast.info(`🔁 Próxima ocorrência agendada para ${next.date === block.date ? '' : next.date + ' '}${next.time}`);
+      }
+    }
+
     const endTime = format(new Date(), 'HH:mm');
     let actualMinutes = block?.duration_minutes ?? 0;
     if (block?.actual_start) {
