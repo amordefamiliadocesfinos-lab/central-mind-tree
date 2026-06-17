@@ -400,6 +400,8 @@ export function useRoutine(options: UseRoutineOptions = {}) {
         task_id: block.task_id,
         template_id: block.template_id,
         notes: block.notes,
+        recurrence: block.recurrence || null,
+        recurrence_parent_id: block.recurrence_parent_id || null,
         status: 'pendente',
       });
 
@@ -411,6 +413,18 @@ export function useRoutine(options: UseRoutineOptions = {}) {
     toast.success('Bloco adicionado!');
     fetchBlocks();
   }, [selectedDate, fetchBlocks]);
+
+  const pauseBlock = useCallback(async (blockId: string) => {
+    const { error } = await supabase
+      .from('routine_blocks')
+      .update({ status: 'pendente', actual_start: null })
+      .eq('id', blockId);
+    if (error) { toast.error('Erro ao pausar'); return; }
+    setActiveBlock(null);
+    toast.info('⏸️ Bloco pausado');
+    fetchBlocks();
+  }, [fetchBlocks]);
+
 
   const updateBlock = useCallback(async (blockId: string, updates: Partial<RoutineBlock>) => {
     const { error } = await supabase
