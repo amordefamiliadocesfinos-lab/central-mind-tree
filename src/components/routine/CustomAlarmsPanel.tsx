@@ -127,7 +127,6 @@ export function CustomAlarmsPanel() {
       let changed = false;
 
       for (const a of alarms) {
-        if (!a.enabled) continue;
         if (!a.times.includes(hhmm)) continue;
         if (!shouldRunToday(a.recurrence, null)) continue;
 
@@ -139,7 +138,7 @@ export function CustomAlarmsPanel() {
         firedRef.current[key] = true;
         changed = true;
 
-        // Adiciona à lista de pendentes (persistente até dispensar)
+        // Aviso visual sempre (mesmo com alarme desativado)
         setPending(prev => {
           const already = prev.some(p => p.id === a.id && p.time === hhmm && p.date === today);
           if (already) return prev;
@@ -148,20 +147,21 @@ export function CustomAlarmsPanel() {
           return next;
         });
 
-        // Dispara
-        speak(a.message || a.name);
-        toast({ title: `⏰ ${a.name}`, description: a.message || `Alarme das ${hhmm}` });
-        if ('Notification' in window && Notification.permission === 'granted') {
-          try { new Notification(`⏰ ${a.name}`, { body: a.message || `Alarme das ${hhmm}` }); } catch {}
-        }
+        // Som / toast / notificação apenas quando ativado
+        if (a.enabled) {
+          speak(a.message || a.name);
+          toast({ title: `⏰ ${a.name}`, description: a.message || `Alarme das ${hhmm}` });
+          if ('Notification' in window && Notification.permission === 'granted') {
+            try { new Notification(`⏰ ${a.name}`, { body: a.message || `Alarme das ${hhmm}` }); } catch {}
+          }
 
-        if (a.recurrence === 'once') {
-          // desabilita após disparar
-          setAlarms(prev => {
-            const next = prev.map(x => x.id === a.id ? { ...x, enabled: false } : x);
-            saveAlarms(next);
-            return next;
-          });
+          if (a.recurrence === 'once') {
+            setAlarms(prev => {
+              const next = prev.map(x => x.id === a.id ? { ...x, enabled: false } : x);
+              saveAlarms(next);
+              return next;
+            });
+          }
         }
       }
       if (changed) saveFired(firedRef.current);
