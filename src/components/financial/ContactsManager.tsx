@@ -403,6 +403,7 @@ export function ContactsManager() {
         onOpenChange={(open) => { if (!open) setWhatsAppContact(undefined); }}
         contactName={whatsAppContact?.name || ''}
         funnelStatus={whatsAppContact?.funnel_status || ''}
+        contactId={whatsAppContact?.id}
         onSend={handleWhatsAppSend}
       />
     </div>
