@@ -877,6 +877,26 @@ export default function Digital() {
                       .map(pid => activePlatforms.find(p => p.id === pid))
                       .filter(Boolean) as typeof activePlatforms;
 
+                    // When a specific platform filter is active, scope each card to that platform
+                    const activePlatformObj = platformFilter !== 'all'
+                      ? activePlatforms.find(p => p.id === platformFilter)
+                      : null;
+
+                    if (activePlatformObj) {
+                      return [
+                        <IdeaCard
+                          key={`${idea.id}-${activePlatformObj.id}`}
+                          idea={idea}
+                          onClick={() => setSelectedIdea(idea.id)}
+                          platforms={activePlatforms}
+                          nodes={nodes}
+                          products={products}
+                          ideaTypes={ideaTypes}
+                          singlePlatform={activePlatformObj}
+                        />,
+                      ];
+                    }
+
                     if (isExpanded && ideaPlatforms.length > 1) {
                       return ideaPlatforms.map((plat) => (
                         <IdeaCard
