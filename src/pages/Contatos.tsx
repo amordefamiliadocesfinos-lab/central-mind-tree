@@ -1508,6 +1508,7 @@ export default function Contatos() {
         onOpenChange={(open) => { if (!open) setWhatsAppContact(null); }}
         contactName={whatsAppContact?.name || ''}
         funnelStatus={whatsAppContact?.funnel_status || ''}
+        contactId={whatsAppContact?.id}
         onSend={handleWhatsAppSend}
       />
 
