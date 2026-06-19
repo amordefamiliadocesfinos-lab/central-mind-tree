@@ -1295,6 +1295,7 @@ export function ContactFormDialog({
         onOpenChange={setWhatsAppOpen}
         contactName={form.name || ''}
         funnelStatus={form.funnel_status || ''}
+        contactId={contact?.id}
         onSend={handleWhatsAppSend}
       />
     </Dialog>
