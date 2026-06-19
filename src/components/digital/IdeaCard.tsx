@@ -49,8 +49,27 @@ interface IdeaCardProps {
 
 export function IdeaCard({ idea, onClick, platforms = [], nodes = [], products = [], ideaTypes = [], singlePlatform, singleVariation, onExpandPlatforms, onCollapsePlatforms, isExpandedByPlatforms }: IdeaCardProps) {
   const [expanded, setExpanded] = useState(false);
-  // When a single variation is provided, derive its status; otherwise use idea status
-  const statusConfig = DIGITAL_STATUS[singleVariation ? singleVariation.status : idea.status];
+  // Derive effective status:
+  // - singleVariation → that variation's status
+  // - singlePlatform → status derived from variations of that platform (worst non-concluido)
+  // - otherwise → idea status
+  const derivePlatformStatus = (vars: DigitalVariation[]): keyof typeof DIGITAL_STATUS => {
+    if (!vars.length) return idea.status;
+    const pending = vars.filter(v => v.status !== 'concluido');
+    if (pending.length === 0) return 'concluido';
+    // pick lowest priority (earliest in pipeline) among pending
+    return pending.reduce((acc, v) => {
+      const pAcc = DIGITAL_STATUS[acc]?.priority ?? 99;
+      const pV = DIGITAL_STATUS[v.status]?.priority ?? 99;
+      return pV < pAcc ? v.status : acc;
+    }, pending[0].status);
+  };
+  const effectiveStatus = singleVariation
+    ? singleVariation.status
+    : singlePlatform
+      ? derivePlatformStatus((idea.variations || []).filter(v => v.platform === singlePlatform.id))
+      : idea.status;
+  const statusConfig = DIGITAL_STATUS[effectiveStatus];
   
 
   const getPlatform = (platformId: string) => platforms.find(p => p.id === platformId);
