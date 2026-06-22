@@ -1,7 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { Contact } from '@/hooks/useContacts';
-import { useContactConversations } from '@/hooks/useContactConversations';
 import { ContactAvatar } from './ContactAvatar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -118,9 +117,10 @@ interface ContactCardProps {
   onSmartAttend: () => Promise<void>;
   hasPhone: boolean;
   nextTaskDate?: string | null;
+  convoSummary?: { openCount: number; totalUnread: number };
 }
 
-export function ContactCard({
+function ContactCardInner({
   contact,
   urgencyLevel,
   noResponseInfo,
@@ -142,15 +142,15 @@ export function ContactCard({
   onSmartAttend,
   hasPhone,
   nextTaskDate,
+  convoSummary,
 }: ContactCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [showFollowUp, setShowFollowUp] = useState(false);
   const [followUpNote, setFollowUpNote] = useState('');
   const [followUpType, setFollowUpType] = useState('mensagem');
   const [savingFollowUp, setSavingFollowUp] = useState(false);
-  const { conversations: linkedConvos } = useContactConversations(contact.id);
-  const openConvCount = linkedConvos.filter(c => c.status === 'open').length;
-  const totalUnread = linkedConvos.reduce((s, c) => s + (c.unread_count || 0), 0);
+  const openConvCount = convoSummary?.openCount ?? 0;
+  const totalUnread = convoSummary?.totalUnread ?? 0;
 
   const urgencyCfg = URGENCY_LEVELS[urgencyLevel];
   const temp = contact.temperatura_lead || 'morno';
