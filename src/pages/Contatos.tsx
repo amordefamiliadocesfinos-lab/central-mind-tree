@@ -85,6 +85,7 @@ import { useDailyMetrics } from '@/hooks/useDailyMetrics';
 import { useLeadScore } from '@/hooks/useLeadScore';
 import { useContactTags } from '@/hooks/useContactTags';
 import { useContactNextTasks } from '@/hooks/useContactNextTasks';
+import { useAllConversationsSummary } from '@/hooks/useAllConversationsSummary';
 import { ContactFormDialog } from '@/components/financial/ContactFormDialog';
 import { WhatsAppMessageSelector } from '@/components/crm/WhatsAppMessageSelector';
 import { LostReasonDialog } from '@/components/crm/LostReasonDialog';
@@ -203,6 +204,7 @@ export default function Contatos() {
   const { getTagsForContact } = useContactTags();
   const { hasOrders } = useContactsWithOrders();
   const { nextTaskByContact } = useContactNextTasks();
+  const { byContact: convoSummaryByContact } = useAllConversationsSummary();
   const { getNoResponseInfo, refreshNoResponse } = useNoResponseDetection();
   const { getScore } = useLeadScore(contacts, getNoResponseInfo, hasOrders);
   const contactIds = useMemo(() => contacts.filter(c => c.is_active).map(c => c.id), [contacts]);
@@ -716,6 +718,7 @@ export default function Contatos() {
         isDragged={draggedContact?.id === contact.id}
         hasPhone={!!phone}
         nextTaskDate={nextTaskByContact[contact.id] || null}
+        convoSummary={convoSummaryByContact[contact.id]}
         onEdit={() => { setDetailContact(contact); setDetailOpen(true); }}
         onWhatsApp={() => handleWhatsApp(contact)}
         onViewOrders={() => { setHistoryContact(contact); setHistoryOpen(true); }}
