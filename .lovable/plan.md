@@ -1,57 +1,58 @@
-## Objetivo
+## Diagnóstico
 
-Ter um único banco de mídia (`digital_media`) como fonte da verdade para imagens/vídeos de **Ideias do Digital** e **Produtos das Operações**. Hoje temos:
+Após analisar o código, identifiquei **4 gargalos principais** que explicam o travamento depois de chegar a ~2000 contatos:
 
-- `digital_media` (com `idea_id` / `variation_id`) — usado pela Mídia do Digital
-- `products.cover_image_url` + `products.media_urls` — usado nos cards de produto
+### 1. Carrega TODOS os contatos de uma vez (`useContacts.ts`)
+- `fetchContacts()` faz paginação no Supabase mas junta tudo em `setContacts(all)` → 2000 objetos com **80+ colunas cada** em memória.
+- O `<select *>` traz campos pesados que nunca aparecem no card (endereço, dados fiscais, pais, etc.).
 
-Vamos consolidar tudo no `digital_media`, mantendo retrocompatibilidade com os campos atuais do produto.
+### 2. Refetch total a cada mutação
+- `createContact`, `updateContact` e `deleteContact` chamam `await fetchContacts()` no final.
+- Editar 1 contato re-baixa os 2000 do banco e re-renderiza tudo.
 
-## O que muda no banco
+### 3. Renderização sem virtualização
+- `KommoFunnelView` e a lista geral renderizam **todos** os `<ContactCard>` (484 linhas cada, com framer-motion, badges, hooks aninhados) simultaneamente.
+- Com 2000 cards, o React tem que montar milhares de nós → trava scroll e clique no mobile.
 
-```sql
-ALTER TABLE public.digital_media
-  ADD COLUMN product_id uuid NULL,
-  ADD COLUMN is_product_cover boolean NOT NULL DEFAULT false;
+### 4. Hooks paralelos pesados na página
+- `Contatos.tsx` carrega ao mesmo tempo: `useContacts`, `useContactsWithOrders`, `useContactHistory`, `useNoResponseDetection`, `useContactChecklist`, `useDailyMetrics`, `useLeadScore`, `useContactTags`, `useContactNextTasks`. Vários iteram sobre a lista inteira.
 
-CREATE INDEX idx_digital_media_product_id ON public.digital_media(product_id);
-```
+---
 
-Backfill (uma vez):
-- Para cada produto com `cover_image_url`, criar uma linha em `digital_media` com aquele URL, `product_id = product.id`, `is_product_cover = true`.
-- Para cada URL extra em `products.media_urls`, criar linha equivalente com `product_id` setado e `is_product_cover = false` (evitando duplicar a cover).
+## Plano de otimização (em ordem de impacto)
 
-`products.cover_image_url` e `products.media_urls` permanecem (sincronizados em escrita) para não quebrar o que já consome esses campos.
+### Etapa 1 — Aliviar o fetch (impacto imediato)
+**`src/hooks/useContacts.ts`**
+- Trocar `select('*')` por um `select` enxuto com apenas os campos usados em listagem/kanban (nome, funil, temperatura, datas, telefone, whatsapp, foto, valor_estimado, classificação, tags-fk). Reduz payload em ~70%.
+- Criar uma função separada `fetchContactFull(id)` para quando o usuário abrir o drawer/edição (busca os 80 campos só daquele contato).
+- Substituir `await fetchContacts()` em create/update/delete por **atualização local do array** (`setContacts(prev => …)`). Mantém um `fetchContacts()` manual como fallback de "recarregar".
 
-## Mudanças no app
+### Etapa 2 — Virtualização da lista (impacto visível no scroll)
+- Adicionar `@tanstack/react-virtual` (leve, já compatível com o stack).
+- **Kanban** (`KommoFunnelView`): virtualizar cada coluna do funil — renderiza só os ~10 cards visíveis por coluna em vez de centenas.
+- **Lista/tabela**: virtualizar as linhas com altura fixa.
 
-1. **Hook novo `useProductMedia(productId)`**: lê `digital_media` filtrando por `product_id`, devolve `{ items, cover, addUpload, removeItem, setCover }`. Toda escrita também espelha `cover_image_url` e `media_urls` na tabela `products` para manter consumidores legados funcionando.
+### Etapa 3 — Memoização e split de componente
+- `ContactCard` envolvido em `React.memo` com comparador raso por `id + updated_at`. Hoje cada re-render do pai re-monta todos os cards.
+- Mover hooks pesados (`useNoResponseDetection`, `useLeadScore`, `useContactNextTasks`) para dentro de subcomponentes lazy do card, ou calcular uma única vez no pai com `useMemo` indexado por id.
+- Debounce no input de busca (300ms) para não filtrar 2000 itens a cada tecla.
 
-2. **Editor de produto (`ProductCostEditor` / formulário em Operacoes)**:
-   - Upload e seleção passam a operar via `useProductMedia`.
-   - Adicionar botão "Escolher da biblioteca" abrindo `MediaLibrary` em modo seletor (filtrado por produto + ideias).
+### Etapa 4 — Índices no banco (para futuras consultas filtradas)
+Quando passarmos a buscar paginado/filtrado no servidor (etapa 5), garantir índices em:
+- `contacts(is_active, funnel_status)`
+- `contacts(is_active, name)`
+- `contacts(updated_at desc)`
 
-3. **`MediaLibrary` (Digital → Mídia)**:
-   - Novo filtro lateral: **Produtos** (mostra mídias com `product_id`, agrupadas por produto).
-   - Permitir vincular/desvincular uma mídia a um produto (botão "Vincular a produto").
-   - Continua suportando ideias/variações; `product_id` é independente, então uma imagem pode estar ligada a produto **e** ideia ao mesmo tempo.
+### Etapa 5 (opcional, se ainda lento após 1-4) — Paginação server-side
+- Carregar 100 contatos por vez com `range()` + busca/filtros indo direto para o Postgres.
+- Indicado se a base crescer para 5k+.
 
-4. **`ProductCard` / `ProductGallery`**: continuam lendo `cover_image_url` e `media_urls` (que agora ficam em sincronia automática), sem alteração visual.
+---
 
-5. **Vínculo Produto ↔ Ideia** (já existente): quando uma ideia é vinculada a um produto, a aba de mídia da ideia passa a mostrar **também** as mídias daquele produto como sugestão para reaproveitar.
+## O que farei primeiro (se aprovar)
+Implemento **Etapas 1, 2 e 3** em uma rodada — já elimina o travamento atual com 2000 contatos sem mudar fluxo de uso. Etapas 4 e 5 ficam como próximo passo se ainda houver lentidão.
 
-## Observações técnicas
-
-- `digital_media.product_id` fica nullable — mídia pode existir só para uma ideia, só para um produto, ou para ambos.
-- Não vamos remover `cover_image_url`/`media_urls` agora; esse passo pode vir num cleanup futuro depois que toda a UI estiver migrada.
-- Tudo via UI, nada exige ação manual do usuário. O backfill roda na migration.
-
-## Confirmação
-
-Posso seguir com:
-1. Migration (coluna `product_id`, índice, backfill).
-2. Hook `useProductMedia` + sincronização espelhada com `products`.
-3. Adaptação do editor de produto (upload + escolher da biblioteca).
-4. Filtro "Produtos" no `MediaLibrary` com vincular/desvincular.
-
-Confirma esse plano?
+## Detalhes técnicos
+- Lib nova: `@tanstack/react-virtual` (~3KB, sem dependências extras).
+- Sem mudanças de schema nem migrações nesta primeira rodada.
+- Tipagem do `Contact` permanece — apenas os campos não selecionados virão `undefined` na lista (já são todos opcionais).
