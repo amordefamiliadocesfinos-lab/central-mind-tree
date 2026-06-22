@@ -112,6 +112,20 @@ export interface Contact {
   updated_at: string;
 }
 
+// Columns actually rendered in the list/kanban/cards. Drops heavy fiscal,
+// address-detail and parents columns that are only needed in the edit drawer.
+const LIST_COLUMNS = [
+  'id','name','fantasy_name','code','type','person_type','document',
+  'phone','landline','mobile','email','whatsapp','website','photo_url',
+  'city','state','contact_type','salesperson','category',
+  'funnel_status','temperatura_lead','valor_estimado','ultimo_contato','origem_lead',
+  'next_action_text','next_action_date','next_contact_date',
+  'client_classification','campaign_idea_id',
+  'lifetime_value','paid_orders_count','last_purchase_date','last_payment_date',
+  'lost_reason','lost_at','company_name','notes',
+  'is_active','converted_at','created_at','updated_at',
+].join(',');
+
 export function useContacts() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(false);
@@ -119,14 +133,13 @@ export function useContacts() {
   const fetchContacts = async () => {
     setLoading(true);
     try {
-      // Paginate to bypass PostgREST's 1000-row default cap
       const PAGE = 1000;
       let from = 0;
       const all: any[] = [];
       while (true) {
         const { data, error } = await supabase
           .from('contacts')
-          .select('*')
+          .select(LIST_COLUMNS)
           .order('name')
           .range(from, from + PAGE - 1);
         if (error) throw error;
@@ -144,10 +157,24 @@ export function useContacts() {
     }
   };
 
+  // Fetch the full record (all 80+ columns) for the edit drawer only.
+  const fetchContactFull = async (id: string): Promise<Contact | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('contacts')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+      if (error) throw error;
+      return (data as unknown as Contact) || null;
+    } catch (error: any) {
+      console.error('Error fetching contact full:', error);
+      return null;
+    }
+  };
 
   const createContact = async (contact: Partial<Contact>) => {
     try {
-      // Helper to convert empty strings to null
       const cleanValue = (val: any) => (val === '' || val === undefined ? null : val);
       const cleanNumber = (val: any) => {
         if (val === '' || val === undefined || val === null) return null;
@@ -155,86 +182,93 @@ export function useContacts() {
         return isNaN(num) ? null : num;
       };
 
+      const payload: any = {
+        name: contact.name,
+        fantasy_name: cleanValue(contact.fantasy_name),
+        code: cleanValue(contact.code),
+        type: contact.type || 'cliente',
+        person_type: contact.person_type || 'fisica',
+        document: cleanValue(contact.document),
+        customer_since: cleanValue(contact.customer_since),
+        taxpayer_type: cleanValue(contact.taxpayer_type),
+        state_registration: cleanValue(contact.state_registration),
+        rg: cleanValue(contact.rg),
+        issuing_agency: cleanValue(contact.issuing_agency),
+        zip_code: cleanValue(contact.zip_code),
+        state: cleanValue(contact.state),
+        city: cleanValue(contact.city),
+        neighborhood: cleanValue(contact.neighborhood),
+        address: cleanValue(contact.address),
+        address_number: cleanValue(contact.address_number),
+        address_complement: cleanValue(contact.address_complement),
+        billing_zip_code: cleanValue(contact.billing_zip_code),
+        billing_state: cleanValue(contact.billing_state),
+        billing_city: cleanValue(contact.billing_city),
+        billing_neighborhood: cleanValue(contact.billing_neighborhood),
+        billing_address: cleanValue(contact.billing_address),
+        billing_number: cleanValue(contact.billing_number),
+        billing_complement: cleanValue(contact.billing_complement),
+        contact_info: cleanValue(contact.contact_info),
+        contact_people: contact.contact_people,
+        phone: cleanValue(contact.phone),
+        landline: cleanValue(contact.landline),
+        fax: cleanValue(contact.fax),
+        mobile: cleanValue(contact.mobile),
+        mobile_carrier: cleanValue(contact.mobile_carrier),
+        email: cleanValue(contact.email),
+        nfe_email: cleanValue(contact.nfe_email),
+        website: cleanValue(contact.website),
+        skype: cleanValue(contact.skype),
+        whatsapp: cleanValue(contact.whatsapp),
+        next_visit: cleanValue(contact.next_visit),
+        avg_load_percentage: cleanNumber(contact.avg_load_percentage),
+        marital_status: cleanValue(contact.marital_status),
+        profession: cleanValue(contact.profession),
+        gender: cleanValue(contact.gender),
+        birth_date: cleanValue(contact.birth_date),
+        birthplace: cleanValue(contact.birthplace),
+        photo_url: cleanValue(contact.photo_url),
+        father_name: cleanValue(contact.father_name),
+        father_cpf: cleanValue(contact.father_cpf),
+        mother_name: cleanValue(contact.mother_name),
+        mother_cpf: cleanValue(contact.mother_cpf),
+        contact_type: cleanValue(contact.contact_type),
+        salesperson: cleanValue(contact.salesperson),
+        default_operation_nature: cleanValue(contact.default_operation_nature),
+        credit_limit_type: contact.credit_limit_type || 'unlimited',
+        credit_limit_value: cleanNumber(contact.credit_limit_value),
+        payment_condition: cleanValue(contact.payment_condition),
+        category: cleanValue(contact.category),
+        company_name: cleanValue(contact.company_name),
+        notes: cleanValue(contact.notes),
+        next_action_text: cleanValue(contact.next_action_text),
+        next_action_date: cleanValue(contact.next_action_date),
+        funnel_status: contact.funnel_status || 'novo_lead',
+        next_contact_date: cleanValue(contact.next_contact_date),
+        temperatura_lead: contact.temperatura_lead || 'morno',
+        valor_estimado: cleanNumber(contact.valor_estimado),
+        ultimo_contato: cleanValue(contact.ultimo_contato),
+        origem_lead: cleanValue(contact.origem_lead) || 'Não Informado',
+        is_active: contact.is_active ?? true,
+        campaign_idea_id: cleanValue(contact.campaign_idea_id),
+        client_classification: cleanValue(contact.client_classification),
+      };
+
       const { data, error } = await supabase
         .from('contacts')
-        .insert({
-          name: contact.name,
-          fantasy_name: cleanValue(contact.fantasy_name),
-          code: cleanValue(contact.code),
-          type: contact.type || 'cliente',
-          person_type: contact.person_type || 'fisica',
-          document: cleanValue(contact.document),
-          customer_since: cleanValue(contact.customer_since),
-          taxpayer_type: cleanValue(contact.taxpayer_type),
-          state_registration: cleanValue(contact.state_registration),
-          rg: cleanValue(contact.rg),
-          issuing_agency: cleanValue(contact.issuing_agency),
-          zip_code: cleanValue(contact.zip_code),
-          state: cleanValue(contact.state),
-          city: cleanValue(contact.city),
-          neighborhood: cleanValue(contact.neighborhood),
-          address: cleanValue(contact.address),
-          address_number: cleanValue(contact.address_number),
-          address_complement: cleanValue(contact.address_complement),
-          billing_zip_code: cleanValue(contact.billing_zip_code),
-          billing_state: cleanValue(contact.billing_state),
-          billing_city: cleanValue(contact.billing_city),
-          billing_neighborhood: cleanValue(contact.billing_neighborhood),
-          billing_address: cleanValue(contact.billing_address),
-          billing_number: cleanValue(contact.billing_number),
-          billing_complement: cleanValue(contact.billing_complement),
-          contact_info: cleanValue(contact.contact_info),
-          contact_people: contact.contact_people,
-          phone: cleanValue(contact.phone),
-          landline: cleanValue(contact.landline),
-          fax: cleanValue(contact.fax),
-          mobile: cleanValue(contact.mobile),
-          mobile_carrier: cleanValue(contact.mobile_carrier),
-          email: cleanValue(contact.email),
-          nfe_email: cleanValue(contact.nfe_email),
-          website: cleanValue(contact.website),
-          skype: cleanValue(contact.skype),
-          whatsapp: cleanValue(contact.whatsapp),
-          next_visit: cleanValue(contact.next_visit),
-          avg_load_percentage: cleanNumber(contact.avg_load_percentage),
-          marital_status: cleanValue(contact.marital_status),
-          profession: cleanValue(contact.profession),
-          gender: cleanValue(contact.gender),
-          birth_date: cleanValue(contact.birth_date),
-          birthplace: cleanValue(contact.birthplace),
-          photo_url: cleanValue(contact.photo_url),
-          father_name: cleanValue(contact.father_name),
-          father_cpf: cleanValue(contact.father_cpf),
-          mother_name: cleanValue(contact.mother_name),
-          mother_cpf: cleanValue(contact.mother_cpf),
-          contact_type: cleanValue(contact.contact_type),
-          salesperson: cleanValue(contact.salesperson),
-          default_operation_nature: cleanValue(contact.default_operation_nature),
-          credit_limit_type: contact.credit_limit_type || 'unlimited',
-          credit_limit_value: cleanNumber(contact.credit_limit_value),
-          payment_condition: cleanValue(contact.payment_condition),
-          category: cleanValue(contact.category),
-          company_name: cleanValue(contact.company_name),
-          notes: cleanValue(contact.notes),
-          next_action_text: cleanValue(contact.next_action_text),
-          next_action_date: cleanValue(contact.next_action_date),
-          funnel_status: contact.funnel_status || 'novo_lead',
-          next_contact_date: cleanValue(contact.next_contact_date),
-          temperatura_lead: contact.temperatura_lead || 'morno',
-          valor_estimado: cleanNumber(contact.valor_estimado),
-          ultimo_contato: cleanValue(contact.ultimo_contato),
-          origem_lead: cleanValue(contact.origem_lead) || 'Não Informado',
-          is_active: contact.is_active ?? true,
-          campaign_idea_id: cleanValue(contact.campaign_idea_id),
-          client_classification: cleanValue(contact.client_classification),
-        })
-        .select()
+        .insert(payload)
+        .select(LIST_COLUMNS)
         .single();
 
       if (error) throw error;
-      
+
+      // Local insert + keep list sorted by name (matches initial fetch order)
+      setContacts(prev => {
+        const next = [...prev, data as unknown as Contact];
+        next.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+        return next;
+      });
       toast.success('Contato criado com sucesso');
-      await fetchContacts();
       return data;
     } catch (error: any) {
       console.error('Error creating contact:', error);
@@ -245,18 +279,21 @@ export function useContacts() {
 
   const updateContact = async (id: string, contact: Partial<Contact>) => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('contacts')
         .update({
           ...contact,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', id);
+        .eq('id', id)
+        .select(LIST_COLUMNS)
+        .single();
 
       if (error) throw error;
-      
+
+      // Local merge — avoids refetching all 2000 rows
+      setContacts(prev => prev.map(c => (c.id === id ? { ...c, ...(data as any) } : c)));
       toast.success('Contato atualizado com sucesso');
-      await fetchContacts();
     } catch (error: any) {
       console.error('Error updating contact:', error);
       toast.error('Erro ao atualizar contato');
@@ -272,9 +309,10 @@ export function useContacts() {
         .eq('id', id);
 
       if (error) throw error;
-      
+
+      // Local soft-delete
+      setContacts(prev => prev.map(c => (c.id === id ? { ...c, is_active: false } : c)));
       toast.success('Contato removido com sucesso');
-      await fetchContacts();
     } catch (error: any) {
       console.error('Error deleting contact:', error);
       toast.error('Erro ao remover contato');
@@ -290,6 +328,7 @@ export function useContacts() {
     contacts,
     loading,
     fetchContacts,
+    fetchContactFull,
     createContact,
     updateContact,
     deleteContact,
