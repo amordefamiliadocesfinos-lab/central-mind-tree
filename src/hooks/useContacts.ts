@@ -139,7 +139,7 @@ export function useContacts() {
       while (true) {
         const { data, error } = await supabase
           .from('contacts')
-          .select(LIST_COLUMNS)
+          .select('*')
           .order('name')
           .range(from, from + PAGE - 1);
         if (error) throw error;
@@ -257,7 +257,7 @@ export function useContacts() {
       const { data, error } = await supabase
         .from('contacts')
         .insert(payload)
-        .select(LIST_COLUMNS)
+        .select('*')
         .single();
 
       if (error) throw error;
@@ -286,7 +286,7 @@ export function useContacts() {
           updated_at: new Date().toISOString(),
         })
         .eq('id', id)
-        .select(LIST_COLUMNS)
+        .select('*')
         .single();
 
       if (error) throw error;
