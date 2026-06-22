@@ -1,7 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, memo } from 'react';
 import { Link } from 'react-router-dom';
 import { Contact } from '@/hooks/useContacts';
-import { useContactConversations } from '@/hooks/useContactConversations';
 import { ContactAvatar } from './ContactAvatar';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -118,9 +117,10 @@ interface ContactCardProps {
   onSmartAttend: () => Promise<void>;
   hasPhone: boolean;
   nextTaskDate?: string | null;
+  convoSummary?: { openCount: number; totalUnread: number };
 }
 
-export function ContactCard({
+function ContactCardInner({
   contact,
   urgencyLevel,
   noResponseInfo,
@@ -142,15 +142,15 @@ export function ContactCard({
   onSmartAttend,
   hasPhone,
   nextTaskDate,
+  convoSummary,
 }: ContactCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [showFollowUp, setShowFollowUp] = useState(false);
   const [followUpNote, setFollowUpNote] = useState('');
   const [followUpType, setFollowUpType] = useState('mensagem');
   const [savingFollowUp, setSavingFollowUp] = useState(false);
-  const { conversations: linkedConvos } = useContactConversations(contact.id);
-  const openConvCount = linkedConvos.filter(c => c.status === 'open').length;
-  const totalUnread = linkedConvos.reduce((s, c) => s + (c.unread_count || 0), 0);
+  const openConvCount = convoSummary?.openCount ?? 0;
+  const totalUnread = convoSummary?.totalUnread ?? 0;
 
   const urgencyCfg = URGENCY_LEVELS[urgencyLevel];
   const temp = contact.temperatura_lead || 'morno';
@@ -482,3 +482,28 @@ export function ContactCard({
     </motion.div>
   );
 }
+
+export const ContactCard = memo(ContactCardInner, (prev, next) => {
+  // Re-render only when something visible to this card changed.
+  if (prev.contact !== next.contact) {
+    if (
+      prev.contact.id !== next.contact.id ||
+      prev.contact.updated_at !== next.contact.updated_at ||
+      prev.contact.funnel_status !== next.contact.funnel_status ||
+      prev.contact.temperatura_lead !== next.contact.temperatura_lead ||
+      prev.contact.ultimo_contato !== next.contact.ultimo_contato ||
+      prev.contact.next_action_date !== next.contact.next_action_date
+    ) return false;
+  }
+  return (
+    prev.urgencyLevel === next.urgencyLevel &&
+    prev.hasOrders === next.hasOrders &&
+    prev.hasPhone === next.hasPhone &&
+    prev.isDragged === next.isDragged &&
+    prev.nextTaskDate === next.nextTaskDate &&
+    prev.noResponseInfo === next.noResponseInfo &&
+    prev.checklistData === next.checklistData &&
+    prev.scoreInfo === next.scoreInfo &&
+    prev.convoSummary === next.convoSummary
+  );
+});
