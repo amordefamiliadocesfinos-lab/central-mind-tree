@@ -482,3 +482,28 @@ function ContactCardInner({
     </motion.div>
   );
 }
+
+export const ContactCard = memo(ContactCardInner, (prev, next) => {
+  // Re-render only when something visible to this card changed.
+  if (prev.contact !== next.contact) {
+    if (
+      prev.contact.id !== next.contact.id ||
+      prev.contact.updated_at !== next.contact.updated_at ||
+      prev.contact.funnel_status !== next.contact.funnel_status ||
+      prev.contact.temperatura_lead !== next.contact.temperatura_lead ||
+      prev.contact.ultimo_contato !== next.contact.ultimo_contato ||
+      prev.contact.next_action_date !== next.contact.next_action_date
+    ) return false;
+  }
+  return (
+    prev.urgencyLevel === next.urgencyLevel &&
+    prev.hasOrders === next.hasOrders &&
+    prev.hasPhone === next.hasPhone &&
+    prev.isDragged === next.isDragged &&
+    prev.nextTaskDate === next.nextTaskDate &&
+    prev.noResponseInfo === next.noResponseInfo &&
+    prev.checklistData === next.checklistData &&
+    prev.scoreInfo === next.scoreInfo &&
+    prev.convoSummary === next.convoSummary
+  );
+});
