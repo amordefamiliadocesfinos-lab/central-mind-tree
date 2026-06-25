@@ -29,6 +29,7 @@ import Financeiro from "./pages/Financeiro";
 import Assistente from "./pages/Assistente";
 import Contatos from "./pages/Contatos";
 import ContatosInbox from "./pages/ContatosInbox";
+import TarefasAgendadas from "./pages/TarefasAgendadas";
 import Rotas from "./pages/Rotas";
 import Academia from "./pages/Academia";
 import Metas from "./pages/Metas";
