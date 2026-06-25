@@ -1546,6 +1546,13 @@ export default function Contatos() {
         onSend={handleWhatsAppSend}
       />
 
+      <BulkWhatsAppDispatch
+        open={!!bulkDispatchContacts}
+        onOpenChange={(open) => { if (!open) setBulkDispatchContacts(null); }}
+        contacts={bulkDispatchContacts || []}
+        onFinished={() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }}
+      />
+
       <LostReasonDialog
         open={!!lostDialogContact}
         contactName={lostDialogContact?.name}
