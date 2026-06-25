@@ -556,9 +556,15 @@ export default function Contatos() {
     const phone = whatsAppContact.whatsapp || whatsAppContact.mobile || whatsAppContact.phone;
     if (!phone) return;
 
+    const contact = whatsAppContact;
+    setWhatsAppContact(null);
+
+    // Atualização otimista: marca último contato como hoje para sair da lista imediatamente
+    await updateContact(contact.id, { ultimo_contato: new Date().toISOString().split('T')[0] });
+
     await logAndOpen({
-      contactId: whatsAppContact.id,
-      contactName: whatsAppContact.name,
+      contactId: contact.id,
+      contactName: contact.name,
       phone,
       message,
       templateLabel,
@@ -566,7 +572,6 @@ export default function Contatos() {
     });
 
     setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);
-    setWhatsAppContact(null);
   };
 
   const handleTempChange = async (contact: Contact, newTemp: string) => {
