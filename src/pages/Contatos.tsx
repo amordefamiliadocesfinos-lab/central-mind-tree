@@ -878,6 +878,7 @@ export default function Contatos() {
             setFormOpen(true);
           }}
           onWhatsApp={handleWhatsApp}
+          onBulkDispatch={(list) => setBulkDispatchContacts(list)}
           getUrgencyLevel={getUrgencyLevel}
         />
 
