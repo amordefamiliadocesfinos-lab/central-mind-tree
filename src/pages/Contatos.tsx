@@ -305,10 +305,25 @@ export default function Contatos() {
       }
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
+        const qDigits = searchQuery.replace(/\D/g, '');
+        // Phone fuzzy match: compare only digits, match by suffix (last N digits)
+        // tolerates different country/area code prefixes (e.g. 5511987654321 vs 11987654321 vs 987654321)
+        const phoneMatch = (val?: string | null) => {
+          if (!val || qDigits.length < 4) return false;
+          const d = val.replace(/\D/g, '');
+          if (!d) return false;
+          const min = Math.min(d.length, qDigits.length);
+          // require at least 6 trailing digits to match (or full query if shorter)
+          const tail = Math.max(6, Math.min(min, qDigits.length));
+          return d.slice(-tail) === qDigits.slice(-tail) || d.includes(qDigits);
+        };
         return (
           c.name?.toLowerCase().includes(q) ||
           c.fantasy_name?.toLowerCase().includes(q) ||
           c.email?.toLowerCase().includes(q) ||
+          phoneMatch(c.phone) ||
+          phoneMatch(c.whatsapp) ||
+          phoneMatch(c.mobile) ||
           c.phone?.toLowerCase().includes(q) ||
           c.whatsapp?.toLowerCase().includes(q) ||
           c.document?.toLowerCase().includes(q) ||
@@ -316,6 +331,7 @@ export default function Contatos() {
           c.notes?.toLowerCase().includes(q)
         );
       }
+
       return true;
     });
   }, [contacts, searchQuery, statusFilter, tempFilter, typeFilter, tagFilter, actionFilter, contactDateFilter, classificationFilter, originFilter, getTagsForContact, isNextActionOverdue]);
