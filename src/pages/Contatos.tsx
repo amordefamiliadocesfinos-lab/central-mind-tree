@@ -95,6 +95,7 @@ import { ContactTagsManager } from '@/components/crm/ContactTagsManager';
 import { LeadImportDialog } from '@/components/crm/LeadImportDialog';
 import { ContactActivitiesPanel } from '@/components/crm/ContactActivitiesPanel';
 import { LeadsNeedContactPanel } from '@/components/crm/LeadsNeedContactPanel';
+import { BulkWhatsAppDispatch } from '@/components/crm/BulkWhatsAppDispatch';
 import { cn } from '@/lib/utils';
 import { FunnelView } from '@/components/FunnelView';
 import { KommoFunnelView } from '@/components/crm/KommoFunnelView';
