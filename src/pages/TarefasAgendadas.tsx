@@ -51,6 +51,7 @@ export default function TarefasAgendadas() {
       .from('tasks')
       .select('id, title, status, scheduled_date, scheduled_time, due_date, assigned_to, contact_id')
       .is('deleted_at', null)
+      .not('contact_id', 'is', null)
       .not('scheduled_date', 'is', null)
       .order('scheduled_date', { ascending: true })
       .order('scheduled_time', { ascending: true, nullsFirst: false });
