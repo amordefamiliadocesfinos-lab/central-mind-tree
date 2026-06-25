@@ -28,8 +28,8 @@ function firstName(name: string) {
 
 function renderMessage(template: string, contact: Contact) {
   return template
-    .replaceAll('{nome}', firstName(contact.name))
-    .replaceAll('{nome_completo}', contact.name || '');
+    .replace(/\{nome\}/g, firstName(contact.name))
+    .replace(/\{nome_completo\}/g, contact.name || '');
 }
 
 export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished }: Props) {
