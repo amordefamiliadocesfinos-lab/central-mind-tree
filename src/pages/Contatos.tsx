@@ -95,6 +95,7 @@ import { ContactTagsManager } from '@/components/crm/ContactTagsManager';
 import { LeadImportDialog } from '@/components/crm/LeadImportDialog';
 import { ContactActivitiesPanel } from '@/components/crm/ContactActivitiesPanel';
 import { LeadsNeedContactPanel } from '@/components/crm/LeadsNeedContactPanel';
+import { BulkWhatsAppDispatch } from '@/components/crm/BulkWhatsAppDispatch';
 import { cn } from '@/lib/utils';
 import { FunnelView } from '@/components/FunnelView';
 import { KommoFunnelView } from '@/components/crm/KommoFunnelView';
@@ -543,6 +544,7 @@ export default function Contatos() {
   };
 
   const [whatsAppContact, setWhatsAppContact] = useState<Contact | null>(null);
+  const [bulkDispatchContacts, setBulkDispatchContacts] = useState<Contact[] | null>(null);
 
   const handleWhatsApp = (contact: Contact) => {
     const phone = contact.whatsapp || contact.mobile || contact.phone;
@@ -876,6 +878,7 @@ export default function Contatos() {
             setFormOpen(true);
           }}
           onWhatsApp={handleWhatsApp}
+          onBulkDispatch={(list) => setBulkDispatchContacts(list)}
           getUrgencyLevel={getUrgencyLevel}
         />
 
@@ -1541,6 +1544,13 @@ export default function Contatos() {
         funnelStatus={whatsAppContact?.funnel_status || ''}
         contactId={whatsAppContact?.id}
         onSend={handleWhatsAppSend}
+      />
+
+      <BulkWhatsAppDispatch
+        open={!!bulkDispatchContacts}
+        onOpenChange={(open) => { if (!open) setBulkDispatchContacts(null); }}
+        contacts={bulkDispatchContacts || []}
+        onFinished={() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }}
       />
 
       <LostReasonDialog
