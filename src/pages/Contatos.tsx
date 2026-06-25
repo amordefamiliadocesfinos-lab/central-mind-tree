@@ -779,6 +779,13 @@ export default function Contatos() {
             Contatos
           </h1>
           <div className="flex items-center gap-2">
+            <Link to="/contatos/tarefas">
+              <Button variant="outline" size="sm" className="gap-1">
+                <CalendarClock className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Tarefas agendadas</span>
+                <span className="sm:hidden">Tarefas</span>
+              </Button>
+            </Link>
             <Link to="/contatos/inbox">
               <Button variant="outline" size="sm" className="gap-1">
                 <MessageCircle className="h-3.5 w-3.5" />
