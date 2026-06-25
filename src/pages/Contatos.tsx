@@ -544,6 +544,7 @@ export default function Contatos() {
   };
 
   const [whatsAppContact, setWhatsAppContact] = useState<Contact | null>(null);
+  const [bulkDispatchContacts, setBulkDispatchContacts] = useState<Contact[] | null>(null);
 
   const handleWhatsApp = (contact: Contact) => {
     const phone = contact.whatsapp || contact.mobile || contact.phone;
