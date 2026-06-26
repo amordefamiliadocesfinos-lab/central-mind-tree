@@ -17,6 +17,10 @@ export interface Product {
   media_urls: string[];
   cover_image_url: string | null;
   expiry_days: number | null;
+  height_cm: number | null;
+  width_cm: number | null;
+  length_cm: number | null;
+  weight_g: number | null;
   created_at: string;
   updated_at: string;
 }

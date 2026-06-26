@@ -1399,6 +1399,68 @@ export default function Operacoes() {
                   </div>
                 </div>
 
+              <div className="rounded-lg border p-3 space-y-2">
+                <Label className="text-sm font-semibold">Dimensões e Peso</Label>
+                <div className="grid grid-cols-4 gap-2">
+                  <div>
+                    <Label className="text-xs">Altura (cm)</Label>
+                    <Input
+                      type="number"
+                      step="any"
+                      min={0}
+                      className="h-10"
+                      value={editingProduct.height_cm ?? ''}
+                      onChange={(e) => setEditingProduct({
+                        ...editingProduct,
+                        height_cm: e.target.value === '' ? null : parseFloat(e.target.value),
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Largura (cm)</Label>
+                    <Input
+                      type="number"
+                      step="any"
+                      min={0}
+                      className="h-10"
+                      value={editingProduct.width_cm ?? ''}
+                      onChange={(e) => setEditingProduct({
+                        ...editingProduct,
+                        width_cm: e.target.value === '' ? null : parseFloat(e.target.value),
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Comprimento (cm)</Label>
+                    <Input
+                      type="number"
+                      step="any"
+                      min={0}
+                      className="h-10"
+                      value={editingProduct.length_cm ?? ''}
+                      onChange={(e) => setEditingProduct({
+                        ...editingProduct,
+                        length_cm: e.target.value === '' ? null : parseFloat(e.target.value),
+                      })}
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs">Peso (g)</Label>
+                    <Input
+                      type="number"
+                      step="any"
+                      min={0}
+                      className="h-10"
+                      value={editingProduct.weight_g ?? ''}
+                      onChange={(e) => setEditingProduct({
+                        ...editingProduct,
+                        weight_g: e.target.value === '' ? null : parseFloat(e.target.value),
+                      })}
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="flex gap-2">
                 <Button 
                   variant="outline" 

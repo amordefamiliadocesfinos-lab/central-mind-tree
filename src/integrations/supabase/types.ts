@@ -3126,8 +3126,10 @@ export type Database = {
           deleted_at: string | null
           description: string | null
           expiry_days: number | null
+          height_cm: number | null
           id: string
           is_active: boolean
+          length_cm: number | null
           media_urls: Json | null
           min_stock: number | null
           name: string
@@ -3135,6 +3137,8 @@ export type Database = {
           sku: string
           unit: string | null
           updated_at: string
+          weight_g: number | null
+          width_cm: number | null
         }
         Insert: {
           attributes?: Json | null
@@ -3145,8 +3149,10 @@ export type Database = {
           deleted_at?: string | null
           description?: string | null
           expiry_days?: number | null
+          height_cm?: number | null
           id?: string
           is_active?: boolean
+          length_cm?: number | null
           media_urls?: Json | null
           min_stock?: number | null
           name: string
@@ -3154,6 +3160,8 @@ export type Database = {
           sku: string
           unit?: string | null
           updated_at?: string
+          weight_g?: number | null
+          width_cm?: number | null
         }
         Update: {
           attributes?: Json | null
@@ -3164,8 +3172,10 @@ export type Database = {
           deleted_at?: string | null
           description?: string | null
           expiry_days?: number | null
+          height_cm?: number | null
           id?: string
           is_active?: boolean
+          length_cm?: number | null
           media_urls?: Json | null
           min_stock?: number | null
           name?: string
@@ -3173,6 +3183,8 @@ export type Database = {
           sku?: string
           unit?: string | null
           updated_at?: string
+          weight_g?: number | null
+          width_cm?: number | null
         }
         Relationships: []
       }
