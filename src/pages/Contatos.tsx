@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, lazy, Suspense } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -86,32 +86,33 @@ import { useLeadScore } from '@/hooks/useLeadScore';
 import { useContactTags } from '@/hooks/useContactTags';
 import { useContactNextTasks } from '@/hooks/useContactNextTasks';
 import { useAllConversationsSummary } from '@/hooks/useAllConversationsSummary';
-import { ContactFormDialog } from '@/components/financial/ContactFormDialog';
-import { WhatsAppMessageSelector } from '@/components/crm/WhatsAppMessageSelector';
-import { LostReasonDialog } from '@/components/crm/LostReasonDialog';
-import { ContactOrderHistory } from '@/components/financial/ContactOrderHistory';
-import { ContactHistoryDialog } from '@/components/ContactHistoryDialog';
-import { ContactTagsManager } from '@/components/crm/ContactTagsManager';
-import { LeadImportDialog } from '@/components/crm/LeadImportDialog';
-import { ContactActivitiesPanel } from '@/components/crm/ContactActivitiesPanel';
 import { LeadsNeedContactPanel } from '@/components/crm/LeadsNeedContactPanel';
-import { BulkWhatsAppDispatch } from '@/components/crm/BulkWhatsAppDispatch';
 import { cn } from '@/lib/utils';
-import { FunnelView } from '@/components/FunnelView';
-import { KommoFunnelView } from '@/components/crm/KommoFunnelView';
 import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { ContactCard } from '@/components/crm/ContactCard';
-import { LeadDetailDrawer } from '@/components/crm/LeadDetailDrawer';
-import { FunnelAutomationsPanel } from '@/components/crm/FunnelAutomationsPanel';
-import { PosVendaPanel } from '@/components/crm/PosVendaPanel';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Zap } from 'lucide-react';
 import { differenceInDays, parseISO, format, isSameDay, isBefore, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CommercialDashboard } from '@/components/dashboard/CommercialDashboard';
 import { openWhatsApp } from '@/lib/whatsapp';
 import { useWhatsAppWithLog } from '@/hooks/useWhatsAppWithLog';
+
+// Lazy-loaded heavy components (dialogs/drawers/views só carregam quando abertos)
+const ContactFormDialog = lazy(() => import('@/components/financial/ContactFormDialog').then(m => ({ default: m.ContactFormDialog })));
+const WhatsAppMessageSelector = lazy(() => import('@/components/crm/WhatsAppMessageSelector').then(m => ({ default: m.WhatsAppMessageSelector })));
+const LostReasonDialog = lazy(() => import('@/components/crm/LostReasonDialog').then(m => ({ default: m.LostReasonDialog })));
+const ContactOrderHistory = lazy(() => import('@/components/financial/ContactOrderHistory').then(m => ({ default: m.ContactOrderHistory })));
+const ContactHistoryDialog = lazy(() => import('@/components/ContactHistoryDialog').then(m => ({ default: m.ContactHistoryDialog })));
+const ContactTagsManager = lazy(() => import('@/components/crm/ContactTagsManager').then(m => ({ default: m.ContactTagsManager })));
+const LeadImportDialog = lazy(() => import('@/components/crm/LeadImportDialog').then(m => ({ default: m.LeadImportDialog })));
+const ContactActivitiesPanel = lazy(() => import('@/components/crm/ContactActivitiesPanel').then(m => ({ default: m.ContactActivitiesPanel })));
+const BulkWhatsAppDispatch = lazy(() => import('@/components/crm/BulkWhatsAppDispatch').then(m => ({ default: m.BulkWhatsAppDispatch })));
+const KommoFunnelView = lazy(() => import('@/components/crm/KommoFunnelView').then(m => ({ default: m.KommoFunnelView })));
+const LeadDetailDrawer = lazy(() => import('@/components/crm/LeadDetailDrawer').then(m => ({ default: m.LeadDetailDrawer })));
+const FunnelAutomationsPanel = lazy(() => import('@/components/crm/FunnelAutomationsPanel').then(m => ({ default: m.FunnelAutomationsPanel })));
+const PosVendaPanel = lazy(() => import('@/components/crm/PosVendaPanel').then(m => ({ default: m.PosVendaPanel })));
+const CommercialDashboard = lazy(() => import('@/components/dashboard/CommercialDashboard').then(m => ({ default: m.CommercialDashboard })));
 
 
 const FUNNEL_STAGES = [
