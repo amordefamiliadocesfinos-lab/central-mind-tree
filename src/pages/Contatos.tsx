@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react';
+import { useState, useMemo, useCallback, useEffect, lazy, Suspense } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -86,32 +86,33 @@ import { useLeadScore } from '@/hooks/useLeadScore';
 import { useContactTags } from '@/hooks/useContactTags';
 import { useContactNextTasks } from '@/hooks/useContactNextTasks';
 import { useAllConversationsSummary } from '@/hooks/useAllConversationsSummary';
-import { ContactFormDialog } from '@/components/financial/ContactFormDialog';
-import { WhatsAppMessageSelector } from '@/components/crm/WhatsAppMessageSelector';
-import { LostReasonDialog } from '@/components/crm/LostReasonDialog';
-import { ContactOrderHistory } from '@/components/financial/ContactOrderHistory';
-import { ContactHistoryDialog } from '@/components/ContactHistoryDialog';
-import { ContactTagsManager } from '@/components/crm/ContactTagsManager';
-import { LeadImportDialog } from '@/components/crm/LeadImportDialog';
-import { ContactActivitiesPanel } from '@/components/crm/ContactActivitiesPanel';
 import { LeadsNeedContactPanel } from '@/components/crm/LeadsNeedContactPanel';
-import { BulkWhatsAppDispatch } from '@/components/crm/BulkWhatsAppDispatch';
 import { cn } from '@/lib/utils';
-import { FunnelView } from '@/components/FunnelView';
-import { KommoFunnelView } from '@/components/crm/KommoFunnelView';
 import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { ContactCard } from '@/components/crm/ContactCard';
-import { LeadDetailDrawer } from '@/components/crm/LeadDetailDrawer';
-import { FunnelAutomationsPanel } from '@/components/crm/FunnelAutomationsPanel';
-import { PosVendaPanel } from '@/components/crm/PosVendaPanel';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Zap } from 'lucide-react';
 import { differenceInDays, parseISO, format, isSameDay, isBefore, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CommercialDashboard } from '@/components/dashboard/CommercialDashboard';
 import { openWhatsApp } from '@/lib/whatsapp';
 import { useWhatsAppWithLog } from '@/hooks/useWhatsAppWithLog';
+
+// Lazy-loaded heavy components (dialogs/drawers/views só carregam quando abertos)
+const ContactFormDialog = lazy(() => import('@/components/financial/ContactFormDialog').then(m => ({ default: m.ContactFormDialog })));
+const WhatsAppMessageSelector = lazy(() => import('@/components/crm/WhatsAppMessageSelector').then(m => ({ default: m.WhatsAppMessageSelector })));
+const LostReasonDialog = lazy(() => import('@/components/crm/LostReasonDialog').then(m => ({ default: m.LostReasonDialog })));
+const ContactOrderHistory = lazy(() => import('@/components/financial/ContactOrderHistory').then(m => ({ default: m.ContactOrderHistory })));
+const ContactHistoryDialog = lazy(() => import('@/components/ContactHistoryDialog').then(m => ({ default: m.ContactHistoryDialog })));
+const ContactTagsManager = lazy(() => import('@/components/crm/ContactTagsManager').then(m => ({ default: m.ContactTagsManager })));
+const LeadImportDialog = lazy(() => import('@/components/crm/LeadImportDialog').then(m => ({ default: m.LeadImportDialog })));
+const ContactActivitiesPanel = lazy(() => import('@/components/crm/ContactActivitiesPanel').then(m => ({ default: m.ContactActivitiesPanel })));
+const BulkWhatsAppDispatch = lazy(() => import('@/components/crm/BulkWhatsAppDispatch').then(m => ({ default: m.BulkWhatsAppDispatch })));
+const KommoFunnelView = lazy(() => import('@/components/crm/KommoFunnelView').then(m => ({ default: m.KommoFunnelView })));
+const LeadDetailDrawer = lazy(() => import('@/components/crm/LeadDetailDrawer').then(m => ({ default: m.LeadDetailDrawer })));
+const FunnelAutomationsPanel = lazy(() => import('@/components/crm/FunnelAutomationsPanel').then(m => ({ default: m.FunnelAutomationsPanel })));
+const PosVendaPanel = lazy(() => import('@/components/crm/PosVendaPanel').then(m => ({ default: m.PosVendaPanel })));
+const CommercialDashboard = lazy(() => import('@/components/dashboard/CommercialDashboard').then(m => ({ default: m.CommercialDashboard })));
 
 
 const FUNNEL_STAGES = [
@@ -817,7 +818,9 @@ export default function Contatos() {
 
         {/* Dashboard Comercial - tempo real */}
         <div className="px-4 pt-2 pb-1">
-          <CommercialDashboard />
+          <Suspense fallback={<div className="h-24" />}>
+            <CommercialDashboard />
+          </Suspense>
         </div>
 
         {/* Indicadores do CRM */}
@@ -1208,13 +1211,15 @@ export default function Contatos() {
             })}
           </div>
         ) : viewMode === 'funnel' ? (
-          <KommoFunnelView
-            contacts={filteredContacts}
-            nextTaskByContact={nextTaskByContact}
-            onLeadClick={(c) => { setDetailContact(c); setDetailOpen(true); }}
-            onStageChange={(c, newStage) => handleStatusChange(c, newStage)}
-            onCreateLead={() => { setEditingContact(null); setFormOpen(true); }}
-          />
+          <Suspense fallback={<div className="p-8 text-center text-muted-foreground text-sm">Carregando funil…</div>}>
+            <KommoFunnelView
+              contacts={filteredContacts}
+              nextTaskByContact={nextTaskByContact}
+              onLeadClick={(c) => { setDetailContact(c); setDetailOpen(true); }}
+              onStageChange={(c, newStage) => handleStatusChange(c, newStage)}
+              onCreateLead={() => { setEditingContact(null); setFormOpen(true); }}
+            />
+          </Suspense>
 
 
         ) : (
@@ -1480,85 +1485,111 @@ export default function Contatos() {
         )}
       </div>
 
-      {/* Dialogs */}
-      <ContactFormDialog open={formOpen} onOpenChange={setFormOpen} contact={editingContact} onSave={handleSave} />
+      {/* Dialogs lazy — só carregam quando abertos */}
+      <Suspense fallback={null}>
+        {formOpen && (
+          <ContactFormDialog open={formOpen} onOpenChange={setFormOpen} contact={editingContact} onSave={handleSave} />
+        )}
 
-      <LeadDetailDrawer
-        open={detailOpen}
-        onOpenChange={setDetailOpen}
-        contact={(detailContact && contacts.find(c => c.id === detailContact.id)) || detailContact || null}
-        onSave={updateContact}
-      />
+        {detailOpen && (
+          <LeadDetailDrawer
+            open={detailOpen}
+            onOpenChange={setDetailOpen}
+            contact={(detailContact && contacts.find(c => c.id === detailContact.id)) || detailContact || null}
+            onSave={updateContact}
+          />
+        )}
 
-      <Dialog open={automationsOpen} onOpenChange={setAutomationsOpen}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-          <FunnelAutomationsPanel onClose={() => setAutomationsOpen(false)} />
-        </DialogContent>
-      </Dialog>
+        {automationsOpen && (
+          <Dialog open={automationsOpen} onOpenChange={setAutomationsOpen}>
+            <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+              <FunnelAutomationsPanel onClose={() => setAutomationsOpen(false)} />
+            </DialogContent>
+          </Dialog>
+        )}
 
-      <PosVendaPanel open={posVendaOpen} onOpenChange={setPosVendaOpen} />
+        {posVendaOpen && (
+          <PosVendaPanel open={posVendaOpen} onOpenChange={setPosVendaOpen} />
+        )}
 
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja excluir "{contactToDelete?.name}"?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground">Excluir</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir "{contactToDelete?.name}"?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground">Excluir</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        {historyOpen && (
+          <ContactOrderHistory open={historyOpen} onOpenChange={setHistoryOpen} contact={historyContact} />
+        )}
 
-      <ContactOrderHistory open={historyOpen} onOpenChange={setHistoryOpen} contact={historyContact} />
+        {timelineOpen && (
+          <ContactHistoryDialog
+            open={timelineOpen}
+            onOpenChange={setTimelineOpen}
+            contactId={timelineContact?.id || null}
+            contactName={timelineContact?.name || ''}
+          />
+        )}
 
-      <ContactHistoryDialog
-        open={timelineOpen}
-        onOpenChange={setTimelineOpen}
-        contactId={timelineContact?.id || null}
-        contactName={timelineContact?.name || ''}
-      />
+        {tagsManagerOpen && (
+          <ContactTagsManager open={tagsManagerOpen} onOpenChange={setTagsManagerOpen} />
+        )}
 
-      <ContactTagsManager open={tagsManagerOpen} onOpenChange={setTagsManagerOpen} />
-      <LeadImportDialog
-        open={importOpen}
-        onOpenChange={setImportOpen}
-        funnelStages={FUNNEL_STAGES.map(s => ({ key: s.key, label: s.label }))}
-        onImported={fetchContacts}
-      />
+        {importOpen && (
+          <LeadImportDialog
+            open={importOpen}
+            onOpenChange={setImportOpen}
+            funnelStages={FUNNEL_STAGES.map(s => ({ key: s.key, label: s.label }))}
+            onImported={fetchContacts}
+          />
+        )}
 
-      <ContactActivitiesPanel
-        open={activitiesOpen}
-        onOpenChange={setActivitiesOpen}
-        contact={activitiesContact}
-      />
+        {activitiesOpen && (
+          <ContactActivitiesPanel
+            open={activitiesOpen}
+            onOpenChange={setActivitiesOpen}
+            contact={activitiesContact}
+          />
+        )}
 
-      <WhatsAppMessageSelector
-        open={!!whatsAppContact}
-        onOpenChange={(open) => { if (!open) setWhatsAppContact(null); }}
-        contactName={whatsAppContact?.name || ''}
-        funnelStatus={whatsAppContact?.funnel_status || ''}
-        contactId={whatsAppContact?.id}
-        onSend={handleWhatsAppSend}
-      />
+        {!!whatsAppContact && (
+          <WhatsAppMessageSelector
+            open={!!whatsAppContact}
+            onOpenChange={(open) => { if (!open) setWhatsAppContact(null); }}
+            contactName={whatsAppContact?.name || ''}
+            funnelStatus={whatsAppContact?.funnel_status || ''}
+            contactId={whatsAppContact?.id}
+            onSend={handleWhatsAppSend}
+          />
+        )}
 
-      <BulkWhatsAppDispatch
-        open={!!bulkDispatchContacts}
-        onOpenChange={(open) => { if (!open) setBulkDispatchContacts(null); }}
-        contacts={bulkDispatchContacts || []}
-        onFinished={() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }}
-      />
+        {!!bulkDispatchContacts && (
+          <BulkWhatsAppDispatch
+            open={!!bulkDispatchContacts}
+            onOpenChange={(open) => { if (!open) setBulkDispatchContacts(null); }}
+            contacts={bulkDispatchContacts || []}
+            onFinished={() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }}
+          />
+        )}
 
-      <LostReasonDialog
-        open={!!lostDialogContact}
-        contactName={lostDialogContact?.name}
-        onCancel={() => setLostDialogContact(null)}
-        onConfirm={handleConfirmLost}
-      />
+        {!!lostDialogContact && (
+          <LostReasonDialog
+            open={!!lostDialogContact}
+            contactName={lostDialogContact?.name}
+            onCancel={() => setLostDialogContact(null)}
+            onConfirm={handleConfirmLost}
+          />
+        )}
+      </Suspense>
 
     </div>
   );
