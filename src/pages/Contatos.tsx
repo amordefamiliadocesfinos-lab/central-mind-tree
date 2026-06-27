@@ -1211,13 +1211,15 @@ export default function Contatos() {
             })}
           </div>
         ) : viewMode === 'funnel' ? (
-          <KommoFunnelView
-            contacts={filteredContacts}
-            nextTaskByContact={nextTaskByContact}
-            onLeadClick={(c) => { setDetailContact(c); setDetailOpen(true); }}
-            onStageChange={(c, newStage) => handleStatusChange(c, newStage)}
-            onCreateLead={() => { setEditingContact(null); setFormOpen(true); }}
-          />
+          <Suspense fallback={<div className="p-8 text-center text-muted-foreground text-sm">Carregando funil…</div>}>
+            <KommoFunnelView
+              contacts={filteredContacts}
+              nextTaskByContact={nextTaskByContact}
+              onLeadClick={(c) => { setDetailContact(c); setDetailOpen(true); }}
+              onStageChange={(c, newStage) => handleStatusChange(c, newStage)}
+              onCreateLead={() => { setEditingContact(null); setFormOpen(true); }}
+            />
+          </Suspense>
 
 
         ) : (
