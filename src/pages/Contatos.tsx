@@ -818,7 +818,9 @@ export default function Contatos() {
 
         {/* Dashboard Comercial - tempo real */}
         <div className="px-4 pt-2 pb-1">
-          <CommercialDashboard />
+          <Suspense fallback={<div className="h-24" />}>
+            <CommercialDashboard />
+          </Suspense>
         </div>
 
         {/* Indicadores do CRM */}
