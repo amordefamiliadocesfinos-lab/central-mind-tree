@@ -1485,85 +1485,111 @@ export default function Contatos() {
         )}
       </div>
 
-      {/* Dialogs */}
-      <ContactFormDialog open={formOpen} onOpenChange={setFormOpen} contact={editingContact} onSave={handleSave} />
+      {/* Dialogs lazy — só carregam quando abertos */}
+      <Suspense fallback={null}>
+        {formOpen && (
+          <ContactFormDialog open={formOpen} onOpenChange={setFormOpen} contact={editingContact} onSave={handleSave} />
+        )}
 
-      <LeadDetailDrawer
-        open={detailOpen}
-        onOpenChange={setDetailOpen}
-        contact={(detailContact && contacts.find(c => c.id === detailContact.id)) || detailContact || null}
-        onSave={updateContact}
-      />
+        {detailOpen && (
+          <LeadDetailDrawer
+            open={detailOpen}
+            onOpenChange={setDetailOpen}
+            contact={(detailContact && contacts.find(c => c.id === detailContact.id)) || detailContact || null}
+            onSave={updateContact}
+          />
+        )}
 
-      <Dialog open={automationsOpen} onOpenChange={setAutomationsOpen}>
-        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-          <FunnelAutomationsPanel onClose={() => setAutomationsOpen(false)} />
-        </DialogContent>
-      </Dialog>
+        {automationsOpen && (
+          <Dialog open={automationsOpen} onOpenChange={setAutomationsOpen}>
+            <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+              <FunnelAutomationsPanel onClose={() => setAutomationsOpen(false)} />
+            </DialogContent>
+          </Dialog>
+        )}
 
-      <PosVendaPanel open={posVendaOpen} onOpenChange={setPosVendaOpen} />
+        {posVendaOpen && (
+          <PosVendaPanel open={posVendaOpen} onOpenChange={setPosVendaOpen} />
+        )}
 
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja excluir "{contactToDelete?.name}"?
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground">Excluir</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir "{contactToDelete?.name}"?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDelete} className="bg-destructive text-destructive-foreground">Excluir</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        {historyOpen && (
+          <ContactOrderHistory open={historyOpen} onOpenChange={setHistoryOpen} contact={historyContact} />
+        )}
 
-      <ContactOrderHistory open={historyOpen} onOpenChange={setHistoryOpen} contact={historyContact} />
+        {timelineOpen && (
+          <ContactHistoryDialog
+            open={timelineOpen}
+            onOpenChange={setTimelineOpen}
+            contactId={timelineContact?.id || null}
+            contactName={timelineContact?.name || ''}
+          />
+        )}
 
-      <ContactHistoryDialog
-        open={timelineOpen}
-        onOpenChange={setTimelineOpen}
-        contactId={timelineContact?.id || null}
-        contactName={timelineContact?.name || ''}
-      />
+        {tagsManagerOpen && (
+          <ContactTagsManager open={tagsManagerOpen} onOpenChange={setTagsManagerOpen} />
+        )}
 
-      <ContactTagsManager open={tagsManagerOpen} onOpenChange={setTagsManagerOpen} />
-      <LeadImportDialog
-        open={importOpen}
-        onOpenChange={setImportOpen}
-        funnelStages={FUNNEL_STAGES.map(s => ({ key: s.key, label: s.label }))}
-        onImported={fetchContacts}
-      />
+        {importOpen && (
+          <LeadImportDialog
+            open={importOpen}
+            onOpenChange={setImportOpen}
+            funnelStages={FUNNEL_STAGES.map(s => ({ key: s.key, label: s.label }))}
+            onImported={fetchContacts}
+          />
+        )}
 
-      <ContactActivitiesPanel
-        open={activitiesOpen}
-        onOpenChange={setActivitiesOpen}
-        contact={activitiesContact}
-      />
+        {activitiesOpen && (
+          <ContactActivitiesPanel
+            open={activitiesOpen}
+            onOpenChange={setActivitiesOpen}
+            contact={activitiesContact}
+          />
+        )}
 
-      <WhatsAppMessageSelector
-        open={!!whatsAppContact}
-        onOpenChange={(open) => { if (!open) setWhatsAppContact(null); }}
-        contactName={whatsAppContact?.name || ''}
-        funnelStatus={whatsAppContact?.funnel_status || ''}
-        contactId={whatsAppContact?.id}
-        onSend={handleWhatsAppSend}
-      />
+        {!!whatsAppContact && (
+          <WhatsAppMessageSelector
+            open={!!whatsAppContact}
+            onOpenChange={(open) => { if (!open) setWhatsAppContact(null); }}
+            contactName={whatsAppContact?.name || ''}
+            funnelStatus={whatsAppContact?.funnel_status || ''}
+            contactId={whatsAppContact?.id}
+            onSend={handleWhatsAppSend}
+          />
+        )}
 
-      <BulkWhatsAppDispatch
-        open={!!bulkDispatchContacts}
-        onOpenChange={(open) => { if (!open) setBulkDispatchContacts(null); }}
-        contacts={bulkDispatchContacts || []}
-        onFinished={() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }}
-      />
+        {!!bulkDispatchContacts && (
+          <BulkWhatsAppDispatch
+            open={!!bulkDispatchContacts}
+            onOpenChange={(open) => { if (!open) setBulkDispatchContacts(null); }}
+            contacts={bulkDispatchContacts || []}
+            onFinished={() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }}
+          />
+        )}
 
-      <LostReasonDialog
-        open={!!lostDialogContact}
-        contactName={lostDialogContact?.name}
-        onCancel={() => setLostDialogContact(null)}
-        onConfirm={handleConfirmLost}
-      />
+        {!!lostDialogContact && (
+          <LostReasonDialog
+            open={!!lostDialogContact}
+            contactName={lostDialogContact?.name}
+            onCancel={() => setLostDialogContact(null)}
+            onConfirm={handleConfirmLost}
+          />
+        )}
+      </Suspense>
 
     </div>
   );
