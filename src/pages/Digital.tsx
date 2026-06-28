@@ -451,8 +451,11 @@ export default function Digital() {
               </Button>
             </div>
             {showPriorities && (
-              <DigitalPrioritiesPanel ideas={ideas} platforms={activePlatforms} onSelectIdea={openIdeaWithVariation} />
+              <Suspense fallback={<TabLoading />}>
+                <DigitalPrioritiesPanel ideas={ideas} platforms={activePlatforms} onSelectIdea={openIdeaWithVariation} />
+              </Suspense>
             )}
+
           </>
         )}
 
