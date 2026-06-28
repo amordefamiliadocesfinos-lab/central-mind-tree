@@ -806,9 +806,12 @@ export default function Digital() {
       {/* Media Tab - Full Height */}
       {!selectedIdeaData && activeTab === 'midia' ? (
         <div className="flex-1 pb-20">
-          <MediaLibrary mode="browse" />
+          <Suspense fallback={<TabLoading />}>
+            <MediaLibrary mode="browse" />
+          </Suspense>
         </div>
       ) : (
+
         <main className="px-4 py-4 pb-24">
           {selectedIdeaData ? (
             <IdeaEditor
