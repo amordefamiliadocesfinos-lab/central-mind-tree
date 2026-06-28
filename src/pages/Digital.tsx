@@ -991,7 +991,9 @@ export default function Digital() {
               <PlatformsManager />
             </div>
           )}
+          </Suspense>
         </main>
+
       )}
 
       {/* Create Dialog */}
