@@ -1162,11 +1162,16 @@ export default function Digital() {
         />
       </ResponsiveDialog>
 
-      <QuickActionWizard
-        open={showQuickWizard}
-        onOpenChange={setShowQuickWizard}
-        onCreated={(id) => setSelectedIdea(id)}
-      />
+      {showQuickWizard && (
+        <Suspense fallback={null}>
+          <QuickActionWizard
+            open={showQuickWizard}
+            onOpenChange={setShowQuickWizard}
+            onCreated={(id) => setSelectedIdea(id)}
+          />
+        </Suspense>
+      )}
+
     </div>
   );
 }
