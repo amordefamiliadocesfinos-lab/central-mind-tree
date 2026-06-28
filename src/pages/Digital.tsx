@@ -813,6 +813,8 @@ export default function Digital() {
       ) : (
 
         <main className="px-4 py-4 pb-24">
+          <Suspense fallback={<TabLoading />}>
+
           {selectedIdeaData ? (
             <IdeaEditor
               idea={selectedIdeaData}
