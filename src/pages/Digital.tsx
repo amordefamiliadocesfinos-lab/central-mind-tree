@@ -1,16 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { useDigital, DIGITAL_STATUS } from '@/hooks/useDigital';
 import { useIdeaTypes } from '@/hooks/useIdeaTypes';
 import { useProductsList } from '@/hooks/useProductsList';
-import { IdeaCard, IdeaEditor, KanbanBoard, MediaLibrary, MetricsChart, BatchVariationDialog, PlatformsManager, DigitalCalendar } from '@/components/digital';
+import { IdeaCard } from '@/components/digital/IdeaCard';
 import { DigitalDashboard } from '@/components/digital/DigitalDashboard';
-import { DigitalPrioritiesPanel } from '@/components/digital/DigitalPrioritiesPanel';
-import { IdeaTypesManager } from '@/components/digital/IdeaTypesManager';
 import { PlatformIcon } from '@/components/digital/PlatformsManager';
-import { TrendsPanel } from '@/components/digital/TrendsPanel';
-import { InteractionsPanel } from '@/components/digital/InteractionsPanel';
-import { ServicePanel } from '@/components/digital/ServicePanel';
-import { KnowledgeBasePanel } from '@/components/digital/KnowledgeBasePanel';
 import { ProductSelector } from '@/components/digital/ProductSelector';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,10 +13,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, ArrowLeft, Search, LayoutGrid, Columns3, Image, BarChart3, Link2, Settings2, TrendingUp, MessageCircle, Book, Calendar, Headset, X, SlidersHorizontal, Sparkles, Layers, ArrowUpDown, Zap, Table as TableIcon } from 'lucide-react';
-import { IdeasSpreadsheetView } from '@/components/digital/IdeasSpreadsheetView';
-import { QuickActionWizard } from '@/components/digital/QuickActionWizard';
 import { Wand2 } from 'lucide-react';
-import { AllVariationsSpreadsheetView } from '@/components/digital/AllVariationsSpreadsheetView';
 import { HierarchicalPlatformSelector } from '@/components/digital/HierarchicalPlatformSelector';
 import { PlatformHierarchicalPicker } from '@/components/digital/PlatformHierarchicalPicker';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -33,6 +24,30 @@ import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
+
+// Lazy-load heavy components (editors, tabs, dialogs)
+const IdeaEditor = lazy(() => import('@/components/digital/IdeaEditor').then(m => ({ default: m.IdeaEditor })));
+const KanbanBoard = lazy(() => import('@/components/digital/KanbanBoard').then(m => ({ default: m.KanbanBoard })));
+const MediaLibrary = lazy(() => import('@/components/digital/MediaLibrary').then(m => ({ default: m.MediaLibrary })));
+const MetricsChart = lazy(() => import('@/components/digital/MetricsChart').then(m => ({ default: m.MetricsChart })));
+const PlatformsManager = lazy(() => import('@/components/digital/PlatformsManager').then(m => ({ default: m.PlatformsManager })));
+const DigitalCalendar = lazy(() => import('@/components/digital/DigitalCalendar').then(m => ({ default: m.DigitalCalendar })));
+const TrendsPanel = lazy(() => import('@/components/digital/TrendsPanel').then(m => ({ default: m.TrendsPanel })));
+const InteractionsPanel = lazy(() => import('@/components/digital/InteractionsPanel').then(m => ({ default: m.InteractionsPanel })));
+const ServicePanel = lazy(() => import('@/components/digital/ServicePanel').then(m => ({ default: m.ServicePanel })));
+const KnowledgeBasePanel = lazy(() => import('@/components/digital/KnowledgeBasePanel').then(m => ({ default: m.KnowledgeBasePanel })));
+const IdeasSpreadsheetView = lazy(() => import('@/components/digital/IdeasSpreadsheetView').then(m => ({ default: m.IdeasSpreadsheetView })));
+const AllVariationsSpreadsheetView = lazy(() => import('@/components/digital/AllVariationsSpreadsheetView').then(m => ({ default: m.AllVariationsSpreadsheetView })));
+const QuickActionWizard = lazy(() => import('@/components/digital/QuickActionWizard').then(m => ({ default: m.QuickActionWizard })));
+const IdeaTypesManager = lazy(() => import('@/components/digital/IdeaTypesManager').then(m => ({ default: m.IdeaTypesManager })));
+const DigitalPrioritiesPanel = lazy(() => import('@/components/digital/DigitalPrioritiesPanel').then(m => ({ default: m.DigitalPrioritiesPanel })));
+
+const TabLoading = () => (
+  <div className="flex items-center justify-center py-12">
+    <div className="animate-pulse text-sm text-muted-foreground">Carregando…</div>
+  </div>
+);
+
 
 interface Node {
   id: string;
