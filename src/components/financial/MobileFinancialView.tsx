@@ -259,7 +259,7 @@ export function MobileFinancialView({
         <MaisView onOpen={setSubSection} />
       )}
 
-      {(section === 'receber' || section === 'pagar' || section === 'resumo') && section !== 'mais' && (
+      {(section === 'receber' || section === 'pagar' || section === 'resumo') && (
         <>
           {/* Quick totals strip (always visible on list sections) */}
           {(section === 'receber' || section === 'pagar') && (
