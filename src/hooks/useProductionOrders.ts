@@ -53,9 +53,16 @@ export interface ProductionOrder {
     name: string;
     sku: string;
   };
+  source_order?: {
+    id: string;
+    order_number: string | null;
+    customer_name: string | null;
+    due_date: string | null;
+  } | null;
   processes?: ProductionOrderProcess[];
   entries?: ProductionEntry[];
 }
+
 
 export const PRODUCTION_ORDER_STATUS = {
   aberto: { label: 'Aberto', color: 'bg-blue-500' },
