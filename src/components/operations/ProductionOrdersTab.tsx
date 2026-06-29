@@ -200,7 +200,7 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
     }
 
     // Now complete the order with shortage check skipped
-    const result = await completeOrder(pendingCompleteOrderId, true);
+    const result = await completeOrder(pendingCompleteOrderId, true, effectiveLocation);
     
     if (result.success) {
       setShowShortageDialog(false);
