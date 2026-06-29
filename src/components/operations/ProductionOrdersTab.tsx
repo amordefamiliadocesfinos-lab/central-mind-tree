@@ -18,12 +18,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { 
   Plus, Factory, Package, Users, CheckCircle2, 
-  ChevronRight, Clock, Trash2, Play, Check, Pencil, AlertTriangle, PackagePlus
+  ChevronRight, Clock, Trash2, Play, Check, Pencil, AlertTriangle, PackagePlus,
+  List, CalendarDays
 } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { BOMLine } from '@/hooks/useBOM';
+import { ProductionWeekView } from './ProductionWeekView';
 
 interface ProductionOrdersTabProps {
   products: Product[];
@@ -46,6 +48,7 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
     completeOrder,
     checkBOMShortages,
     getPaymentSummary,
+    fetchOrders,
   } = useProductionOrders();
   const { processes, activeProcesses } = useProcesses();
   const { createMovement } = useInventoryMovements();
@@ -60,6 +63,7 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
   const [showEntryForm, setShowEntryForm] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedOrderNumber, setEditedOrderNumber] = useState('');
+  const [viewMode, setViewMode] = useState<'list' | 'week'>('list');
   
   // Stock adjustment state
   const [showShortageDialog, setShowShortageDialog] = useState(false);
@@ -271,18 +275,45 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center gap-2 flex-wrap">
         <h2 className="text-lg font-semibold flex items-center gap-2">
           <Factory className="h-5 w-5" />
           Ordens de Produção ({orders.length})
         </h2>
-        <Button onClick={() => setShowCreateDialog(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nova OP
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="inline-flex rounded-md border bg-card p-0.5">
+            <Button
+              size="sm"
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              className="h-8 px-2.5"
+              onClick={() => setViewMode('list')}
+            >
+              <List className="h-4 w-4 mr-1" /> Lista
+            </Button>
+            <Button
+              size="sm"
+              variant={viewMode === 'week' ? 'default' : 'ghost'}
+              className="h-8 px-2.5"
+              onClick={() => setViewMode('week')}
+            >
+              <CalendarDays className="h-4 w-4 mr-1" /> Semana
+            </Button>
+          </div>
+          <Button onClick={() => setShowCreateDialog(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nova OP
+          </Button>
+        </div>
       </div>
 
-      {/* Orders List */}
+      {viewMode === 'week' ? (
+        <ProductionWeekView
+          orders={orders}
+          calculateConsolidation={calculateConsolidation}
+          onSelectOrder={setSelectedOrder}
+          onRefresh={fetchOrders}
+        />
+      ) : (
       <div className="space-y-2">
         {orders.length === 0 ? (
           <Card className="p-8 text-center">
@@ -307,7 +338,6 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
                 <CardContent className="p-4">
                   <div className="flex justify-between items-start gap-3">
                     <div className="space-y-1.5 min-w-0 flex-1">
-                      {/* Title: customer name OR "Para Estoque" */}
                       <h3 className="font-semibold text-base truncate flex items-center gap-2">
                         {isForStock ? (
                           <>
@@ -371,6 +401,8 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
           })
         )}
       </div>
+      )}
+
 
 
 
