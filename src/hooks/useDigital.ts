@@ -524,21 +524,32 @@ export function useDigital() {
   useEffect(() => {
     fetchIdeas();
 
+    // Debounce refetch to avoid storms when many rows change at once
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const debouncedRefetch = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        fetchIdeas();
+        timer = null;
+      }, 600);
+    };
+
     const channel = supabase
       .channel('digital-changes')
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'digital_ideas',
-      }, fetchIdeas)
+      }, debouncedRefetch)
       .on('postgres_changes', {
         event: '*',
         schema: 'public',
         table: 'digital_variations',
-      }, fetchIdeas)
+      }, debouncedRefetch)
       .subscribe();
 
     return () => {
+      if (timer) clearTimeout(timer);
       supabase.removeChannel(channel);
     };
   }, [fetchIdeas]);
