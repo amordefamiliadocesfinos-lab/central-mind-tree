@@ -48,6 +48,7 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
     completeOrder,
     checkBOMShortages,
     getPaymentSummary,
+    fetchOrders,
   } = useProductionOrders();
   const { processes, activeProcesses } = useProcesses();
   const { createMovement } = useInventoryMovements();
