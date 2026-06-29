@@ -49,6 +49,11 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
   } = useProductionOrders();
   const { processes, activeProcesses } = useProcesses();
   const { createMovement } = useInventoryMovements();
+  const { locations } = useStorageLocations();
+  const defaultLocation = locations[0]?.name || 'Fábrica';
+  const [completionLocation, setCompletionLocation] = useState<string>('');
+  const effectiveLocation = completionLocation || defaultLocation;
+
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<ProductionOrder | null>(null);
