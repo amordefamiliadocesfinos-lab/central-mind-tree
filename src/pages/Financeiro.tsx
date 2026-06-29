@@ -13,6 +13,7 @@ import {
   PricingManagerV2,
   InvoicesManager,
 } from '@/components/financial';
+import { MobileFinancialView } from '@/components/financial/MobileFinancialView';
 import { useFinancial, EntryStatus } from '@/hooks/useFinancial';
 import { Users, DollarSign, FileText } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
