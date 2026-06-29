@@ -163,7 +163,7 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
   };
 
   const handleCompleteOrder = async (order: ProductionOrder) => {
-    const result = await completeOrder(order.id);
+    const result = await completeOrder(order.id, false, effectiveLocation);
     
     if (!result.success && result.shortages && result.shortages.length > 0) {
       // Show shortage dialog with adjustment options
