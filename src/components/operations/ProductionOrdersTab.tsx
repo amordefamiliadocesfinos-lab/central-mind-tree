@@ -20,7 +20,7 @@ import {
   ChevronRight, Clock, Trash2, Play, Check, Pencil, AlertTriangle, PackagePlus
 } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { BOMLine } from '@/hooks/useBOM';
 
@@ -323,10 +323,10 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
                         </span>
                       </div>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                        <span>Criada: {format(new Date(order.created_at), "dd/MM/yyyy", { locale: ptBR })}</span>
+                        <span>Criada: {format(parseISO(order.created_at), "dd/MM/yyyy", { locale: ptBR })}</span>
                         {order.source_order?.due_date && (
                           <span className="text-amber-600 font-medium">
-                            Entrega: {format(new Date(order.source_order.due_date), "dd/MM/yyyy", { locale: ptBR })}
+                            Entrega: {format(parseISO(order.source_order.due_date), "dd/MM/yyyy", { locale: ptBR })}
                           </span>
                         )}
                         {order.batch_code && <span>Lote: {order.batch_code}</span>}
