@@ -3,6 +3,7 @@ import { useProductionOrders, ProductionOrder, ProductionEntry, PRODUCTION_ORDER
 import { useProcesses, Process } from '@/hooks/useProcesses';
 import { useOrders, Product } from '@/hooks/useOrders';
 import { useInventoryMovements } from '@/hooks/useInventoryMovements';
+import { useStorageLocations } from '@/hooks/useStorageLocations';
 import { supabase } from '@/integrations/supabase/client';
 import { ResponsiveDialog, FullScreenDialog } from '@/components/ui/responsive-dialog';
 import { Button } from '@/components/ui/button';
