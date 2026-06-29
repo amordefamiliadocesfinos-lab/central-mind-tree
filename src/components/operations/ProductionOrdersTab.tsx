@@ -3,6 +3,7 @@ import { useProductionOrders, ProductionOrder, ProductionEntry, PRODUCTION_ORDER
 import { useProcesses, Process } from '@/hooks/useProcesses';
 import { useOrders, Product } from '@/hooks/useOrders';
 import { useInventoryMovements } from '@/hooks/useInventoryMovements';
+import { useStorageLocations } from '@/hooks/useStorageLocations';
 import { supabase } from '@/integrations/supabase/client';
 import { ResponsiveDialog, FullScreenDialog } from '@/components/ui/responsive-dialog';
 import { Button } from '@/components/ui/button';
@@ -48,6 +49,11 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
   } = useProductionOrders();
   const { processes, activeProcesses } = useProcesses();
   const { createMovement } = useInventoryMovements();
+  const { locations } = useStorageLocations();
+  const defaultLocation = locations[0]?.name || 'Fábrica';
+  const [completionLocation, setCompletionLocation] = useState<string>('');
+  const effectiveLocation = completionLocation || defaultLocation;
+
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<ProductionOrder | null>(null);
@@ -157,7 +163,7 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
   };
 
   const handleCompleteOrder = async (order: ProductionOrder) => {
-    const result = await completeOrder(order.id);
+    const result = await completeOrder(order.id, false, effectiveLocation);
     
     if (!result.success && result.shortages && result.shortages.length > 0) {
       // Show shortage dialog with adjustment options
@@ -194,7 +200,7 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
     }
 
     // Now complete the order with shortage check skipped
-    const result = await completeOrder(pendingCompleteOrderId, true);
+    const result = await completeOrder(pendingCompleteOrderId, true, effectiveLocation);
     
     if (result.success) {
       setShowShortageDialog(false);
@@ -287,28 +293,45 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
           orders.map((order) => {
             const statusConfig = PRODUCTION_ORDER_STATUS[order.status as keyof typeof PRODUCTION_ORDER_STATUS];
             const consolidated = calculateConsolidation(order);
+            const isForStock = !order.source_order_id;
             
             return (
               <Card 
                 key={order.id}
-                className="cursor-pointer hover:bg-muted/50 transition-colors border-l-4 border-l-amber-500"
+                className={cn(
+                  "cursor-pointer hover:bg-muted/50 transition-colors border-l-4",
+                  isForStock ? "border-l-emerald-500" : "border-l-amber-500"
+                )}
                 onClick={() => setSelectedOrder(order)}
               >
                 <CardContent className="p-4">
                   <div className="flex justify-between items-start gap-3">
                     <div className="space-y-1.5 min-w-0 flex-1">
-                      {/* Customer name as title (like Pedido card) */}
-                      <h3 className="font-semibold text-base truncate">
-                        {order.source_order?.customer_name || order.product?.name || 'Sem cliente'}
+                      {/* Title: customer name OR "Para Estoque" */}
+                      <h3 className="font-semibold text-base truncate flex items-center gap-2">
+                        {isForStock ? (
+                          <>
+                            <PackagePlus className="h-4 w-4 text-emerald-600 shrink-0" />
+                            Produção para Estoque
+                          </>
+                        ) : (
+                          order.source_order?.customer_name || order.product?.name || 'Sem cliente'
+                        )}
                       </h3>
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge className={cn("text-xs text-white", statusConfig?.color)}>
                           {statusConfig?.label}
                         </Badge>
-                        <span className="inline-flex items-center gap-1 text-[11px] text-amber-600">
-                          <Factory className="h-3 w-3" />
-                          Produção
-                        </span>
+                        {isForStock ? (
+                          <Badge variant="outline" className="text-[10px] border-emerald-500 text-emerald-700">
+                            📦 Para Estoque
+                          </Badge>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-amber-600">
+                            <Factory className="h-3 w-3" />
+                            Pedido
+                          </span>
+                        )}
                         {order.source_order?.order_number && (
                           <Badge variant="outline" className="text-[10px]">
                             {order.source_order.order_number}
@@ -350,6 +373,7 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
       </div>
 
 
+
       {/* Create Order Dialog */}
       <FullScreenDialog 
         open={showCreateDialog} 
@@ -357,6 +381,35 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
         title="Nova Ordem de Produção"
       >
         <div className="space-y-4 p-4">
+            {/* Stock destination banner */}
+            <div className="flex items-start gap-3 p-3 rounded-lg border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-900">
+              <PackagePlus className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-medium text-emerald-900 dark:text-emerald-200">Produção para Estoque</p>
+                <p className="text-xs text-emerald-700 dark:text-emerald-300/80">
+                  Ao concluir esta OP, a quantidade produzida será adicionada automaticamente ao estoque em{' '}
+                  <span className="font-semibold">{effectiveLocation}</span>.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <Label>Local de Destino do Estoque</Label>
+              <Select value={effectiveLocation} onValueChange={(v) => setCompletionLocation(v)}>
+                <SelectTrigger className="h-12">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {locations.length === 0 && (
+                    <SelectItem value="Fábrica">Fábrica</SelectItem>
+                  )}
+                  {locations.map((loc) => (
+                    <SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div>
               <Label>Produto *</Label>
               <Select
@@ -558,8 +611,39 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
                     </CardContent>
                   </Card>
 
+                  {/* Destination location for stock entry */}
+                  {selectedOrder.status === 'producao' && (
+                    <Card className="border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20 dark:border-emerald-900">
+                      <CardContent className="pt-4 space-y-2">
+                        <Label className="flex items-center gap-2 text-emerald-900 dark:text-emerald-200">
+                          <PackagePlus className="h-4 w-4" />
+                          Local de Destino do Estoque
+                        </Label>
+                        <Select value={effectiveLocation} onValueChange={(v) => setCompletionLocation(v)}>
+                          <SelectTrigger className="h-11 bg-background">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {locations.length === 0 && (
+                              <SelectItem value="Fábrica">Fábrica</SelectItem>
+                            )}
+                            {locations.map((loc) => (
+                              <SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-emerald-700 dark:text-emerald-300/80">
+                          Ao concluir, <span className="font-semibold">{calculateConsolidation(selectedOrder)} un.</span> serão
+                          adicionadas em <span className="font-semibold">{effectiveLocation}</span>
+                          {selectedOrder.source_order_id ? ' e o pedido será marcado como Produzido.' : '.'}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+
                   {/* Actions */}
                   <div className="flex gap-2">
+
                     {selectedOrder.status === 'aberto' && (
                       <Button 
                         variant="outline"
