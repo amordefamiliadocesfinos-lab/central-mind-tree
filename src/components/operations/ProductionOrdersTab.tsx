@@ -291,36 +291,52 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
             return (
               <Card 
                 key={order.id}
-                className="cursor-pointer hover:bg-muted/50 transition-colors"
+                className="cursor-pointer hover:bg-muted/50 transition-colors border-l-4 border-l-amber-500"
                 onClick={() => setSelectedOrder(order)}
               >
                 <CardContent className="p-4">
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{order.order_number}</span>
+                  <div className="flex justify-between items-start gap-3">
+                    <div className="space-y-1.5 min-w-0 flex-1">
+                      {/* Customer name as title (like Pedido card) */}
+                      <h3 className="font-semibold text-base truncate">
+                        {order.source_order?.customer_name || order.product?.name || 'Sem cliente'}
+                      </h3>
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Badge className={cn("text-xs text-white", statusConfig?.color)}>
                           {statusConfig?.label}
                         </Badge>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Package className="h-4 w-4" />
-                        <span>{order.product?.name || 'Produto não definido'}</span>
-                        {order.batch_code && (
-                          <Badge variant="outline" className="text-xs">
-                            Lote: {order.batch_code}
+                        <span className="inline-flex items-center gap-1 text-[11px] text-amber-600">
+                          <Factory className="h-3 w-3" />
+                          Produção
+                        </span>
+                        {order.source_order?.order_number && (
+                          <Badge variant="outline" className="text-[10px]">
+                            {order.source_order.order_number}
                           </Badge>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {format(new Date(order.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                      </p>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Package className="h-4 w-4 shrink-0" />
+                        <span className="truncate">
+                          <span className="font-medium text-foreground">{order.target_quantity}x</span>{' '}
+                          {order.product?.name || 'Produto não definido'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
+                        <span>Criada: {format(new Date(order.created_at), "dd/MM/yyyy", { locale: ptBR })}</span>
+                        {order.source_order?.due_date && (
+                          <span className="text-amber-600 font-medium">
+                            Entrega: {format(new Date(order.source_order.due_date), "dd/MM/yyyy", { locale: ptBR })}
+                          </span>
+                        )}
+                        {order.batch_code && <span>Lote: {order.batch_code}</span>}
+                      </div>
                     </div>
-                    <div className="text-right flex items-center gap-3">
+                    <div className="text-right flex items-center gap-2 shrink-0">
                       <div>
-                        <p className="text-2xl font-bold">{consolidated}</p>
-                        <p className="text-xs text-muted-foreground">
-                          de {order.target_quantity} meta
+                        <p className="text-2xl font-bold leading-tight">{consolidated}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          de {order.target_quantity}
                         </p>
                       </div>
                       <ChevronRight className="h-5 w-5 text-muted-foreground" />
@@ -332,6 +348,7 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
           })
         )}
       </div>
+
 
       {/* Create Order Dialog */}
       <FullScreenDialog 
