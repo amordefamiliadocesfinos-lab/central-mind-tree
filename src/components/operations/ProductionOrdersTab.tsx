@@ -63,6 +63,7 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
   const [showEntryForm, setShowEntryForm] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedOrderNumber, setEditedOrderNumber] = useState('');
+  const [viewMode, setViewMode] = useState<'list' | 'week'>('list');
   
   // Stock adjustment state
   const [showShortageDialog, setShowShortageDialog] = useState(false);
