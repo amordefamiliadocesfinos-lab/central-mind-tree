@@ -3066,6 +3066,7 @@ export type Database = {
           notes: string | null
           order_number: string | null
           product_id: string | null
+          scheduled_date: string | null
           source_order_id: string | null
           status: string
           target_quantity: number
@@ -3080,6 +3081,7 @@ export type Database = {
           notes?: string | null
           order_number?: string | null
           product_id?: string | null
+          scheduled_date?: string | null
           source_order_id?: string | null
           status?: string
           target_quantity?: number
@@ -3094,6 +3096,7 @@ export type Database = {
           notes?: string | null
           order_number?: string | null
           product_id?: string | null
+          scheduled_date?: string | null
           source_order_id?: string | null
           status?: string
           target_quantity?: number
