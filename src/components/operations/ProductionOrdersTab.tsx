@@ -18,12 +18,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { 
   Plus, Factory, Package, Users, CheckCircle2, 
-  ChevronRight, Clock, Trash2, Play, Check, Pencil, AlertTriangle, PackagePlus
+  ChevronRight, Clock, Trash2, Play, Check, Pencil, AlertTriangle, PackagePlus,
+  List, CalendarDays
 } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { BOMLine } from '@/hooks/useBOM';
+import { ProductionWeekView } from './ProductionWeekView';
 
 interface ProductionOrdersTabProps {
   products: Product[];
