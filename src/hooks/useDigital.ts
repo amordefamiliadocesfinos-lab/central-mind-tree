@@ -142,8 +142,8 @@ export function useDigital() {
         *,
         variations:digital_variations(*)
       `)
-      .order('status', { ascending: true })
-      .order('order_index', { ascending: true });
+      .order('updated_at', { ascending: false })
+      .limit(300);
 
     if (error) {
       console.error('Error fetching digital ideas:', error);
@@ -151,15 +151,15 @@ export function useDigital() {
       return;
     }
 
-    // Sort by status priority
+    // Sort by status priority then order_index
     const sorted = (data || []).sort((a, b) => {
       const priorityA = DIGITAL_STATUS[a.status as keyof typeof DIGITAL_STATUS]?.priority || 99;
       const priorityB = DIGITAL_STATUS[b.status as keyof typeof DIGITAL_STATUS]?.priority || 99;
       if (priorityA !== priorityB) return priorityA - priorityB;
-      return a.order_index - b.order_index;
+      return (a.order_index || 0) - (b.order_index || 0);
     });
 
-    const parsed = (sorted || []).map(item => ({
+    const parsed = sorted.map(item => ({
       ...item,
       custom_fields: Array.isArray(item.custom_fields) ? item.custom_fields : [],
       custom_field_values: (item.custom_field_values && typeof item.custom_field_values === 'object' && !Array.isArray(item.custom_field_values)) ? item.custom_field_values : {},
