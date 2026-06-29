@@ -293,28 +293,45 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
           orders.map((order) => {
             const statusConfig = PRODUCTION_ORDER_STATUS[order.status as keyof typeof PRODUCTION_ORDER_STATUS];
             const consolidated = calculateConsolidation(order);
+            const isForStock = !order.source_order_id;
             
             return (
               <Card 
                 key={order.id}
-                className="cursor-pointer hover:bg-muted/50 transition-colors border-l-4 border-l-amber-500"
+                className={cn(
+                  "cursor-pointer hover:bg-muted/50 transition-colors border-l-4",
+                  isForStock ? "border-l-emerald-500" : "border-l-amber-500"
+                )}
                 onClick={() => setSelectedOrder(order)}
               >
                 <CardContent className="p-4">
                   <div className="flex justify-between items-start gap-3">
                     <div className="space-y-1.5 min-w-0 flex-1">
-                      {/* Customer name as title (like Pedido card) */}
-                      <h3 className="font-semibold text-base truncate">
-                        {order.source_order?.customer_name || order.product?.name || 'Sem cliente'}
+                      {/* Title: customer name OR "Para Estoque" */}
+                      <h3 className="font-semibold text-base truncate flex items-center gap-2">
+                        {isForStock ? (
+                          <>
+                            <PackagePlus className="h-4 w-4 text-emerald-600 shrink-0" />
+                            Produção para Estoque
+                          </>
+                        ) : (
+                          order.source_order?.customer_name || order.product?.name || 'Sem cliente'
+                        )}
                       </h3>
                       <div className="flex items-center gap-2 flex-wrap">
                         <Badge className={cn("text-xs text-white", statusConfig?.color)}>
                           {statusConfig?.label}
                         </Badge>
-                        <span className="inline-flex items-center gap-1 text-[11px] text-amber-600">
-                          <Factory className="h-3 w-3" />
-                          Produção
-                        </span>
+                        {isForStock ? (
+                          <Badge variant="outline" className="text-[10px] border-emerald-500 text-emerald-700">
+                            📦 Para Estoque
+                          </Badge>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[11px] text-amber-600">
+                            <Factory className="h-3 w-3" />
+                            Pedido
+                          </span>
+                        )}
                         {order.source_order?.order_number && (
                           <Badge variant="outline" className="text-[10px]">
                             {order.source_order.order_number}
@@ -354,6 +371,7 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
           })
         )}
       </div>
+
 
 
       {/* Create Order Dialog */}
