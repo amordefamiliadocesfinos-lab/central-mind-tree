@@ -128,7 +128,7 @@ function DayColumn({ dayId, date, orders, calculateConsolidation, onSelectOrder,
               order={o}
               calculateConsolidation={calculateConsolidation}
               onClick={() => onSelectOrder(o)}
-              disabled={!o.source_order_id}
+              disabled={false}
             />
           ))
         )}
