@@ -57,10 +57,29 @@ export default function Financeiro() {
     fetchEntries(newFilters);
   };
 
+  if (isMobile) {
+    return (
+      <MobileFinancialView
+        entries={entries}
+        categories={categories}
+        accounts={accounts}
+        loading={loading}
+        filters={filters}
+        onPeriodChange={handleDateRangeChange}
+        onCreateEntry={createEntry}
+        onUpdateEntry={updateEntry}
+        onDeleteEntry={deleteEntry}
+        onRegisterPayment={registerPayment}
+        onSaveAccount={saveAccount}
+        onSaveCategory={saveCategory}
+      />
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <MobileHeader title="Financeiro" showBack />
-      
+
       <div className="container mx-auto p-4 space-y-4">
         {/* Period selector */}
         <div className="flex flex-wrap items-center gap-2">
