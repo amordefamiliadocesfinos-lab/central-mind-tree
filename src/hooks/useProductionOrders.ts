@@ -53,9 +53,16 @@ export interface ProductionOrder {
     name: string;
     sku: string;
   };
+  source_order?: {
+    id: string;
+    order_number: string | null;
+    customer_name: string | null;
+    due_date: string | null;
+  } | null;
   processes?: ProductionOrderProcess[];
   entries?: ProductionEntry[];
 }
+
 
 export const PRODUCTION_ORDER_STATUS = {
   aberto: { label: 'Aberto', color: 'bg-blue-500' },
@@ -76,6 +83,7 @@ export function useProductionOrders() {
       .select(`
         *,
         product:products(id, name, sku),
+        source_order:orders!production_orders_source_order_id_fkey(id, order_number, customer_name, due_date),
         processes:production_order_processes(
           *,
           process:processes(id, name, value_per_unit)
@@ -86,6 +94,7 @@ export function useProductionOrders() {
         )
       `)
       .order('created_at', { ascending: false });
+
 
     if (error) {
       console.error('Error fetching production orders:', error);
