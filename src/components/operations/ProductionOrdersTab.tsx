@@ -381,6 +381,35 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
         title="Nova Ordem de Produção"
       >
         <div className="space-y-4 p-4">
+            {/* Stock destination banner */}
+            <div className="flex items-start gap-3 p-3 rounded-lg border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/30 dark:border-emerald-900">
+              <PackagePlus className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+              <div className="text-sm">
+                <p className="font-medium text-emerald-900 dark:text-emerald-200">Produção para Estoque</p>
+                <p className="text-xs text-emerald-700 dark:text-emerald-300/80">
+                  Ao concluir esta OP, a quantidade produzida será adicionada automaticamente ao estoque em{' '}
+                  <span className="font-semibold">{effectiveLocation}</span>.
+                </p>
+              </div>
+            </div>
+
+            <div>
+              <Label>Local de Destino do Estoque</Label>
+              <Select value={effectiveLocation} onValueChange={(v) => setCompletionLocation(v)}>
+                <SelectTrigger className="h-12">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {locations.length === 0 && (
+                    <SelectItem value="Fábrica">Fábrica</SelectItem>
+                  )}
+                  {locations.map((loc) => (
+                    <SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div>
               <Label>Produto *</Label>
               <Select
