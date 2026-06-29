@@ -48,6 +48,7 @@ export interface ProductionOrder {
   created_at: string;
   updated_at: string;
   completed_at: string | null;
+  scheduled_date: string | null;
   product?: {
     id: string;
     name: string;
