@@ -611,8 +611,39 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
                     </CardContent>
                   </Card>
 
+                  {/* Destination location for stock entry */}
+                  {selectedOrder.status === 'producao' && (
+                    <Card className="border-emerald-200 bg-emerald-50/50 dark:bg-emerald-950/20 dark:border-emerald-900">
+                      <CardContent className="pt-4 space-y-2">
+                        <Label className="flex items-center gap-2 text-emerald-900 dark:text-emerald-200">
+                          <PackagePlus className="h-4 w-4" />
+                          Local de Destino do Estoque
+                        </Label>
+                        <Select value={effectiveLocation} onValueChange={(v) => setCompletionLocation(v)}>
+                          <SelectTrigger className="h-11 bg-background">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {locations.length === 0 && (
+                              <SelectItem value="Fábrica">Fábrica</SelectItem>
+                            )}
+                            {locations.map((loc) => (
+                              <SelectItem key={loc.id} value={loc.name}>{loc.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-emerald-700 dark:text-emerald-300/80">
+                          Ao concluir, <span className="font-semibold">{calculateConsolidation(selectedOrder)} un.</span> serão
+                          adicionadas em <span className="font-semibold">{effectiveLocation}</span>
+                          {selectedOrder.source_order_id ? ' e o pedido será marcado como Produzido.' : '.'}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+
                   {/* Actions */}
                   <div className="flex gap-2">
+
                     {selectedOrder.status === 'aberto' && (
                       <Button 
                         variant="outline"
