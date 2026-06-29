@@ -21,6 +21,7 @@ interface Props {
 const WEEKDAY_LABELS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
 function getOrderDate(o: ProductionOrder): Date {
+  if (o.scheduled_date) return parseISO(o.scheduled_date);
   if (o.source_order?.due_date) return parseISO(o.source_order.due_date);
   return parseISO(o.created_at);
 }
