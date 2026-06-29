@@ -21,6 +21,7 @@ interface Props {
 const WEEKDAY_LABELS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
 function getOrderDate(o: ProductionOrder): Date {
+  if (o.scheduled_date) return parseISO(o.scheduled_date);
   if (o.source_order?.due_date) return parseISO(o.source_order.due_date);
   return parseISO(o.created_at);
 }
@@ -127,7 +128,7 @@ function DayColumn({ dayId, date, orders, calculateConsolidation, onSelectOrder,
               order={o}
               calculateConsolidation={calculateConsolidation}
               onClick={() => onSelectOrder(o)}
-              disabled={!o.source_order_id}
+              disabled={false}
             />
           ))
         )}
@@ -170,25 +171,34 @@ export function ProductionWeekView({ orders, calculateConsolidation, onSelectOrd
 
     const order = orders.find(o => o.id === active.id);
     if (!order) return;
-    if (!order.source_order_id) {
-      toast.error('OPs para estoque não têm data de entrega vinculada');
-      return;
-    }
 
     const targetDateKey = over.id as string;
     const currentDate = getOrderDate(order);
     if (format(currentDate, 'yyyy-MM-dd') === targetDateKey) return;
 
-    const { error } = await supabase
-      .from('orders')
-      .update({ due_date: targetDateKey })
-      .eq('id', order.source_order_id);
+    // Always persist on the production order itself (works for stock + customer OPs)
+    const { error: opError } = await supabase
+      .from('production_orders')
+      .update({ scheduled_date: targetDateKey })
+      .eq('id', order.id);
 
-    if (error) {
-      toast.error('Erro ao atualizar data de entrega');
+    if (opError) {
+      toast.error('Erro ao reagendar OP');
       return;
     }
-    toast.success(`Entrega movida para ${format(parseISO(targetDateKey), "dd/MM (EEE)", { locale: ptBR })}`);
+
+    // If linked to a customer order, also update the delivery date to stay in sync
+    if (order.source_order_id) {
+      const { error: orderError } = await supabase
+        .from('orders')
+        .update({ due_date: targetDateKey })
+        .eq('id', order.source_order_id);
+      if (orderError) {
+        toast.error('OP reagendada, mas falhou ao atualizar data de entrega do pedido');
+      }
+    }
+
+    toast.success(`Movido para ${format(parseISO(targetDateKey), "dd/MM (EEE)", { locale: ptBR })}`);
     onRefresh();
   };
 
