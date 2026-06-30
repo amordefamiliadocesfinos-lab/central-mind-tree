@@ -162,6 +162,16 @@ export default function Rotina() {
           </div>
           
           <div className="flex gap-1">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => setMtPickerOpen(true)}
+              className="text-xs h-10 gap-1"
+              title="Escolher Método de Trabalho"
+            >
+              <Sparkles className="h-4 w-4" />
+              <span className="hidden sm:inline">MT</span>
+            </Button>
             {!isToday(selectedDate) && (
               <Button 
                 variant="outline" 
