@@ -298,7 +298,10 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
               {current && (
                 <div className="rounded-md border bg-muted/40 p-2 text-xs">
                   <div className="text-muted-foreground mb-1">Pré-visualização ({current.name}):</div>
-                  <div className="whitespace-pre-wrap">{appendAttachmentsToMessage(renderMessage(template, current), attachments)}</div>
+                  <div className="whitespace-pre-wrap">{renderMessage(template, current)}</div>
+                  {attachments.length > 0 && (
+                    <div className="mt-1 text-[11px] text-muted-foreground">📎 {attachments.length} anexo(s) serão enviados como mídia</div>
+                  )}
                 </div>
               )}
 
