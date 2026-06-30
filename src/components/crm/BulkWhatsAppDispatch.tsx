@@ -283,11 +283,16 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
                 placeholder="Digite a mensagem..."
               />
 
+              <WhatsAppAttachments
+                attachments={attachments}
+                onChange={setAttachments}
+                compact
+              />
 
               {current && (
                 <div className="rounded-md border bg-muted/40 p-2 text-xs">
                   <div className="text-muted-foreground mb-1">Pré-visualização ({current.name}):</div>
-                  <div className="whitespace-pre-wrap">{renderMessage(template, current)}</div>
+                  <div className="whitespace-pre-wrap">{appendAttachmentsToMessage(renderMessage(template, current), attachments)}</div>
                 </div>
               )}
 
