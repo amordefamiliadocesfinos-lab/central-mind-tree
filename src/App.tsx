@@ -125,6 +125,7 @@ function AppContent() {
       <QuickConversationFAB />
       <StockCheckAlert />
       <StockCheckWizard />
+      <RoutineAlertOverlay />
     </BrowserRouter>
   );
 }
