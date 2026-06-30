@@ -37,6 +37,7 @@ import Oportunidades from "./pages/Oportunidades";
 import NotFound from "./pages/NotFound";
 import { QuickConversationFAB } from "@/components/crm/QuickConversationFAB";
 import { RoutineAlertOverlay } from "@/components/routine/RoutineAlertOverlay";
+import { RoutineAlertsToggleButton } from "@/components/routine/RoutineAlertsToggleButton";
 import { useScheduledTaskPromotion } from "./hooks/useScheduledTaskPromotion";
 import { useKeyboardAware } from "./hooks/useKeyboardAware";
 
