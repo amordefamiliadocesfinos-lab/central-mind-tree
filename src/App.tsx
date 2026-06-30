@@ -37,6 +37,7 @@ import Oportunidades from "./pages/Oportunidades";
 import NotFound from "./pages/NotFound";
 import { QuickConversationFAB } from "@/components/crm/QuickConversationFAB";
 import { RoutineAlertOverlay } from "@/components/routine/RoutineAlertOverlay";
+import { RoutineAlertsToggleButton } from "@/components/routine/RoutineAlertsToggleButton";
 import { useScheduledTaskPromotion } from "./hooks/useScheduledTaskPromotion";
 import { useKeyboardAware } from "./hooks/useKeyboardAware";
 
@@ -114,7 +115,8 @@ function AppContent() {
   return (
     <BrowserRouter>
       {/* Assistant positioned in top-right, but below the search bar on mobile */}
-      <div className="fixed z-50 md:top-4 md:right-4 max-md:bottom-16 max-md:right-3">
+      <div className="fixed z-50 md:top-4 md:right-4 max-md:bottom-16 max-md:right-3 flex items-center gap-1">
+        <RoutineAlertsToggleButton />
         <AssistantPanel />
       </div>
       <GlobalSearchBar />

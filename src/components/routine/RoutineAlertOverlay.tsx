@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, BellOff, Check, Clock, X, Volume2, VolumeX } from 'lucide-react';
+import { Bell, BellOff, Check, Clock, X, Volume2, VolumeX, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
@@ -30,6 +30,9 @@ interface PendingBlock {
 
 const SOUND_KEY = 'pc.routine.sound.enabled';
 const DISMISSED_KEY = 'pc.routine.alert.dismissed';
+const HIDDEN_KEY = 'pc.routine.alerts.hidden';
+export const ROUTINE_ALERTS_TOGGLE_EVENT = 'pc:routine-alerts-toggle';
+export const ROUTINE_ALERTS_COUNT_EVENT = 'pc:routine-alerts-count';
 
 function playBeep() {
   try {
@@ -63,7 +66,26 @@ export function RoutineAlertOverlay() {
     const v = localStorage.getItem(SOUND_KEY);
     return v === null ? true : v === 'true';
   });
+  const [hidden, setHidden] = useState<boolean>(() => localStorage.getItem(HIDDEN_KEY) === 'true');
   const alertedRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const onToggle = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      const next = typeof detail?.hidden === 'boolean' ? detail.hidden : !hidden;
+      setHidden(next);
+      localStorage.setItem(HIDDEN_KEY, String(next));
+    };
+    window.addEventListener(ROUTINE_ALERTS_TOGGLE_EVENT, onToggle);
+    return () => window.removeEventListener(ROUTINE_ALERTS_TOGGLE_EVENT, onToggle);
+  }, [hidden]);
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent(ROUTINE_ALERTS_COUNT_EVENT, {
+      detail: { count: pending.length, hidden },
+    }));
+  }, [pending.length, hidden]);
+
 
   const getDismissed = useCallback((): Record<string, string> => {
     try { return JSON.parse(localStorage.getItem(DISMISSED_KEY) || '{}'); } catch { return {}; }
@@ -184,13 +206,28 @@ export function RoutineAlertOverlay() {
     setPending(prev => prev.filter(p => p.id !== block.id));
   };
 
-  if (pending.length === 0) return null;
+  if (pending.length === 0 || hidden) return null;
+
+  const minimizeAll = () => {
+    setHidden(true);
+    localStorage.setItem(HIDDEN_KEY, 'true');
+  };
 
   return (
     <div className="fixed z-[60] flex flex-col gap-2 pointer-events-none
                     max-md:left-2 max-md:right-2 max-md:bottom-20
                     md:right-4 md:bottom-4 md:max-w-sm md:w-full">
+      <div className="pointer-events-auto self-end">
+        <button
+          onClick={minimizeAll}
+          className="inline-flex items-center gap-1 rounded-full bg-card/95 backdrop-blur border border-primary/30 shadow px-2.5 py-1 text-xs hover:bg-card"
+          title="Minimizar todos"
+        >
+          <Minus className="h-3 w-3" /> Minimizar todos ({pending.length})
+        </button>
+      </div>
       <AnimatePresence initial={false}>
+
         {pending.slice(0, 3).map((block) => (
           <motion.div
             key={block.id}
