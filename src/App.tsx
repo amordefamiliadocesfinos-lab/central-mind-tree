@@ -115,7 +115,8 @@ function AppContent() {
   return (
     <BrowserRouter>
       {/* Assistant positioned in top-right, but below the search bar on mobile */}
-      <div className="fixed z-50 md:top-4 md:right-4 max-md:bottom-16 max-md:right-3">
+      <div className="fixed z-50 md:top-4 md:right-4 max-md:bottom-16 max-md:right-3 flex items-center gap-1">
+        <RoutineAlertsToggleButton />
         <AssistantPanel />
       </div>
       <GlobalSearchBar />
