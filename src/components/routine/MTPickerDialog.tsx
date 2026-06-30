@@ -145,14 +145,25 @@ export function MTPickerDialog({ open, onOpenChange, selectedDate, onApplied }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0">
         <DialogHeader className="p-4 pb-2 border-b">
-          <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            Métodos de Trabalho (MT)
-          </DialogTitle>
-          <DialogDescription className="text-xs">
-            Cronogramas prontos por área. Escolha um e aplique ao dia ou semana.
-          </DialogDescription>
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <DialogTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                Métodos de Trabalho (MT)
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Cronogramas prontos por área. Escolha um e aplique ao dia ou semana.
+              </DialogDescription>
+            </div>
+            <ActiveUserPicker />
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-2">
+            {activeUser
+              ? <>A MT será aplicada para <span className="font-semibold text-foreground">{activeUser.name}</span>. Outros usuários não serão afetados.</>
+              : <>Nenhum usuário selecionado — a MT será aplicada como <span className="font-semibold text-foreground">geral</span> (sem dono).</>}
+          </p>
         </DialogHeader>
+
 
         <Tabs value={areaFilter} onValueChange={setAreaFilter} className="px-4 pt-3">
           <TabsList className="w-full grid grid-cols-4 h-9">
