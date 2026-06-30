@@ -32,6 +32,7 @@ export function useWhatsAppWithLog() {
       templateLabel,
       approach,
       source,
+      skipOpen,
     } = opts;
 
     if (!phone) {
