@@ -192,6 +192,85 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
             </DialogHeader>
 
             <div className="space-y-3">
+              {/* Template picker */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground">Mensagens salvas</span>
+                  <Button size="sm" variant="ghost" className="h-7 text-xs gap-1" onClick={handleOpenCreate}>
+                    <Plus className="h-3.5 w-3.5" /> Nova
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
+                  <button
+                    type="button"
+                    onClick={() => handleSelectTemplate('default')}
+                    className={cn(
+                      'px-2 py-1 rounded-md border text-xs transition',
+                      selectedTplKey === 'default' ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted'
+                    )}
+                  >
+                    Padrão
+                  </button>
+                  {WHATSAPP_TEMPLATES.map(t => (
+                    <button
+                      key={t.key}
+                      type="button"
+                      onClick={() => handleSelectTemplate(t.key)}
+                      className={cn(
+                        'px-2 py-1 rounded-md border text-xs transition',
+                        selectedTplKey === t.key ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted'
+                      )}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                  {customTemplates.map(t => (
+                    <div
+                      key={t.key}
+                      className={cn(
+                        'group flex items-center gap-1 px-2 py-1 rounded-md border text-xs cursor-pointer transition',
+                        selectedTplKey === t.key ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted'
+                      )}
+                      onClick={() => handleSelectTemplate(t.key)}
+                    >
+                      <span>{t.label}</span>
+                      <button onClick={(e) => handleOpenEdit(t, e)} className="opacity-60 hover:opacity-100">
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                      <button onClick={(e) => handleDeleteCustom(t.key, e)} className="opacity-60 hover:opacity-100">
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {creatorOpen && (
+                <div className="rounded-md border bg-muted/30 p-2 space-y-2">
+                  <Input
+                    placeholder="Título (ex: Reativação)"
+                    value={draftLabel}
+                    onChange={(e) => setDraftLabel(e.target.value)}
+                    className="h-8 text-sm"
+                  />
+                  <Textarea
+                    placeholder="Mensagem... use {nome} para o primeiro nome"
+                    value={draftMessage}
+                    onChange={(e) => setDraftMessage(e.target.value)}
+                    rows={3}
+                    className="text-sm"
+                  />
+                  <div className="flex justify-end gap-1.5">
+                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setCreatorOpen(false)}>
+                      <X className="h-3.5 w-3.5 mr-1" /> Cancelar
+                    </Button>
+                    <Button size="sm" className="h-7 text-xs" onClick={handleSaveDraft}>
+                      <Check className="h-3.5 w-3.5 mr-1" /> Salvar
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               <Textarea
                 value={template}
                 onChange={(e) => setTemplate(e.target.value)}
@@ -199,6 +278,7 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
                 className="text-sm"
                 placeholder="Digite a mensagem..."
               />
+
 
               {current && (
                 <div className="rounded-md border bg-muted/40 p-2 text-xs">
