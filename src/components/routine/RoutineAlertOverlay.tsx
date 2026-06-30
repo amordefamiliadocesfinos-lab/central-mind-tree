@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, BellOff, Check, Clock, X, Volume2, VolumeX } from 'lucide-react';
+import { Bell, BellOff, Check, Clock, X, Volume2, VolumeX, Minus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
