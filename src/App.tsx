@@ -115,8 +115,8 @@ function AppContent() {
 
   return (
     <BrowserRouter>
-      {/* Assistant positioned in top-right, but below the search bar on mobile */}
-      <div className="fixed z-50 md:top-4 md:right-4 max-md:bottom-16 max-md:right-3 flex items-center gap-1">
+      {/* Floating dock above footer — avoids overlapping page header buttons */}
+      <div className="fixed z-40 right-3 bottom-16 md:bottom-20 md:right-4 flex items-center gap-1 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 border border-border rounded-full shadow-md px-1.5 py-1">
         <ActiveUserPicker />
         <RoutineAlertsToggleButton />
         <AssistantPanel />
