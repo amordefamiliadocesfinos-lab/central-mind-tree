@@ -290,14 +290,13 @@ export default function Contatos() {
     if (!cid || !contacts.length) return;
     const target = contacts.find(c => c.id === cid);
     if (target) {
-      setEditingContact(target);
-      setFormOpen(true);
+      void openContactForm(target);
       setSearchQuery(target.name);
       const next = new URLSearchParams(searchParams);
       next.delete('contact');
       setSearchParams(next, { replace: true });
     }
-  }, [searchParams, contacts, setSearchParams]);
+  }, [searchParams, contacts, setSearchParams, openContactForm]);
 
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [tempFilter, setTempFilter] = useState<string>('all');
@@ -889,7 +888,7 @@ export default function Contatos() {
               <Users className="h-3.5 w-3.5 mr-1" />
               Importar Leads
             </Button>
-            <Button onClick={() => { setEditingContact(undefined); setFormOpen(true); }} size="sm" className="bg-green-600 hover:bg-green-700 shadow-sm">
+            <Button onClick={() => { void openContactForm(); }} size="sm" className="bg-green-600 hover:bg-green-700 shadow-sm">
               <Plus className="h-4 w-4 mr-1" />
               Novo
             </Button>
@@ -957,8 +956,7 @@ export default function Contatos() {
         <LeadsNeedContactPanel
           contacts={contacts}
           onOpenContact={(contact) => {
-            setEditingContact(contact);
-            setFormOpen(true);
+            void openContactForm(contact);
           }}
           onWhatsApp={handleWhatsApp}
           onBulkDispatch={(list) => setBulkDispatchContacts(list)}
@@ -1289,7 +1287,7 @@ export default function Contatos() {
               nextTaskByContact={nextTaskByContact}
               onLeadClick={(c) => { setDetailContact(c); setDetailOpen(true); }}
               onStageChange={(c, newStage) => handleStatusChange(c, newStage)}
-              onCreateLead={() => { setEditingContact(null); setFormOpen(true); }}
+              onCreateLead={() => { void openContactForm(); }}
             />
           </Suspense>
 
@@ -1508,7 +1506,7 @@ export default function Contatos() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => { setEditingContact(contact); setFormOpen(true); }}>
+                              <DropdownMenuItem onClick={() => { void openContactForm(contact); }}>
                                 <Edit className="h-3.5 w-3.5 mr-2" />
                                 Editar
                               </DropdownMenuItem>
