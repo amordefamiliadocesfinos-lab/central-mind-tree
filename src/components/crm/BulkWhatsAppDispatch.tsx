@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { Contact } from '@/hooks/useContacts';
+import { openWhatsApp } from '@/lib/whatsapp';
 import {
   WHATSAPP_TEMPLATES,
   loadCustomTemplates,
@@ -136,18 +137,22 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
     setBusy(true);
     const phone = current.whatsapp || current.mobile || current.phone!;
     const msg = renderMessage(template, current);
+    const hasAttachments = attachments.length > 0;
+    const opened = hasAttachments
+      ? await import('@/lib/whatsappShare').then(({ shareToWhatsApp }) => shareToWhatsApp({ phone, message: msg, attachments }))
+      : openWhatsApp(phone, msg);
+
+    if (!opened) {
+      toast.error('WhatsApp bloqueado pelo navegador. Libere pop-ups e tente novamente.');
+      setBusy(false);
+      return;
+    }
 
     // Atualização otimista
     await supabase
       .from('contacts')
       .update({ ultimo_contato: new Date().toISOString().split('T')[0] })
       .eq('id', current.id);
-
-    const hasAttachments = attachments.length > 0;
-    if (hasAttachments) {
-      const { shareToWhatsApp } = await import('@/lib/whatsappShare');
-      await shareToWhatsApp({ phone, message: msg, attachments });
-    }
 
     await logAndOpen({
       contactId: current.id,
@@ -156,7 +161,7 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
       message: msg,
       templateLabel: hasAttachments ? `Disparo em fila · ${attachments.length} anexo(s)` : 'Disparo em fila',
       source: 'crm_card',
-      skipOpen: hasAttachments,
+      skipOpen: true,
     });
 
     setSentIds(prev => [...prev, current.id]);

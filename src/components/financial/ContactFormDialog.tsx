@@ -231,14 +231,17 @@ export function ContactFormDialog({
   const handleWhatsAppSend = async (message: string, templateLabel: string, attachments?: any[]) => {
     const phone = form.whatsapp || form.mobile || form.phone;
     if (phone) {
+      const opened = attachments?.length
+        ? await import('@/lib/whatsappShare').then(({ shareToWhatsApp }) => shareToWhatsApp({ phone, message, attachments }))
+        : openWhatsApp(phone, message);
+
+      if (!opened) {
+        toast.error('WhatsApp bloqueado pelo navegador. Libere pop-ups e tente novamente.');
+        return;
+      }
+
       if (contact?.id) {
         await addEntry(contact.id, 'whatsapp', `💬 Mensagem iniciada via WhatsApp (${templateLabel})`, new Date().toISOString());
-      }
-      if (attachments?.length) {
-        const { shareToWhatsApp } = await import('@/lib/whatsappShare');
-        await shareToWhatsApp({ phone, message, attachments });
-      } else {
-        openWhatsApp(phone, message);
       }
     }
   };

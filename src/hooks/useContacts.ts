@@ -173,7 +173,7 @@ export function useContacts() {
     }
   };
 
-  const createContact = async (contact: Partial<Contact>) => {
+  const createContact = async (contact: Partial<Contact>): Promise<Contact> => {
     try {
       const cleanValue = (val: any) => (val === '' || val === undefined ? null : val);
       const cleanNumber = (val: any) => {
@@ -263,13 +263,14 @@ export function useContacts() {
       if (error) throw error;
 
       // Local insert + keep list sorted by name (matches initial fetch order)
+      const created = data as unknown as Contact;
       setContacts(prev => {
-        const next = [...prev, data as unknown as Contact];
+        const next = [...prev, created];
         next.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         return next;
       });
       toast.success('Contato criado com sucesso');
-      return data;
+      return created;
     } catch (error: any) {
       console.error('Error creating contact:', error);
       toast.error('Erro ao criar contato');
