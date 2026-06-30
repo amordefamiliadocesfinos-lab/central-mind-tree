@@ -133,8 +133,10 @@ export function useRoutine(options: UseRoutineOptions = {}) {
   const [stats, setStats] = useState<RoutineStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeBlock, setActiveBlock] = useState<RoutineBlock | null>(null);
-  
+
+  const { activeUserId } = useActiveUser();
   const { scheduleNotification, requestPermission, notify } = useNotifications();
+
 
   // Date range based on view mode
   const dateRange = useMemo(() => {
