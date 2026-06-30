@@ -30,6 +30,9 @@ interface PendingBlock {
 
 const SOUND_KEY = 'pc.routine.sound.enabled';
 const DISMISSED_KEY = 'pc.routine.alert.dismissed';
+const HIDDEN_KEY = 'pc.routine.alerts.hidden';
+export const ROUTINE_ALERTS_TOGGLE_EVENT = 'pc:routine-alerts-toggle';
+export const ROUTINE_ALERTS_COUNT_EVENT = 'pc:routine-alerts-count';
 
 function playBeep() {
   try {
