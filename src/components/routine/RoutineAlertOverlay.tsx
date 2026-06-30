@@ -66,7 +66,26 @@ export function RoutineAlertOverlay() {
     const v = localStorage.getItem(SOUND_KEY);
     return v === null ? true : v === 'true';
   });
+  const [hidden, setHidden] = useState<boolean>(() => localStorage.getItem(HIDDEN_KEY) === 'true');
   const alertedRef = useRef<Set<string>>(new Set());
+
+  useEffect(() => {
+    const onToggle = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      const next = typeof detail?.hidden === 'boolean' ? detail.hidden : !hidden;
+      setHidden(next);
+      localStorage.setItem(HIDDEN_KEY, String(next));
+    };
+    window.addEventListener(ROUTINE_ALERTS_TOGGLE_EVENT, onToggle);
+    return () => window.removeEventListener(ROUTINE_ALERTS_TOGGLE_EVENT, onToggle);
+  }, [hidden]);
+
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent(ROUTINE_ALERTS_COUNT_EVENT, {
+      detail: { count: pending.length, hidden },
+    }));
+  }, [pending.length, hidden]);
+
 
   const getDismissed = useCallback((): Record<string, string> => {
     try { return JSON.parse(localStorage.getItem(DISMISSED_KEY) || '{}'); } catch { return {}; }
