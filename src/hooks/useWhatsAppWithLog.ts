@@ -11,6 +11,8 @@ export interface WhatsAppLogOptions {
   templateLabel?: string;
   approach?: string;
   source: 'crm_card' | 'crm_smart_attend' | 'crm_follow_up' | 'atendimento' | 'dashboard';
+  /** Não abre o WhatsApp aqui — quem chamou já cuidou do envio (ex.: shareToWhatsApp com anexos). */
+  skipOpen?: boolean;
 }
 
 /**
