@@ -44,10 +44,20 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
   const { logAndOpen } = useWhatsAppWithLog();
   const [phase, setPhase] = useState<Phase>('compose');
   const [template, setTemplate] = useState(DEFAULT_TEMPLATE);
+  const [selectedTplKey, setSelectedTplKey] = useState<string>('default');
+  const [customTemplates, setCustomTemplates] = useState<CustomTemplate[]>(() => loadCustomTemplates());
+  const [creatorOpen, setCreatorOpen] = useState(false);
+  const [editingTplKey, setEditingTplKey] = useState<string | null>(null);
+  const [draftLabel, setDraftLabel] = useState('');
+  const [draftMessage, setDraftMessage] = useState('');
   const [index, setIndex] = useState(0);
   const [sentIds, setSentIds] = useState<string[]>([]);
   const [skippedIds, setSkippedIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    saveCustomTemplates(customTemplates);
+  }, [customTemplates]);
 
   // Apenas contatos com telefone
   const queue = useMemo(
@@ -63,8 +73,47 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
       setSentIds([]);
       setSkippedIds([]);
       setTemplate(DEFAULT_TEMPLATE);
+      setSelectedTplKey('default');
+      setCreatorOpen(false);
     }
   }, [open]);
+
+  const handleSelectTemplate = (key: string) => {
+    setSelectedTplKey(key);
+    if (key === 'default') { setTemplate(DEFAULT_TEMPLATE); return; }
+    const tpl = customTemplates.find(t => t.key === key) || WHATSAPP_TEMPLATES.find(t => t.key === key);
+    if (tpl) setTemplate(tpl.message);
+  };
+
+  const handleOpenCreate = () => {
+    setEditingTplKey(null); setDraftLabel(''); setDraftMessage(''); setCreatorOpen(true);
+  };
+  const handleOpenEdit = (tpl: CustomTemplate, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingTplKey(tpl.key); setDraftLabel(tpl.label); setDraftMessage(tpl.message); setCreatorOpen(true);
+  };
+  const handleDeleteCustom = (key: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('Excluir esta mensagem?')) return;
+    setCustomTemplates(prev => prev.filter(t => t.key !== key));
+    if (selectedTplKey === key) handleSelectTemplate('default');
+    toast.success('Mensagem excluída');
+  };
+  const handleSaveDraft = () => {
+    const label = draftLabel.trim(); const message = draftMessage.trim();
+    if (!label || !message) { toast.error('Preencha título e mensagem'); return; }
+    if (editingTplKey) {
+      setCustomTemplates(prev => prev.map(t => t.key === editingTplKey ? { ...t, label, message } : t));
+      if (selectedTplKey === editingTplKey) setTemplate(message);
+      toast.success('Mensagem atualizada');
+    } else {
+      const key = `custom_${Date.now()}`;
+      setCustomTemplates(prev => [...prev, { key, label, message }]);
+      setSelectedTplKey(key); setTemplate(message);
+      toast.success('Mensagem criada');
+    }
+    setCreatorOpen(false); setEditingTplKey(null); setDraftLabel(''); setDraftMessage('');
+  };
 
   const current = queue[index];
   const total = queue.length;
