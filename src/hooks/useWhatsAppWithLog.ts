@@ -11,6 +11,8 @@ export interface WhatsAppLogOptions {
   templateLabel?: string;
   approach?: string;
   source: 'crm_card' | 'crm_smart_attend' | 'crm_follow_up' | 'atendimento' | 'dashboard';
+  /** Não abre o WhatsApp aqui — quem chamou já cuidou do envio (ex.: shareToWhatsApp com anexos). */
+  skipOpen?: boolean;
 }
 
 /**
@@ -30,6 +32,7 @@ export function useWhatsAppWithLog() {
       templateLabel,
       approach,
       source,
+      skipOpen,
     } = opts;
 
     if (!phone) {
@@ -123,7 +126,11 @@ export function useWhatsAppWithLog() {
       }
     }
 
-    // 4. Abre WhatsApp
+    // 4. Abre WhatsApp (a menos que o chamador já tenha disparado o compartilhamento)
+    if (skipOpen) {
+      toast.success('Registrado no histórico e no Atendimento');
+      return true;
+    }
     const opened = openWhatsApp(phone, message);
     if (opened) {
       toast.success('WhatsApp aberto · Registrado no histórico e no Atendimento');

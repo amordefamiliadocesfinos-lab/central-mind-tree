@@ -228,13 +228,18 @@ export function ContactFormDialog({
     }
   };
 
-  const handleWhatsAppSend = async (message: string, templateLabel: string) => {
+  const handleWhatsAppSend = async (message: string, templateLabel: string, attachments?: any[]) => {
     const phone = form.whatsapp || form.mobile || form.phone;
     if (phone) {
       if (contact?.id) {
         await addEntry(contact.id, 'whatsapp', `💬 Mensagem iniciada via WhatsApp (${templateLabel})`, new Date().toISOString());
       }
-      openWhatsApp(phone, message);
+      if (attachments?.length) {
+        const { shareToWhatsApp } = await import('@/lib/whatsappShare');
+        await shareToWhatsApp({ phone, message, attachments });
+      } else {
+        openWhatsApp(phone, message);
+      }
     }
   };
 

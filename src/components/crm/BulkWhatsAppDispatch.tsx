@@ -135,22 +135,28 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
     if (!current) return;
     setBusy(true);
     const phone = current.whatsapp || current.mobile || current.phone!;
-    const baseMsg = renderMessage(template, current);
-    const msg = appendAttachmentsToMessage(baseMsg, attachments);
+    const msg = renderMessage(template, current);
 
-    // Atualização otimista: marca último contato como hoje para sair da lista
+    // Atualização otimista
     await supabase
       .from('contacts')
       .update({ ultimo_contato: new Date().toISOString().split('T')[0] })
       .eq('id', current.id);
+
+    const hasAttachments = attachments.length > 0;
+    if (hasAttachments) {
+      const { shareToWhatsApp } = await import('@/lib/whatsappShare');
+      await shareToWhatsApp({ phone, message: msg, attachments });
+    }
 
     await logAndOpen({
       contactId: current.id,
       contactName: current.name,
       phone,
       message: msg,
-      templateLabel: attachments.length ? `Disparo em fila · ${attachments.length} anexo(s)` : 'Disparo em fila',
+      templateLabel: hasAttachments ? `Disparo em fila · ${attachments.length} anexo(s)` : 'Disparo em fila',
       source: 'crm_card',
+      skipOpen: hasAttachments,
     });
 
     setSentIds(prev => [...prev, current.id]);
@@ -292,7 +298,10 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
               {current && (
                 <div className="rounded-md border bg-muted/40 p-2 text-xs">
                   <div className="text-muted-foreground mb-1">Pré-visualização ({current.name}):</div>
-                  <div className="whitespace-pre-wrap">{appendAttachmentsToMessage(renderMessage(template, current), attachments)}</div>
+                  <div className="whitespace-pre-wrap">{renderMessage(template, current)}</div>
+                  {attachments.length > 0 && (
+                    <div className="mt-1 text-[11px] text-muted-foreground">📎 {attachments.length} anexo(s) serão enviados como mídia</div>
+                  )}
                 </div>
               )}
 
@@ -337,7 +346,10 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
               </div>
 
               <div className="rounded-md border bg-muted/40 p-3 text-sm whitespace-pre-wrap">
-                {appendAttachmentsToMessage(renderMessage(template, current), attachments)}
+                {renderMessage(template, current)}
+                {attachments.length > 0 && (
+                  <div className="mt-2 text-xs text-muted-foreground">📎 {attachments.length} anexo(s) serão enviados como mídia</div>
+                )}
               </div>
 
               <div className="flex justify-between gap-2 pt-2">

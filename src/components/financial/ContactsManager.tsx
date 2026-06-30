@@ -147,11 +147,10 @@ export function ContactsManager() {
     }
   };
 
-  const handleWhatsAppSend = async (message: string, templateLabel: string) => {
+  const handleWhatsAppSend = async (message: string, templateLabel: string, attachments?: any[]) => {
     if (!whatsAppContact) return;
     const phone = whatsAppContact.whatsapp || whatsAppContact.mobile || whatsAppContact.phone;
     if (phone) {
-      // Registrar no histórico do contato
       try {
         await supabase.from('contact_history').insert({
           contact_id: whatsAppContact.id,
@@ -163,7 +162,12 @@ export function ContactsManager() {
       } catch (e) {
         console.error('Erro ao registrar histórico:', e);
       }
-      openWhatsApp(phone, message);
+      if (attachments?.length) {
+        const { shareToWhatsApp } = await import('@/lib/whatsappShare');
+        await shareToWhatsApp({ phone, message, attachments });
+      } else {
+        openWhatsApp(phone, message);
+      }
     }
     setWhatsAppContact(undefined);
   };

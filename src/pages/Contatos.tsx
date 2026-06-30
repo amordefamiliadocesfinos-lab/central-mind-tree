@@ -554,7 +554,7 @@ export default function Contatos() {
     }
   };
 
-  const handleWhatsAppSend = async (message: string, templateLabel: string) => {
+  const handleWhatsAppSend = async (message: string, templateLabel: string, attachments?: any[]) => {
     if (!whatsAppContact) return;
     const phone = whatsAppContact.whatsapp || whatsAppContact.mobile || whatsAppContact.phone;
     if (!phone) return;
@@ -565,6 +565,12 @@ export default function Contatos() {
     // Atualização otimista: marca último contato como hoje para sair da lista imediatamente
     await updateContact(contact.id, { ultimo_contato: new Date().toISOString().split('T')[0] });
 
+    const hasAttachments = !!attachments?.length;
+    if (hasAttachments) {
+      const { shareToWhatsApp } = await import('@/lib/whatsappShare');
+      await shareToWhatsApp({ phone, message, attachments: attachments! });
+    }
+
     await logAndOpen({
       contactId: contact.id,
       contactName: contact.name,
@@ -572,6 +578,7 @@ export default function Contatos() {
       message,
       templateLabel,
       source: 'crm_card',
+      skipOpen: hasAttachments,
     });
 
     setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);

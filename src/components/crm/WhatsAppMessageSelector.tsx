@@ -78,7 +78,8 @@ interface Props {
   contactName: string;
   funnelStatus: string;
   contactId?: string;
-  onSend: (message: string, templateLabel: string) => void;
+  contactPhone?: string;
+  onSend: (message: string, templateLabel: string, attachments?: WhatsAppAttachment[]) => void;
 }
 
 export function WhatsAppMessageSelector({ open, onOpenChange, contactName, funnelStatus, contactId, onSend }: Props) {
@@ -224,9 +225,10 @@ export function WhatsAppMessageSelector({ open, onOpenChange, contactName, funne
 
   const handleSend = () => {
     const label = isAiSelected ? `IA · ${aiReason || 'personalizada'}` : selectedTemplate.label;
-    const messageWithAttachments = appendAttachmentsToMessage(finalMessage, attachments);
     const fullLabel = attachments.length ? `${label} · ${attachments.length} anexo(s)` : label;
-    onSend(messageWithAttachments, fullLabel);
+    // Envia mensagem PURA + anexos separados — quem recebe decide se usa Web Share
+    // (arquivo como mídia real) ou fallback (download + wa.me).
+    onSend(finalMessage, fullLabel, attachments);
     onOpenChange(false);
   };
 
