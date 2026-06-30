@@ -2,13 +2,21 @@ import { useState, useMemo, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { MessageCircle, Send, SkipForward, CheckCircle2, X, Users } from 'lucide-react';
+import { MessageCircle, Send, SkipForward, CheckCircle2, X, Users, Plus, Pencil, Trash2, Check } from 'lucide-react';
 import { useWhatsAppWithLog } from '@/hooks/useWhatsAppWithLog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import type { Contact } from '@/hooks/useContacts';
+import {
+  WHATSAPP_TEMPLATES,
+  loadCustomTemplates,
+  saveCustomTemplates,
+  type CustomTemplate,
+} from '@/lib/whatsappTemplates';
 
 interface Props {
   open: boolean;
