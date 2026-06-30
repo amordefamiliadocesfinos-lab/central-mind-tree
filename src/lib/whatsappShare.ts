@@ -17,11 +17,12 @@ import { appendAttachmentsToMessage, type WhatsAppAttachment } from '@/component
 
 function triggerDownload(att: WhatsAppAttachment) {
   try {
+    // NÃO usar target=_blank — o navegador bloqueia como popup quando vários
+    // são disparados. O atributo `download` é suficiente para baixar local.
     const a = document.createElement('a');
     a.href = att.url;
     a.download = att.name;
     a.rel = 'noopener';
-    a.target = '_blank';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
