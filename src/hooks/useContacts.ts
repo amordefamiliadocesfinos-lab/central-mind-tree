@@ -114,17 +114,7 @@ export interface Contact {
 
 // Columns actually rendered in the list/kanban/cards. Drops heavy fiscal,
 // address-detail and parents columns that are only needed in the edit drawer.
-const LIST_COLUMNS = [
-  'id','name','fantasy_name','code','type','person_type','document',
-  'phone','landline','mobile','email','whatsapp','website','photo_url',
-  'city','state','contact_type','salesperson','category',
-  'funnel_status','temperatura_lead','valor_estimado','ultimo_contato','origem_lead',
-  'next_action_text','next_action_date','next_contact_date',
-  'client_classification','campaign_idea_id',
-  'lifetime_value','paid_orders_count','last_purchase_date','last_payment_date',
-  'lost_reason','lost_at','company_name','notes',
-  'is_active','converted_at','created_at','updated_at',
-].join(',');
+const LIST_COLUMNS = 'id,name,fantasy_name,code,type,person_type,document,phone,landline,mobile,email,whatsapp,website,photo_url,city,state,contact_type,salesperson,category,funnel_status,temperatura_lead,valor_estimado,ultimo_contato,origem_lead,next_action_text,next_action_date,next_contact_date,client_classification,campaign_idea_id,lifetime_value,paid_orders_count,last_purchase_date,last_payment_date,lost_reason,lost_at,company_name,notes,is_active,converted_at,created_at,updated_at';
 
 export function useContacts() {
   const [contacts, setContacts] = useState<Contact[]>([]);
@@ -139,7 +129,7 @@ export function useContacts() {
       while (true) {
         const { data, error } = await supabase
           .from('contacts')
-          .select('*')
+          .select(LIST_COLUMNS)
           .order('name')
           .range(from, from + PAGE - 1);
         if (error) throw error;
@@ -173,7 +163,7 @@ export function useContacts() {
     }
   };
 
-  const createContact = async (contact: Partial<Contact>) => {
+  const createContact = async (contact: Partial<Contact>): Promise<Contact> => {
     try {
       const cleanValue = (val: any) => (val === '' || val === undefined ? null : val);
       const cleanNumber = (val: any) => {
@@ -257,19 +247,20 @@ export function useContacts() {
       const { data, error } = await supabase
         .from('contacts')
         .insert(payload)
-        .select('*')
+        .select(LIST_COLUMNS)
         .single();
 
       if (error) throw error;
 
       // Local insert + keep list sorted by name (matches initial fetch order)
+      const created = data as unknown as Contact;
       setContacts(prev => {
-        const next = [...prev, data as unknown as Contact];
+        const next = [...prev, created];
         next.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
         return next;
       });
       toast.success('Contato criado com sucesso');
-      return data;
+      return created;
     } catch (error: any) {
       console.error('Error creating contact:', error);
       toast.error('Erro ao criar contato');
@@ -286,7 +277,7 @@ export function useContacts() {
           updated_at: new Date().toISOString(),
         })
         .eq('id', id)
-        .select('*')
+        .select(LIST_COLUMNS)
         .single();
 
       if (error) throw error;

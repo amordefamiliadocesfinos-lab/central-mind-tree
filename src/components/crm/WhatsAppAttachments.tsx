@@ -62,9 +62,10 @@ export function WhatsAppAttachments({ attachments, onChange, disabled, compact }
           toast.error(`Falha ao enviar ${file.name}`);
           continue;
         }
-        const { data } = supabase.storage.from('media').getPublicUrl(path);
+        const { data: publicData } = supabase.storage.from('media').getPublicUrl(path);
+        const { data: signedData } = await supabase.storage.from('media').createSignedUrl(path, 60 * 60 * 24 * 7);
         uploaded.push({
-          url: data.publicUrl,
+          url: signedData?.signedUrl || publicData.publicUrl,
           name: file.name,
           type: file.type || 'application/octet-stream',
           size: file.size,
@@ -156,7 +157,7 @@ export function appendAttachmentsToMessage(message: string, attachments: WhatsAp
           : a.type.startsWith('video/')
             ? '🎬'
             : '📎';
-      return `${kind} ${a.name}\n${a.url}`;
+      return `${kind} ${a.name}: ${a.url}`;
     })
     .join('\n\n');
   const sep = message.trim() ? '\n\n' : '';

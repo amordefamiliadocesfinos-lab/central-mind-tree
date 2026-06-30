@@ -48,7 +48,6 @@ import {
   Megaphone,
   Eye,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { differenceInDays, parseISO, format, isToday, isYesterday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -169,13 +168,7 @@ function ContactCardInner({
   };
 
   return (
-    <motion.div
-      layout
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.15 }}
-    >
+    <div>
       <Card
         className={cn(
           'transition-all cursor-grab active:cursor-grabbing border-l-[3px] overflow-hidden select-none',
@@ -479,7 +472,7 @@ function ContactCardInner({
           </Collapsible>
         </div>
       </Card>
-    </motion.div>
+    </div>
   );
 }
 

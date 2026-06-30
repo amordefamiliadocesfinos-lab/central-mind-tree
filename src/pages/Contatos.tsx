@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, lazy, Suspense } from 'react';
+import { useState, useMemo, useCallback, useEffect, lazy, Suspense, useDeferredValue, useRef, type ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -94,7 +94,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Zap } from 'lucide-react';
 import { differenceInDays, parseISO, format, isSameDay, isBefore, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { openWhatsApp } from '@/lib/whatsapp';
 import { useWhatsAppWithLog } from '@/hooks/useWhatsAppWithLog';
 
@@ -198,10 +198,66 @@ function formatCurrencyShort(v?: number | null) {
 type SortField = 'name' | 'valor_estimado' | 'ultimo_contato' | 'created_at' | 'temperatura' | 'score';
 type SortDir = 'asc' | 'desc';
 
+function VirtualContactColumn({
+  contacts,
+  renderContact,
+  emptyLabel,
+  dragOverLabel,
+  isDragOver,
+  className,
+}: {
+  contacts: Contact[];
+  renderContact: (contact: Contact) => ReactNode;
+  emptyLabel: string;
+  dragOverLabel: string;
+  isDragOver: boolean;
+  className?: string;
+}) {
+  const parentRef = useRef<HTMLDivElement>(null);
+  const rowVirtualizer = useVirtualizer({
+    count: contacts.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 145,
+    overscan: 6,
+    getItemKey: (index) => contacts[index]?.id ?? index,
+  });
+
+  if (contacts.length === 0) {
+    return (
+      <div ref={parentRef} className={cn('flex-1 px-2 py-2 min-h-[300px] max-h-[calc(100vh-340px)] overflow-y-auto', className)}>
+        <p className="text-[11px] text-muted-foreground text-center py-6 opacity-60">
+          {isDragOver ? dragOverLabel : emptyLabel}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={parentRef} className={cn('flex-1 px-2 py-2 min-h-[300px] max-h-[calc(100vh-340px)] overflow-y-auto', className)}>
+      <div className="relative w-full" style={{ height: rowVirtualizer.getTotalSize() }}>
+        {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+          const contact = contacts[virtualRow.index];
+          return (
+            <div
+              key={contact.id}
+              data-index={virtualRow.index}
+              ref={rowVirtualizer.measureElement}
+              className="absolute left-0 top-0 w-full pb-1.5"
+              style={{ transform: `translateY(${virtualRow.start}px)` }}
+            >
+              {renderContact(contact)}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function Contatos() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { contacts, loading, createContact, updateContact, deleteContact, fetchContacts } = useContacts();
+  const { contacts, loading, createContact, updateContact, deleteContact, fetchContacts, fetchContactFull } = useContacts();
   const { addEntry } = useContactHistory();
   const { getTagsForContact } = useContactTags();
   const { hasOrders } = useContactsWithOrders();
@@ -214,6 +270,19 @@ export default function Contatos() {
   const { dailyMetrics, refetchDaily } = useDailyMetrics();
   const { logAndOpen } = useWhatsAppWithLog();
   const [searchQuery, setSearchQuery] = useState('');
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+
+  const openContactForm = useCallback(async (contact?: Contact | null) => {
+    if (!contact) {
+      setEditingContact(undefined);
+      setFormOpen(true);
+      return;
+    }
+    setEditingContact(contact);
+    setFormOpen(true);
+    const full = await fetchContactFull(contact.id);
+    if (full) setEditingContact(full);
+  }, [fetchContactFull]);
 
   // Deep-link: abrir contato selecionado vindo de outras telas (ex.: Atendimento)
   useEffect(() => {
@@ -221,14 +290,13 @@ export default function Contatos() {
     if (!cid || !contacts.length) return;
     const target = contacts.find(c => c.id === cid);
     if (target) {
-      setEditingContact(target);
-      setFormOpen(true);
+      void openContactForm(target);
       setSearchQuery(target.name);
       const next = new URLSearchParams(searchParams);
       next.delete('contact');
       setSearchParams(next, { replace: true });
     }
-  }, [searchParams, contacts, setSearchParams]);
+  }, [searchParams, contacts, setSearchParams, openContactForm]);
 
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [tempFilter, setTempFilter] = useState<string>('all');
@@ -305,9 +373,9 @@ export default function Contatos() {
           if (!isSameDay(d, new Date()) && !isBefore(startOfDay(d), today)) return false;
         } catch { return false; }
       }
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        const qDigits = searchQuery.replace(/\D/g, '');
+      if (deferredSearchQuery) {
+        const q = deferredSearchQuery.toLowerCase();
+        const qDigits = deferredSearchQuery.replace(/\D/g, '');
         // Phone fuzzy match: compare only digits, match by suffix (last N digits)
         // tolerates different country/area code prefixes (e.g. 5511987654321 vs 11987654321 vs 987654321)
         const phoneMatch = (val?: string | null) => {
@@ -336,7 +404,7 @@ export default function Contatos() {
 
       return true;
     });
-  }, [contacts, searchQuery, statusFilter, tempFilter, typeFilter, tagFilter, actionFilter, contactDateFilter, classificationFilter, originFilter, getTagsForContact, isNextActionOverdue]);
+  }, [contacts, deferredSearchQuery, statusFilter, tempFilter, typeFilter, tagFilter, actionFilter, contactDateFilter, classificationFilter, originFilter, getTagsForContact, isNextActionOverdue]);
 
   const sortedContacts = useMemo(() => {
     return [...filteredContacts].sort((a, b) => {
@@ -562,14 +630,18 @@ export default function Contatos() {
     const contact = whatsAppContact;
     setWhatsAppContact(null);
 
+    const hasAttachments = !!attachments?.length;
+    const opened = hasAttachments
+      ? await import('@/lib/whatsappShare').then(({ shareToWhatsApp }) => shareToWhatsApp({ phone, message, attachments: attachments! }))
+      : openWhatsApp(phone, message);
+
+    if (!opened) {
+      if (!hasAttachments) toast.error('WhatsApp bloqueado pelo navegador. Libere pop-ups e tente novamente.');
+      return;
+    }
+
     // Atualização otimista: marca último contato como hoje para sair da lista imediatamente
     await updateContact(contact.id, { ultimo_contato: new Date().toISOString().split('T')[0] });
-
-    const hasAttachments = !!attachments?.length;
-    if (hasAttachments) {
-      const { shareToWhatsApp } = await import('@/lib/whatsappShare');
-      await shareToWhatsApp({ phone, message, attachments: attachments! });
-    }
 
     await logAndOpen({
       contactId: contact.id,
@@ -578,7 +650,7 @@ export default function Contatos() {
       message,
       templateLabel,
       source: 'crm_card',
-      skipOpen: hasAttachments,
+      skipOpen: true,
     });
 
     setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);
@@ -816,7 +888,7 @@ export default function Contatos() {
               <Users className="h-3.5 w-3.5 mr-1" />
               Importar Leads
             </Button>
-            <Button onClick={() => { setEditingContact(undefined); setFormOpen(true); }} size="sm" className="bg-green-600 hover:bg-green-700 shadow-sm">
+            <Button onClick={() => { void openContactForm(); }} size="sm" className="bg-green-600 hover:bg-green-700 shadow-sm">
               <Plus className="h-4 w-4 mr-1" />
               Novo
             </Button>
@@ -884,8 +956,7 @@ export default function Contatos() {
         <LeadsNeedContactPanel
           contacts={contacts}
           onOpenContact={(contact) => {
-            setEditingContact(contact);
-            setFormOpen(true);
+            void openContactForm(contact);
           }}
           onWhatsApp={handleWhatsApp}
           onBulkDispatch={(list) => setBulkDispatchContacts(list)}
@@ -1148,16 +1219,13 @@ export default function Contatos() {
                     <div className={cn('h-[3px] mt-2 rounded-full', stage.color)} />
                   </div>
 
-                  <div className="flex-1 px-2 py-2 space-y-1.5 min-h-[300px] max-h-[calc(100vh-340px)] overflow-y-auto">
-                    <AnimatePresence>
-                      {stageContacts.map(contact => renderContactCard(contact))}
-                    </AnimatePresence>
-                    {stageContacts.length === 0 && (
-                      <p className="text-[11px] text-muted-foreground text-center py-6 opacity-60">
-                        {isDragOver ? 'Soltar aqui' : 'Sem leads'}
-                      </p>
-                    )}
-                  </div>
+                  <VirtualContactColumn
+                    contacts={stageContacts}
+                    renderContact={renderContactCard}
+                    emptyLabel="Sem leads"
+                    dragOverLabel="Soltar aqui"
+                    isDragOver={isDragOver}
+                  />
                 </div>
               );
             })}
@@ -1200,19 +1268,14 @@ export default function Contatos() {
                     </div>
                   </div>
 
-                  <div className={cn(
-                    "space-y-2 max-h-[calc(100vh-380px)] overflow-y-auto rounded-lg transition-colors p-0.5",
-                    isDragOver && "bg-primary/5"
-                  )}>
-                    <AnimatePresence>
-                      {stageContacts.map(contact => renderContactCard(contact))}
-                    </AnimatePresence>
-                    {stageContacts.length === 0 && (
-                      <p className="text-xs text-muted-foreground text-center py-8 opacity-60">
-                        {isDragOver ? "Soltar aqui" : "Nenhum contato"}
-                      </p>
-                    )}
-                  </div>
+                  <VirtualContactColumn
+                    contacts={stageContacts}
+                    renderContact={renderContactCard}
+                    emptyLabel="Nenhum contato"
+                    dragOverLabel="Soltar aqui"
+                    isDragOver={isDragOver}
+                    className={cn('rounded-lg transition-colors p-0.5 max-h-[calc(100vh-380px)]', isDragOver && 'bg-primary/5')}
+                  />
                 </div>
               );
             })}
@@ -1224,7 +1287,7 @@ export default function Contatos() {
               nextTaskByContact={nextTaskByContact}
               onLeadClick={(c) => { setDetailContact(c); setDetailOpen(true); }}
               onStageChange={(c, newStage) => handleStatusChange(c, newStage)}
-              onCreateLead={() => { setEditingContact(null); setFormOpen(true); }}
+              onCreateLead={() => { void openContactForm(); }}
             />
           </Suspense>
 
@@ -1276,7 +1339,7 @@ export default function Contatos() {
                           <div className="flex items-center gap-2">
                             <ContactAvatar photoUrl={contact.photo_url} name={contact.name} size="sm" />
                             <div>
-                              <span className="text-primary hover:underline cursor-pointer font-medium" onClick={() => { setEditingContact(contact); setFormOpen(true); }}>
+                              <span className="text-primary hover:underline cursor-pointer font-medium" onClick={() => { void openContactForm(contact); }}>
                                 {contact.name}
                               </span>
                               {contact.fantasy_name && <p className="text-xs text-muted-foreground">{contact.fantasy_name}</p>}
@@ -1443,7 +1506,7 @@ export default function Contatos() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => { setEditingContact(contact); setFormOpen(true); }}>
+                              <DropdownMenuItem onClick={() => { void openContactForm(contact); }}>
                                 <Edit className="h-3.5 w-3.5 mr-2" />
                                 Editar
                               </DropdownMenuItem>
