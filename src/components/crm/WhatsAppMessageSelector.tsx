@@ -224,7 +224,9 @@ export function WhatsAppMessageSelector({ open, onOpenChange, contactName, funne
 
   const handleSend = () => {
     const label = isAiSelected ? `IA · ${aiReason || 'personalizada'}` : selectedTemplate.label;
-    onSend(finalMessage, label);
+    const messageWithAttachments = appendAttachmentsToMessage(finalMessage, attachments);
+    const fullLabel = attachments.length ? `${label} · ${attachments.length} anexo(s)` : label;
+    onSend(messageWithAttachments, fullLabel);
     onOpenChange(false);
   };
 
