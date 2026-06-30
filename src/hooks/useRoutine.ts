@@ -39,8 +39,10 @@ export interface RoutineBlock {
   notes: string | null;
   recurrence: RecurrenceType | null;
   recurrence_parent_id: string | null;
+  assigned_user_id?: string | null;
   created_at: string;
 }
+
 
 export function getNextRecurrence(date: string, time: string | null, recurrence: RecurrenceType): { date: string; time: string } {
   const t = time || '08:00';
