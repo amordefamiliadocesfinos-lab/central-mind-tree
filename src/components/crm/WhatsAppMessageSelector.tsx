@@ -403,11 +403,11 @@ export function WhatsAppMessageSelector({ open, onOpenChange, contactName, funne
           {/* Send */}
           <Button
             className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"
-            disabled={!finalMessage.trim() || aiLoading}
+            disabled={(!finalMessage.trim() && attachments.length === 0) || aiLoading}
             onClick={handleSend}
           >
             <Send className="h-4 w-4" />
-            Abrir WhatsApp
+            Abrir WhatsApp{attachments.length > 0 ? ` · ${attachments.length} anexo(s)` : ''}
           </Button>
         </div>
       </DialogContent>
