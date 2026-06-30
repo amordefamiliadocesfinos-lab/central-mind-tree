@@ -129,6 +129,7 @@ export function WhatsAppMessageSelector({ open, onOpenChange, contactName, funne
       setIsEditing(false);
       setAiMessage('');
       setAiReason('');
+      setAttachments([]);
       resetCreator();
     }
     onOpenChange(isOpen);
