@@ -34,7 +34,9 @@ export function BlockEditDialog({
     planned_start: '',
     notes: '',
     recurrence: '' as RecurrenceType | '',
+    checklist: [] as ChecklistItem[],
   });
+  const [newItem, setNewItem] = useState('');
 
   useEffect(() => {
     if (block) {
@@ -45,9 +47,9 @@ export function BlockEditDialog({
         planned_start: block.planned_start || '',
         notes: block.notes || '',
         recurrence: (block.recurrence as RecurrenceType | null) || '',
+        checklist: Array.isArray((block as any).checklist) ? (block as any).checklist : [],
       });
     } else {
-      // Default values for new block
       const now = new Date();
       const hours = now.getHours().toString().padStart(2, '0');
       const mins = Math.ceil(now.getMinutes() / 5) * 5;
@@ -61,9 +63,25 @@ export function BlockEditDialog({
         planned_start: `${adjustedHours}:${adjustedMins}`,
         notes: '',
         recurrence: '',
+        checklist: [],
       });
     }
+    setNewItem('');
   }, [block, open]);
+
+  const addChecklistItem = () => {
+    const t = newItem.trim();
+    if (!t) return;
+    setFormData(f => ({
+      ...f,
+      checklist: [...f.checklist, { id: crypto.randomUUID(), text: t, done: false }],
+    }));
+    setNewItem('');
+  };
+
+  const removeChecklistItem = (id: string) => {
+    setFormData(f => ({ ...f, checklist: f.checklist.filter(i => i.id !== id) }));
+  };
 
   const handleSubmit = () => {
     const { recurrence, ...rest } = formData;
@@ -71,7 +89,7 @@ export function BlockEditDialog({
       ...rest,
       recurrence: (recurrence === '' ? null : recurrence) as RecurrenceType | null,
       date: block?.date || defaultDate,
-    });
+    } as any);
     onOpenChange(false);
   };
 
