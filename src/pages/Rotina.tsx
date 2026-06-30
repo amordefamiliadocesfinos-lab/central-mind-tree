@@ -295,6 +295,12 @@ export default function Rotina() {
         onSave={handleSaveBlock}
         defaultDate={format(selectedDate, 'yyyy-MM-dd')}
       />
+
+      <MTPickerDialog
+        open={mtPickerOpen}
+        onOpenChange={setMtPickerOpen}
+        selectedDate={selectedDate}
+      />
     </div>
   );
 }
