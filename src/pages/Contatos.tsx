@@ -636,7 +636,7 @@ export default function Contatos() {
       : openWhatsApp(phone, message);
 
     if (!opened) {
-      toast.error('WhatsApp bloqueado pelo navegador. Libere pop-ups e tente novamente.');
+      if (!hasAttachments) toast.error('WhatsApp bloqueado pelo navegador. Libere pop-ups e tente novamente.');
       return;
     }
 

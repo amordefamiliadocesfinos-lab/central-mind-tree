@@ -143,7 +143,7 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
       : openWhatsApp(phone, msg);
 
     if (!opened) {
-      toast.error('WhatsApp bloqueado pelo navegador. Libere pop-ups e tente novamente.');
+      if (!hasAttachments) toast.error('WhatsApp bloqueado pelo navegador. Libere pop-ups e tente novamente.');
       setBusy(false);
       return;
     }
