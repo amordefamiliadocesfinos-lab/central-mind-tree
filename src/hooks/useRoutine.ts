@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNotifications } from './useNotifications';
+import { useActiveUser } from './useActiveUser';
 import { toast } from 'sonner';
 import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, parseISO, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+
 
 export type RecurrenceType = '1h' | '2h' | '4h' | '6h' | '12h' | 'daily' | 'weekly' | 'monthly';
 
