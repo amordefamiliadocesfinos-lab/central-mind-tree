@@ -2,13 +2,21 @@ import { useState, useMemo, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { MessageCircle, Send, SkipForward, CheckCircle2, X, Users } from 'lucide-react';
+import { MessageCircle, Send, SkipForward, CheckCircle2, X, Users, Plus, Pencil, Trash2, Check } from 'lucide-react';
 import { useWhatsAppWithLog } from '@/hooks/useWhatsAppWithLog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import type { Contact } from '@/hooks/useContacts';
+import {
+  WHATSAPP_TEMPLATES,
+  loadCustomTemplates,
+  saveCustomTemplates,
+  type CustomTemplate,
+} from '@/lib/whatsappTemplates';
 
 interface Props {
   open: boolean;
@@ -36,10 +44,20 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
   const { logAndOpen } = useWhatsAppWithLog();
   const [phase, setPhase] = useState<Phase>('compose');
   const [template, setTemplate] = useState(DEFAULT_TEMPLATE);
+  const [selectedTplKey, setSelectedTplKey] = useState<string>('default');
+  const [customTemplates, setCustomTemplates] = useState<CustomTemplate[]>(() => loadCustomTemplates());
+  const [creatorOpen, setCreatorOpen] = useState(false);
+  const [editingTplKey, setEditingTplKey] = useState<string | null>(null);
+  const [draftLabel, setDraftLabel] = useState('');
+  const [draftMessage, setDraftMessage] = useState('');
   const [index, setIndex] = useState(0);
   const [sentIds, setSentIds] = useState<string[]>([]);
   const [skippedIds, setSkippedIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    saveCustomTemplates(customTemplates);
+  }, [customTemplates]);
 
   // Apenas contatos com telefone
   const queue = useMemo(
@@ -55,8 +73,47 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
       setSentIds([]);
       setSkippedIds([]);
       setTemplate(DEFAULT_TEMPLATE);
+      setSelectedTplKey('default');
+      setCreatorOpen(false);
     }
   }, [open]);
+
+  const handleSelectTemplate = (key: string) => {
+    setSelectedTplKey(key);
+    if (key === 'default') { setTemplate(DEFAULT_TEMPLATE); return; }
+    const tpl = customTemplates.find(t => t.key === key) || WHATSAPP_TEMPLATES.find(t => t.key === key);
+    if (tpl) setTemplate(tpl.message);
+  };
+
+  const handleOpenCreate = () => {
+    setEditingTplKey(null); setDraftLabel(''); setDraftMessage(''); setCreatorOpen(true);
+  };
+  const handleOpenEdit = (tpl: CustomTemplate, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingTplKey(tpl.key); setDraftLabel(tpl.label); setDraftMessage(tpl.message); setCreatorOpen(true);
+  };
+  const handleDeleteCustom = (key: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!confirm('Excluir esta mensagem?')) return;
+    setCustomTemplates(prev => prev.filter(t => t.key !== key));
+    if (selectedTplKey === key) handleSelectTemplate('default');
+    toast.success('Mensagem excluída');
+  };
+  const handleSaveDraft = () => {
+    const label = draftLabel.trim(); const message = draftMessage.trim();
+    if (!label || !message) { toast.error('Preencha título e mensagem'); return; }
+    if (editingTplKey) {
+      setCustomTemplates(prev => prev.map(t => t.key === editingTplKey ? { ...t, label, message } : t));
+      if (selectedTplKey === editingTplKey) setTemplate(message);
+      toast.success('Mensagem atualizada');
+    } else {
+      const key = `custom_${Date.now()}`;
+      setCustomTemplates(prev => [...prev, { key, label, message }]);
+      setSelectedTplKey(key); setTemplate(message);
+      toast.success('Mensagem criada');
+    }
+    setCreatorOpen(false); setEditingTplKey(null); setDraftLabel(''); setDraftMessage('');
+  };
 
   const current = queue[index];
   const total = queue.length;
@@ -135,6 +192,85 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
             </DialogHeader>
 
             <div className="space-y-3">
+              {/* Template picker */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground">Mensagens salvas</span>
+                  <Button size="sm" variant="ghost" className="h-7 text-xs gap-1" onClick={handleOpenCreate}>
+                    <Plus className="h-3.5 w-3.5" /> Nova
+                  </Button>
+                </div>
+                <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
+                  <button
+                    type="button"
+                    onClick={() => handleSelectTemplate('default')}
+                    className={cn(
+                      'px-2 py-1 rounded-md border text-xs transition',
+                      selectedTplKey === 'default' ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted'
+                    )}
+                  >
+                    Padrão
+                  </button>
+                  {WHATSAPP_TEMPLATES.map(t => (
+                    <button
+                      key={t.key}
+                      type="button"
+                      onClick={() => handleSelectTemplate(t.key)}
+                      className={cn(
+                        'px-2 py-1 rounded-md border text-xs transition',
+                        selectedTplKey === t.key ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted'
+                      )}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                  {customTemplates.map(t => (
+                    <div
+                      key={t.key}
+                      className={cn(
+                        'group flex items-center gap-1 px-2 py-1 rounded-md border text-xs cursor-pointer transition',
+                        selectedTplKey === t.key ? 'bg-primary text-primary-foreground border-primary' : 'hover:bg-muted'
+                      )}
+                      onClick={() => handleSelectTemplate(t.key)}
+                    >
+                      <span>{t.label}</span>
+                      <button onClick={(e) => handleOpenEdit(t, e)} className="opacity-60 hover:opacity-100">
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                      <button onClick={(e) => handleDeleteCustom(t.key, e)} className="opacity-60 hover:opacity-100">
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {creatorOpen && (
+                <div className="rounded-md border bg-muted/30 p-2 space-y-2">
+                  <Input
+                    placeholder="Título (ex: Reativação)"
+                    value={draftLabel}
+                    onChange={(e) => setDraftLabel(e.target.value)}
+                    className="h-8 text-sm"
+                  />
+                  <Textarea
+                    placeholder="Mensagem... use {nome} para o primeiro nome"
+                    value={draftMessage}
+                    onChange={(e) => setDraftMessage(e.target.value)}
+                    rows={3}
+                    className="text-sm"
+                  />
+                  <div className="flex justify-end gap-1.5">
+                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setCreatorOpen(false)}>
+                      <X className="h-3.5 w-3.5 mr-1" /> Cancelar
+                    </Button>
+                    <Button size="sm" className="h-7 text-xs" onClick={handleSaveDraft}>
+                      <Check className="h-3.5 w-3.5 mr-1" /> Salvar
+                    </Button>
+                  </div>
+                </div>
+              )}
+
               <Textarea
                 value={template}
                 onChange={(e) => setTemplate(e.target.value)}
@@ -142,6 +278,7 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
                 className="text-sm"
                 placeholder="Digite a mensagem..."
               />
+
 
               {current && (
                 <div className="rounded-md border bg-muted/40 p-2 text-xs">
