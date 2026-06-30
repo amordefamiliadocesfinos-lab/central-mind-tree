@@ -1,0 +1,2 @@
+ALTER TABLE public.routine_blocks ADD COLUMN IF NOT EXISTS assigned_user_id uuid REFERENCES public.app_users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_routine_blocks_assigned_user ON public.routine_blocks(assigned_user_id, date);

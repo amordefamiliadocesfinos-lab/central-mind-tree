@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useNotifications } from './useNotifications';
+import { useActiveUser } from './useActiveUser';
 import { toast } from 'sonner';
 import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, parseISO, isToday } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+
 
 export type RecurrenceType = '1h' | '2h' | '4h' | '6h' | '12h' | 'daily' | 'weekly' | 'monthly';
 
@@ -37,8 +39,10 @@ export interface RoutineBlock {
   notes: string | null;
   recurrence: RecurrenceType | null;
   recurrence_parent_id: string | null;
+  assigned_user_id?: string | null;
   created_at: string;
 }
+
 
 export function getNextRecurrence(date: string, time: string | null, recurrence: RecurrenceType): { date: string; time: string } {
   const t = time || '08:00';
@@ -131,8 +135,10 @@ export function useRoutine(options: UseRoutineOptions = {}) {
   const [stats, setStats] = useState<RoutineStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeBlock, setActiveBlock] = useState<RoutineBlock | null>(null);
-  
+
+  const { activeUserId } = useActiveUser();
   const { scheduleNotification, requestPermission, notify } = useNotifications();
+
 
   // Date range based on view mode
   const dateRange = useMemo(() => {
@@ -159,14 +165,20 @@ export function useRoutine(options: UseRoutineOptions = {}) {
   const fetchBlocks = useCallback(async () => {
     const startStr = format(dateRange.start, 'yyyy-MM-dd');
     const endStr = format(dateRange.end, 'yyyy-MM-dd');
-    
-    const { data, error } = await supabase
+
+    let q = supabase
       .from('routine_blocks')
       .select('*')
       .gte('date', startStr)
       .lte('date', endStr)
       .order('date', { ascending: true })
       .order('planned_start', { ascending: true });
+
+    if (activeUserId) {
+      q = q.or(`assigned_user_id.eq.${activeUserId},assigned_user_id.is.null`);
+    }
+
+    const { data, error } = await q;
 
     if (error) {
       console.error('Error fetching blocks:', error);
@@ -179,7 +191,8 @@ export function useRoutine(options: UseRoutineOptions = {}) {
     // Mantém activeBlock somente se ainda existir e estiver "andamento"
     const active = list.find((b) => b.status === 'andamento');
     setActiveBlock(active || null);
-  }, [dateRange]);
+  }, [dateRange, activeUserId]);
+
 
   // Fetch templates
   const fetchTemplates = useCallback(async () => {
@@ -363,6 +376,7 @@ export function useRoutine(options: UseRoutineOptions = {}) {
         template_id: block.template_id,
         notes: block.notes,
         recurrence: block.recurrence,
+        assigned_user_id: block.assigned_user_id ?? null,
         recurrence_parent_id: block.recurrence_parent_id || block.id,
         status: 'pendente',
       });
@@ -407,9 +421,9 @@ export function useRoutine(options: UseRoutineOptions = {}) {
     fetchBlocks();
   }, [blocks, fetchBlocks]);
 
-  const addBlock = useCallback(async (block: Partial<RoutineBlock> & { checklist?: any[] }) => {
+  const addBlock = useCallback(async (block: Partial<RoutineBlock> & { checklist?: any[]; assigned_user_id?: string | null }) => {
     const dateStr = block.date || format(selectedDate, 'yyyy-MM-dd');
-    
+
     const { error } = await supabase
       .from('routine_blocks')
       .insert({
@@ -428,7 +442,8 @@ export function useRoutine(options: UseRoutineOptions = {}) {
         recurrence: block.recurrence || null,
         recurrence_parent_id: block.recurrence_parent_id || null,
         status: 'pendente',
-      });
+        assigned_user_id: block.assigned_user_id !== undefined ? block.assigned_user_id : activeUserId,
+      } as any);
 
     if (error) {
       toast.error('Erro ao adicionar bloco');
@@ -437,7 +452,8 @@ export function useRoutine(options: UseRoutineOptions = {}) {
 
     toast.success('Bloco adicionado!');
     fetchBlocks();
-  }, [selectedDate, fetchBlocks]);
+  }, [selectedDate, fetchBlocks, activeUserId]);
+
 
   const pauseBlock = useCallback(async (blockId: string) => {
     const { error } = await supabase

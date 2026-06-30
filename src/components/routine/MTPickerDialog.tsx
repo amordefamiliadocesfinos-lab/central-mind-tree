@@ -11,6 +11,8 @@ import { format, addDays, startOfWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useActiveUser } from '@/hooks/useActiveUser';
+import { ActiveUserPicker } from '@/components/ActiveUserPicker';
 
 interface MTBlock {
   start: string;
@@ -56,6 +58,8 @@ export function MTPickerDialog({ open, onOpenChange, selectedDate, onApplied }: 
   const [areaFilter, setAreaFilter] = useState('all');
   const [selectedMT, setSelectedMT] = useState<MT | null>(null);
   const [applying, setApplying] = useState(false);
+  const { activeUserId, activeUser } = useActiveUser();
+
 
   useEffect(() => {
     if (!open) return;
@@ -81,7 +85,10 @@ export function MTPickerDialog({ open, onOpenChange, selectedDate, onApplied }: 
   const applyToDate = async (mt: MT, date: Date, replace = true) => {
     const dateStr = format(date, 'yyyy-MM-dd');
     if (replace) {
-      await supabase.from('routine_blocks').delete().eq('date', dateStr);
+      let del = supabase.from('routine_blocks').delete().eq('date', dateStr);
+      if (activeUserId) del = del.eq('assigned_user_id', activeUserId);
+      else del = del.is('assigned_user_id', null);
+      await del;
     }
     const rows = mt.blocks.map(b => ({
       date: dateStr,
@@ -94,10 +101,12 @@ export function MTPickerDialog({ open, onOpenChange, selectedDate, onApplied }: 
       notes: b.notes || `MT: ${mt.name}`,
       checklist: b.checklist || [],
       status: 'pendente',
+      assigned_user_id: activeUserId,
     }));
-    const { error } = await supabase.from('routine_blocks').insert(rows);
+    const { error } = await supabase.from('routine_blocks').insert(rows as any);
     if (error) throw error;
   };
+
 
   const handleApplyDay = async () => {
     if (!selectedMT) return;
@@ -136,14 +145,25 @@ export function MTPickerDialog({ open, onOpenChange, selectedDate, onApplied }: 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0">
         <DialogHeader className="p-4 pb-2 border-b">
-          <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            Métodos de Trabalho (MT)
-          </DialogTitle>
-          <DialogDescription className="text-xs">
-            Cronogramas prontos por área. Escolha um e aplique ao dia ou semana.
-          </DialogDescription>
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <DialogTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                Métodos de Trabalho (MT)
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Cronogramas prontos por área. Escolha um e aplique ao dia ou semana.
+              </DialogDescription>
+            </div>
+            <ActiveUserPicker />
+          </div>
+          <p className="text-[11px] text-muted-foreground mt-2">
+            {activeUser
+              ? <>A MT será aplicada para <span className="font-semibold text-foreground">{activeUser.name}</span>. Outros usuários não serão afetados.</>
+              : <>Nenhum usuário selecionado — a MT será aplicada como <span className="font-semibold text-foreground">geral</span> (sem dono).</>}
+          </p>
         </DialogHeader>
+
 
         <Tabs value={areaFilter} onValueChange={setAreaFilter} className="px-4 pt-3">
           <TabsList className="w-full grid grid-cols-4 h-9">
