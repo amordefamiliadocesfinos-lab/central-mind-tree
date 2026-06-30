@@ -3195,6 +3195,7 @@ export type Database = {
         Row: {
           actual_end: string | null
           actual_start: string | null
+          assigned_user_id: string | null
           block_type: string
           checklist: Json
           created_at: string
@@ -3217,6 +3218,7 @@ export type Database = {
         Insert: {
           actual_end?: string | null
           actual_start?: string | null
+          assigned_user_id?: string | null
           block_type?: string
           checklist?: Json
           created_at?: string
@@ -3239,6 +3241,7 @@ export type Database = {
         Update: {
           actual_end?: string | null
           actual_start?: string | null
+          assigned_user_id?: string | null
           block_type?: string
           checklist?: Json
           created_at?: string
@@ -3259,6 +3262,13 @@ export type Database = {
           title?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "routine_blocks_assigned_user_id_fkey"
+            columns: ["assigned_user_id"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "routine_blocks_node_id_fkey"
             columns: ["node_id"]
