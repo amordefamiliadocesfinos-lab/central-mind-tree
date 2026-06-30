@@ -52,6 +52,7 @@ export default function Rotina() {
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingBlock, setEditingBlock] = useState<RoutineBlock | null>(null);
+  const [mtPickerOpen, setMtPickerOpen] = useState(false);
 
   // Navigation
   const navigateDate = (direction: 'prev' | 'next') => {
