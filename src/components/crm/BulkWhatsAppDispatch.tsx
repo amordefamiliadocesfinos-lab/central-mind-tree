@@ -77,6 +77,7 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
       setTemplate(DEFAULT_TEMPLATE);
       setSelectedTplKey('default');
       setCreatorOpen(false);
+      setAttachments([]);
     }
   }, [open]);
 
