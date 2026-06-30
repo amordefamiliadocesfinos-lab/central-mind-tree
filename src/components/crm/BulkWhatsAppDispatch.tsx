@@ -135,7 +135,8 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
     if (!current) return;
     setBusy(true);
     const phone = current.whatsapp || current.mobile || current.phone!;
-    const msg = renderMessage(template, current);
+    const baseMsg = renderMessage(template, current);
+    const msg = appendAttachmentsToMessage(baseMsg, attachments);
 
     // Atualização otimista: marca último contato como hoje para sair da lista
     await supabase
@@ -148,7 +149,7 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
       contactName: current.name,
       phone,
       message: msg,
-      templateLabel: 'Disparo em fila',
+      templateLabel: attachments.length ? `Disparo em fila · ${attachments.length} anexo(s)` : 'Disparo em fila',
       source: 'crm_card',
     });
 
