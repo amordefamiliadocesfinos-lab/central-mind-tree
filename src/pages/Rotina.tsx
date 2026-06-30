@@ -5,12 +5,13 @@ import { RoutineWeekView } from '@/components/routine/RoutineWeekView';
 import { RoutineMonthView } from '@/components/routine/RoutineMonthView';
 import { CustomAlarmsPanel } from '@/components/routine/CustomAlarmsPanel';
 import { BlockEditDialog } from '@/components/routine/BlockEditDialog';
+import { MTPickerDialog } from '@/components/routine/MTPickerDialog';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   ArrowLeft, ChevronLeft, ChevronRight, Calendar, 
   CalendarDays, CalendarRange, Clock, 
-  RotateCcw
+  RotateCcw, Sparkles
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format, addDays, addWeeks, addMonths, subDays, subWeeks, subMonths, isToday } from 'date-fns';
@@ -51,6 +52,7 @@ export default function Rotina() {
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingBlock, setEditingBlock] = useState<RoutineBlock | null>(null);
+  const [mtPickerOpen, setMtPickerOpen] = useState(false);
 
   // Navigation
   const navigateDate = (direction: 'prev' | 'next') => {
@@ -160,6 +162,16 @@ export default function Rotina() {
           </div>
           
           <div className="flex gap-1">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => setMtPickerOpen(true)}
+              className="text-xs h-10 gap-1"
+              title="Escolher Método de Trabalho"
+            >
+              <Sparkles className="h-4 w-4" />
+              <span className="hidden sm:inline">MT</span>
+            </Button>
             {!isToday(selectedDate) && (
               <Button 
                 variant="outline" 
@@ -282,6 +294,12 @@ export default function Rotina() {
         block={editingBlock}
         onSave={handleSaveBlock}
         defaultDate={format(selectedDate, 'yyyy-MM-dd')}
+      />
+
+      <MTPickerDialog
+        open={mtPickerOpen}
+        onOpenChange={setMtPickerOpen}
+        selectedDate={selectedDate}
       />
     </div>
   );
