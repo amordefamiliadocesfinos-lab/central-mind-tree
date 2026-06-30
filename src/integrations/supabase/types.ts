@@ -3289,6 +3289,54 @@ export type Database = {
           },
         ]
       }
+      routine_mts: {
+        Row: {
+          area: string
+          blocks: Json
+          color: string | null
+          created_at: string
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean
+          is_default: boolean
+          name: string
+          order_index: number
+          target_role: string | null
+          updated_at: string
+        }
+        Insert: {
+          area: string
+          blocks?: Json
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name: string
+          order_index?: number
+          target_role?: string | null
+          updated_at?: string
+        }
+        Update: {
+          area?: string
+          blocks?: Json
+          color?: string | null
+          created_at?: string
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          name?: string
+          order_index?: number
+          target_role?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       routine_prefs: {
         Row: {
           breaks: Json | null
