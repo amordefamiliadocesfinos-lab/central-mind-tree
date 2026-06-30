@@ -631,14 +631,18 @@ export default function Contatos() {
     const contact = whatsAppContact;
     setWhatsAppContact(null);
 
+    const hasAttachments = !!attachments?.length;
+    const opened = hasAttachments
+      ? await import('@/lib/whatsappShare').then(({ shareToWhatsApp }) => shareToWhatsApp({ phone, message, attachments: attachments! }))
+      : openWhatsApp(phone, message);
+
+    if (!opened) {
+      toast.error('WhatsApp bloqueado pelo navegador. Libere pop-ups e tente novamente.');
+      return;
+    }
+
     // Atualização otimista: marca último contato como hoje para sair da lista imediatamente
     await updateContact(contact.id, { ultimo_contato: new Date().toISOString().split('T')[0] });
-
-    const hasAttachments = !!attachments?.length;
-    if (hasAttachments) {
-      const { shareToWhatsApp } = await import('@/lib/whatsappShare');
-      await shareToWhatsApp({ phone, message, attachments: attachments! });
-    }
 
     await logAndOpen({
       contactId: contact.id,
@@ -647,7 +651,7 @@ export default function Contatos() {
       message,
       templateLabel,
       source: 'crm_card',
-      skipOpen: hasAttachments,
+      skipOpen: true,
     });
 
     setTimeout(() => { refreshNoResponse(); refetchChecklists(); refetchDaily(); }, 500);
@@ -1217,16 +1221,13 @@ export default function Contatos() {
                     <div className={cn('h-[3px] mt-2 rounded-full', stage.color)} />
                   </div>
 
-                  <div className="flex-1 px-2 py-2 space-y-1.5 min-h-[300px] max-h-[calc(100vh-340px)] overflow-y-auto">
-                    <AnimatePresence>
-                      {stageContacts.map(contact => renderContactCard(contact))}
-                    </AnimatePresence>
-                    {stageContacts.length === 0 && (
-                      <p className="text-[11px] text-muted-foreground text-center py-6 opacity-60">
-                        {isDragOver ? 'Soltar aqui' : 'Sem leads'}
-                      </p>
-                    )}
-                  </div>
+                  <VirtualContactColumn
+                    contacts={stageContacts}
+                    renderContact={renderContactCard}
+                    emptyLabel="Sem leads"
+                    dragOverLabel="Soltar aqui"
+                    isDragOver={isDragOver}
+                  />
                 </div>
               );
             })}
@@ -1269,19 +1270,14 @@ export default function Contatos() {
                     </div>
                   </div>
 
-                  <div className={cn(
-                    "space-y-2 max-h-[calc(100vh-380px)] overflow-y-auto rounded-lg transition-colors p-0.5",
-                    isDragOver && "bg-primary/5"
-                  )}>
-                    <AnimatePresence>
-                      {stageContacts.map(contact => renderContactCard(contact))}
-                    </AnimatePresence>
-                    {stageContacts.length === 0 && (
-                      <p className="text-xs text-muted-foreground text-center py-8 opacity-60">
-                        {isDragOver ? "Soltar aqui" : "Nenhum contato"}
-                      </p>
-                    )}
-                  </div>
+                  <VirtualContactColumn
+                    contacts={stageContacts}
+                    renderContact={renderContactCard}
+                    emptyLabel="Nenhum contato"
+                    dragOverLabel="Soltar aqui"
+                    isDragOver={isDragOver}
+                    className={cn('rounded-lg transition-colors p-0.5 max-h-[calc(100vh-380px)]', isDragOver && 'bg-primary/5')}
+                  />
                 </div>
               );
             })}
@@ -1345,7 +1341,7 @@ export default function Contatos() {
                           <div className="flex items-center gap-2">
                             <ContactAvatar photoUrl={contact.photo_url} name={contact.name} size="sm" />
                             <div>
-                              <span className="text-primary hover:underline cursor-pointer font-medium" onClick={() => { setEditingContact(contact); setFormOpen(true); }}>
+                              <span className="text-primary hover:underline cursor-pointer font-medium" onClick={() => { void openContactForm(contact); }}>
                                 {contact.name}
                               </span>
                               {contact.fantasy_name && <p className="text-xs text-muted-foreground">{contact.fantasy_name}</p>}
