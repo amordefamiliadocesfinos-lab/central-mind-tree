@@ -418,9 +418,9 @@ export function useRoutine(options: UseRoutineOptions = {}) {
     fetchBlocks();
   }, [blocks, fetchBlocks]);
 
-  const addBlock = useCallback(async (block: Partial<RoutineBlock> & { checklist?: any[] }) => {
+  const addBlock = useCallback(async (block: Partial<RoutineBlock> & { checklist?: any[]; assigned_user_id?: string | null }) => {
     const dateStr = block.date || format(selectedDate, 'yyyy-MM-dd');
-    
+
     const { error } = await supabase
       .from('routine_blocks')
       .insert({
@@ -439,7 +439,8 @@ export function useRoutine(options: UseRoutineOptions = {}) {
         recurrence: block.recurrence || null,
         recurrence_parent_id: block.recurrence_parent_id || null,
         status: 'pendente',
-      });
+        assigned_user_id: block.assigned_user_id !== undefined ? block.assigned_user_id : activeUserId,
+      } as any);
 
     if (error) {
       toast.error('Erro ao adicionar bloco');
@@ -448,7 +449,8 @@ export function useRoutine(options: UseRoutineOptions = {}) {
 
     toast.success('Bloco adicionado!');
     fetchBlocks();
-  }, [selectedDate, fetchBlocks]);
+  }, [selectedDate, fetchBlocks, activeUserId]);
+
 
   const pauseBlock = useCallback(async (blockId: string) => {
     const { error } = await supabase
