@@ -78,7 +78,8 @@ interface Props {
   contactName: string;
   funnelStatus: string;
   contactId?: string;
-  onSend: (message: string, templateLabel: string) => void;
+  contactPhone?: string;
+  onSend: (message: string, templateLabel: string, attachments?: WhatsAppAttachment[]) => void;
 }
 
 export function WhatsAppMessageSelector({ open, onOpenChange, contactName, funnelStatus, contactId, onSend }: Props) {
