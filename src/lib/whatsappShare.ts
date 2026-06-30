@@ -47,14 +47,19 @@ export async function shareToWhatsApp({ phone, message, attachments }: ShareToWh
     ? appendAttachmentsToMessage(message, attachments)
     : message;
 
+  // 1) Abre o WhatsApp PRIMEIRO (dentro do gesto do usuário) para evitar
+  //    bloqueio de popup. Qualquer download vem depois.
   const opened = openWhatsApp(phone, finalMessage);
 
   if (opened && attachments.length) {
-    // baixa em segundo plano para o usuário poder anexar manualmente se quiser
-    attachments.forEach((att, i) => setTimeout(() => triggerDownload(att), 300 + i * 250));
+    // Baixa os arquivos para o usuário anexar manualmente como mídia.
+    // Sem target=_blank e sem setTimeout grande para não cair no bloqueador.
+    attachments.forEach((att, i) => {
+      setTimeout(() => triggerDownload(att), i * 200);
+    });
     toast.info(
-      `${attachments.length} arquivo(s) baixados — anexe no WhatsApp com o clipe 📎 se quiser enviar como mídia`,
-      { duration: 5000 }
+      `${attachments.length} arquivo(s) baixados — anexe no WhatsApp com o clipe 📎 para enviar como mídia`,
+      { duration: 6000 }
     );
   }
 
