@@ -5,8 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { Plus, Trash2, GripVertical } from 'lucide-react';
+
+interface ChecklistItem { id: string; text: string; done: boolean }
 
 interface BlockEditDialogProps {
   open: boolean;
@@ -30,7 +34,9 @@ export function BlockEditDialog({
     planned_start: '',
     notes: '',
     recurrence: '' as RecurrenceType | '',
+    checklist: [] as ChecklistItem[],
   });
+  const [newItem, setNewItem] = useState('');
 
   useEffect(() => {
     if (block) {
@@ -41,9 +47,9 @@ export function BlockEditDialog({
         planned_start: block.planned_start || '',
         notes: block.notes || '',
         recurrence: (block.recurrence as RecurrenceType | null) || '',
+        checklist: Array.isArray((block as any).checklist) ? (block as any).checklist : [],
       });
     } else {
-      // Default values for new block
       const now = new Date();
       const hours = now.getHours().toString().padStart(2, '0');
       const mins = Math.ceil(now.getMinutes() / 5) * 5;
@@ -57,9 +63,25 @@ export function BlockEditDialog({
         planned_start: `${adjustedHours}:${adjustedMins}`,
         notes: '',
         recurrence: '',
+        checklist: [],
       });
     }
+    setNewItem('');
   }, [block, open]);
+
+  const addChecklistItem = () => {
+    const t = newItem.trim();
+    if (!t) return;
+    setFormData(f => ({
+      ...f,
+      checklist: [...f.checklist, { id: crypto.randomUUID(), text: t, done: false }],
+    }));
+    setNewItem('');
+  };
+
+  const removeChecklistItem = (id: string) => {
+    setFormData(f => ({ ...f, checklist: f.checklist.filter(i => i.id !== id) }));
+  };
 
   const handleSubmit = () => {
     const { recurrence, ...rest } = formData;
@@ -67,7 +89,7 @@ export function BlockEditDialog({
       ...rest,
       recurrence: (recurrence === '' ? null : recurrence) as RecurrenceType | null,
       date: block?.date || defaultDate,
-    });
+    } as any);
     onOpenChange(false);
   };
 
@@ -175,6 +197,49 @@ export function BlockEditDialog({
               Ao concluir, o próximo horário é agendado automaticamente.
             </p>
           )}
+        </div>
+
+        {/* Checklist */}
+        <div>
+          <Label>Checklist de tarefas</Label>
+          <div className="space-y-2 mt-1">
+            {formData.checklist.map((item) => (
+              <div key={item.id} className="flex items-center gap-2 bg-muted/40 rounded-md px-2 py-1.5">
+                <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
+                <Checkbox
+                  checked={item.done}
+                  onCheckedChange={(v) => setFormData(f => ({
+                    ...f,
+                    checklist: f.checklist.map(i => i.id === item.id ? { ...i, done: !!v } : i),
+                  }))}
+                />
+                <Input
+                  className="h-8 flex-1 bg-transparent border-0 focus-visible:ring-0 px-1"
+                  value={item.text}
+                  onChange={(e) => setFormData(f => ({
+                    ...f,
+                    checklist: f.checklist.map(i => i.id === item.id ? { ...i, text: e.target.value } : i),
+                  }))}
+                />
+                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0"
+                  onClick={() => removeChecklistItem(item.id)}>
+                  <Trash2 className="h-4 w-4 text-destructive" />
+                </Button>
+              </div>
+            ))}
+            <div className="flex gap-2">
+              <Input
+                className="h-10"
+                placeholder="Adicionar item..."
+                value={newItem}
+                onChange={(e) => setNewItem(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addChecklistItem(); } }}
+              />
+              <Button type="button" variant="outline" className="h-10" onClick={addChecklistItem}>
+                <Plus className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </div>
 
         {/* Notes */}

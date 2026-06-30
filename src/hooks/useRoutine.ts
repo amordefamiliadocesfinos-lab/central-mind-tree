@@ -407,7 +407,7 @@ export function useRoutine(options: UseRoutineOptions = {}) {
     fetchBlocks();
   }, [blocks, fetchBlocks]);
 
-  const addBlock = useCallback(async (block: Partial<RoutineBlock>) => {
+  const addBlock = useCallback(async (block: Partial<RoutineBlock> & { checklist?: any[] }) => {
     const dateStr = block.date || format(selectedDate, 'yyyy-MM-dd');
     
     const { error } = await supabase
@@ -424,6 +424,7 @@ export function useRoutine(options: UseRoutineOptions = {}) {
         task_id: block.task_id,
         template_id: block.template_id,
         notes: block.notes,
+        checklist: (block.checklist as any) || [],
         recurrence: block.recurrence || null,
         recurrence_parent_id: block.recurrence_parent_id || null,
         status: 'pendente',
