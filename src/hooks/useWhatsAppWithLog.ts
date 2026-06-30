@@ -126,7 +126,11 @@ export function useWhatsAppWithLog() {
       }
     }
 
-    // 4. Abre WhatsApp
+    // 4. Abre WhatsApp (a menos que o chamador já tenha disparado o compartilhamento)
+    if (skipOpen) {
+      toast.success('Registrado no histórico e no Atendimento');
+      return true;
+    }
     const opened = openWhatsApp(phone, message);
     if (opened) {
       toast.success('WhatsApp aberto · Registrado no histórico e no Atendimento');
