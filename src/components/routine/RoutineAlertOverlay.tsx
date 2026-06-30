@@ -206,13 +206,28 @@ export function RoutineAlertOverlay() {
     setPending(prev => prev.filter(p => p.id !== block.id));
   };
 
-  if (pending.length === 0) return null;
+  if (pending.length === 0 || hidden) return null;
+
+  const minimizeAll = () => {
+    setHidden(true);
+    localStorage.setItem(HIDDEN_KEY, 'true');
+  };
 
   return (
     <div className="fixed z-[60] flex flex-col gap-2 pointer-events-none
                     max-md:left-2 max-md:right-2 max-md:bottom-20
                     md:right-4 md:bottom-4 md:max-w-sm md:w-full">
+      <div className="pointer-events-auto self-end">
+        <button
+          onClick={minimizeAll}
+          className="inline-flex items-center gap-1 rounded-full bg-card/95 backdrop-blur border border-primary/30 shadow px-2.5 py-1 text-xs hover:bg-card"
+          title="Minimizar todos"
+        >
+          <Minus className="h-3 w-3" /> Minimizar todos ({pending.length})
+        </button>
+      </div>
       <AnimatePresence initial={false}>
+
         {pending.slice(0, 3).map((block) => (
           <motion.div
             key={block.id}
