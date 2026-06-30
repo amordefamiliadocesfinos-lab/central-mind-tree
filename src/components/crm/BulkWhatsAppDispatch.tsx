@@ -17,6 +17,7 @@ import {
   saveCustomTemplates,
   type CustomTemplate,
 } from '@/lib/whatsappTemplates';
+import { WhatsAppAttachments, appendAttachmentsToMessage, type WhatsAppAttachment } from './WhatsAppAttachments';
 
 interface Props {
   open: boolean;
