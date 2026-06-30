@@ -17,6 +17,7 @@ import {
   saveCustomTemplates,
   type CustomTemplate,
 } from '@/lib/whatsappTemplates';
+import { WhatsAppAttachments, appendAttachmentsToMessage, type WhatsAppAttachment } from './WhatsAppAttachments';
 
 interface Props {
   open: boolean;
@@ -54,6 +55,7 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
   const [sentIds, setSentIds] = useState<string[]>([]);
   const [skippedIds, setSkippedIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [attachments, setAttachments] = useState<WhatsAppAttachment[]>([]);
 
   useEffect(() => {
     saveCustomTemplates(customTemplates);
@@ -75,6 +77,7 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
       setTemplate(DEFAULT_TEMPLATE);
       setSelectedTplKey('default');
       setCreatorOpen(false);
+      setAttachments([]);
     }
   }, [open]);
 
@@ -132,7 +135,8 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
     if (!current) return;
     setBusy(true);
     const phone = current.whatsapp || current.mobile || current.phone!;
-    const msg = renderMessage(template, current);
+    const baseMsg = renderMessage(template, current);
+    const msg = appendAttachmentsToMessage(baseMsg, attachments);
 
     // Atualização otimista: marca último contato como hoje para sair da lista
     await supabase
@@ -145,7 +149,7 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
       contactName: current.name,
       phone,
       message: msg,
-      templateLabel: 'Disparo em fila',
+      templateLabel: attachments.length ? `Disparo em fila · ${attachments.length} anexo(s)` : 'Disparo em fila',
       source: 'crm_card',
     });
 
@@ -279,11 +283,16 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
                 placeholder="Digite a mensagem..."
               />
 
+              <WhatsAppAttachments
+                attachments={attachments}
+                onChange={setAttachments}
+                compact
+              />
 
               {current && (
                 <div className="rounded-md border bg-muted/40 p-2 text-xs">
                   <div className="text-muted-foreground mb-1">Pré-visualização ({current.name}):</div>
-                  <div className="whitespace-pre-wrap">{renderMessage(template, current)}</div>
+                  <div className="whitespace-pre-wrap">{appendAttachmentsToMessage(renderMessage(template, current), attachments)}</div>
                 </div>
               )}
 
@@ -328,7 +337,7 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
               </div>
 
               <div className="rounded-md border bg-muted/40 p-3 text-sm whitespace-pre-wrap">
-                {renderMessage(template, current)}
+                {appendAttachmentsToMessage(renderMessage(template, current), attachments)}
               </div>
 
               <div className="flex justify-between gap-2 pt-2">

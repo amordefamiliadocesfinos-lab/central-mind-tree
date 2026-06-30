@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { WhatsAppAttachments, appendAttachmentsToMessage, type WhatsAppAttachment } from './WhatsAppAttachments';
 
 interface WhatsAppTemplate {
   key: string;
@@ -98,6 +99,7 @@ export function WhatsAppMessageSelector({ open, onOpenChange, contactName, funne
   const [editingTplKey, setEditingTplKey] = useState<string | null>(null);
   const [draftLabel, setDraftLabel] = useState('');
   const [draftMessage, setDraftMessage] = useState('');
+  const [attachments, setAttachments] = useState<WhatsAppAttachment[]>([]);
 
   useEffect(() => {
     saveCustom(customTemplates);
@@ -127,6 +129,7 @@ export function WhatsAppMessageSelector({ open, onOpenChange, contactName, funne
       setIsEditing(false);
       setAiMessage('');
       setAiReason('');
+      setAttachments([]);
       resetCreator();
     }
     onOpenChange(isOpen);
@@ -221,7 +224,9 @@ export function WhatsAppMessageSelector({ open, onOpenChange, contactName, funne
 
   const handleSend = () => {
     const label = isAiSelected ? `IA · ${aiReason || 'personalizada'}` : selectedTemplate.label;
-    onSend(finalMessage, label);
+    const messageWithAttachments = appendAttachmentsToMessage(finalMessage, attachments);
+    const fullLabel = attachments.length ? `${label} · ${attachments.length} anexo(s)` : label;
+    onSend(messageWithAttachments, fullLabel);
     onOpenChange(false);
   };
 
@@ -387,14 +392,22 @@ export function WhatsAppMessageSelector({ open, onOpenChange, contactName, funne
             )}
           </div>
 
+          {/* Anexos */}
+          <WhatsAppAttachments
+            attachments={attachments}
+            onChange={setAttachments}
+            disabled={aiLoading}
+            compact
+          />
+
           {/* Send */}
           <Button
             className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"
-            disabled={!finalMessage.trim() || aiLoading}
+            disabled={(!finalMessage.trim() && attachments.length === 0) || aiLoading}
             onClick={handleSend}
           >
             <Send className="h-4 w-4" />
-            Abrir WhatsApp
+            Abrir WhatsApp{attachments.length > 0 ? ` · ${attachments.length} anexo(s)` : ''}
           </Button>
         </div>
       </DialogContent>
