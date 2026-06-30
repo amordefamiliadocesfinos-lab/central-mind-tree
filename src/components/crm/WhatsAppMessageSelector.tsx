@@ -392,6 +392,14 @@ export function WhatsAppMessageSelector({ open, onOpenChange, contactName, funne
             )}
           </div>
 
+          {/* Anexos */}
+          <WhatsAppAttachments
+            attachments={attachments}
+            onChange={setAttachments}
+            disabled={aiLoading}
+            compact
+          />
+
           {/* Send */}
           <Button
             className="w-full gap-2 bg-green-600 hover:bg-green-700 text-white"
