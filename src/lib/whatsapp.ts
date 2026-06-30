@@ -31,8 +31,8 @@ export function buildWhatsAppUrl(phone: string | null | undefined, message?: str
 export function openWhatsApp(phone: string | null | undefined, message?: string): boolean {
   const url = buildWhatsAppUrl(phone, message);
   if (!url) return false;
-  window.open(url, '_blank', 'noopener,noreferrer');
-  return true;
+  const win = window.open(url, '_blank', 'noopener,noreferrer');
+  return win !== null;
 }
 
 /** Versão "broadcast" sem telefone fixo — abre o seletor de contato do WhatsApp com mensagem pré-preenchida. */

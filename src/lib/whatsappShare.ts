@@ -15,19 +15,24 @@ import { toast } from 'sonner';
 import { openWhatsApp } from './whatsapp';
 import { appendAttachmentsToMessage, type WhatsAppAttachment } from '@/components/crm/WhatsAppAttachments';
 
-function triggerDownload(att: WhatsAppAttachment) {
+async function triggerDownload(att: WhatsAppAttachment) {
   try {
-    // NÃO usar target=_blank — o navegador bloqueia como popup quando vários
-    // são disparados. O atributo `download` é suficiente para baixar local.
+    // Baixa como blob local. Não usa a URL pública diretamente no <a>, pois
+    // navegadores podem ignorar `download` em URL externa e abrir outra guia.
+    const response = await fetch(att.url);
+    if (!response.ok) throw new Error('download_failed');
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement('a');
-    a.href = att.url;
+    a.href = blobUrl;
     a.download = att.name;
     a.rel = 'noopener';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
+    URL.revokeObjectURL(blobUrl);
   } catch {
-    /* ignore */
+    toast.error(`Não foi possível baixar ${att.name} automaticamente`);
   }
 }
 
@@ -51,11 +56,16 @@ export async function shareToWhatsApp({ phone, message, attachments }: ShareToWh
   //    bloqueio de popup. Qualquer download vem depois.
   const opened = openWhatsApp(phone, finalMessage);
 
-  if (opened && attachments.length) {
+  if (!opened) {
+    toast.error('O navegador bloqueou o WhatsApp. Libere pop-ups para este site e tente novamente.');
+    return false;
+  }
+
+  if (attachments.length) {
     // Baixa os arquivos para o usuário anexar manualmente como mídia.
     // Sem target=_blank e sem setTimeout grande para não cair no bloqueador.
     attachments.forEach((att, i) => {
-      setTimeout(() => triggerDownload(att), i * 200);
+      setTimeout(() => { void triggerDownload(att); }, i * 200);
     });
     toast.info(
       `${attachments.length} arquivo(s) baixados — anexe no WhatsApp com o clipe 📎 para enviar como mídia`,
