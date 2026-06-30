@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect, lazy, Suspense } from 'react';
+import { useState, useMemo, useCallback, useEffect, lazy, Suspense, useDeferredValue, useRef, type ReactNode } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -94,7 +94,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Zap } from 'lucide-react';
 import { differenceInDays, parseISO, format, isSameDay, isBefore, startOfDay } from 'date-fns';
 import { toast } from 'sonner';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { openWhatsApp } from '@/lib/whatsapp';
 import { useWhatsAppWithLog } from '@/hooks/useWhatsAppWithLog';
 
@@ -198,10 +198,66 @@ function formatCurrencyShort(v?: number | null) {
 type SortField = 'name' | 'valor_estimado' | 'ultimo_contato' | 'created_at' | 'temperatura' | 'score';
 type SortDir = 'asc' | 'desc';
 
+function VirtualContactColumn({
+  contacts,
+  renderContact,
+  emptyLabel,
+  dragOverLabel,
+  isDragOver,
+  className,
+}: {
+  contacts: Contact[];
+  renderContact: (contact: Contact) => ReactNode;
+  emptyLabel: string;
+  dragOverLabel: string;
+  isDragOver: boolean;
+  className?: string;
+}) {
+  const parentRef = useRef<HTMLDivElement>(null);
+  const rowVirtualizer = useVirtualizer({
+    count: contacts.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 145,
+    overscan: 6,
+    getItemKey: (index) => contacts[index]?.id ?? index,
+  });
+
+  if (contacts.length === 0) {
+    return (
+      <div ref={parentRef} className={cn('flex-1 px-2 py-2 min-h-[300px] max-h-[calc(100vh-340px)] overflow-y-auto', className)}>
+        <p className="text-[11px] text-muted-foreground text-center py-6 opacity-60">
+          {isDragOver ? dragOverLabel : emptyLabel}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div ref={parentRef} className={cn('flex-1 px-2 py-2 min-h-[300px] max-h-[calc(100vh-340px)] overflow-y-auto', className)}>
+      <div className="relative w-full" style={{ height: rowVirtualizer.getTotalSize() }}>
+        {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+          const contact = contacts[virtualRow.index];
+          return (
+            <div
+              key={contact.id}
+              data-index={virtualRow.index}
+              ref={rowVirtualizer.measureElement}
+              className="absolute left-0 top-0 w-full pb-1.5"
+              style={{ transform: `translateY(${virtualRow.start}px)` }}
+            >
+              {renderContact(contact)}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function Contatos() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { contacts, loading, createContact, updateContact, deleteContact, fetchContacts } = useContacts();
+  const { contacts, loading, createContact, updateContact, deleteContact, fetchContacts, fetchContactFull } = useContacts();
   const { addEntry } = useContactHistory();
   const { getTagsForContact } = useContactTags();
   const { hasOrders } = useContactsWithOrders();
@@ -214,6 +270,19 @@ export default function Contatos() {
   const { dailyMetrics, refetchDaily } = useDailyMetrics();
   const { logAndOpen } = useWhatsAppWithLog();
   const [searchQuery, setSearchQuery] = useState('');
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+
+  const openContactForm = useCallback(async (contact?: Contact | null) => {
+    if (!contact) {
+      setEditingContact(undefined);
+      setFormOpen(true);
+      return;
+    }
+    setEditingContact(contact);
+    setFormOpen(true);
+    const full = await fetchContactFull(contact.id);
+    if (full) setEditingContact(full);
+  }, [fetchContactFull]);
 
   // Deep-link: abrir contato selecionado vindo de outras telas (ex.: Atendimento)
   useEffect(() => {
@@ -305,9 +374,9 @@ export default function Contatos() {
           if (!isSameDay(d, new Date()) && !isBefore(startOfDay(d), today)) return false;
         } catch { return false; }
       }
-      if (searchQuery) {
-        const q = searchQuery.toLowerCase();
-        const qDigits = searchQuery.replace(/\D/g, '');
+      if (deferredSearchQuery) {
+        const q = deferredSearchQuery.toLowerCase();
+        const qDigits = deferredSearchQuery.replace(/\D/g, '');
         // Phone fuzzy match: compare only digits, match by suffix (last N digits)
         // tolerates different country/area code prefixes (e.g. 5511987654321 vs 11987654321 vs 987654321)
         const phoneMatch = (val?: string | null) => {
@@ -336,7 +405,7 @@ export default function Contatos() {
 
       return true;
     });
-  }, [contacts, searchQuery, statusFilter, tempFilter, typeFilter, tagFilter, actionFilter, contactDateFilter, classificationFilter, originFilter, getTagsForContact, isNextActionOverdue]);
+  }, [contacts, deferredSearchQuery, statusFilter, tempFilter, typeFilter, tagFilter, actionFilter, contactDateFilter, classificationFilter, originFilter, getTagsForContact, isNextActionOverdue]);
 
   const sortedContacts = useMemo(() => {
     return [...filteredContacts].sort((a, b) => {
