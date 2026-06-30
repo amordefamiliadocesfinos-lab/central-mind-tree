@@ -113,10 +113,12 @@ export function RoutineAlertOverlay() {
     });
     if (dirty) setDismissed(dismissed);
 
+    const activeUserId = localStorage.getItem('pc.activeUserId');
     const due = (data as any[]).filter(b => {
       if (!b.planned_start) return false;
       if (b.planned_start > nowHHMM) return false;
       if (b.snooze_until && b.snooze_until > nowIso) return false;
+      if (activeUserId && b.assigned_user_id && b.assigned_user_id !== activeUserId) return false;
       const dismissKey = `${b.id}:${b.planned_start}`;
       if (dismissed[dismissKey]) return false;
       return true;
