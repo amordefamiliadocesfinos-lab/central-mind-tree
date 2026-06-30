@@ -58,6 +58,8 @@ export function MTPickerDialog({ open, onOpenChange, selectedDate, onApplied }: 
   const [areaFilter, setAreaFilter] = useState('all');
   const [selectedMT, setSelectedMT] = useState<MT | null>(null);
   const [applying, setApplying] = useState(false);
+  const { activeUserId, activeUser } = useActiveUser();
+
 
   useEffect(() => {
     if (!open) return;
