@@ -11,6 +11,8 @@ import { format, addDays, startOfWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useActiveUser } from '@/hooks/useActiveUser';
+import { ActiveUserPicker } from '@/components/ActiveUserPicker';
 
 interface MTBlock {
   start: string;
