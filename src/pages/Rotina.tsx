@@ -5,12 +5,13 @@ import { RoutineWeekView } from '@/components/routine/RoutineWeekView';
 import { RoutineMonthView } from '@/components/routine/RoutineMonthView';
 import { CustomAlarmsPanel } from '@/components/routine/CustomAlarmsPanel';
 import { BlockEditDialog } from '@/components/routine/BlockEditDialog';
+import { MTPickerDialog } from '@/components/routine/MTPickerDialog';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   ArrowLeft, ChevronLeft, ChevronRight, Calendar, 
   CalendarDays, CalendarRange, Clock, 
-  RotateCcw
+  RotateCcw, Sparkles
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { format, addDays, addWeeks, addMonths, subDays, subWeeks, subMonths, isToday } from 'date-fns';
