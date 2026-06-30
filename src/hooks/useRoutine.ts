@@ -376,6 +376,7 @@ export function useRoutine(options: UseRoutineOptions = {}) {
         template_id: block.template_id,
         notes: block.notes,
         recurrence: block.recurrence,
+        assigned_user_id: block.assigned_user_id ?? null,
         recurrence_parent_id: block.recurrence_parent_id || block.id,
         status: 'pendente',
       });
