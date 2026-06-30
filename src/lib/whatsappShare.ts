@@ -17,11 +17,12 @@ import { appendAttachmentsToMessage, type WhatsAppAttachment } from '@/component
 
 function triggerDownload(att: WhatsAppAttachment) {
   try {
+    // NÃO usar target=_blank — o navegador bloqueia como popup quando vários
+    // são disparados. O atributo `download` é suficiente para baixar local.
     const a = document.createElement('a');
     a.href = att.url;
     a.download = att.name;
     a.rel = 'noopener';
-    a.target = '_blank';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -46,14 +47,19 @@ export async function shareToWhatsApp({ phone, message, attachments }: ShareToWh
     ? appendAttachmentsToMessage(message, attachments)
     : message;
 
+  // 1) Abre o WhatsApp PRIMEIRO (dentro do gesto do usuário) para evitar
+  //    bloqueio de popup. Qualquer download vem depois.
   const opened = openWhatsApp(phone, finalMessage);
 
   if (opened && attachments.length) {
-    // baixa em segundo plano para o usuário poder anexar manualmente se quiser
-    attachments.forEach((att, i) => setTimeout(() => triggerDownload(att), 300 + i * 250));
+    // Baixa os arquivos para o usuário anexar manualmente como mídia.
+    // Sem target=_blank e sem setTimeout grande para não cair no bloqueador.
+    attachments.forEach((att, i) => {
+      setTimeout(() => triggerDownload(att), i * 200);
+    });
     toast.info(
-      `${attachments.length} arquivo(s) baixados — anexe no WhatsApp com o clipe 📎 se quiser enviar como mídia`,
-      { duration: 5000 }
+      `${attachments.length} arquivo(s) baixados — anexe no WhatsApp com o clipe 📎 para enviar como mídia`,
+      { duration: 6000 }
     );
   }
 
