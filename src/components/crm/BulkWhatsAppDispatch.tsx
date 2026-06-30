@@ -55,6 +55,7 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
   const [sentIds, setSentIds] = useState<string[]>([]);
   const [skippedIds, setSkippedIds] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
+  const [attachments, setAttachments] = useState<WhatsAppAttachment[]>([]);
 
   useEffect(() => {
     saveCustomTemplates(customTemplates);
