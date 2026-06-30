@@ -163,14 +163,20 @@ export function useRoutine(options: UseRoutineOptions = {}) {
   const fetchBlocks = useCallback(async () => {
     const startStr = format(dateRange.start, 'yyyy-MM-dd');
     const endStr = format(dateRange.end, 'yyyy-MM-dd');
-    
-    const { data, error } = await supabase
+
+    let q = supabase
       .from('routine_blocks')
       .select('*')
       .gte('date', startStr)
       .lte('date', endStr)
       .order('date', { ascending: true })
       .order('planned_start', { ascending: true });
+
+    if (activeUserId) {
+      q = q.or(`assigned_user_id.eq.${activeUserId},assigned_user_id.is.null`);
+    }
+
+    const { data, error } = await q;
 
     if (error) {
       console.error('Error fetching blocks:', error);
@@ -183,7 +189,8 @@ export function useRoutine(options: UseRoutineOptions = {}) {
     // Mantém activeBlock somente se ainda existir e estiver "andamento"
     const active = list.find((b) => b.status === 'andamento');
     setActiveBlock(active || null);
-  }, [dateRange]);
+  }, [dateRange, activeUserId]);
+
 
   // Fetch templates
   const fetchTemplates = useCallback(async () => {
