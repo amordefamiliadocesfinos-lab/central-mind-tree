@@ -99,6 +99,7 @@ export function WhatsAppMessageSelector({ open, onOpenChange, contactName, funne
   const [editingTplKey, setEditingTplKey] = useState<string | null>(null);
   const [draftLabel, setDraftLabel] = useState('');
   const [draftMessage, setDraftMessage] = useState('');
+  const [attachments, setAttachments] = useState<WhatsAppAttachment[]>([]);
 
   useEffect(() => {
     saveCustom(customTemplates);
