@@ -337,7 +337,7 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
               </div>
 
               <div className="rounded-md border bg-muted/40 p-3 text-sm whitespace-pre-wrap">
-                {renderMessage(template, current)}
+                {appendAttachmentsToMessage(renderMessage(template, current), attachments)}
               </div>
 
               <div className="flex justify-between gap-2 pt-2">
