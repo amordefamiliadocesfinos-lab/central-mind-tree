@@ -3196,6 +3196,7 @@ export type Database = {
           actual_end: string | null
           actual_start: string | null
           block_type: string
+          checklist: Json
           created_at: string
           date: string
           duration_minutes: number
@@ -3207,6 +3208,7 @@ export type Database = {
           planned_start: string | null
           recurrence: string | null
           recurrence_parent_id: string | null
+          snooze_until: string | null
           status: string
           task_id: string | null
           template_id: string | null
@@ -3216,6 +3218,7 @@ export type Database = {
           actual_end?: string | null
           actual_start?: string | null
           block_type?: string
+          checklist?: Json
           created_at?: string
           date?: string
           duration_minutes?: number
@@ -3227,6 +3230,7 @@ export type Database = {
           planned_start?: string | null
           recurrence?: string | null
           recurrence_parent_id?: string | null
+          snooze_until?: string | null
           status?: string
           task_id?: string | null
           template_id?: string | null
@@ -3236,6 +3240,7 @@ export type Database = {
           actual_end?: string | null
           actual_start?: string | null
           block_type?: string
+          checklist?: Json
           created_at?: string
           date?: string
           duration_minutes?: number
@@ -3247,6 +3252,7 @@ export type Database = {
           planned_start?: string | null
           recurrence?: string | null
           recurrence_parent_id?: string | null
+          snooze_until?: string | null
           status?: string
           task_id?: string | null
           template_id?: string | null

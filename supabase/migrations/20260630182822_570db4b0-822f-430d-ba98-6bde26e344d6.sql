@@ -1,0 +1,1 @@
+ALTER TABLE public.routine_blocks ADD COLUMN IF NOT EXISTS checklist jsonb NOT NULL DEFAULT '[]'::jsonb; ALTER TABLE public.routine_blocks ADD COLUMN IF NOT EXISTS snooze_until timestamptz;
