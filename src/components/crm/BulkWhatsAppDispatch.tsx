@@ -135,22 +135,28 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
     if (!current) return;
     setBusy(true);
     const phone = current.whatsapp || current.mobile || current.phone!;
-    const baseMsg = renderMessage(template, current);
-    const msg = appendAttachmentsToMessage(baseMsg, attachments);
+    const msg = renderMessage(template, current);
 
-    // Atualização otimista: marca último contato como hoje para sair da lista
+    // Atualização otimista
     await supabase
       .from('contacts')
       .update({ ultimo_contato: new Date().toISOString().split('T')[0] })
       .eq('id', current.id);
+
+    const hasAttachments = attachments.length > 0;
+    if (hasAttachments) {
+      const { shareToWhatsApp } = await import('@/lib/whatsappShare');
+      await shareToWhatsApp({ phone, message: msg, attachments });
+    }
 
     await logAndOpen({
       contactId: current.id,
       contactName: current.name,
       phone,
       message: msg,
-      templateLabel: attachments.length ? `Disparo em fila · ${attachments.length} anexo(s)` : 'Disparo em fila',
+      templateLabel: hasAttachments ? `Disparo em fila · ${attachments.length} anexo(s)` : 'Disparo em fila',
       source: 'crm_card',
+      skipOpen: hasAttachments,
     });
 
     setSentIds(prev => [...prev, current.id]);
