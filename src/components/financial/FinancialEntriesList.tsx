@@ -19,11 +19,13 @@ import { ptBR } from 'date-fns/locale';
 import { 
   Plus, Search, MoreVertical, Download, DollarSign, CheckCircle, Trash2, 
   Edit, Filter, Printer, FileText, RefreshCw, X, Calendar, ChevronDown,
-  CreditCard, Paperclip, List, LayoutGrid
+  CreditCard, Paperclip, List, LayoutGrid, CalendarPlus
+
 } from 'lucide-react';
 import { FinancialEntry, EntryStatus, getEntryStatus, FinancialCategory, FinancialAccount } from '@/hooks/useFinancial';
 import { PaymentDialog } from './PaymentDialog';
 import { AdvancedPaymentDialog } from './AdvancedPaymentDialog';
+import { AddToRoutineDialog } from '@/components/routine/AddToRoutineDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface FinancialEntriesListProps {
