@@ -152,7 +152,12 @@ export function MTPickerDialog({ open, onOpenChange, selectedDate, onApplied }: 
                 Cronogramas prontos por área. Escolha um e aplique ao dia ou semana.
               </DialogDescription>
             </div>
-            <ActiveUserPicker />
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setManagerOpen(true)}>
+                <Settings className="h-4 w-4 mr-1" /> Gerenciar
+              </Button>
+              <ActiveUserPicker />
+            </div>
           </div>
           <p className="text-[11px] text-muted-foreground mt-2">
             {activeUser
