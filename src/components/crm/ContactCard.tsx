@@ -477,8 +477,17 @@ function ContactCardInner({
           </Collapsible>
         </div>
       </Card>
+      <AddToRoutineDialog
+        open={routineOpen}
+        onOpenChange={setRoutineOpen}
+        source={{ kind: 'crm/contact', id: contact.id, label: contact.name || undefined }}
+        defaultTitle={`Contatar ${contact.name || 'lead'}`}
+        defaultFocus="atendimento"
+        defaultDurationMin={20}
+      />
     </div>
   );
+
 }
 
 export const ContactCard = memo(ContactCardInner, (prev, next) => {
