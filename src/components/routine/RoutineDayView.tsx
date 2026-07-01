@@ -555,12 +555,38 @@ function BlockCardContent({
               </>
             )}
             
+            {(block.status === 'concluido' || block.status === 'pulado') && (
+              <>
+                {onReopen && (
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={onReopen}
+                    className="h-9 w-9 p-0"
+                    title="Reabrir"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={onEdit}
+                  className="h-9 w-9 p-0"
+                  title="Editar"
+                >
+                  <Pencil className="h-3 w-3" />
+                </Button>
+              </>
+            )}
+
             {block.status !== 'andamento' && (
               <Button
                 size="sm"
                 variant="ghost"
                 onClick={onDelete}
                 className="h-9 w-9 p-0 text-destructive hover:text-destructive"
+                title="Excluir"
               >
                 <Trash2 className="h-3 w-3" />
               </Button>
