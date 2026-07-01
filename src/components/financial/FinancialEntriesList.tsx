@@ -1051,7 +1051,7 @@ export function FinancialEntriesList({
           onOpenChange={(o) => !o && setRoutineEntry(null)}
           source={{ kind: 'financial/entry', id: routineEntry.id, label: routineEntry.description }}
           defaultTitle={`💰 ${routineEntry.type === 'receber' ? 'Receber' : 'Pagar'}: ${routineEntry.description}`}
-          defaultFocus="admin" as any
+          defaultFocus="pessoal"
           defaultDurationMin={15}
           defaultNotes={`Valor: ${formatCurrency(routineEntry.value)}`}
         />
