@@ -279,6 +279,7 @@ export function MTPickerDialog({ open, onOpenChange, selectedDate, onApplied }: 
           </div>
         </div>
       </DialogContent>
+      <MTManagerDialog open={managerOpen} onOpenChange={setManagerOpen} onChanged={loadMts} />
     </Dialog>
   );
 }
