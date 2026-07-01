@@ -322,6 +322,7 @@ interface SortableBlockCardProps {
   onPause?: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onReopen?: () => void;
 }
 
 function SortableBlockCard(props: SortableBlockCardProps) {
