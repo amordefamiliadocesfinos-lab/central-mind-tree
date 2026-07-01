@@ -29,6 +29,8 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
+import { AddToRoutineDialog } from '@/components/routine/AddToRoutineDialog';
+import { CalendarPlus } from 'lucide-react';
 import {
   MoreVertical,
   Edit,
