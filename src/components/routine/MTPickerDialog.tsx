@@ -6,7 +6,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Loader2, CalendarDays, Calendar as CalIcon, Sparkles, Clock, CheckSquare, Trash2 } from 'lucide-react';
+import { Loader2, CalendarDays, Calendar as CalIcon, Sparkles, Clock, CheckSquare, Trash2, Settings } from 'lucide-react';
+import { MTManagerDialog } from './MTManagerDialog';
 import { format, addDays, startOfWeek } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -59,26 +60,22 @@ export function MTPickerDialog({ open, onOpenChange, selectedDate, onApplied }: 
   const [selectedMT, setSelectedMT] = useState<MT | null>(null);
   const [applying, setApplying] = useState(false);
   const { activeUserId, activeUser } = useActiveUser();
+  const [managerOpen, setManagerOpen] = useState(false);
+
+  const loadMts = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('routine_mts' as any)
+      .select('*')
+      .eq('is_active', true)
+      .order('order_index');
+    if (error) { toast.error('Erro ao carregar MTs'); setLoading(false); return; }
+    setMts((data as any) || []);
+    setLoading(false);
+  };
 
 
-  useEffect(() => {
-    if (!open) return;
-    (async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('routine_mts' as any)
-        .select('*')
-        .eq('is_active', true)
-        .order('order_index');
-      if (error) {
-        toast.error('Erro ao carregar MTs');
-        setLoading(false);
-        return;
-      }
-      setMts((data as any) || []);
-      setLoading(false);
-    })();
-  }, [open]);
+  useEffect(() => { if (open) loadMts(); }, [open]);
 
   const filtered = areaFilter === 'all' ? mts : mts.filter(m => m.area === areaFilter);
 
@@ -155,7 +152,12 @@ export function MTPickerDialog({ open, onOpenChange, selectedDate, onApplied }: 
                 Cronogramas prontos por área. Escolha um e aplique ao dia ou semana.
               </DialogDescription>
             </div>
-            <ActiveUserPicker />
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" onClick={() => setManagerOpen(true)}>
+                <Settings className="h-4 w-4 mr-1" /> Gerenciar
+              </Button>
+              <ActiveUserPicker />
+            </div>
           </div>
           <p className="text-[11px] text-muted-foreground mt-2">
             {activeUser
@@ -277,6 +279,7 @@ export function MTPickerDialog({ open, onOpenChange, selectedDate, onApplied }: 
           </div>
         </div>
       </DialogContent>
+      <MTManagerDialog open={managerOpen} onOpenChange={setManagerOpen} onChanged={loadMts} />
     </Dialog>
   );
 }
