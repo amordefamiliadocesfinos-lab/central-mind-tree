@@ -374,6 +374,7 @@ interface BlockCardContentProps {
   onPause?: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onReopen?: () => void;
   dragHandleProps?: Record<string, unknown>;
 }
 
@@ -389,6 +390,7 @@ function BlockCardContent({
   onPause,
   onEdit,
   onDelete,
+  onReopen,
   dragHandleProps = {},
 }: BlockCardContentProps) {
   const focusInfo = FOCUS_TYPES[block.focus as FocusType] || FOCUS_TYPES.trabalho_profundo;
