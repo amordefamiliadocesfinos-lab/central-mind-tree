@@ -1,6 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { AddToRoutineButton } from '@/components/routine/AddToRoutineButton';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChevronRight, Trash2, Package, Factory } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -126,7 +127,18 @@ export function OrderCard({ order, orderStatus, orderChannels, onStatusChange, o
               ))}
             </SelectContent>
           </Select>
+          <div onClick={(e) => e.stopPropagation()}>
+            <AddToRoutineButton
+              iconOnly
+              variant="ghost"
+              source={{ kind: 'operations/order', id: order.id, label: order.order_number || undefined }}
+              defaultTitle={`📦 Pedido ${order.order_number || ''}`}
+              defaultFocus="trabalho_profundo"
+              defaultDurationMin={30}
+            />
+          </div>
         </div>
+
       </CardContent>
     </Card>
   );
