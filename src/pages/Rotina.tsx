@@ -252,6 +252,7 @@ export default function Rotina() {
             onPauseBlock={pauseBlock}
             onEditBlock={handleEditBlock}
             onDeleteBlock={deleteBlock}
+            onReopenBlock={(id) => updateBlock(id, { status: 'pendente', actual_start: null, actual_end: null })}
             onReorderBlocks={reorderBlocks}
             onAddBlock={handleAddBlock}
             onQuickAdd={handleQuickAdd}
