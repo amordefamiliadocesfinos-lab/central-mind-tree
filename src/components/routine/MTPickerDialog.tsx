@@ -82,11 +82,17 @@ export function MTPickerDialog({ open, onOpenChange, selectedDate, onApplied }: 
   const applyToDate = async (mt: MT, date: Date, replace = true) => {
     const dateStr = format(date, 'yyyy-MM-dd');
     if (replace) {
-      let del = supabase.from('routine_blocks').delete().eq('date', dateStr);
+      // Preserva blocos vindos de outros módulos (marcados com "origem:" nas notes)
+      let del = supabase
+        .from('routine_blocks')
+        .delete()
+        .eq('date', dateStr)
+        .or('notes.is.null,notes.not.ilike.%origem:%');
       if (activeUserId) del = del.eq('assigned_user_id', activeUserId);
       else del = del.is('assigned_user_id', null);
       await del;
     }
+    const mtTag = `MT: ${mt.name}`;
     const rows = mt.blocks.map(b => ({
       date: dateStr,
       title: b.title,
@@ -95,7 +101,7 @@ export function MTPickerDialog({ open, onOpenChange, selectedDate, onApplied }: 
       duration_minutes: b.duration_minutes,
       planned_start: b.start,
       planned_end: b.end,
-      notes: b.notes || `MT: ${mt.name}`,
+      notes: b.notes ? `${b.notes}\n${mtTag}` : mtTag,
       checklist: b.checklist || [],
       status: 'pendente',
       assigned_user_id: activeUserId,
