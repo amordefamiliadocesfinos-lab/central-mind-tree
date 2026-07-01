@@ -1,58 +1,110 @@
-## Diagnóstico
+# Integração do Painel Central — Rotina como centro de execução
 
-Após analisar o código, identifiquei **4 gargalos principais** que explicam o travamento depois de chegar a ~2000 contatos:
-
-### 1. Carrega TODOS os contatos de uma vez (`useContacts.ts`)
-- `fetchContacts()` faz paginação no Supabase mas junta tudo em `setContacts(all)` → 2000 objetos com **80+ colunas cada** em memória.
-- O `<select *>` traz campos pesados que nunca aparecem no card (endereço, dados fiscais, pais, etc.).
-
-### 2. Refetch total a cada mutação
-- `createContact`, `updateContact` e `deleteContact` chamam `await fetchContacts()` no final.
-- Editar 1 contato re-baixa os 2000 do banco e re-renderiza tudo.
-
-### 3. Renderização sem virtualização
-- `KommoFunnelView` e a lista geral renderizam **todos** os `<ContactCard>` (484 linhas cada, com framer-motion, badges, hooks aninhados) simultaneamente.
-- Com 2000 cards, o React tem que montar milhares de nós → trava scroll e clique no mobile.
-
-### 4. Hooks paralelos pesados na página
-- `Contatos.tsx` carrega ao mesmo tempo: `useContacts`, `useContactsWithOrders`, `useContactHistory`, `useNoResponseDetection`, `useContactChecklist`, `useDailyMetrics`, `useLeadScore`, `useContactTags`, `useContactNextTasks`. Vários iteram sobre a lista inteira.
+## Objetivo
+1. Fazer a **Rotina** ser o hub de execução: qualquer módulo (Digital, CRM, Financeiro, Produção, Foco, Tarefas) pode enviar uma atividade para ela via botão **"Adicionar à Rotina"**.
+2. Cada **Método de Trabalho (MT)** ganha uma **Área de Trabalho** própria, destacando os módulos prioritários daquela função — sem esconder os demais.
 
 ---
 
-## Plano de otimização (em ordem de impacto)
+## Parte 1 — Botão "Adicionar à Rotina" (universal)
 
-### Etapa 1 — Aliviar o fetch (impacto imediato)
-**`src/hooks/useContacts.ts`**
-- Trocar `select('*')` por um `select` enxuto com apenas os campos usados em listagem/kanban (nome, funil, temperatura, datas, telefone, whatsapp, foto, valor_estimado, classificação, tags-fk). Reduz payload em ~70%.
-- Criar uma função separada `fetchContactFull(id)` para quando o usuário abrir o drawer/edição (busca os 80 campos só daquele contato).
-- Substituir `await fetchContacts()` em create/update/delete por **atualização local do array** (`setContacts(prev => …)`). Mantém um `fetchContacts()` manual como fallback de "recarregar".
+Novo componente compartilhado `AddToRoutineButton` + dialog `AddToRoutineDialog`.
 
-### Etapa 2 — Virtualização da lista (impacto visível no scroll)
-- Adicionar `@tanstack/react-virtual` (leve, já compatível com o stack).
-- **Kanban** (`KommoFunnelView`): virtualizar cada coluna do funil — renderiza só os ~10 cards visíveis por coluna em vez de centenas.
-- **Lista/tabela**: virtualizar as linhas com altura fixa.
+Campos do dialog:
+- **Título** (pré-preenchido a partir do item de origem: tarefa, lead, pedido, ideia, lançamento)
+- **Usuário responsável** (dropdown `app_users`)
+- **Método de Trabalho** (dropdown `routine_mts`, opcional — só para agrupar)
+- **Data + Horário** (date + time picker)
+- **Duração** (min)
+- **Recorrência** (nenhuma / diária / semanal / mensal — dias da semana quando semanal)
+- **Alerta** (sem alerta / no horário / 5 / 15 / 30 min antes)
+- **Foco** (trabalho_profundo, atendimento, criativo, admin, pausa)
 
-### Etapa 3 — Memoização e split de componente
-- `ContactCard` envolvido em `React.memo` com comparador raso por `id + updated_at`. Hoje cada re-render do pai re-monta todos os cards.
-- Mover hooks pesados (`useNoResponseDetection`, `useLeadScore`, `useContactNextTasks`) para dentro de subcomponentes lazy do card, ou calcular uma única vez no pai com `useMemo` indexado por id.
-- Debounce no input de busca (300ms) para não filtrar 2000 itens a cada tecla.
+Comportamento:
+- Cria linha em `routine_blocks` para a data escolhida (e clona nas próximas N ocorrências quando recorrente — limitar a 12 para não explodir).
+- Marca `notes` com origem (`origem: crm/lead/<id>`, `origem: financial/entry/<id>` etc.) para rastreio.
+- Ao concluir o bloco na Rotina, opcionalmente marcar a tarefa/pedido de origem como feito (fase 2, fora deste plano).
 
-### Etapa 4 — Índices no banco (para futuras consultas filtradas)
-Quando passarmos a buscar paginado/filtrado no servidor (etapa 5), garantir índices em:
-- `contacts(is_active, funnel_status)`
-- `contacts(is_active, name)`
-- `contacts(updated_at desc)`
+Pontos de inserção do botão (fase 1):
+- CRM: `ContactCard` (menu de ações) e `LeadDetailDrawer`
+- Financeiro: `FinancialEntriesList` (menu do lançamento)
+- Produção: `OrderCard` / `OrderEditDialog`
+- Digital: card de ideia (menu de ações)
+- Foco: item da fila
+- Tarefas: `TasksDialog` / linha da tarefa
 
-### Etapa 5 (opcional, se ainda lento após 1-4) — Paginação server-side
-- Carregar 100 contatos por vez com `range()` + busca/filtros indo direto para o Postgres.
-- Indicado se a base crescer para 5k+.
+Todos usam o mesmo componente — sem duplicação.
 
 ---
 
-## O que farei primeiro (se aprovar)
-Implemento **Etapas 1, 2 e 3** em uma rodada — já elimina o travamento atual com 2000 contatos sem mudar fluxo de uso. Etapas 4 e 5 ficam como próximo passo se ainda houver lentidão.
+## Parte 2 — MT complementa, não sobrescreve
 
-## Detalhes técnicos
-- Lib nova: `@tanstack/react-virtual` (~3KB, sem dependências extras).
-- Sem mudanças de schema nem migrações nesta primeira rodada.
-- Tipagem do `Contact` permanece — apenas os campos não selecionados virão `undefined` na lista (já são todos opcionais).
+Já existe `MTPickerDialog` que aplica o cronograma base do MT. Ajuste:
+- Ao aplicar um MT, **preservar** blocos existentes que tenham `notes` contendo `origem:` (vieram de outros módulos).
+- Só substituir os blocos "base" do MT anterior.
+
+Implementação: no `useRoutine.autoPlanDay` (ou onde o MT é aplicado), filtrar antes de deletar:
+```ts
+.not('notes', 'ilike', '%origem:%')
+```
+
+---
+
+## Parte 3 — Área de Trabalho por MT
+
+Nova coluna em `routine_mts`:
+- `priority_modules text[]` — lista de rotas priorizadas (ex.: `['/dashboard','/financeiro']`)
+
+Editor: adicionar seção no `MTManagerDialog` — checkboxes com todos os módulos disponíveis:
+`Dashboard, CRM, Digital, Financeiro, Produção, Operações, Foco, Rotina, Tarefas, Rotas, Reuniões, Planejamento, Metas, Atendimento`.
+
+Presets padrão (aplicados só se `priority_modules` estiver vazio):
+- **Gestão** → Dashboard, Metas, Financeiro, Reuniões
+- **Comercial** → CRM, Atendimento, Digital, Financeiro
+- **Produção** → Operações, Produção, Estoque (Operações), Rotas
+
+Exibição:
+- Novo componente `MTWorkspaceBar` renderizado no topo do `Index`/Dashboard e opcionalmente no header global — mostra ícones grandes dos módulos prioritários do MT ativo do dia.
+- MT ativo = MT do bloco em andamento, ou o mais usado no dia, ou o padrão do usuário.
+- Todos os outros módulos continuam acessíveis pelo menu/rotas normais — só não ficam em destaque.
+
+---
+
+## Alterações técnicas
+
+### Banco
+Migration:
+```sql
+ALTER TABLE public.routine_mts
+  ADD COLUMN IF NOT EXISTS priority_modules text[] DEFAULT '{}'::text[];
+```
+
+### Arquivos novos
+- `src/components/routine/AddToRoutineButton.tsx`
+- `src/components/routine/AddToRoutineDialog.tsx`
+- `src/components/routine/MTWorkspaceBar.tsx`
+- `src/hooks/useActiveMT.ts` (retorna o MT ativo do momento)
+
+### Arquivos editados
+- `src/hooks/useRoutine.ts` — helper `addBlockFromModule({source, ...})` + recorrência + preservação de blocos com `origem:`
+- `src/components/routine/MTManagerDialog.tsx` — editor de `priority_modules`
+- `src/components/routine/MTPickerDialog.tsx` — passar flag "preservar externos"
+- `src/pages/Index.tsx` (ou Dashboard) — renderizar `MTWorkspaceBar`
+- Inserção do `AddToRoutineButton` em: `ContactCard`, `LeadDetailDrawer`, `FinancialEntriesList`, `OrderCard`/`OrderEditDialog`, card de ideia digital, `TasksDialog`, item da fila do Foco.
+
+### Fora do escopo desta iteração
+- Marcar item de origem como concluído quando o bloco é concluído (fase 2).
+- Reagendamento automático quando um módulo altera a data da tarefa fonte.
+- Modo "workspace fullscreen" por MT (fase 2).
+
+---
+
+## Ordem de execução
+1. Migration `priority_modules`.
+2. `AddToRoutineDialog` + hook `useRoutine.addBlockFromModule`.
+3. `AddToRoutineButton` e integração nos 6 pontos listados.
+4. Ajuste do `MTPickerDialog`/`autoPlanDay` para preservar `origem:`.
+5. Editor `priority_modules` no `MTManagerDialog`.
+6. `useActiveMT` + `MTWorkspaceBar` no Index.
+
+Confirma esse plano? Posso ajustar pontos de inserção, presets de MT ou remover a recorrência automática se preferir manter simples.
