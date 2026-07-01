@@ -9,9 +9,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Plus, Trash2, Pencil, Save, X, GripVertical, ArrowLeft, ArrowUp, ArrowDown, Copy, ListChecks } from 'lucide-react';
+import { Loader2, Plus, Trash2, Pencil, Save, X, GripVertical, ArrowLeft, ArrowUp, ArrowDown, Copy, ListChecks, LayoutGrid } from 'lucide-react';
 import { toast } from 'sonner';
 import { FOCUS_TYPES } from '@/hooks/useRoutine';
+import { MODULE_CATALOG } from './MTWorkspaceBar';
 
 interface MTBlock {
   start: string;
@@ -36,6 +37,7 @@ interface MT {
   is_active: boolean;
   is_default: boolean;
   order_index: number;
+  priority_modules: string[];
 }
 
 interface Props {
@@ -56,6 +58,7 @@ const emptyMT = (): MT => ({
   is_active: true,
   is_default: false,
   order_index: 0,
+  priority_modules: [],
 });
 
 const emptyBlock = (start = '08:00'): MTBlock => {
@@ -104,6 +107,7 @@ function normalizeMT(mt: any): MT {
     is_active: mt?.is_active ?? true,
     is_default: mt?.is_default ?? false,
     order_index: mt?.order_index ?? 0,
+    priority_modules: Array.isArray(mt?.priority_modules) ? mt.priority_modules : [],
   };
 }
 
@@ -143,6 +147,7 @@ export function MTManagerDialog({ open, onOpenChange, onChanged }: Props) {
       is_active: editing.is_active,
       is_default: editing.is_default,
       order_index: editing.order_index,
+      priority_modules: editing.priority_modules || [],
     };
     let err;
     if (editing.id) {
