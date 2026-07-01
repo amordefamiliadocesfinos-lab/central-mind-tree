@@ -60,6 +60,19 @@ export function MTPickerDialog({ open, onOpenChange, selectedDate, onApplied }: 
   const [selectedMT, setSelectedMT] = useState<MT | null>(null);
   const [applying, setApplying] = useState(false);
   const { activeUserId, activeUser } = useActiveUser();
+  const [managerOpen, setManagerOpen] = useState(false);
+
+  const loadMts = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('routine_mts' as any)
+      .select('*')
+      .eq('is_active', true)
+      .order('order_index');
+    if (error) { toast.error('Erro ao carregar MTs'); setLoading(false); return; }
+    setMts((data as any) || []);
+    setLoading(false);
+  };
 
 
   useEffect(() => {
