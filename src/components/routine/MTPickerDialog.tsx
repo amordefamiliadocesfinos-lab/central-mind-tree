@@ -75,24 +75,7 @@ export function MTPickerDialog({ open, onOpenChange, selectedDate, onApplied }: 
   };
 
 
-  useEffect(() => {
-    if (!open) return;
-    (async () => {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('routine_mts' as any)
-        .select('*')
-        .eq('is_active', true)
-        .order('order_index');
-      if (error) {
-        toast.error('Erro ao carregar MTs');
-        setLoading(false);
-        return;
-      }
-      setMts((data as any) || []);
-      setLoading(false);
-    })();
-  }, [open]);
+  useEffect(() => { if (open) loadMts(); }, [open]);
 
   const filtered = areaFilter === 'all' ? mts : mts.filter(m => m.area === areaFilter);
 
