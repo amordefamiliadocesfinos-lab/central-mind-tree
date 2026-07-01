@@ -19,11 +19,13 @@ import { ptBR } from 'date-fns/locale';
 import { 
   Plus, Search, MoreVertical, Download, DollarSign, CheckCircle, Trash2, 
   Edit, Filter, Printer, FileText, RefreshCw, X, Calendar, ChevronDown,
-  CreditCard, Paperclip, List, LayoutGrid
+  CreditCard, Paperclip, List, LayoutGrid, CalendarPlus
+
 } from 'lucide-react';
 import { FinancialEntry, EntryStatus, getEntryStatus, FinancialCategory, FinancialAccount } from '@/hooks/useFinancial';
 import { PaymentDialog } from './PaymentDialog';
 import { AdvancedPaymentDialog } from './AdvancedPaymentDialog';
+import { AddToRoutineDialog } from '@/components/routine/AddToRoutineDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface FinancialEntriesListProps {
@@ -81,6 +83,7 @@ export function FinancialEntriesList({
   const [paymentEntry, setPaymentEntry] = useState<FinancialEntry | undefined>();
   const [advancedPaymentEntries, setAdvancedPaymentEntries] = useState<FinancialEntry[]>([]);
   const [isPartialPayment, setIsPartialPayment] = useState(false);
+  const [routineEntry, setRoutineEntry] = useState<FinancialEntry | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(!isMobile);
   const [selectedAccount, setSelectedAccount] = useState<string>('all');
@@ -706,6 +709,10 @@ export function FinancialEntriesList({
                                 <Edit className="mr-2 h-4 w-4" />
                                 Editar
                               </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setRoutineEntry(entry)}>
+                                <CalendarPlus className="mr-2 h-4 w-4" />
+                                Adicionar à Rotina
+                              </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => onDeleteEntry(entry.id)} className="text-red-500">
                                 <Trash2 className="mr-2 h-4 w-4" />
                                 Excluir
@@ -1035,6 +1042,18 @@ export function FinancialEntriesList({
           onConfirm={async (id, value, accountId, notes) => {
             await onRegisterPayment(id, value, accountId, notes);
           }}
+        />
+      )}
+
+      {routineEntry && (
+        <AddToRoutineDialog
+          open={!!routineEntry}
+          onOpenChange={(o) => !o && setRoutineEntry(null)}
+          source={{ kind: 'financial/entry', id: routineEntry.id, label: routineEntry.description }}
+          defaultTitle={`💰 ${routineEntry.type === 'receber' ? 'Receber' : 'Pagar'}: ${routineEntry.description}`}
+          defaultFocus="pessoal"
+          defaultDurationMin={15}
+          defaultNotes={`Valor: ${formatCurrency(routineEntry.value)}`}
         />
       )}
     </div>

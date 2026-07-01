@@ -3312,6 +3312,7 @@ export type Database = {
           is_default: boolean
           name: string
           order_index: number
+          priority_modules: string[]
           target_role: string | null
           updated_at: string
         }
@@ -3327,6 +3328,7 @@ export type Database = {
           is_default?: boolean
           name: string
           order_index?: number
+          priority_modules?: string[]
           target_role?: string | null
           updated_at?: string
         }
@@ -3342,6 +3344,7 @@ export type Database = {
           is_default?: boolean
           name?: string
           order_index?: number
+          priority_modules?: string[]
           target_role?: string | null
           updated_at?: string
         }

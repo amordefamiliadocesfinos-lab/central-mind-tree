@@ -9,9 +9,10 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Plus, Trash2, Pencil, Save, X, GripVertical, ArrowLeft, ArrowUp, ArrowDown, Copy, ListChecks } from 'lucide-react';
+import { Loader2, Plus, Trash2, Pencil, Save, X, GripVertical, ArrowLeft, ArrowUp, ArrowDown, Copy, ListChecks, LayoutGrid } from 'lucide-react';
 import { toast } from 'sonner';
 import { FOCUS_TYPES } from '@/hooks/useRoutine';
+import { MODULE_CATALOG } from './MTWorkspaceBar';
 
 interface MTBlock {
   start: string;
@@ -36,6 +37,7 @@ interface MT {
   is_active: boolean;
   is_default: boolean;
   order_index: number;
+  priority_modules: string[];
 }
 
 interface Props {
@@ -56,6 +58,7 @@ const emptyMT = (): MT => ({
   is_active: true,
   is_default: false,
   order_index: 0,
+  priority_modules: [],
 });
 
 const emptyBlock = (start = '08:00'): MTBlock => {
@@ -104,6 +107,7 @@ function normalizeMT(mt: any): MT {
     is_active: mt?.is_active ?? true,
     is_default: mt?.is_default ?? false,
     order_index: mt?.order_index ?? 0,
+    priority_modules: Array.isArray(mt?.priority_modules) ? mt.priority_modules : [],
   };
 }
 
@@ -143,6 +147,7 @@ export function MTManagerDialog({ open, onOpenChange, onChanged }: Props) {
       is_active: editing.is_active,
       is_default: editing.is_default,
       order_index: editing.order_index,
+      priority_modules: editing.priority_modules || [],
     };
     let err;
     if (editing.id) {
@@ -333,6 +338,37 @@ export function MTManagerDialog({ open, onOpenChange, onChanged }: Props) {
                     <Label className="text-xs">Descrição</Label>
                     <Textarea rows={3} value={editing.description || ''} onChange={e => setEditing({ ...editing, description: e.target.value })} />
                   </div>
+
+                  <div className="pt-2 border-t">
+                    <Label className="text-xs flex items-center gap-1 mb-1.5">
+                      <LayoutGrid className="h-3 w-3" /> Área de Trabalho (módulos em destaque)
+                    </Label>
+                    <p className="text-[10px] text-muted-foreground mb-2">
+                      Marque os módulos mais usados nesta função. Aparecerão em destaque no Dashboard quando este MT estiver ativo.
+                    </p>
+                    <div className="grid grid-cols-2 gap-1 max-h-56 overflow-y-auto pr-1">
+                      {Object.entries(MODULE_CATALOG).map(([key, info]) => {
+                        const checked = editing.priority_modules?.includes(key);
+                        return (
+                          <label key={key} className="flex items-center gap-1.5 text-xs px-2 py-1 rounded hover:bg-accent cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={!!checked}
+                              onChange={e => {
+                                const cur = editing.priority_modules || [];
+                                const next = e.target.checked
+                                  ? [...cur, key]
+                                  : cur.filter(k => k !== key);
+                                setEditing({ ...editing, priority_modules: next });
+                              }}
+                            />
+                            <span className="truncate">{info.label}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   <div className="flex gap-4 pt-1">
                     <label className="flex items-center gap-2 text-xs">
                       <input type="checkbox" checked={editing.is_active} onChange={e => setEditing({ ...editing, is_active: e.target.checked })} />
@@ -344,6 +380,7 @@ export function MTManagerDialog({ open, onOpenChange, onChanged }: Props) {
                     </label>
                   </div>
                 </div>
+
 
                 {/* Blocks */}
                 <div className="space-y-3">

@@ -39,6 +39,7 @@ import { CampaignResults } from '@/components/dashboard/CampaignResults';
 import { CompanyStatus } from '@/components/dashboard/CompanyStatus';
 import { BottleneckCard } from '@/components/dashboard/BottleneckCard';
 import { NextActionsCard } from '@/components/dashboard/NextActionsCard';
+import { MTWorkspaceBar } from '@/components/routine/MTWorkspaceBar';
 
 
 interface DashboardData {
@@ -359,11 +360,14 @@ export default function Dashboard() {
           </Button>
         </div>
 
+        {/* Área de Trabalho do MT ativo — destaca módulos prioritários do papel do momento */}
+        <MTWorkspaceBar />
 
         {/* Situação da Empresa - status geral em tempo real */}
         <CompanyStatus />
         <BottleneckCard />
         <NextActionsCard />
+
 
         {/* Resumo do Dia - Sticky no topo */}
         <div className="sticky top-14 z-20 -mx-4 px-4 py-2 bg-background/95 backdrop-blur-sm">

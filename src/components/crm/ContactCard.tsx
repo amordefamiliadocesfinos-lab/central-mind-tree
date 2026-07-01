@@ -29,6 +29,8 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { cn } from '@/lib/utils';
+import { AddToRoutineDialog } from '@/components/routine/AddToRoutineDialog';
+import { CalendarPlus } from 'lucide-react';
 import {
   MoreVertical,
   Edit,
@@ -143,6 +145,7 @@ function ContactCardInner({
   nextTaskDate,
   convoSummary,
 }: ContactCardProps) {
+  const [routineOpen, setRoutineOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [showFollowUp, setShowFollowUp] = useState(false);
   const [followUpNote, setFollowUpNote] = useState('');
@@ -257,7 +260,9 @@ function ContactCardInner({
                 <DropdownMenuItem onClick={onCreateOrder} className="text-green-700 dark:text-green-500 font-medium"><ShoppingCart className="h-4 w-4 mr-2" /> Novo Pedido</DropdownMenuItem>
                 <DropdownMenuItem onClick={onViewHistory}><History className="h-4 w-4 mr-2" /> Histórico</DropdownMenuItem>
                 <DropdownMenuItem onClick={onViewActivities}><CalendarClock className="h-4 w-4 mr-2" /> Atividades</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setRoutineOpen(true)}><CalendarPlus className="h-4 w-4 mr-2" /> Adicionar à Rotina</DropdownMenuItem>
                 <DropdownMenuSeparator />
+
                 <DropdownMenuSub>
                   <DropdownMenuSubTrigger><Thermometer className="h-4 w-4 mr-2" /> Temperatura</DropdownMenuSubTrigger>
                   <DropdownMenuSubContent>
@@ -472,8 +477,17 @@ function ContactCardInner({
           </Collapsible>
         </div>
       </Card>
+      <AddToRoutineDialog
+        open={routineOpen}
+        onOpenChange={setRoutineOpen}
+        source={{ kind: 'crm/contact', id: contact.id, label: contact.name || undefined }}
+        defaultTitle={`Contatar ${contact.name || 'lead'}`}
+        defaultFocus="atendimento"
+        defaultDurationMin={20}
+      />
     </div>
   );
+
 }
 
 export const ContactCard = memo(ContactCardInner, (prev, next) => {
