@@ -81,6 +81,7 @@ export function FinancialEntriesList({
   const [paymentEntry, setPaymentEntry] = useState<FinancialEntry | undefined>();
   const [advancedPaymentEntries, setAdvancedPaymentEntries] = useState<FinancialEntry[]>([]);
   const [isPartialPayment, setIsPartialPayment] = useState(false);
+  const [routineEntry, setRoutineEntry] = useState<FinancialEntry | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(!isMobile);
   const [selectedAccount, setSelectedAccount] = useState<string>('all');
@@ -705,6 +706,10 @@ export function FinancialEntriesList({
                               <DropdownMenuItem onClick={() => handleEdit(entry)}>
                                 <Edit className="mr-2 h-4 w-4" />
                                 Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => setRoutineEntry(entry)}>
+                                <CalendarPlus className="mr-2 h-4 w-4" />
+                                Adicionar à Rotina
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => onDeleteEntry(entry.id)} className="text-red-500">
                                 <Trash2 className="mr-2 h-4 w-4" />
