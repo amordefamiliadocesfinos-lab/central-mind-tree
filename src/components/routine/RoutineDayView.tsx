@@ -276,6 +276,7 @@ export function RoutineDayView({
                   onPause={onPauseBlock ? () => onPauseBlock(block.id) : undefined}
                   onEdit={() => onEditBlock(block)}
                   onDelete={() => onDeleteBlock(block.id)}
+                  onReopen={onReopenBlock ? () => onReopenBlock(block.id) : undefined}
                 />
               ))}
             </div>
