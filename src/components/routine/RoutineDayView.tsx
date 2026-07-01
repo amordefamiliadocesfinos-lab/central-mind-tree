@@ -42,6 +42,7 @@ interface RoutineDayViewProps {
   onPauseBlock?: (id: string) => void;
   onEditBlock: (block: RoutineBlock) => void;
   onDeleteBlock: (id: string) => void;
+  onReopenBlock?: (id: string) => void;
   onReorderBlocks: (blocks: RoutineBlock[]) => void;
   onAddBlock: () => void;
   onQuickAdd: (duration: number) => void;
