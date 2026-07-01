@@ -1,0 +1,1 @@
+ALTER TABLE public.routine_mts ADD COLUMN IF NOT EXISTS priority_modules text[] NOT NULL DEFAULT '{}'::text[];
