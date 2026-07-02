@@ -138,7 +138,6 @@ export function DailyPerformance() {
         messagesSent: { ...prev.messagesSent, today: prev.messagesSent.today + 1 },
       }));
       if (contactId) contactedTodayRef.current.add(contactId);
-      window.setTimeout(() => { void load(); }, 700);
     };
 
     window.addEventListener('crm:whatsapp-sent', handleWhatsAppSent);
@@ -257,9 +256,9 @@ export function DailyPerformance() {
       const sumValue = (rows: any[] | null) =>
         (rows || []).reduce((acc, r) => acc + Number(r.total_value || 0), 0);
 
-      setData({
-        contactsServed: { today: contactsTodaySet.size, yesterday: contactsYSet.size },
-        messagesSent: { today: msgsT.count || 0, yesterday: msgsY.count || 0 },
+      setData(prev => ({
+        contactsServed: { today: Math.max(prev.contactsServed.today, contactsTodaySet.size), yesterday: contactsYSet.size },
+        messagesSent: { today: Math.max(prev.messagesSent.today, msgsT.count || 0), yesterday: msgsY.count || 0 },
         ordersCreated: { today: ordersT.count || 0, yesterday: ordersY.count || 0 },
         salesClosed: {
           today: salesT.data?.length || 0,
@@ -270,7 +269,7 @@ export function DailyPerformance() {
           yesterday: sumValue(salesY.data as any),
         },
         productionDone: { today: prodT.count || 0, yesterday: prodY.count || 0 },
-      });
+      }));
     } catch (err) {
       console.error('Erro ao carregar performance:', err);
     } finally {
