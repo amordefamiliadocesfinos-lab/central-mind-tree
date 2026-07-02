@@ -168,6 +168,9 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
       skipOpen: true,
     });
 
+    // Segunda sincronização depois do histórico existir no banco.
+    onFinished?.();
+
     advance();
     setBusy(false);
   };
