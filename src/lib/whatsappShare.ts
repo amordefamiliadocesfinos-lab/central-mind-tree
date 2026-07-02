@@ -1,14 +1,11 @@
 /**
  * Envio para WhatsApp com anexos.
  *
- * Estratégia (em ordem de preferência):
- * 1) navigator.share com arquivos (mobile / PWA): abre o seletor nativo e o
- *    usuário escolhe WhatsApp — a mídia vai como arquivo real, não link.
- * 2) Desktop com imagem única: copia a imagem para o clipboard e abre o
- *    WhatsApp Web com o texto pronto. O usuário cola com Ctrl+V e a imagem
- *    entra como mídia nativa (sem virar link).
- * 3) Fallback geral: baixa os anexos localmente e abre o WhatsApp com o
- *    texto. O usuário arrasta os arquivos baixados para dentro da conversa.
+ * Estratégia:
+ * 1) Sempre abre o WhatsApp/Web pelo mesmo caminho da mensagem de texto.
+ * 2) Com imagens: tenta copiar a primeira imagem para o clipboard para colar
+ *    no WhatsApp Web como mídia nativa.
+ * 3) Baixa os anexos localmente para o usuário arrastar/anexar manualmente.
  *
  * Nunca mais acrescentamos as URLs dos anexos ao texto — isso poluía a
  * mensagem com links de storage (ex.: xkskyu...supabase.co).
@@ -81,33 +78,9 @@ export interface ShareToWhatsAppOptions {
 }
 
 export async function shareToWhatsApp({ phone, message, attachments }: ShareToWhatsAppOptions): Promise<boolean> {
-  // Caminho 1: Web Share API com arquivos (mobile) — envia mídia de verdade.
-  if (attachments.length && typeof navigator !== 'undefined' && typeof navigator.canShare === 'function') {
-    const files = (await Promise.all(attachments.map(fetchAsFile))).filter((f): f is File => !!f);
-    if (files.length && navigator.canShare({ files })) {
-      try {
-        await navigator.share({ files, text: message });
-        return true;
-      } catch (err: any) {
-        if (err?.name === 'AbortError') return false; // usuário cancelou
-        // se falhar, cai para o próximo caminho
-      }
-    }
-  }
-
-  // Prepara arquivos localmente uma única vez para clipboard/download.
-  const files = attachments.length
-    ? (await Promise.all(attachments.map(fetchAsFile))).filter((f): f is File => !!f)
-    : [];
-
-  // Caminho 2: Desktop com pelo menos uma imagem — copia p/ clipboard.
-  const firstImage = files.find(f => f.type.startsWith('image/'));
-  let clipboardOk = false;
-  if (firstImage) {
-    clipboardOk = await copyImageToClipboard(firstImage);
-  }
-
-  // Abre o WhatsApp com o TEXTO PURO (nunca mais concatena URLs de storage).
+  // Abre o WhatsApp com o TEXTO PURO, exatamente como no envio sem anexos.
+  // Não usamos navigator.share porque no desktop ele abre o painel do sistema
+  // com vários apps, em vez de levar direto ao WhatsApp Web.
   const opened = openWhatsApp(phone, message);
   if (!opened) {
     toast.error('O navegador bloqueou o WhatsApp. Libere pop-ups para este site e tente novamente.');
@@ -116,7 +89,17 @@ export async function shareToWhatsApp({ phone, message, attachments }: ShareToWh
 
   if (!attachments.length) return true;
 
-  // Caminho 3: baixa os arquivos para o usuário arrastar/anexar manualmente.
+  // Prepara arquivos localmente uma única vez para clipboard/download.
+  const files = (await Promise.all(attachments.map(fetchAsFile))).filter((f): f is File => !!f);
+
+  // Caminho 2: Desktop com pelo menos uma imagem — copia p/ clipboard.
+  const firstImage = files.find(f => f.type.startsWith('image/'));
+  let clipboardOk = false;
+  if (firstImage) {
+    clipboardOk = await copyImageToClipboard(firstImage);
+  }
+
+  // Baixa os arquivos para o usuário arrastar/anexar manualmente.
   files.forEach((f, i) => {
     setTimeout(() => { void triggerDownloadFile(f); }, i * 200);
   });
