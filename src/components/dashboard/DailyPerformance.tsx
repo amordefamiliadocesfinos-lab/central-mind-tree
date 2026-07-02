@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import {
@@ -116,11 +116,33 @@ function MetricCard({
 }
 
 export function DailyPerformance() {
+  const contactedTodayRef = useRef<Set<string>>(new Set());
   const [data, setData] = useState<PerformanceData>(EMPTY);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     void load();
+  }, []);
+
+  useEffect(() => {
+    const handleWhatsAppSent = (event: Event) => {
+      const contactId = (event as CustomEvent<{ contactId?: string }>).detail?.contactId;
+      setData(prev => ({
+        ...prev,
+        contactsServed: {
+          ...prev.contactsServed,
+          today: contactId && contactedTodayRef.current.has(contactId)
+            ? prev.contactsServed.today
+            : prev.contactsServed.today + 1,
+        },
+        messagesSent: { ...prev.messagesSent, today: prev.messagesSent.today + 1 },
+      }));
+      if (contactId) contactedTodayRef.current.add(contactId);
+      window.setTimeout(() => { void load(); }, 700);
+    };
+
+    window.addEventListener('crm:whatsapp-sent', handleWhatsAppSent);
+    return () => window.removeEventListener('crm:whatsapp-sent', handleWhatsAppSent);
   }, []);
 
   async function load() {
@@ -230,6 +252,7 @@ export function DailyPerformance() {
         .lte('created_at', yEnd);
       ct?.forEach((r: any) => r.contact_id && contactsTodaySet.add(r.contact_id));
       cy?.forEach((r: any) => r.contact_id && contactsYSet.add(r.contact_id));
+      contactedTodayRef.current = contactsTodaySet;
 
       const sumValue = (rows: any[] | null) =>
         (rows || []).reduce((acc, r) => acc + Number(r.total_value || 0), 0);

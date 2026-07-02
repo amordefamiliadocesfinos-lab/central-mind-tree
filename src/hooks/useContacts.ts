@@ -292,6 +292,14 @@ export function useContacts() {
     }
   };
 
+  const markContactTouchedLocal = (id: string, date: string) => {
+    setContacts(prev => prev.map(c => (
+      c.id === id
+        ? { ...c, ultimo_contato: date, updated_at: new Date().toISOString() }
+        : c
+    )));
+  };
+
   const deleteContact = async (id: string) => {
     try {
       const { error } = await supabase
@@ -322,6 +330,7 @@ export function useContacts() {
     fetchContactFull,
     createContact,
     updateContact,
+    markContactTouchedLocal,
     deleteContact,
   };
 }

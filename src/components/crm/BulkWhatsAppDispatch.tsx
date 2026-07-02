@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { Contact } from '@/hooks/useContacts';
 import { openWhatsApp } from '@/lib/whatsapp';
+import { getTodayISO } from '@/lib/dateUtils';
 import {
   WHATSAPP_TEMPLATES,
   loadCustomTemplates,
@@ -24,7 +25,7 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   contacts: Contact[];
-  onFinished?: () => void;
+  onFinished?: (contact?: Contact) => void;
 }
 
 const DEFAULT_TEMPLATE =
@@ -148,10 +149,13 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
       return;
     }
 
-    // Atualização otimista
+    // Sai da lista e atualiza contadores imediatamente, sem esperar o banco.
+    setSentIds(prev => [...prev, current.id]);
+    onFinished?.(current);
+
     await supabase
       .from('contacts')
-      .update({ ultimo_contato: new Date().toISOString().split('T')[0] })
+      .update({ ultimo_contato: getTodayISO() })
       .eq('id', current.id);
 
     await logAndOpen({
@@ -164,9 +168,9 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
       skipOpen: true,
     });
 
-    setSentIds(prev => [...prev, current.id]);
-    // Refresh contadores/painéis imediatamente após cada envio
+    // Segunda sincronização depois do histórico existir no banco.
     onFinished?.();
+
     advance();
     setBusy(false);
   };
