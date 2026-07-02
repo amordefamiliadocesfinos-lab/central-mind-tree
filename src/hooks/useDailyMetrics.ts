@@ -51,12 +51,12 @@ export function useDailyMetrics() {
 
     contactedTodayRef.current = uniqueContacts;
 
-    setMetrics({
-      contactsAttended: uniqueContacts.size,
-      messagesSent: messages,
+    setMetrics(prev => ({
+      contactsAttended: Math.max(prev.contactsAttended, uniqueContacts.size),
+      messagesSent: Math.max(prev.messagesSent, messages),
       responsesReceived: responses,
       ordersGenerated: orders,
-    });
+    }));
   }, [todayStart]);
 
   useEffect(() => {
@@ -77,8 +77,6 @@ export function useDailyMetrics() {
           messagesSent: prev.messagesSent + 1,
         };
       });
-
-      window.setTimeout(() => { void fetchMetrics(); }, 700);
     };
 
     window.addEventListener('crm:whatsapp-sent', handleWhatsAppSent);

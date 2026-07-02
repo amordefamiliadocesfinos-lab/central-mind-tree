@@ -136,6 +136,7 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
   const handleSendNext = async () => {
     if (!current) return;
     setBusy(true);
+    const sentContact = current;
     const phone = current.whatsapp || current.mobile || current.phone!;
     const msg = renderMessage(template, current);
     const hasAttachments = attachments.length > 0;
@@ -150,29 +151,25 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
     }
 
     // Sai da lista e atualiza contadores imediatamente, sem esperar o banco.
-    setSentIds(prev => [...prev, current.id]);
-    onFinished?.(current);
+    setSentIds(prev => [...prev, sentContact.id]);
+    onFinished?.(sentContact);
+    advance();
+    setBusy(false);
 
-    await supabase
+    void supabase
       .from('contacts')
-      .update({ ultimo_contato: getTodayISO() })
-      .eq('id', current.id);
+      .update({ ultimo_contato: getTodayISO(), updated_at: new Date().toISOString() })
+      .eq('id', sentContact.id);
 
-    await logAndOpen({
-      contactId: current.id,
-      contactName: current.name,
+    void logAndOpen({
+      contactId: sentContact.id,
+      contactName: sentContact.name,
       phone,
       message: msg,
       templateLabel: hasAttachments ? `Disparo em fila · ${attachments.length} anexo(s)` : 'Disparo em fila',
       source: 'crm_card',
       skipOpen: true,
-    });
-
-    // Segunda sincronização depois do histórico existir no banco.
-    onFinished?.();
-
-    advance();
-    setBusy(false);
+    }).then(() => onFinished?.()).catch(() => onFinished?.());
   };
 
 

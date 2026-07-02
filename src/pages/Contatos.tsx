@@ -671,9 +671,7 @@ export default function Contatos() {
 
     // Atualização otimista: sai da lista e atualiza contadores imediatamente
     markContactedOptimistically(contact.id);
-    await updateContact(contact.id, { ultimo_contato: getTodayISO() });
-
-    await logAndOpen({
+    void logAndOpen({
       contactId: contact.id,
       contactName: contact.name,
       phone,
@@ -681,9 +679,8 @@ export default function Contatos() {
       templateLabel,
       source: 'crm_card',
       skipOpen: true,
-    });
+    }).finally(() => setTimeout(refreshContactSignals, 500));
 
-    setTimeout(refreshContactSignals, 500);
   };
 
   const handleTempChange = async (contact: Contact, newTemp: string) => {
@@ -805,19 +802,24 @@ export default function Contatos() {
 
     const { message, approach } = getSmartMessage(contact);
 
-    await logAndOpen({
+    const opened = openWhatsApp(phone, message);
+    if (!opened) {
+      toast.error('WhatsApp bloqueado pelo navegador. Libere pop-ups e tente novamente.');
+      return;
+    }
+
+    markContactedOptimistically(contact.id);
+
+    void logAndOpen({
       contactId: contact.id,
       contactName: contact.name,
       phone,
       message,
       approach,
       source: 'crm_smart_attend',
-    });
+      skipOpen: true,
+    }).finally(() => setTimeout(refreshContactSignals, 500));
 
-    markContactedOptimistically(contact.id);
-    await updateContact(contact.id, { ultimo_contato: getTodayISO() });
-
-    setTimeout(refreshContactSignals, 500);
     toast.success(`⚡ Atendimento inteligente: ${approach}`);
   }, [getSmartMessage, logAndOpen, markContactedOptimistically, updateContact, refreshContactSignals]);
 
@@ -869,16 +871,21 @@ export default function Contatos() {
         }}
         onSendSuggestion={async () => {
           if (!phone || !noResponseInfo) return;
-          await logAndOpen({
+          const opened = openWhatsApp(phone, noResponseInfo.suggestedMessage);
+          if (!opened) {
+            toast.error('WhatsApp bloqueado pelo navegador. Libere pop-ups e tente novamente.');
+            return;
+          }
+          markContactedOptimistically(contact.id);
+          void logAndOpen({
             contactId: contact.id,
             contactName: contact.name,
             phone,
             message: noResponseInfo.suggestedMessage,
             approach: noResponseInfo.suggestedLabel,
             source: 'crm_follow_up',
-          });
-          markContactedOptimistically(contact.id);
-          setTimeout(refreshContactSignals, 500);
+            skipOpen: true,
+          }).finally(() => setTimeout(refreshContactSignals, 500));
         }}
         onSmartAttend={async () => handleSmartAttend(contact)}
       />

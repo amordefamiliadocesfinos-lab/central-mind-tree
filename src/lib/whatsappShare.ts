@@ -89,32 +89,29 @@ export async function shareToWhatsApp({ phone, message, attachments }: ShareToWh
 
   if (!attachments.length) return true;
 
-  // Prepara arquivos localmente uma única vez para clipboard/download.
-  const files = (await Promise.all(attachments.map(fetchAsFile))).filter((f): f is File => !!f);
+  // Não segura a fila/contador esperando download/clipboard: registra e avança já.
+  void (async () => {
+    const files = (await Promise.all(attachments.map(fetchAsFile))).filter((f): f is File => !!f);
 
-  // Caminho 2: Desktop com pelo menos uma imagem — copia p/ clipboard.
-  const firstImage = files.find(f => f.type.startsWith('image/'));
-  let clipboardOk = false;
-  if (firstImage) {
-    clipboardOk = await copyImageToClipboard(firstImage);
-  }
+    const firstImage = files.find(f => f.type.startsWith('image/'));
+    const clipboardOk = firstImage ? await copyImageToClipboard(firstImage) : false;
 
-  // Baixa os arquivos para o usuário arrastar/anexar manualmente.
-  files.forEach((f, i) => {
-    setTimeout(() => { void triggerDownloadFile(f); }, i * 200);
-  });
+    files.forEach((f, i) => {
+      setTimeout(() => { void triggerDownloadFile(f); }, i * 200);
+    });
 
-  if (clipboardOk) {
-    toast.success(
-      'Imagem copiada! No WhatsApp, cole com Ctrl+V (ou ⌘+V) para enviar como foto.',
-      { duration: 8000 }
-    );
-  } else {
-    toast.info(
-      `${attachments.length} arquivo(s) baixados — arraste para dentro da conversa do WhatsApp (ou clique no clipe 📎).`,
-      { duration: 7000 }
-    );
-  }
+    if (clipboardOk) {
+      toast.success(
+        'Imagem copiada! No WhatsApp Web, cole com Ctrl+V (ou ⌘+V) para enviar como foto.',
+        { duration: 8000 }
+      );
+    } else {
+      toast.info(
+        `${attachments.length} arquivo(s) baixados — anexe no WhatsApp Web pelo clipe 📎 ou arraste para a conversa.`,
+        { duration: 7000 }
+      );
+    }
+  })();
 
   return true;
 }
