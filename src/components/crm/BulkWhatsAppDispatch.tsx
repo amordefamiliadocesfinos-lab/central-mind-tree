@@ -165,9 +165,12 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
     });
 
     setSentIds(prev => [...prev, current.id]);
+    // Refresh contadores/painéis imediatamente após cada envio
+    onFinished?.();
     advance();
     setBusy(false);
   };
+
 
   const handleSkip = () => {
     if (!current) return;
