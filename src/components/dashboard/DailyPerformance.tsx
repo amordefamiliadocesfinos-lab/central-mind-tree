@@ -123,6 +123,20 @@ export function DailyPerformance() {
     void load();
   }, []);
 
+  useEffect(() => {
+    const handleWhatsAppSent = () => {
+      setData(prev => ({
+        ...prev,
+        contactsServed: { ...prev.contactsServed, today: prev.contactsServed.today + 1 },
+        messagesSent: { ...prev.messagesSent, today: prev.messagesSent.today + 1 },
+      }));
+      window.setTimeout(() => { void load(); }, 700);
+    };
+
+    window.addEventListener('crm:whatsapp-sent', handleWhatsAppSent);
+    return () => window.removeEventListener('crm:whatsapp-sent', handleWhatsAppSent);
+  }, []);
+
   async function load() {
     setLoading(true);
     const now = new Date();

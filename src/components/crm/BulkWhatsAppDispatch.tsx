@@ -24,7 +24,7 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   contacts: Contact[];
-  onFinished?: () => void;
+  onFinished?: (contact?: Contact) => void;
 }
 
 const DEFAULT_TEMPLATE =
@@ -166,7 +166,7 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
 
     setSentIds(prev => [...prev, current.id]);
     // Refresh contadores/painéis imediatamente após cada envio
-    onFinished?.();
+    onFinished?.(current);
     advance();
     setBusy(false);
   };
