@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { openWhatsApp } from '@/lib/whatsapp';
+import { getTodayISO } from '@/lib/dateUtils';
 
 export interface WhatsAppLogOptions {
   contactId: string;
@@ -69,7 +70,7 @@ export function useWhatsAppWithLog() {
     // 2. Atualiza ultimo_contato no contato
     await supabase
       .from('contacts')
-      .update({ ultimo_contato: now.split('T')[0], updated_at: now })
+      .update({ ultimo_contato: getTodayISO(), updated_at: now })
       .eq('id', contactId);
 
     // 3. Garante conversa no Atendimento Digital (service_conversations)
