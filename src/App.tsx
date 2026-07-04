@@ -35,6 +35,7 @@ import Academia from "./pages/Academia";
 import Metas from "./pages/Metas";
 import Oportunidades from "./pages/Oportunidades";
 import Nucleo from "./pages/Nucleo";
+import { NucleoLauncherButton } from "@/components/NucleoLauncherButton";
 import NotFound from "./pages/NotFound";
 import { QuickConversationFAB } from "@/components/crm/QuickConversationFAB";
 import { RoutineAlertOverlay } from "@/components/routine/RoutineAlertOverlay";
@@ -119,6 +120,7 @@ function AppContent() {
     <BrowserRouter>
       {/* Floating dock above footer — avoids overlapping page header buttons */}
       <div className="fixed z-40 right-3 bottom-16 md:bottom-20 md:right-4 flex items-center gap-1 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 border border-border rounded-full shadow-md px-1.5 py-1">
+        <NucleoLauncherButton />
         <ActiveUserPicker />
         <RoutineAlertsToggleButton />
         <AssistantPanel />
