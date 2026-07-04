@@ -35,6 +35,7 @@ import Academia from "./pages/Academia";
 import Metas from "./pages/Metas";
 import Oportunidades from "./pages/Oportunidades";
 import Nucleo from "./pages/Nucleo";
+import { NucleoLauncherButton } from "@/components/NucleoLauncherButton";
 import NotFound from "./pages/NotFound";
 import { QuickConversationFAB } from "@/components/crm/QuickConversationFAB";
 import { RoutineAlertOverlay } from "@/components/routine/RoutineAlertOverlay";
