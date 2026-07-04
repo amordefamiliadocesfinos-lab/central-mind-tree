@@ -34,6 +34,7 @@ import Rotas from "./pages/Rotas";
 import Academia from "./pages/Academia";
 import Metas from "./pages/Metas";
 import Oportunidades from "./pages/Oportunidades";
+import Nucleo from "./pages/Nucleo";
 import NotFound from "./pages/NotFound";
 import { QuickConversationFAB } from "@/components/crm/QuickConversationFAB";
 import { RoutineAlertOverlay } from "@/components/routine/RoutineAlertOverlay";
@@ -101,6 +102,7 @@ function AnimatedRoutes() {
           <Route path="/academia" element={<Academia />} />
           <Route path="/metas" element={<Metas />} />
           <Route path="/oportunidades" element={<Oportunidades />} />
+          <Route path="/nucleo" element={<Nucleo />} />
           <Route path="/task/:id" element={<TaskEdit />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
