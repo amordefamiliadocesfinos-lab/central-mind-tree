@@ -377,6 +377,27 @@ function loadPages(): DocPage[] {
       pages = [...seeded, ...pages];
       localStorage.setItem(ARQUITETURA_SEED_FLAG_KEY, "1");
     }
+    // Seed evolução once
+    if (!localStorage.getItem(EVOLUCAO_SEED_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "evolucao").map((p) => p.title)
+      );
+      const now = new Date().toISOString();
+      const seeded = EVOLUCAO_SEED.filter(
+        (s) => !existingTitles.has(s.title)
+      ).map<DocPage>((s) => ({
+        id: uid(),
+        areaId: "evolucao",
+        title: s.title,
+        content: s.content,
+        tags: s.tags,
+        createdAt: now,
+        updatedAt: now,
+        versions: [],
+      }));
+      pages = [...seeded, ...pages];
+      localStorage.setItem(EVOLUCAO_SEED_FLAG_KEY, "1");
+    }
     return pages;
   } catch {
     return [];
