@@ -431,6 +431,163 @@ const MAPA_GERAL_CONTENT =
 
 const MAPA_GERAL_FILL_FLAG = "nucleo_estado_atual_mapa_geral_fill_v1";
 
+const ARQUITETURA_ATUAL_CONTENT =
+  "Arquitetura Atual — Painel Central\n" +
+  "Snapshot descritivo de como o sistema está organizado hoje. Nenhum código foi alterado.\n\n" +
+  "==============================================\n" +
+  "1. STACK E ORGANIZAÇÃO GERAL\n" +
+  "==============================================\n" +
+  "• Frontend: React 18 + Vite 5 + TypeScript 5 + Tailwind CSS v3 + shadcn/ui.\n" +
+  "• Estado global: Zustand (src/stores). Dados remotos: TanStack Query.\n" +
+  "• Roteamento: React Router (BrowserRouter) com transições via framer-motion (AnimatePresence).\n" +
+  "• Backend: Lovable Cloud (Supabase) — Postgres + Auth + Storage + Edge Functions (Deno).\n" +
+  "• Cliente Supabase: src/integrations/supabase/client.ts (auto-gerado, imutável).\n" +
+  "• Tipos gerados: src/integrations/supabase/types.ts (auto-gerado).\n" +
+  "• Design system: tokens semânticos em src/index.css + variantes shadcn em src/components/ui.\n" +
+  "• Timezone forçado America/Sao_Paulo, datas parseISO/date-fns ptBR, DD/MM/YYYY na UI.\n\n" +
+  "==============================================\n" +
+  "2. ESTRUTURA DE PASTAS (raiz)\n" +
+  "==============================================\n" +
+  ".env, .lovable/, README.md, components.json, eslint.config.js, index.html\n" +
+  "package.json, postcss.config.js, tailwind.config.ts, tsconfig*.json, vite.config.ts\n" +
+  "public/          → assets estáticos (placeholder.svg, robots.txt)\n" +
+  "supabase/        → config.toml + functions/ (edge functions)\n" +
+  "src/             → código da aplicação\n\n" +
+  "==============================================\n" +
+  "3. ESTRUTURA DE PASTAS (src/)\n" +
+  "==============================================\n" +
+  "src/\n" +
+  "├── App.tsx                → Providers globais + rotas + dock flutuante\n" +
+  "├── main.tsx               → Bootstrap React\n" +
+  "├── App.css / index.css    → Estilos globais e tokens de design\n" +
+  "├── vite-env.d.ts\n" +
+  "│\n" +
+  "├── pages/                 → Uma página por rota (Index, Dashboard, Foco, ...)\n" +
+  "├── components/            → Componentes de UI, organizados por domínio\n" +
+  "│   ├── ui/                → shadcn/ui base (button, dialog, popover, ...)\n" +
+  "│   ├── assistant/         → Assistente CEO (IA)\n" +
+  "│   ├── automation/        → Regras de automação\n" +
+  "│   ├── crm/               → CRM / contatos / WhatsApp\n" +
+  "│   ├── dashboard/         → Widgets do dashboard panorâmico\n" +
+  "│   ├── digital/           → Marketing digital / ideias / mídia\n" +
+  "│   ├── financial/         → Financeiro (contas, entradas, faturas, pricing)\n" +
+  "│   ├── foco/              → Fila de execução\n" +
+  "│   ├── lightbox/          → Visualização global de mídia\n" +
+  "│   ├── operations/        → Pedidos, produção, estoque, MRP\n" +
+  "│   ├── planejamento/      → Planejamento drag-and-drop\n" +
+  "│   ├── routes/            → Rotas de entrega\n" +
+  "│   ├── routine/           → Rotina, blocos, MTs, alertas\n" +
+  "│   ├── seasonal/          → Datas sazonais\n" +
+  "│   ├── stock-check/       → Verificação de estoque\n" +
+  "│   ├── time-reports/      → Relatórios de tempo\n" +
+  "│   └── (raiz)             → Componentes transversais: NodeTree, TaskBar, GlobalSearchBar, ...\n" +
+  "│\n" +
+  "├── hooks/                 → Hooks de dados e comportamento (useContacts, useOrders, ...)\n" +
+  "├── stores/                → Zustand: appStore, selectors, stockCheckStore\n" +
+  "├── contexts/              → UndoRedoContext, LinesModeContext\n" +
+  "├── lib/                   → Utilitários puros (dateUtils, decimal, formulaEngine, ...)\n" +
+  "└── integrations/supabase/ → client.ts + types.ts (auto-gerados)\n\n" +
+  "==============================================\n" +
+  "4. ORGANIZAÇÃO DOS MÓDULOS\n" +
+  "==============================================\n" +
+  "Cada módulo funcional segue o mesmo padrão em 3 camadas:\n\n" +
+  "  1) Página em src/pages/<Modulo>.tsx  → orquestra layout + estado local + rotas internas.\n" +
+  "  2) Componentes em src/components/<modulo>/  → UI específica (dialogs, cards, painéis, editors, spreadsheets).\n" +
+  "  3) Hooks em src/hooks/use<Modulo>*.ts  → acesso a dados (Supabase + React Query) e regras de negócio.\n\n" +
+  "Módulos mapeados hoje:\n" +
+  "• Núcleo               → pages/Nucleo.tsx (estrutura de conhecimento, sem pasta de componentes própria).\n" +
+  "• Organograma          → components/NodeTree, NodeBox, NodesSpreadsheetView, HorizontalOrgChart, MultiView.\n" +
+  "• Foco                 → pages/Foco.tsx + components/foco/ + hooks/useTimeTracking, useOnHold, useTaskMerge.\n" +
+  "• Planejamento         → pages/Planejamento.tsx + components/planejamento/.\n" +
+  "• Calendário           → pages/Calendario.tsx + hooks/useCalendarService, useSeasonalDays.\n" +
+  "• Rotina               → pages/Rotina.tsx + components/routine/ + hooks/useRoutine, useRoutineBlocks, useActiveMT.\n" +
+  "• Operações            → pages/Operacoes.tsx + components/operations/ + hooks/useOrders, useProductionOrders, useMRP, useMultiLocationInventory.\n" +
+  "• Digital              → pages/Digital.tsx + components/digital/ + hooks/useDigital*, useIdea*, usePlatform*, useMediaFolders.\n" +
+  "• Financeiro           → pages/Financeiro.tsx + components/financial/ + hooks/useFinancial, usePricing, usePricingV2.\n" +
+  "• CRM / Contatos       → pages/Contatos*.tsx, TarefasAgendadas.tsx + components/crm/ + hooks/useContact*, useLeadScore, useNoResponseDetection.\n" +
+  "• Reuniões             → pages/Reunioes.tsx, ReuniaoDetalhe.tsx + hooks/useMeetings.\n" +
+  "• Assistente (IA)      → pages/Assistente.tsx + components/assistant/ + hooks/useAICEO + edge function ai-ceo.\n" +
+  "• Planilhas            → pages/Planilhas.tsx + components/SpreadsheetEditor, SheetList, SheetTabsBar + hooks/useSpreadsheet + lib/formulaEngine.\n" +
+  "• Rotas de entrega     → pages/Rotas.tsx + components/routes/ + hooks/useDeliveryRoutes.\n" +
+  "• Minha Área           → pages/MinhaArea.tsx + hooks/useActiveUser.\n" +
+  "• Dashboard            → pages/Dashboard.tsx + components/dashboard/ + hooks/useDailyMetrics.\n" +
+  "• Metas / Oportunidades / Academia → páginas independentes complementares.\n\n" +
+  "==============================================\n" +
+  "5. CAMADA DE APRESENTAÇÃO (App.tsx)\n" +
+  "==============================================\n" +
+  "Cadeia de providers, de fora para dentro:\n" +
+  "  QueryClientProvider\n" +
+  "  └── TooltipProvider\n" +
+  "      └── UndoRedoProvider\n" +
+  "          └── LinesModeProvider\n" +
+  "              └── LightboxProvider\n" +
+  "                  ├── Toaster + Sonner (notificações globais)\n" +
+  "                  ├── AppContent\n" +
+  "                  │   ├── Dock flutuante (Núcleo, ActiveUser, Alertas, Assistente)\n" +
+  "                  │   ├── GlobalSearchBar (topo)\n" +
+  "                  │   ├── SwipeNavigationWrapper → AnimatedRoutes\n" +
+  "                  │   ├── GlobalFooterBar (rodapé com toolbar)\n" +
+  "                  │   ├── QuickConversationFAB (CRM)\n" +
+  "                  │   ├── StockCheckAlert + StockCheckWizard\n" +
+  "                  │   └── RoutineAlertOverlay\n" +
+  "                  └── LightboxRoot\n\n" +
+  "Hooks globais montados em AppContent: useScheduledTaskPromotion, useKeyboardAware.\n\n" +
+  "==============================================\n" +
+  "6. COMPONENTES PRINCIPAIS (transversais)\n" +
+  "==============================================\n" +
+  "• Navegação: GlobalSearchBar, GlobalFooterBar, NavLink, SwipeNavigationWrapper, ActiveUserPicker, NucleoLauncherButton.\n" +
+  "• Organograma: NodeTree, NodeBox, NodeEditDialog, MoveNodeDialog, NodeConnectionsOverlay, HorizontalOrgChart, MultiView, CEOLegend, NodesSpreadsheetView.\n" +
+  "• Tarefas: TaskBar, TasksDialog, TaskMergeDialog, DayTasksModal, DueDateBanner, DueDatePill, OnHoldBadge, OnHoldDialog.\n" +
+  "• Replanejamento: PlanningConfirmationDialog, ReplanningBanner, ReplanningModal, ReplanningWizard.\n" +
+  "• Mídia global: LightboxProvider, LightboxRoot, LightboxImage, LightboxVideo, MediaUploader, ProductGallery.\n" +
+  "• Assistente IA: AssistantPanel, CEOChat.\n" +
+  "• Estoque/Produção: BOMEditor, MRPPanel, InventoryMovementDialog, ProductMovementHistory.\n" +
+  "• CRM: FunnelView, KommoFunnelView, LeadDetailDrawer, ContactCard, ContactTimeline, QuickConversationFAB, BulkWhatsAppDispatch.\n" +
+  "• Financeiro: FinancialDashboard, FinancialEntriesList, FinancialEntryForm, PricingManagerV2, InvoicesManager.\n" +
+  "• Rotina: RoutineAlertOverlay, MTWorkspaceBar, RoutineDay/Week/MonthView, CustomAlarmsPanel.\n" +
+  "• Verificação de estoque: StockCheckAlert, StockCheckWizard.\n" +
+  "• UI base: src/components/ui — todos os primitivos shadcn.\n\n" +
+  "==============================================\n" +
+  "7. CAMADA DE DADOS\n" +
+  "==============================================\n" +
+  "• Todo acesso ao backend passa por hooks em src/hooks/, que usam o cliente Supabase importado de @/integrations/supabase/client.\n" +
+  "• React Query gerencia cache, invalidação e sincronização otimista.\n" +
+  "• RLS (Row Level Security) obrigatório em todas as tabelas públicas + GRANTs explícitos.\n" +
+  "• Roles armazenados em tabela separada (user_roles) com função SECURITY DEFINER has_role.\n" +
+  "• Precisão decimal: numeric(20,10) para custos, preços e quantidades — nunca arredondar antes de exibir.\n" +
+  "• Datas: armazenadas YYYY-MM-DD, sempre lidas com parseISO (nunca new Date()).\n\n" +
+  "==============================================\n" +
+  "8. EDGE FUNCTIONS (supabase/functions)\n" +
+  "==============================================\n" +
+  "• ai-ceo                 → Assistente CEO com contexto amplo.\n" +
+  "• contact-from-media     → Extração de contato a partir de mídia.\n" +
+  "• contact-summary        → Resumo de contato via IA.\n" +
+  "• digital-content-ai     → Geração de conteúdo digital.\n" +
+  "• digital-trends         → Análise de tendências.\n" +
+  "• enhance-image          → Melhoria de imagem.\n" +
+  "• media-enhance          → Melhoria genérica de mídia.\n" +
+  "• smart-whatsapp-message → Sugestão inteligente de mensagens WhatsApp.\n\n" +
+  "==============================================\n" +
+  "9. PADRÕES ARQUITETURAIS EM VIGOR\n" +
+  "==============================================\n" +
+  "• Mobile-first: sticky headers com safe-area, bottom nav, ResponsiveDialog fullscreen no mobile, framer-motion para transições.\n" +
+  "• Lazy-loading e divisão de componentes para módulos pesados (ver memory: module-lazy-loading-architecture).\n" +
+  "• Spreadsheet implementado com HTML/Tailwind custom (react-data-grid é proibido).\n" +
+  "• LightboxProvider único no App root (nunca local) para evitar conflitos de contexto.\n" +
+  "• Download de mídia via fetch-to-blob; substituição atualiza registro existente (preserva links).\n" +
+  "• Nós do organograma sempre conectados ao root 'Deividi' (ID d7c76db8-b7e0-4ce1-87ca-21275c346326); evitar ciclos em parent_id.\n" +
+  "• Autonomia do usuário: campos, categorias, canais e plataformas são dinâmicos — nada hardcoded rígido.\n" +
+  "• Segurança: nunca guardar roles no profile; nunca validar admin via localStorage/hardcoded.\n\n" +
+  "==============================================\n" +
+  "10. FLUXO DE UMA REQUISIÇÃO TÍPICA\n" +
+  "==============================================\n" +
+  "Usuário → Página (src/pages) → Componentes (src/components/<modulo>) → Hook (src/hooks/use*) →\n" +
+  "Cliente Supabase (@/integrations/supabase/client) → Postgres/Edge Function → resposta cacheada por React Query →\n" +
+  "UI re-renderiza com transições framer-motion.\n\n" +
+  "Documento vivo — atualize conforme a arquitetura evoluir.";
+
+const ARQUITETURA_ATUAL_FILL_FLAG = "nucleo_estado_atual_arquitetura_atual_fill_v1";
+
 
 const BIBLIOTECA_SEED: Array<{ title: string; content: string; tags: string[] }> = [
   {
@@ -659,6 +816,38 @@ function loadPages(): DocPage[] {
       }
       localStorage.setItem(MAPA_GERAL_FILL_FLAG, "1");
     }
+    // Fill "Arquitetura Atual" content once (safe: only if page is empty)
+    if (!localStorage.getItem(ARQUITETURA_ATUAL_FILL_FLAG)) {
+      const now = new Date().toISOString();
+      let exists = false;
+      pages = pages.map((p) => {
+        if (p.areaId === "estado-atual" && p.title === "Arquitetura Atual") {
+          exists = true;
+          if (!p.content || p.content.trim() === "") {
+            return { ...p, content: ARQUITETURA_ATUAL_CONTENT, updatedAt: now };
+          }
+        }
+        return p;
+      });
+      if (!exists) {
+        pages = [
+          ...pages,
+          {
+            id: uid(),
+            areaId: "estado-atual",
+            title: "Arquitetura Atual",
+            content: ARQUITETURA_ATUAL_CONTENT,
+            tags: ["arquitetura", "atual"],
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+        ];
+      }
+      localStorage.setItem(ARQUITETURA_ATUAL_FILL_FLAG, "1");
+    }
+
+
 
 
 
