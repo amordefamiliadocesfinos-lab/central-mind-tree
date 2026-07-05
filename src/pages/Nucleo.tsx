@@ -250,6 +250,23 @@ const EVOLUCAO_SEED: Array<{ title: string; content: string; tags: string[] }> =
   },
 ];
 
+const ESTADO_ATUAL_SEED_FLAG_KEY = "nucleo_estado_atual_seed_v1";
+
+const ESTADO_ATUAL_TITLES: Array<{ title: string; tags: string[] }> = [
+  { title: "Mapa Geral do Sistema", tags: ["mapa", "visão-geral"] },
+  { title: "Arquitetura Atual", tags: ["arquitetura", "atual"] },
+  { title: "Banco de Dados", tags: ["banco-de-dados"] },
+  { title: "Integrações", tags: ["integrações"] },
+  { title: "Agentes de IA", tags: ["ia", "agentes"] },
+  { title: "Fluxos do Sistema", tags: ["fluxos"] },
+  { title: "Funcionalidades Implementadas", tags: ["funcionalidades", "implementadas"] },
+  { title: "Funcionalidades Incompletas", tags: ["funcionalidades", "incompletas"] },
+  { title: "Pontos Fortes", tags: ["pontos-fortes"] },
+  { title: "Pontos de Melhoria", tags: ["melhorias"] },
+  { title: "Dívida Técnica", tags: ["dívida-técnica"] },
+  { title: "Resumo Executivo", tags: ["resumo", "executivo"] },
+];
+
 
 const BIBLIOTECA_SEED: Array<{ title: string; content: string; tags: string[] }> = [
   {
