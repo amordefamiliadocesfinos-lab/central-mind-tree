@@ -1108,6 +1108,36 @@ function loadPages(): DocPage[] {
       }
       localStorage.setItem(BANCO_DE_DADOS_FILL_FLAG, "1");
     }
+    // Fill "Integrações" content once (safe: only if page is empty)
+    if (!localStorage.getItem(INTEGRACOES_FILL_FLAG)) {
+      const now = new Date().toISOString();
+      let exists = false;
+      pages = pages.map((p) => {
+        if (p.areaId === "estado-atual" && p.title === "Integrações") {
+          exists = true;
+          if (!p.content || p.content.trim() === "") {
+            return { ...p, content: INTEGRACOES_CONTENT, updatedAt: now };
+          }
+        }
+        return p;
+      });
+      if (!exists) {
+        pages = [
+          ...pages,
+          {
+            id: uid(),
+            areaId: "estado-atual",
+            title: "Integrações",
+            content: INTEGRACOES_CONTENT,
+            tags: ["integrações", "apis", "serviços"],
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+        ];
+      }
+      localStorage.setItem(INTEGRACOES_FILL_FLAG, "1");
+    }
 
 
 
