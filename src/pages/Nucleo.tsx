@@ -239,10 +239,6 @@ function loadPages(): DocPage[] {
     return [];
   }
 }
-  } catch {
-    return [];
-  }
-}
 
 function savePages(pages: DocPage[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(pages));
