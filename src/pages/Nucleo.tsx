@@ -588,6 +588,86 @@ const ARQUITETURA_ATUAL_CONTENT =
 
 const ARQUITETURA_ATUAL_FILL_FLAG = "nucleo_estado_atual_arquitetura_atual_fill_v1";
 
+const AGENTES_IA_CONTENT =
+  "Agentes de IA — Estado Atual\n" +
+  "=========================================\n\n" +
+  "Inventário dos agentes de IA operando hoje no Painel Central. Todos rodam em Edge Functions Deno (supabase/functions/*), consomem o Lovable AI Gateway (https://ai.gateway.lovable.dev/v1/chat/completions) e usam o modelo padrão google/gemini-2.5-flash (variações indicadas). Documento descritivo — não altera comportamento.\n\n" +
+  "1. CEO IA (ai-ceo)\n" +
+  "-----------------------------------------\n" +
+  "• Responsabilidade: assistente executivo com autonomia operacional. Analisa contexto global do painel, gera decisões/insights e executa CRUD em múltiplas entidades sob governança (ai_policies).\n" +
+  "• Fluxo: recebe request do frontend (chat ou geração de insights) → carrega contexto amplo via SUPABASE_SERVICE_ROLE_KEY (tarefas, contatos, financeiro, produção, digital) → monta systemPrompt executivo → chama Gemini 2.5 Flash → parseia decisões/ações e executa CRUD → registra em ai_chat_messages, ai_insights, ai_insight_messages e ai_actions.\n" +
+  "• Ferramentas/Ações suportadas: task_create/update/delete, node_create/update/delete, order_*, financial_create/update/delete/pay, contact_*, product_*, routine_*, post_*, notification.\n" +
+  "• Governança: políticas em ai_policies (max_risk, escopos) — respeita autopilot definido pelo usuário.\n" +
+  "• Modelo: google/gemini-2.5-flash.\n" +
+  "• Limitações atuais: não faz streaming (resposta unitária); autonomia depende de max_risk configurado; não valida efeitos colaterais de negócio (ex.: impacto financeiro real de uma exclusão); histórico armazenado sem sumarização automática — contexto pode ficar caro em conversas longas.\n\n" +
+  "2. Extrator de Contatos por Mídia (contact-from-media)\n" +
+  "-----------------------------------------\n" +
+  "• Responsabilidade: extrair dados de contato (CRM) a partir de imagem/vídeo — cartão de visita, print de WhatsApp, perfil social, identidade, etc.\n" +
+  "• Fluxo: recebe { mediaUrl, mimeType } → monta prompt multimodal (image_url ou video_url) → chama Gemini 2.5 Flash com tool calling estruturado → retorna JSON com campos identificados (nome, telefone, whatsapp, email, empresa, person_type, notes).\n" +
+  "• Ferramentas: tool call schema para normalizar saída (telefones BR só dígitos, WhatsApp com DDI 55, pessoa física vs jurídica).\n" +
+  "• Modelo: google/gemini-2.5-flash (multimodal).\n" +
+  "• Limitações atuais: qualidade da extração depende da nitidez/idioma da mídia; não valida existência prévia do contato (deduplicação fica no frontend); vídeos longos podem exceder janela de contexto; não persiste o contato — apenas devolve o payload.\n\n" +
+  "3. Resumo/Briefing de Contato (contact-summary)\n" +
+  "-----------------------------------------\n" +
+  "• Responsabilidade: gerar briefing consolidado de um contato para uso comercial/atendimento.\n" +
+  "• Fluxo: recebe { contact_id } → busca contato, histórico (contact_history), pedidos e conversas via service role → monta systemPrompt de analista comercial → chama Gemini 2.5 Flash → devolve resumo em texto/markdown.\n" +
+  "• Ferramentas: apenas leitura direta no banco (sem tool calling).\n" +
+  "• Modelo: google/gemini-2.5-flash.\n" +
+  "• Limitações atuais: verify_jwt = false (chamada pública, controle apenas por RLS de leitura da service role); resumo não é armazenado — reprocessado a cada chamada; não cita fontes/eventos específicos com IDs.\n\n" +
+  "4. IA de Mensagens WhatsApp (smart-whatsapp-message)\n" +
+  "-----------------------------------------\n" +
+  "• Responsabilidade: gerar mensagem personalizada de WhatsApp com tom humanizado brasileiro, adaptada ao estágio do funil e histórico do cliente.\n" +
+  "• Fluxo: recebe contexto do contato (funnel_status, LTV, último contato, produtos, motivo do envio) → monta systemPrompt de especialista em vendas por WhatsApp → chama Gemini 2.5 Flash → retorna texto pronto para revisão antes do envio.\n" +
+  "• Ferramentas: nenhuma — geração pura de texto (envio é via deep link wa.me / api.whatsapp.com no frontend).\n" +
+  "• Modelo: google/gemini-2.5-flash.\n" +
+  "• Limitações atuais: não envia — apenas sugere; sem A/B testing embutido; não conhece o histórico literal de mensagens já trocadas na conversa (apenas metadados do CRM).\n\n" +
+  "5. Especialista em Conteúdo Digital (digital-content-ai)\n" +
+  "-----------------------------------------\n" +
+  "• Responsabilidade: equipe de especialistas de marketing digital — gera objetivos, público-alvo, mensagens-chave, KPIs, descrições, captions, CTAs, hashtags, checklists, estruturas de plataforma e adaptação de variações por canal (Instagram, TikTok, Shopee, Mercado Livre, etc.).\n" +
+  "• Fluxo: recebe { field, platform, ideaContext, variations, mediaUrls } → seleciona prompt correspondente (buildSingleFieldPrompt, buildVariationsPrompt ou engenharia reversa de UI via prints) → chama Gemini 2.5 Flash (texto ou multimodal) → devolve conteúdo pronto para preencher digital_ideas / digital_variations.\n" +
+  "• Ferramentas: prompts especializados por tipo de campo + análise multimodal de screenshots para reconstruir estruturas de plataforma.\n" +
+  "• Modelo: google/gemini-2.5-flash.\n" +
+  "• Limitações atuais: qualidade cai em nichos muito específicos sem contexto de marca; não valida políticas específicas de cada plataforma (limites de caracteres, termos proibidos); reconstrução de UI via prints depende da qualidade das imagens.\n\n" +
+  "6. Radar de Tendências Digitais (digital-trends)\n" +
+  "-----------------------------------------\n" +
+  "• Responsabilidade: identificar tendências de marketing digital por nicho e sugerir ganchos criativos, além de gerar respostas de atendimento e sugestões de FAQ.\n" +
+  "• Fluxo: recebe { query, niche, type } → escolhe prompt (trends | reply | faq) → chama Gemini 2.5 Flash pedindo saída JSON estruturada (trends[], reply, faq[]) → retorna ao frontend.\n" +
+  "• Ferramentas: prompt-engineering para saída JSON (sem tool calling formal).\n" +
+  "• Modelo: google/gemini-2.5-flash.\n" +
+  "• Limitações atuais: sem acesso a fontes externas em tempo real (dados baseados no conhecimento do modelo, que tem cutoff); JSON pode falhar em prompts complexos — parsing precisa ser defensivo.\n\n" +
+  "7. Enhancer de Foto de Perfil (enhance-image)\n" +
+  "-----------------------------------------\n" +
+  "• Responsabilidade: melhorar nitidez/resolução de fotos de perfil preservando 100% da identidade (mesmo rosto, expressão, roupa, fundo).\n" +
+  "• Fluxo: recebe { imageUrl } → prompt fixo instruindo preservação de identidade → chama modelo de geração/edição de imagem via Gateway → retorna imagem melhorada.\n" +
+  "• Ferramentas: geração de imagem (modality image).\n" +
+  "• Modelo: modelo de imagem do Gateway (fallback interno via callModel).\n" +
+  "• Limitações atuais: risco de leve deriva da identidade em rostos difíceis; sem controle explícito de resolução final; não faz upscale ilimitado.\n\n" +
+  "8. Enhancer de Mídia Digital (media-enhance)\n" +
+  "-----------------------------------------\n" +
+  "• Responsabilidade: reprocessar mídias do módulo Digital (fotos de produto, capas, imagens de post) para uso publicitário/comercial.\n" +
+  "• Fluxo: recebe imagem + instrução → chama google/gemini-2.5-flash-image → devolve nova mídia.\n" +
+  "• Ferramentas: geração/edição de imagem multimodal.\n" +
+  "• Modelo: google/gemini-2.5-flash-image.\n" +
+  "• Limitações atuais: pode alterar detalhes visuais do produto se a instrução não for específica; não versiona automaticamente a mídia original (a substituição/preservação é regra do frontend — memória media-download-and-replace-pattern).\n\n" +
+  "9. Padrões e Restrições Globais dos Agentes\n" +
+  "-----------------------------------------\n" +
+  "• Todas as chamadas passam obrigatoriamente pelo Lovable AI Gateway com header Authorization: Bearer ${LOVABLE_API_KEY} — chave nunca exposta ao browser.\n" +
+  "• Nenhuma função exige segredo de provider externo além de LOVABLE_API_KEY + chaves Supabase padrão.\n" +
+  "• Erros 429 (rate limit) e 402 (créditos esgotados) devem ser tratados no frontend com mensagem clara ao usuário.\n" +
+  "• Nenhum agente ainda usa streaming (todas as respostas são unitárias/JSON).\n" +
+  "• Persistência de histórico/insights fica em ai_chat_messages, ai_insights, ai_insight_messages, ai_actions, ai_policies e service_ai_logs — memória chat-history-persistence-v21.\n" +
+  "• Governança: antes de novo agente ou nova capacidade, consultar o Princípio Mestre do Núcleo e ai_policies para checar alinhamento estratégico e limites de risco.\n\n" +
+  "10. Limitações Gerais Conhecidas\n" +
+  "-----------------------------------------\n" +
+  "• Sem streaming de tokens — respostas curtas parecem instantâneas, longas parecem travar.\n" +
+  "• Sem observabilidade centralizada de custo por agente (só métricas do Gateway).\n" +
+  "• Sem testes automatizados de regressão dos prompts.\n" +
+  "• Sem cache semântico — perguntas repetidas geram novas chamadas pagas.\n" +
+  "• Contexto de conversas longas cresce linearmente (não há sumarização automática).\n\n" +
+  "Documento vivo — atualize sempre que um agente for adicionado, aposentado ou tiver responsabilidades/modelo alterados.";
+
+const AGENTES_IA_FILL_FLAG = "nucleo_estado_atual_agentes_ia_fill_v1";
+
 const INTEGRACOES_CONTENT =
   "Integrações — Estado Atual\n" +
   "=========================================\n\n" +
