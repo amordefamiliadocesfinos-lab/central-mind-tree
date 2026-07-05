@@ -419,6 +419,34 @@ function loadPages(): DocPage[] {
       pages = [...seeded, ...pages];
       localStorage.setItem(EVOLUCAO_SEED_FLAG_KEY, "1");
     }
+    // Seed Princípio Mestre once (independent flag so existing installs also receive it)
+    const PRINCIPIO_FLAG = "nucleo_principio_mestre_seed_v1";
+    if (!localStorage.getItem(PRINCIPIO_FLAG)) {
+      const title = "Princípio Mestre do Painel Central";
+      const already = pages.some(
+        (p) => p.areaId === "biblioteca" && p.title === title
+      );
+      if (!already) {
+        const seedDef = BIBLIOTECA_SEED.find((s) => s.title === title);
+        if (seedDef) {
+          const now = new Date().toISOString();
+          pages = [
+            {
+              id: uid(),
+              areaId: "biblioteca",
+              title: seedDef.title,
+              content: seedDef.content,
+              tags: seedDef.tags,
+              createdAt: now,
+              updatedAt: now,
+              versions: [],
+            },
+            ...pages,
+          ];
+        }
+      }
+      localStorage.setItem(PRINCIPIO_FLAG, "1");
+    }
     return pages;
   } catch {
     return [];
