@@ -91,6 +91,13 @@ const AREAS: AreaMeta[] = [
     icon: TrendingUp,
     color: "#10B981",
   },
+  {
+    id: "estado-atual",
+    title: "Estado Atual do Sistema",
+    description: "Documentação da arquitetura existente do Painel Central.",
+    icon: Activity,
+    color: "#EF4444",
+  },
 ];
 
 const STORAGE_KEY = "nucleo_painel_central_pages_v3";
