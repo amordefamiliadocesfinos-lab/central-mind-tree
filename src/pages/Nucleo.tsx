@@ -121,6 +121,76 @@ const CONSCIENCIA_SEED: Array<{ title: string; content: string; tags: string[] }
   },
 ];
 
+const ARQUITETURA_SEED_FLAG_KEY = "nucleo_arquitetura_seed_v1";
+
+const ARQUITETURA_SEED: Array<{ title: string; content: string; tags: string[] }> = [
+  {
+    title: "Visão Geral da Arquitetura",
+    tags: ["arquitetura", "visão-geral", "plataforma"],
+    content:
+      "Visão Geral da Arquitetura\n\n" +
+      "Documento-mãe da área de Arquitetura. Descreve, em alto nível, como o Painel Central está estruturado e como suas camadas se conectam.\n\n" +
+      "— Escreva aqui a visão geral da plataforma.",
+  },
+  {
+    title: "Arquitetura dos Módulos",
+    tags: ["módulos", "estrutura"],
+    content:
+      "Arquitetura dos Módulos\n\n" +
+      "Como cada módulo do Painel Central (CRM, Financeiro, Operações, Digital, Rotina, etc.) é organizado, suas responsabilidades e limites.\n\n" +
+      "— Documente aqui a arquitetura de cada módulo.",
+  },
+  {
+    title: "Arquitetura dos Agentes de IA",
+    tags: ["ia", "agentes"],
+    content:
+      "Arquitetura dos Agentes de IA\n\n" +
+      "Estrutura dos agentes de IA: papéis, contexto, ferramentas, memória, políticas de decisão e integração com a Consciência.\n\n" +
+      "— Documente aqui cada agente e sua arquitetura.",
+  },
+  {
+    title: "Banco de Dados",
+    tags: ["banco-de-dados", "schema"],
+    content:
+      "Banco de Dados\n\n" +
+      "Modelagem, tabelas, relacionamentos, políticas de acesso (RLS) e convenções do banco de dados.\n\n" +
+      "— Documente aqui o schema e as regras de dados.",
+  },
+  {
+    title: "Fluxos",
+    tags: ["fluxos", "processos"],
+    content:
+      "Fluxos\n\n" +
+      "Fluxos de dados, de usuário e de automações que atravessam o sistema (ex.: lead → venda → produção → entrega).\n\n" +
+      "— Documente aqui cada fluxo relevante.",
+  },
+  {
+    title: "APIs",
+    tags: ["api", "endpoints"],
+    content:
+      "APIs\n\n" +
+      "Endpoints internos e externos, contratos, autenticação, versionamento e exemplos de uso.\n\n" +
+      "— Documente aqui as APIs expostas e consumidas.",
+  },
+  {
+    title: "Integrações",
+    tags: ["integrações", "terceiros"],
+    content:
+      "Integrações\n\n" +
+      "Integrações com serviços externos (WhatsApp, provedores de IA, pagamentos, e-mail, etc.): configuração, limites e falhas conhecidas.\n\n" +
+      "— Documente aqui cada integração ativa.",
+  },
+  {
+    title: "Estrutura Geral da Plataforma",
+    tags: ["plataforma", "infraestrutura"],
+    content:
+      "Estrutura Geral da Plataforma\n\n" +
+      "Camadas de frontend, backend, banco, storage, edge functions, autenticação e deploy. Como tudo se encaixa.\n\n" +
+      "— Documente aqui a estrutura geral.",
+  },
+];
+
+
 const BIBLIOTECA_SEED: Array<{ title: string; content: string; tags: string[] }> = [
   {
     title: "Carta Zero — A Teoria do Painel Central",
@@ -233,6 +303,27 @@ function loadPages(): DocPage[] {
       }));
       pages = [...seeded, ...pages];
       localStorage.setItem(CONSCIENCIA_SEED_FLAG_KEY, "1");
+    }
+    // Seed arquitetura once
+    if (!localStorage.getItem(ARQUITETURA_SEED_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "arquitetura").map((p) => p.title)
+      );
+      const now = new Date().toISOString();
+      const seeded = ARQUITETURA_SEED.filter(
+        (s) => !existingTitles.has(s.title)
+      ).map<DocPage>((s) => ({
+        id: uid(),
+        areaId: "arquitetura",
+        title: s.title,
+        content: s.content,
+        tags: s.tags,
+        createdAt: now,
+        updatedAt: now,
+        versions: [],
+      }));
+      pages = [...seeded, ...pages];
+      localStorage.setItem(ARQUITETURA_SEED_FLAG_KEY, "1");
     }
     return pages;
   } catch {
