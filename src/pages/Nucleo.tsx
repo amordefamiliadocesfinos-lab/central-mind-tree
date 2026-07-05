@@ -588,6 +588,143 @@ const ARQUITETURA_ATUAL_CONTENT =
 
 const ARQUITETURA_ATUAL_FILL_FLAG = "nucleo_estado_atual_arquitetura_atual_fill_v1";
 
+const BANCO_DE_DADOS_CONTENT =
+  "Banco de Dados — Estado Atual\n" +
+  "=========================================\n\n" +
+  "Documento descritivo do banco de dados do Painel Central. Não altera schema, não executa migrações — apenas registra a estrutura existente para consulta.\n\n" +
+  "1. Visão Geral\n" +
+  "-----------------------------------------\n" +
+  "• Motor: PostgreSQL gerenciado via Lovable Cloud (Supabase).\n" +
+  "• Acesso do frontend: PostgREST (Data API) + Realtime, através de @/integrations/supabase/client.\n" +
+  "• Segurança: RLS habilitado em todas as tabelas do schema public; políticas por tabela; funções SECURITY DEFINER para regras específicas.\n" +
+  "• Armazenamento de arquivos: Supabase Storage — buckets 'media', 'contact-avatars' e 'delivery-proof' (públicos).\n" +
+  "• Padrões globais: timestamps com timezone (America/Sao_Paulo na apresentação), IDs uuid (gen_random_uuid), colunas created_at/updated_at, precisão numeric(20,10) para valores monetários e quantidades.\n\n" +
+  "2. Entidades Principais (agrupadas por domínio)\n" +
+  "-----------------------------------------\n\n" +
+  "A) Organograma / Núcleo Operacional\n" +
+  "• nodes — Árvore hierárquica de nós do painel (raiz obrigatória 'Deividi' id d7c76db8-b7e0-4ce1-87ca-21275c346326). Campos típicos: title, parent_id, type, color, order_index.\n" +
+  "• tasks — Tarefas vinculadas a nós. Campos: title, description, status (estrutural|andamento|pendente|concluído), node_id, dependency_id, progress, order_index, contact_id, scheduled_date, due_date, scheduled_time, assigned_to, on_hold_*.\n" +
+  "• on_hold_log — Log de mudanças de status 'em espera' das tarefas.\n" +
+  "• task_merge_history — Histórico de mesclagem de tarefas duplicadas.\n" +
+  "• time_entries — Apontamentos de tempo por tarefa (started_at, ended_at, duration).\n" +
+  "• timer_state — Estado atual do timer ativo do Foco.\n\n" +
+  "B) Rotina & Metas\n" +
+  "• routine_blocks — Blocos de rotina com horário, duração e vinculação a MT/template.\n" +
+  "• routine_templates — Modelos reutilizáveis de rotina.\n" +
+  "• routine_mts — Métodos de Trabalho (MT) por área operacional.\n" +
+  "• routine_prefs — Preferências de rotina por usuário/operador.\n" +
+  "• routine_stats — Estatísticas agregadas de execução.\n" +
+  "• monthly_goals — Metas mensais (valor, categoria, progresso).\n" +
+  "• seasonal_days — Dias sazonais recorrentes com dias de preparo e urgência.\n" +
+  "• meetings, meeting_items, meeting_participants — Reuniões, pauta/itens e participantes.\n\n" +
+  "C) CRM / Contatos\n" +
+  "• contacts — Cadastro central de contatos (81 colunas): dados pessoais, canais (phone, whatsapp, mobile, email), endereço, funil (funnel_status), classificação (client_classification), lifetime_value, paid_orders_count, last_purchase_date, last_payment_date, ultimo_contato, is_active, photo_url, etc.\n" +
+  "• contact_tags + contact_tag_assignments — Tags aplicáveis a contatos (many-to-many).\n" +
+  "• contact_activities — Atividades registradas (ligações, follow-ups).\n" +
+  "• contact_history — Timeline auditável de eventos (event_type, interaction_type, description, interaction_date, old_value/new_value).\n\n" +
+  "D) Atendimento (Multicanal)\n" +
+  "• service_conversations — Conversas por plataforma; vincula contact_id, contact_handle, funnel_stage, status, unread_count, auto_reply_enabled.\n" +
+  "• service_messages — Mensagens da conversa (sender, content, is_ai_suggested, logged_to_history).\n" +
+  "• service_ai_logs — Logs de sugestões/execuções de IA no atendimento.\n\n" +
+  "E) Operações / Produção / Estoque\n" +
+  "• products — SKUs (nome, sku, cover_image_url, price, cost, category, dimensões, peso, media_urls, is_active, deleted_at).\n" +
+  "• product_categories, product_components (BOM), product_processes, product_optional_costs — Estrutura de composição do produto.\n" +
+  "• processes — Cadastro de processos produtivos.\n" +
+  "• production_orders + production_order_processes — Ordens de produção e etapas.\n" +
+  "• production_entries, production_logs — Apontamentos de produção.\n" +
+  "• production_closings + production_closing_items — Fechamentos periódicos de produção.\n" +
+  "• inventory + inventory_movements — Estoque por local e movimentações atômicas.\n" +
+  "• storage_locations — Locais de armazenamento.\n" +
+  "• orders + order_items — Pedidos (order_number, contact_id, status, order_date, delivery_date, priority, notes).\n" +
+  "• invoices — Notas fiscais associadas a pedidos/contatos.\n\n" +
+  "F) Rotas / Entregas\n" +
+  "• delivery_routes — Roteiros de entrega (data, motorista, status).\n" +
+  "• delivery_stops — Paradas da rota com endereço, contato, comprovante, ordem.\n\n" +
+  "G) Financeiro\n" +
+  "• financial_accounts — Contas (caixa, banco, cartão) com saldo inicial e corrente.\n" +
+  "• financial_categories — Categorias (pagar, receber, ambos).\n" +
+  "• financial_entries — Lançamentos a pagar/receber; recorrência, competência, contact_id, order_id, value/value_paid, is_conciliated.\n" +
+  "• financial_movements — Movimentações de pagamento por lançamento e conta (dispara triggers de saldo e value_paid).\n" +
+  "• price_params, price_param_fees, price_param_history, price_fee_fields, price_channels, price_stores, price_simulations, price_simulation_items — Sistema de precificação hierárquica V2.\n\n" +
+  "H) Digital / Marketing\n" +
+  "• digital_platforms + digital_platform_groups — Plataformas e agrupamentos (hierárquico).\n" +
+  "• digital_ideas — Ideias estratégicas (núcleo do conteúdo).\n" +
+  "• digital_variations — Variações por plataforma (40 colunas, campos customizados em JSONB).\n" +
+  "• digital_idea_types — Tipos configuráveis de ideia.\n" +
+  "• digital_media + digital_media_folders — Biblioteca de mídia unificada.\n" +
+  "• digital_templates — Templates de conteúdo.\n" +
+  "• digital_interactions — Interações registradas (engajamento).\n" +
+  "• digital_trends — Tendências detectadas/importadas.\n" +
+  "• digital_knowledge_base — Base de FAQs por plataforma (question, answer, keywords, usage_count).\n" +
+  "• posts — Posts publicados/agendados.\n\n" +
+  "I) IA / Automação / Assistente\n" +
+  "• ai_actions — Ações executáveis pela IA.\n" +
+  "• ai_chat_messages — Histórico do chat do assistente.\n" +
+  "• ai_insights + ai_insight_messages — Insights gerados e conversas relacionadas.\n" +
+  "• ai_policies — Políticas de governança (max_risk, escopos).\n" +
+  "• automation_rules — Regras (trigger_type, trigger_config, action_type, action_config, is_active).\n" +
+  "• automation_logs — Execuções (status success|error, trigger_data, action_result).\n\n" +
+  "J) Planilhas & Diversos\n" +
+  "• sheets, sheet_tabs, sheet_cells — Planilhas customizadas.\n" +
+  "• wizard_steps — Estado de assistentes multi-etapas.\n" +
+  "• app_users — Usuários/colaboradores centralizados.\n\n" +
+  "3. Chaves e Relacionamentos Estruturais\n" +
+  "-----------------------------------------\n" +
+  "• PK padrão: uuid gerada por gen_random_uuid().\n" +
+  "• FKs principais:\n" +
+  "  – tasks.node_id → nodes.id; tasks.dependency_id → tasks.id; tasks.contact_id → contacts.id.\n" +
+  "  – contact_history.contact_id, contact_activities.contact_id, contact_tag_assignments.contact_id, service_conversations.contact_id, delivery_stops.contact_id, invoices.contact_id, orders.contact_id, financial_entries.contact_id → contacts.id.\n" +
+  "  – contact_tag_assignments.tag_id → contact_tags.id (par único contact_id+tag_id).\n" +
+  "  – service_messages.conversation_id → service_conversations.id.\n" +
+  "  – order_items.order_id → orders.id; production_orders → orders/products; product_components → products (BOM).\n" +
+  "  – financial_entries.category_id → financial_categories.id; financial_entries.account_id → financial_accounts.id; financial_entries.order_id → orders.id.\n" +
+  "  – financial_movements.entry_id → financial_entries.id; financial_movements.account_id → financial_accounts.id.\n" +
+  "  – digital_variations.idea_id → digital_ideas.id; digital_variations.platform_id → digital_platforms.id; digital_platforms.parent_id → digital_platforms.id.\n" +
+  "  – sheet_tabs.sheet_id → sheets.id; sheet_cells.tab_id → sheet_tabs.id.\n" +
+  "  – automation_logs.rule_id → automation_rules.id.\n" +
+  "• Constraint global: NUNCA criar FK para auth.users; identidade de usuário fica em app_users.\n\n" +
+  "4. Funções e Triggers\n" +
+  "-----------------------------------------\n" +
+  "Funções SECURITY DEFINER relevantes (schema public):\n" +
+  "• update_updated_at_column / update_tasks_updated_at — Mantêm updated_at.\n" +
+  "• log_service_message_to_history — Loga mensagens de atendimento na timeline do contato.\n" +
+  "• update_account_balance — Ajusta saldo de financial_accounts a cada movimento.\n" +
+  "• update_entry_value_paid — Recalcula value_paid do lançamento após inserção/edição/remoção de movimento.\n" +
+  "• apply_funnel_automations — Executa automation_rules do tipo 'funnel_stage_changed' (cria tarefa, muda estágio, alerta).\n" +
+  "• sync_funnel_contact_to_conversations / sync_funnel_conversation_to_contact — Sincronizam funil entre contatos e conversas.\n" +
+  "• map_conv_to_contact_funnel / map_contact_to_conv_funnel — Mapeiam estágios entre os dois vocabulários.\n" +
+  "• sync_contact_on_order_change — Atualiza classificação e datas de compra quando pedido é entregue/cancelado.\n" +
+  "• sync_contact_on_payment — Incrementa lifetime_value, paid_orders_count e promove a VIP quando pagamento é confirmado.\n" +
+  "• sync_contact_to_service_conversations — Propaga edições do contato para conversas.\n" +
+  "• auto_create_service_conversation — Cria conversa automaticamente para novos contatos ativos.\n" +
+  "• auto_link_conversation_contact — Vincula conversa a contato existente por email/telefone.\n" +
+  "• merge_contacts(primary_id, duplicate_id) — Mescla contatos, reapontando FKs e agregando métricas.\n" +
+  "• create_default_sheet_tab — Cria aba padrão em nova planilha.\n\n" +
+  "5. Segurança (RLS) e Acessos\n" +
+  "-----------------------------------------\n" +
+  "• Todas as tabelas do schema public têm RLS habilitado e ao menos uma política ativa.\n" +
+  "• GRANTs explícitos por tabela para authenticated e service_role; anon apenas quando a política permite leitura pública.\n" +
+  "• Funções sensíveis marcadas com SECURITY DEFINER + search_path = public para evitar escalonamento via schema hijacking.\n" +
+  "• Papéis de usuário devem ficar sempre em tabela separada (padrão user_roles + has_role), nunca em profiles/contacts.\n\n" +
+  "6. Storage (Buckets)\n" +
+  "-----------------------------------------\n" +
+  "• media — Mídia geral do Digital e produtos (público).\n" +
+  "• contact-avatars — Avatares e fotos de contatos (público).\n" +
+  "• delivery-proof — Comprovantes/assinaturas de entrega (público).\n\n" +
+  "7. Realtime\n" +
+  "-----------------------------------------\n" +
+  "Canais postgres_changes usados no frontend para: tasks, contacts, service_conversations, service_messages, digital_knowledge_base, financial_entries, entre outros — mantendo listas e painéis reativos sem refetch manual.\n\n" +
+  "8. Convenções e Restrições Globais\n" +
+  "-----------------------------------------\n" +
+  "• Precisão numeric(20,10) para custos, preços e quantidades — nunca arredondar prematuramente.\n" +
+  "• Datas armazenadas como YYYY-MM-DD ou timestamptz; exibição sempre DD/MM/YYYY em America/Sao_Paulo.\n" +
+  "• Nunca alterar schemas auth/storage/realtime/supabase_functions/vault.\n" +
+  "• Nunca editar src/integrations/supabase/client.ts nem types.ts (gerados).\n" +
+  "• Toda nova tabela em public exige: CREATE TABLE → GRANT → ENABLE RLS → CREATE POLICY, nessa ordem.\n\n" +
+  "Documento vivo — atualize sempre que novas tabelas, funções ou políticas forem criadas.";
+
+const BANCO_DE_DADOS_FILL_FLAG = "nucleo_estado_atual_banco_de_dados_fill_v1";
+
 
 const BIBLIOTECA_SEED: Array<{ title: string; content: string; tags: string[] }> = [
   {
