@@ -588,6 +588,101 @@ const ARQUITETURA_ATUAL_CONTENT =
 
 const ARQUITETURA_ATUAL_FILL_FLAG = "nucleo_estado_atual_arquitetura_atual_fill_v1";
 
+const INTEGRACOES_CONTENT =
+  "Integrações — Estado Atual\n" +
+  "=========================================\n\n" +
+  "Inventário das integrações existentes no Painel Central. Documento descritivo — não altera nem configura nenhuma integração.\n\n" +
+  "1. Backend Principal — Lovable Cloud (Supabase)\n" +
+  "-----------------------------------------\n" +
+  "• Cliente único: src/integrations/supabase/client.ts (auto-gerado, não editar).\n" +
+  "• Data API (PostgREST): CRUD em todas as tabelas do schema public com RLS.\n" +
+  "• Realtime: canais postgres_changes em tasks, contacts, service_conversations, service_messages, digital_knowledge_base, financial_entries, entre outras.\n" +
+  "• Storage: buckets públicos 'media', 'contact-avatars', 'delivery-proof'.\n" +
+  "• Edge Functions (Deno) — todas em supabase/functions/, deploy gerenciado pelo Lovable Cloud.\n" +
+  "• Segredos disponíveis no runtime: LOVABLE_API_KEY, SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_PUBLISHABLE_KEY(S), SUPABASE_SERVICE_ROLE_KEY, SUPABASE_DB_URL, SUPABASE_JWKS, SUPABASE_SECRET_KEYS.\n\n" +
+  "2. Autenticação\n" +
+  "-----------------------------------------\n" +
+  "• Provider: Supabase Auth (via Lovable Cloud).\n" +
+  "• Identidade de colaborador operacional consolidada em public.app_users; nunca vincular FKs diretas para auth.users.\n" +
+  "• Papéis/roles: devem viver em tabela separada (padrão user_roles + has_role) — não usar profiles/contacts.\n" +
+  "• Frontend: sessão obtida via supabase.auth (import.meta.env.VITE_SUPABASE_URL / VITE_SUPABASE_PUBLISHABLE_KEY).\n" +
+  "• Timezone padrão de exibição: America/Sao_Paulo.\n\n" +
+  "3. Inteligência Artificial — Lovable AI Gateway\n" +
+  "-----------------------------------------\n" +
+  "• Endpoint único: https://ai.gateway.lovable.dev/v1/chat/completions.\n" +
+  "• Header: Authorization: Bearer ${LOVABLE_API_KEY} (server-side, nunca exposto ao browser).\n" +
+  "• Modelo padrão do projeto: google/gemini-2.5-flash (com variações em algumas funções).\n" +
+  "• Edge Functions que chamam a IA:\n" +
+  "  – ai-ceo — Assistente executivo (CEO IA); processa contexto amplo do painel, gera insights, dispara ações e sugestões.\n" +
+  "  – contact-summary — Resumo automatizado do contato/lead.\n" +
+  "  – contact-from-media — Extração de contato a partir de mídia (imagem/áudio).\n" +
+  "  – smart-whatsapp-message — Geração personalizada de mensagens WhatsApp por contexto do cliente.\n" +
+  "  – digital-content-ai — Geração de ideias, títulos, roteiros e variações de conteúdo (persona de marketing).\n" +
+  "  – digital-trends — Consulta e sintetiza tendências para o módulo Digital.\n" +
+  "  – enhance-image / media-enhance — Melhoria e reprocessamento de imagens/mídia.\n" +
+  "• Logs de sugestões e execuções ficam em public.ai_chat_messages, ai_insights, ai_insight_messages, ai_actions, ai_policies e service_ai_logs.\n" +
+  "• Governança: políticas de autopilot em ai_policies (max_risk, escopos permitidos).\n\n" +
+  "4. Edge Functions (visão de integração)\n" +
+  "-----------------------------------------\n" +
+  "• Padrão: cada função vive em supabase/functions/<nome>/index.ts, exposta em https://<project>.supabase.co/functions/v1/<nome>.\n" +
+  "• Consumo no frontend: supabase.functions.invoke('<nome>', { body }).\n" +
+  "• Nenhuma função exige atualmente segredo de provider externo além de LOVABLE_API_KEY e as chaves Supabase padrão.\n\n" +
+  "5. WhatsApp\n" +
+  "-----------------------------------------\n" +
+  "• Integração via deep links oficiais (não é API oficial da Meta/Cloud API):\n" +
+  "  – Mobile: https://api.whatsapp.com/send?phone=...&text=...\n" +
+  "  – Desktop: https://wa.me/<numero>?text=...\n" +
+  "• Utilitários: src/lib/whatsapp.ts, src/lib/whatsappShare.ts, src/lib/whatsappTemplates.ts.\n" +
+  "• Componentes: BulkWhatsAppDispatch, WhatsAppMessageSelector, WhatsAppAttachments, QuickConversationDialog.\n" +
+  "• Toda ação de envio é registrada automaticamente na timeline do contato (contact_history) via useWhatsAppWithLog.\n" +
+  "• Anexos: estratégia multi-tier (link, arquivo, mídia da biblioteca) — ver memória whatsapp-file-sharing-strategy.\n\n" +
+  "6. Upload e Gestão de Arquivos\n" +
+  "-----------------------------------------\n" +
+  "• Uploads via Supabase Storage (supabase.storage.from(<bucket>).upload).\n" +
+  "• Buckets em uso:\n" +
+  "  – media — mídia do módulo Digital, produtos e biblioteca unificada.\n" +
+  "  – contact-avatars — fotos e avatares de contatos (com AvatarCropEditor).\n" +
+  "  – delivery-proof — comprovantes/assinaturas de entrega (SignaturePad, DeliveryProofDialog).\n" +
+  "• Componentes centrais: MediaUploader, ProductGallery, digital media library.\n" +
+  "• Download: padrão fetch-to-blob para preservar navegação (memória media-download-and-replace-pattern).\n\n" +
+  "7. Atendimento Multiplataforma\n" +
+  "-----------------------------------------\n" +
+  "• Estrutura pronta para receber mensagens de plataformas externas via service_conversations + service_messages + digital_platforms.\n" +
+  "• Vinculação automática de conversa ↔ contato (auto_link_conversation_contact) por email/telefone.\n" +
+  "• Não há hoje conector oficial ativo com APIs externas (Meta/WhatsApp Business, Instagram Graph, etc.) — as mensagens externas chegam por importação/registro manual ou via IA.\n\n" +
+  "8. Webhooks\n" +
+  "-----------------------------------------\n" +
+  "• Não há webhooks públicos expostos atualmente no Painel Central.\n" +
+  "• As Edge Functions podem receber POST (comportamento HTTP normal), mas nenhum endpoint específico está configurado como webhook receiver de terceiros no momento.\n" +
+  "• Automações internas rodam via triggers PL/pgSQL + tabela automation_rules (não são webhooks externos).\n\n" +
+  "9. Conectores (MCP / App Connectors)\n" +
+  "-----------------------------------------\n" +
+  "• Nenhum MCP Connector ou App Connector externo (Slack, Notion, Gmail, Stripe, etc.) está conectado ao projeto atualmente.\n" +
+  "• Quando ativados, ficam expostos ao runtime como variáveis (secret ou VITE_LOVABLE_CONNECTOR_*) e são chamados via https://connector-gateway.lovable.dev/{connector_id}/... — ver memória de integrações futuras.\n\n" +
+  "10. Bibliotecas de Terceiros com papel de integração\n" +
+  "-----------------------------------------\n" +
+  "• @supabase/supabase-js — cliente oficial (data, auth, storage, realtime, functions).\n" +
+  "• @tanstack/react-query — cache/reatividade das consultas ao backend.\n" +
+  "• date-fns (+ ptBR) — parsing/format DD/MM/YYYY, respeitando America/Sao_Paulo.\n" +
+  "• sonner — toasts de feedback (inclui erros de integração).\n" +
+  "• framer-motion — transições da UI (não é integração externa, mas parte da camada de apresentação).\n" +
+  "• react-router-dom — navegação; consumo do consent redirect e rotas /nucleo.\n\n" +
+  "11. Variáveis de Ambiente Expostas ao Frontend\n" +
+  "-----------------------------------------\n" +
+  "• VITE_SUPABASE_URL — endpoint público do projeto.\n" +
+  "• VITE_SUPABASE_PUBLISHABLE_KEY — chave anon pública.\n" +
+  "• VITE_SUPABASE_PROJECT_ID — ref do projeto (para composição de URLs de auth/OAuth).\n" +
+  "• Nenhuma chave server-side (LOVABLE_API_KEY, SERVICE_ROLE_KEY, DB_URL) é exposta ao browser.\n\n" +
+  "12. Observações e Riscos\n" +
+  "-----------------------------------------\n" +
+  "• Todas as chamadas à IA passam obrigatoriamente pelo Lovable AI Gateway — não há fallback direto para OpenAI/Google/Anthropic.\n" +
+  "• WhatsApp é integração por link, não API oficial: mensagens dependem do dispositivo do operador e não retornam status de entrega.\n" +
+  "• Buckets de Storage são públicos; qualquer URL vazada é acessível — sensibilidade dos arquivos deve considerar isso.\n" +
+  "• Antes de adicionar nova integração externa (webhook, conector, API oficial), consultar o Núcleo (Princípio Mestre) para checar alinhamento estratégico.\n\n" +
+  "Documento vivo — atualize sempre que uma nova integração for adicionada, removida ou reconfigurada.";
+
+const INTEGRACOES_FILL_FLAG = "nucleo_estado_atual_integracoes_fill_v1";
+
 const BANCO_DE_DADOS_CONTENT =
   "Banco de Dados — Estado Atual\n" +
   "=========================================\n\n" +
@@ -1012,6 +1107,36 @@ function loadPages(): DocPage[] {
         ];
       }
       localStorage.setItem(BANCO_DE_DADOS_FILL_FLAG, "1");
+    }
+    // Fill "Integrações" content once (safe: only if page is empty)
+    if (!localStorage.getItem(INTEGRACOES_FILL_FLAG)) {
+      const now = new Date().toISOString();
+      let exists = false;
+      pages = pages.map((p) => {
+        if (p.areaId === "estado-atual" && p.title === "Integrações") {
+          exists = true;
+          if (!p.content || p.content.trim() === "") {
+            return { ...p, content: INTEGRACOES_CONTENT, updatedAt: now };
+          }
+        }
+        return p;
+      });
+      if (!exists) {
+        pages = [
+          ...pages,
+          {
+            id: uid(),
+            areaId: "estado-atual",
+            title: "Integrações",
+            content: INTEGRACOES_CONTENT,
+            tags: ["integrações", "apis", "serviços"],
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+        ];
+      }
+      localStorage.setItem(INTEGRACOES_FILL_FLAG, "1");
     }
 
 
