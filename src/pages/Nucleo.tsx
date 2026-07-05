@@ -816,6 +816,38 @@ function loadPages(): DocPage[] {
       }
       localStorage.setItem(MAPA_GERAL_FILL_FLAG, "1");
     }
+    // Fill "Arquitetura Atual" content once (safe: only if page is empty)
+    if (!localStorage.getItem(ARQUITETURA_ATUAL_FILL_FLAG)) {
+      const now = new Date().toISOString();
+      let exists = false;
+      pages = pages.map((p) => {
+        if (p.areaId === "estado-atual" && p.title === "Arquitetura Atual") {
+          exists = true;
+          if (!p.content || p.content.trim() === "") {
+            return { ...p, content: ARQUITETURA_ATUAL_CONTENT, updatedAt: now };
+          }
+        }
+        return p;
+      });
+      if (!exists) {
+        pages = [
+          ...pages,
+          {
+            id: uid(),
+            areaId: "estado-atual",
+            title: "Arquitetura Atual",
+            content: ARQUITETURA_ATUAL_CONTENT,
+            tags: ["arquitetura", "atual"],
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+        ];
+      }
+      localStorage.setItem(ARQUITETURA_ATUAL_FILL_FLAG, "1");
+    }
+
+
 
 
 
