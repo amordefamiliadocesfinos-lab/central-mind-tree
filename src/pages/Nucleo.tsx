@@ -2090,6 +2090,36 @@ function loadPages(): DocPage[] {
       }
       localStorage.setItem(FLUXOS_SISTEMA_FILL_FLAG, "1");
     }
+    // Fill "Funcionalidades Implementadas" content once (safe: only if page is empty)
+    if (!localStorage.getItem(FUNCIONALIDADES_IMPLEMENTADAS_FILL_FLAG)) {
+      const now = new Date().toISOString();
+      let exists = false;
+      pages = pages.map((p) => {
+        if (p.areaId === "estado-atual" && p.title === "Funcionalidades Implementadas") {
+          exists = true;
+          if (!p.content || p.content.trim() === "") {
+            return { ...p, content: FUNCIONALIDADES_IMPLEMENTADAS_CONTENT, updatedAt: now };
+          }
+        }
+        return p;
+      });
+      if (!exists) {
+        pages = [
+          ...pages,
+          {
+            id: uid(),
+            areaId: "estado-atual",
+            title: "Funcionalidades Implementadas",
+            content: FUNCIONALIDADES_IMPLEMENTADAS_CONTENT,
+            tags: ["funcionalidades", "features", "inventário"],
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+        ];
+      }
+      localStorage.setItem(FUNCIONALIDADES_IMPLEMENTADAS_FILL_FLAG, "1");
+    }
 
 
 
