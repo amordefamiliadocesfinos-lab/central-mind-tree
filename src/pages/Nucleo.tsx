@@ -190,6 +190,58 @@ const ARQUITETURA_SEED: Array<{ title: string; content: string; tags: string[] }
   },
 ];
 
+const EVOLUCAO_SEED_FLAG_KEY = "nucleo_evolucao_seed_v1";
+
+const EVOLUCAO_SEED: Array<{ title: string; content: string; tags: string[] }> = [
+  {
+    title: "Roadmap",
+    tags: ["roadmap", "planejamento"],
+    content:
+      "Roadmap do Painel Central\n\n" +
+      "Visão de curto, médio e longo prazo do que será construído.\n\n" +
+      "• Próximos 30 dias — \n• Próximos 90 dias — \n• Longo prazo — \n\n" +
+      "— Atualize conforme o projeto evolui.",
+  },
+  {
+    title: "Melhorias",
+    tags: ["melhorias", "backlog"],
+    content:
+      "Melhorias\n\n" +
+      "Lista viva de ajustes e refinamentos em módulos existentes.\n\n" +
+      "• Melhoria — módulo — impacto — status\n\n" +
+      "— Registre aqui cada melhoria proposta.",
+  },
+  {
+    title: "Ideias",
+    tags: ["ideias", "exploração"],
+    content:
+      "Ideias\n\n" +
+      "Espaço aberto para capturar ideias, mesmo que ainda não priorizadas.\n\n" +
+      "• Ideia — contexto — potencial\n\n" +
+      "— Não filtre: registre primeiro, avalie depois.",
+  },
+  {
+    title: "Decisões Importantes",
+    tags: ["decisões", "adr"],
+    content:
+      "Decisões Importantes\n\n" +
+      "Registro de decisões estratégicas e técnicas que moldam o Painel Central.\n\n" +
+      "Formato sugerido:\n" +
+      "• Data — Decisão — Contexto — Alternativas consideradas — Consequências\n\n" +
+      "— Toda decisão relevante deve ser documentada aqui.",
+  },
+  {
+    title: "Histórico de Alterações",
+    tags: ["changelog", "histórico"],
+    content:
+      "Histórico de Alterações\n\n" +
+      "Changelog cronológico das mudanças significativas na plataforma.\n\n" +
+      "Formato sugerido:\n" +
+      "• [AAAA-MM-DD] Módulo — descrição da alteração\n\n" +
+      "— Mantenha em ordem cronológica inversa (mais recente no topo).",
+  },
+];
+
 
 const BIBLIOTECA_SEED: Array<{ title: string; content: string; tags: string[] }> = [
   {
