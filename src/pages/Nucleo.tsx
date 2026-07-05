@@ -94,6 +94,32 @@ const AREAS: AreaMeta[] = [
 
 const STORAGE_KEY = "nucleo_painel_central_pages_v3";
 const SEED_FLAG_KEY = "nucleo_biblioteca_seed_v1";
+const CONSCIENCIA_SEED_FLAG_KEY = "nucleo_consciencia_seed_v1";
+
+const CONSCIENCIA_SEED: Array<{ title: string; content: string; tags: string[] }> = [
+  {
+    title: "Diretrizes Operacionais da Consciência",
+    tags: ["diretrizes", "operacional", "consciência", "fundamento"],
+    content:
+      "Diretrizes Operacionais da Consciência\n\n" +
+      "Este documento reúne as diretrizes que orientam o funcionamento da Consciência do Painel Central — a camada responsável por integrar Memória, Aprendizagem, Personalidade, Regras e Especialistas em uma inteligência coerente e alinhada ao propósito do sistema.\n\n" +
+      "1. Propósito\n" +
+      "— Definir como a Consciência interpreta contexto, prioriza decisões e responde ao ambiente.\n\n" +
+      "2. Princípios Operacionais\n" +
+      "— Coerência com o Manifesto e a Constituição.\n" +
+      "— Transparência das decisões e rastreabilidade das ações.\n" +
+      "— Respeito às Regras e aos limites definidos.\n\n" +
+      "3. Estrutura Futura\n" +
+      "Esta área receberá progressivamente documentos específicos de:\n" +
+      "• Memória — o que a Consciência lembra e como recupera.\n" +
+      "• Aprendizagem — como evolui com base em experiência.\n" +
+      "• Personalidade — tom, estilo e postura.\n" +
+      "• Regras — limites, permissões e obrigações.\n" +
+      "• Especialistas — perfis e domínios de conhecimento.\n" +
+      "• Demais componentes da Inteligência Artificial.\n\n" +
+      "— Escreva aqui as diretrizes completas conforme evoluírem.",
+  },
+];
 
 const BIBLIOTECA_SEED: Array<{ title: string; content: string; tags: string[] }> = [
   {
