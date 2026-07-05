@@ -245,6 +245,27 @@ const EVOLUCAO_SEED: Array<{ title: string; content: string; tags: string[] }> =
 
 const BIBLIOTECA_SEED: Array<{ title: string; content: string; tags: string[] }> = [
   {
+    title: "Princípio Mestre do Painel Central",
+    tags: ["princípio", "mestre", "governança", "ia"],
+    content:
+      "Princípio Mestre do Painel Central\n\n" +
+      "O Núcleo do Painel Central é a fonte oficial de conhecimento da plataforma.\n\n" +
+      "Antes de desenvolver novas funcionalidades, módulos, agentes de IA, automações ou alterações, a Inteligência Artificial deverá consultar o Núcleo para verificar se a proposta está alinhada com a filosofia, a arquitetura e as diretrizes do projeto.\n\n" +
+      "Escopo do Núcleo\n" +
+      "— Área estratégica e administrativa.\n" +
+      "— Orienta a evolução da plataforma e o comportamento da Inteligência Artificial.\n" +
+      "— Não interfere no funcionamento operacional do Painel Central.\n\n" +
+      "Compromisso da Inteligência Artificial\n" +
+      "— Continua executando normalmente todas as tarefas solicitadas pelos usuários.\n" +
+      "— Usa o Núcleo como contexto, regras e base de conhecimento para manter consistência com a identidade do projeto.\n" +
+      "— Ao identificar conflito entre um pedido e o Núcleo, sinaliza o conflito antes de prosseguir.\n\n" +
+      "Áreas de consulta\n" +
+      "• Biblioteca do Projeto — Cartas fundadoras (Teoria, Manifesto, Constituição, Consciência, Filosofia, Arquitetura).\n" +
+      "• Consciência — Diretrizes operacionais, memória, aprendizagem, personalidade, regras, especialistas.\n" +
+      "• Arquitetura — Módulos, agentes de IA, banco de dados, fluxos, APIs, integrações, estrutura da plataforma.\n" +
+      "• Evolução do Projeto — Roadmap, melhorias, ideias, decisões importantes, histórico de alterações.",
+  },
+
     title: "Carta Zero — A Teoria do Painel Central",
     tags: ["carta", "teoria", "fundamento"],
     content:
