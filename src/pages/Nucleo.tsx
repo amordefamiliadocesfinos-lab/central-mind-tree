@@ -983,6 +983,36 @@ function loadPages(): DocPage[] {
       }
       localStorage.setItem(ARQUITETURA_ATUAL_FILL_FLAG, "1");
     }
+    // Fill "Banco de Dados" content once (safe: only if page is empty)
+    if (!localStorage.getItem(BANCO_DE_DADOS_FILL_FLAG)) {
+      const now = new Date().toISOString();
+      let exists = false;
+      pages = pages.map((p) => {
+        if (p.areaId === "estado-atual" && p.title === "Banco de Dados") {
+          exists = true;
+          if (!p.content || p.content.trim() === "") {
+            return { ...p, content: BANCO_DE_DADOS_CONTENT, updatedAt: now };
+          }
+        }
+        return p;
+      });
+      if (!exists) {
+        pages = [
+          ...pages,
+          {
+            id: uid(),
+            areaId: "estado-atual",
+            title: "Banco de Dados",
+            content: BANCO_DE_DADOS_CONTENT,
+            tags: ["banco", "dados", "schema"],
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+        ];
+      }
+      localStorage.setItem(BANCO_DE_DADOS_FILL_FLAG, "1");
+    }
 
 
 
