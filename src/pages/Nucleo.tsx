@@ -16,6 +16,7 @@ import {
   Eye,
   Building2,
   TrendingUp,
+  Activity,
   Plus,
   Trash2,
   FileText,
@@ -30,7 +31,7 @@ import { cn } from "@/lib/utils";
 
 // ---------- Types ----------
 
-type AreaId = "biblioteca" | "consciencia" | "arquitetura" | "evolucao";
+type AreaId = "biblioteca" | "consciencia" | "arquitetura" | "evolucao" | "estado-atual";
 
 interface AreaMeta {
   id: AreaId;
@@ -89,6 +90,13 @@ const AREAS: AreaMeta[] = [
     description: "Marcos, aprendizados e histórico de mudanças.",
     icon: TrendingUp,
     color: "#10B981",
+  },
+  {
+    id: "estado-atual",
+    title: "Estado Atual do Sistema",
+    description: "Documentação da arquitetura existente do Painel Central.",
+    icon: Activity,
+    color: "#EF4444",
   },
 ];
 
@@ -240,6 +248,23 @@ const EVOLUCAO_SEED: Array<{ title: string; content: string; tags: string[] }> =
       "• [AAAA-MM-DD] Módulo — descrição da alteração\n\n" +
       "— Mantenha em ordem cronológica inversa (mais recente no topo).",
   },
+];
+
+const ESTADO_ATUAL_SEED_FLAG_KEY = "nucleo_estado_atual_seed_v1";
+
+const ESTADO_ATUAL_TITLES: Array<{ title: string; tags: string[] }> = [
+  { title: "Mapa Geral do Sistema", tags: ["mapa", "visão-geral"] },
+  { title: "Arquitetura Atual", tags: ["arquitetura", "atual"] },
+  { title: "Banco de Dados", tags: ["banco-de-dados"] },
+  { title: "Integrações", tags: ["integrações"] },
+  { title: "Agentes de IA", tags: ["ia", "agentes"] },
+  { title: "Fluxos do Sistema", tags: ["fluxos"] },
+  { title: "Funcionalidades Implementadas", tags: ["funcionalidades", "implementadas"] },
+  { title: "Funcionalidades Incompletas", tags: ["funcionalidades", "incompletas"] },
+  { title: "Pontos Fortes", tags: ["pontos-fortes"] },
+  { title: "Pontos de Melhoria", tags: ["melhorias"] },
+  { title: "Dívida Técnica", tags: ["dívida-técnica"] },
+  { title: "Resumo Executivo", tags: ["resumo", "executivo"] },
 ];
 
 
@@ -419,6 +444,28 @@ function loadPages(): DocPage[] {
       pages = [...seeded, ...pages];
       localStorage.setItem(EVOLUCAO_SEED_FLAG_KEY, "1");
     }
+    // Seed estado atual do sistema once
+    if (!localStorage.getItem(ESTADO_ATUAL_SEED_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "estado-atual").map((p) => p.title)
+      );
+      const now = new Date().toISOString();
+      const seeded = ESTADO_ATUAL_TITLES.filter(
+        (s) => !existingTitles.has(s.title)
+      ).map<DocPage>((s) => ({
+        id: uid(),
+        areaId: "estado-atual",
+        title: s.title,
+        content: "",
+        tags: s.tags,
+        createdAt: now,
+        updatedAt: now,
+        versions: [],
+      }));
+      pages = [...pages, ...seeded];
+      localStorage.setItem(ESTADO_ATUAL_SEED_FLAG_KEY, "1");
+    }
+
     // Seed Princípio Mestre once (independent flag so existing installs also receive it)
     const PRINCIPIO_FLAG = "nucleo_principio_mestre_seed_v1";
     if (!localStorage.getItem(PRINCIPIO_FLAG)) {
