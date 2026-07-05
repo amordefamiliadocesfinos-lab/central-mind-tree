@@ -267,6 +267,170 @@ const ESTADO_ATUAL_TITLES: Array<{ title: string; tags: string[] }> = [
   { title: "Resumo Executivo", tags: ["resumo", "executivo"] },
 ];
 
+const MAPA_GERAL_CONTENT =
+  "Mapa Geral do Sistema — Painel Central\n" +
+  "Snapshot da estrutura atual da plataforma. Documento descritivo — nenhuma funcionalidade foi alterada.\n\n" +
+  "==============================================\n" +
+  "1. VISÃO GERAL\n" +
+  "==============================================\n" +
+  "Painel Central – Cérebro é uma plataforma web (React 18 + Vite + TypeScript + Tailwind + shadcn/ui) que funciona como organograma interativo e hub operacional. Backend em Lovable Cloud (Supabase: Postgres + Auth + Storage + Edge Functions). Estado global via Zustand, dados remotos via TanStack Query e cliente Supabase.\n\n" +
+  "==============================================\n" +
+  "2. MÓDULOS EXISTENTES\n" +
+  "==============================================\n" +
+  "• Núcleo — Fonte oficial de conhecimento (Biblioteca, Consciência, Arquitetura, Evolução, Estado Atual).\n" +
+  "• Organograma / Node Tree — Árvore hierárquica de nós, múltiplas visualizações (Padrão, Linhas, CEO, Horizontal, Spreadsheet).\n" +
+  "• Foco — Fila de execução prioritária com cronômetro (time tracking).\n" +
+  "• Planejamento — Drag-and-drop de tarefas sincronizado com Foco.\n" +
+  "• Calendário — Hub anual unificando tarefas, pedidos, reuniões, conteúdo digital e datas sazonais.\n" +
+  "• Rotina — Blocos de foco, MTs (Métodos de Trabalho), alertas globais e checklists.\n" +
+  "• Operações — Pedidos (estoque/produção), OPs, produção semanal, MRP, inventário multi-local, custos.\n" +
+  "• Digital — Ideias, variações por plataforma, calendário editorial, mídia, tendências, atendimento.\n" +
+  "• Financeiro — Contas, categorias, entradas, pagamentos parciais, faturas, precificação hierárquica (V2), dashboard.\n" +
+  "• CRM / Contatos — Funil Kommo, leads, timeline, tags, atividades, tarefas agendadas, inbox de conversas.\n" +
+  "• Reuniões — Roteiro estruturado, agenda, action items, sincronização com calendário.\n" +
+  "• Assistente (IA CEO) — Chat com contexto amplo, execução de comandos, histórico persistente.\n" +
+  "• Planilhas — Editor de planilhas com engine de fórmulas próprio.\n" +
+  "• Rotas — Planejamento de entregas, navegação, prova de entrega.\n" +
+  "• Minha Área — Dashboard personalizado por usuário ativo.\n" +
+  "• Dashboard Panorâmico — KPIs cross-módulo.\n" +
+  "• Metas / Oportunidades / Academia — Áreas complementares.\n\n" +
+  "==============================================\n" +
+  "3. ROTAS (src/App.tsx — React Router)\n" +
+  "==============================================\n" +
+  "/                     → Index (Organograma principal)\n" +
+  "/dashboard            → Dashboard panorâmico\n" +
+  "/foco                 → Fila de execução\n" +
+  "/planejamento         → Planejamento drag-and-drop\n" +
+  "/calendario           → Calendário anual unificado\n" +
+  "/rotina               → Rotina e blocos de foco\n" +
+  "/operacoes            → Operações (pedidos, produção, estoque)\n" +
+  "/digital              → Marketing digital\n" +
+  "/planilhas            → Planilhas\n" +
+  "/reunioes             → Lista de reuniões\n" +
+  "/reunioes/:id         → Detalhe da reunião\n" +
+  "/minha-area           → Área pessoal do usuário ativo\n" +
+  "/financeiro           → Financeiro\n" +
+  "/assistente           → Assistente IA (CEO)\n" +
+  "/contatos             → CRM / contatos\n" +
+  "/contatos/inbox       → Inbox de conversas\n" +
+  "/contatos/tarefas     → Tarefas agendadas do CRM\n" +
+  "/rotas                → Rotas de entrega\n" +
+  "/academia             → Academia\n" +
+  "/metas                → Metas\n" +
+  "/oportunidades        → Oportunidades\n" +
+  "/nucleo               → Núcleo (base de conhecimento)\n" +
+  "/task/:id             → Edição de tarefa\n" +
+  "*                     → NotFound\n\n" +
+  "==============================================\n" +
+  "4. PÁGINAS (src/pages)\n" +
+  "==============================================\n" +
+  "Index, Dashboard, Foco, Planejamento, Calendario, Rotina, Operacoes, Digital, Planilhas, Reunioes, ReuniaoDetalhe, MinhaArea, Financeiro, Assistente, Contatos, ContatosInbox, TarefasAgendadas, Rotas, Academia, Metas, Oportunidades, Nucleo, TaskEdit, NotFound.\n\n" +
+  "==============================================\n" +
+  "5. MENUS E NAVEGAÇÃO GLOBAL\n" +
+  "==============================================\n" +
+  "• GlobalSearchBar — barra de busca superior global.\n" +
+  "• GlobalFooterBar — rodapé com toolbar integrada, contadores de tarefas e seletor de modo de visualização.\n" +
+  "• Dock flutuante (canto inferior direito): NucleoLauncherButton, ActiveUserPicker, RoutineAlertsToggleButton, AssistantPanel.\n" +
+  "• SwipeNavigationWrapper — navegação por gestos (mobile).\n" +
+  "• OperationsBottomNav / OperationsTopTabs — navegação interna do módulo Operações.\n" +
+  "• Bottom nav mobile e sticky headers com safe-area em todas as páginas.\n\n" +
+  "==============================================\n" +
+  "6. COMPONENTES PRINCIPAIS (src/components)\n" +
+  "==============================================\n" +
+  "Raiz:\n" +
+  "• NodeTree, NodeBox, NodeEditDialog, MoveNodeDialog, NodeConnectionsOverlay, NodesSpreadsheetView, HorizontalOrgChart, MultiView, CEOLegend.\n" +
+  "• TaskBar, TasksDialog, TaskMergeDialog, DayTasksModal, DueDateBanner, DueDatePill, OnHoldBadge, OnHoldDialog.\n" +
+  "• PlanningConfirmationDialog, ReplanningBanner, ReplanningModal, ReplanningWizard.\n" +
+  "• GlobalSearchBar, GlobalFooterBar, NavLink, SwipeNavigationWrapper, ActiveUserPicker, NucleoLauncherButton.\n" +
+  "• MediaUploader, ProductGallery, ProductMovementHistory, BOMEditor, MRPPanel, InventoryMovementDialog.\n" +
+  "• SheetList, SheetTabsBar, SpreadsheetEditor, FunnelView, CollaboratorsPanel, ContactHistoryDialog, FollowUpBanner.\n\n" +
+  "Assistente (IA):\n" +
+  "• AssistantPanel, CEOChat.\n\n" +
+  "Automação:\n" +
+  "• AutomationRulesPanel.\n\n" +
+  "CRM (src/components/crm):\n" +
+  "• BulkWhatsAppDispatch, ContactActivitiesPanel, ContactAvatar, ContactCard, ContactChatPanel, ContactOrdersList, ContactTagsManager, ContactTasksPanel, ContactTimeline, FunnelAutomationsPanel, KommoFunnelView, LeadDetailDrawer, LeadImportDialog, LeadOriginPicker, LeadsNeedContactPanel, LostReasonDialog, MergeDuplicatesDialog, NextBestAction, PosVendaPanel, QuickConversationDialog, QuickConversationFAB, WhatsAppAttachments, WhatsAppMessageSelector.\n\n" +
+  "Dashboard:\n" +
+  "• BottleneckCard, CampaignResults, CommercialDashboard, CompanyStatus, DailyPerformance, DailyPriorities, DailySummary, NextActionsCard, QuickFinance.\n\n" +
+  "Digital (src/components/digital):\n" +
+  "• AIVariationsGenerator, AllVariationsSpreadsheetView, BatchVariationDialog, CustomFieldsDefinition, CustomFieldsRenderer, DigitalCalendar, DigitalDashboard, DigitalPrioritiesPanel, HierarchicalPlatformSelector, IdeaCard, IdeaEditor, IdeaTypesManager, IdeasSpreadsheetView, InteractionsPanel, KanbanBoard, KnowledgeBasePanel, MediaEditor, MediaFolderSidebar, MediaLibrary, MediaThumbnail, MetricsChart, NextStepHint, PlatformHierarchicalPicker, PlatformReplicaRenderer, PlatformsHealthPanel, PlatformsManager, ProductSelector, QuickActionWizard, ScheduleCalendar, ServicePanel, TrendsPanel, VariationEditor, VariationsSpreadsheetView.\n\n" +
+  "Financeiro (src/components/financial):\n" +
+  "• AccountsManager, AdvancedPaymentDialog, AvatarCropEditor, CategoriesManager, ContactFormDialog, ContactOrderHistory, ContactsManager, FinancialDashboard, FinancialEntriesList, FinancialEntryForm, InvoiceValidationDialog, InvoicesManager, IssuedInvoiceDetails, MobileFinancialView, PaymentDialog, PricingManager, PricingManagerV2.\n\n" +
+  "Foco:\n" +
+  "• TasksSpreadsheetView.\n\n" +
+  "Operações (src/components/operations):\n" +
+  "• ContactAutocomplete, KPICards, LateProductionBadge, LegacyProductionReport, LocationsManager, MRPTab, MultiLocationMovementDialog, OperationsBottomNav, OperationsCalendarTab, OperationsSearchBar, OperationsTopTabs, OrderCard, OrderEditDialog, OrderGridCard, OrderPriorityBadge, OrdersDateFilter, ProcessesManager, ProductCard, ProductCategoriesManager, ProductCostEditor, ProductDeleteDialog, ProductionClosingTab, ProductionLogForm, ProductionOrdersTab, ProductionPlanningView, ProductionTab, ProductionWeekView, ProductivityCharts, ProductsSubFilters.\n\n" +
+  "Planejamento:\n" +
+  "• SelectionSpreadsheetView.\n\n" +
+  "Rotas (src/components/routes):\n" +
+  "• AddStopDialog, ContactAddressPicker, DeliveryProofDialog, RouteEditor, SignaturePad, StopSortableItem.\n\n" +
+  "Rotina (src/components/routine):\n" +
+  "• AddToRoutineButton, AddToRoutineDialog, BlockEditDialog, CustomAlarmsPanel, MTManagerDialog, MTPickerDialog, MTWorkspaceBar, RoutineAlertOverlay, RoutineAlertsToggleButton, RoutineDayView, RoutineMonthView, RoutineWeekView.\n\n" +
+  "Sazonais:\n" +
+  "• SeasonalBadge, SeasonalDayModal, SeasonalDaysList, SeasonalEventDialog.\n\n" +
+  "Verificação de estoque:\n" +
+  "• StockCheckAlert, StockCheckWizard.\n\n" +
+  "Time reports:\n" +
+  "• TimeReportsPanel.\n\n" +
+  "Lightbox global:\n" +
+  "• LightboxProvider, LightboxRoot, LightboxImage, LightboxVideo (montado no App root).\n\n" +
+  "UI base:\n" +
+  "• src/components/ui — biblioteca shadcn/ui completa (button, card, dialog, popover, tabs, toast, sonner, etc.).\n\n" +
+  "==============================================\n" +
+  "7. PROVIDERS GLOBAIS (src/App.tsx)\n" +
+  "==============================================\n" +
+  "QueryClientProvider → TooltipProvider → UndoRedoProvider → LinesModeProvider → LightboxProvider → Toaster + Sonner + AppContent + LightboxRoot.\n" +
+  "Hooks globais no AppContent: useScheduledTaskPromotion, useKeyboardAware.\n\n" +
+  "==============================================\n" +
+  "8. HOOKS PRINCIPAIS (src/hooks)\n" +
+  "==============================================\n" +
+  "Dados/CRM: useContacts, useContactsWithOrders, useContactActivities, useContactChecklist, useContactConversations, useContactHistory, useContactNextTasks, useContactTags, useLeadScore, useNoResponseDetection, useAllConversationsSummary.\n" +
+  "Operações/Produção: useOrders, useProductionOrders, useProductionLogs, useProductionClosing, useProductsList, useProductCategories, useProductCosts, useBOM, useMRP, useInventoryMovements, useMultiLocationInventory, useStorageLocations, useProcesses.\n" +
+  "Financeiro: useFinancial, usePricing, usePricingV2.\n" +
+  "Digital: useDigital, useDigitalInteractions, useDigitalTrends, useIdeaActions, useIdeaTypes, useMediaFolders, usePlatformGroups, usePlatforms, usePosts, useProductIdeas, useKnowledgeBase.\n" +
+  "Rotina/Foco/Calendário: useRoutine, useRoutineBlocks, useActiveMT, useCalendarService, useSeasonalDays, useScheduledTaskPromotion, useReplanningReminder, useReplanningWizard, useTimeTracking, useOnHold, useTaskMerge.\n" +
+  "Sistema: useActiveUser, useNotifications, useSpreadsheet, useSwipeNavigation, useUndoRedo, useKeyboardAware, use-mobile, use-toast, useDailyMetrics, useMeetings, useDeliveryRoutes, useServiceChat, useWhatsAppWithLog, useAICEO.\n\n" +
+  "==============================================\n" +
+  "9. STATE / STORES (src/stores)\n" +
+  "==============================================\n" +
+  "• appStore.ts — estado global principal (Zustand).\n" +
+  "• selectors.ts — seletores derivados.\n" +
+  "• stockCheckStore.ts — estado do assistente de verificação de estoque.\n\n" +
+  "==============================================\n" +
+  "10. CONTEXTOS (src/contexts)\n" +
+  "==============================================\n" +
+  "• UndoRedoContext — pilha global de desfazer/refazer.\n" +
+  "• LinesModeContext — modo de visualização de linhas do organograma.\n" +
+  "• LightboxContext (em components/lightbox) — visualização global de mídia.\n\n" +
+  "==============================================\n" +
+  "11. BIBLIOTECAS UTILITÁRIAS (src/lib)\n" +
+  "==============================================\n" +
+  "dateUtils, decimal, formulaEngine, invoiceSync, invoiceValidation, utils, whatsapp, whatsappShare, whatsappTemplates.\n\n" +
+  "==============================================\n" +
+  "12. BACKEND — LOVABLE CLOUD\n" +
+  "==============================================\n" +
+  "Cliente: src/integrations/supabase/client.ts (auto-gerado, não editar).\n" +
+  "Tipos: src/integrations/supabase/types.ts (auto-gerado).\n\n" +
+  "Edge Functions (supabase/functions):\n" +
+  "• ai-ceo — Assistente CEO com contexto amplo.\n" +
+  "• contact-from-media — Extração de contato a partir de mídia.\n" +
+  "• contact-summary — Resumo de contato via IA.\n" +
+  "• digital-content-ai — Geração de conteúdo digital.\n" +
+  "• digital-trends — Análise de tendências.\n" +
+  "• enhance-image / media-enhance — Melhoria de imagem/mídia.\n" +
+  "• smart-whatsapp-message — Sugestão inteligente de mensagens WhatsApp.\n\n" +
+  "==============================================\n" +
+  "13. OBSERVAÇÕES\n" +
+  "==============================================\n" +
+  "• Timezone obrigatório: America/Sao_Paulo. Parsing sempre com parseISO (date-fns).\n" +
+  "• Datas exibidas em DD/MM/YYYY; armazenadas em YYYY-MM-DD.\n" +
+  "• Precisão decimal: numeric(20,10) para custos, preços e quantidades.\n" +
+  "• Mobile-first: sticky headers com safe-area, bottom nav, ResponsiveDialog fullscreen, framer-motion.\n" +
+  "• Todo nó do organograma deve conectar-se ao nó raiz 'Deividi' (ID: d7c76db8-b7e0-4ce1-87ca-21275c346326).\n" +
+  "• Documento vivo — atualize conforme o sistema evoluir.";
+
+const MAPA_GERAL_FILL_FLAG = "nucleo_estado_atual_mapa_geral_fill_v1";
+
 
 const BIBLIOTECA_SEED: Array<{ title: string; content: string; tags: string[] }> = [
   {
@@ -465,6 +629,38 @@ function loadPages(): DocPage[] {
       pages = [...pages, ...seeded];
       localStorage.setItem(ESTADO_ATUAL_SEED_FLAG_KEY, "1");
     }
+    // Fill "Mapa Geral do Sistema" content once (safe: only if page is empty)
+    if (!localStorage.getItem(MAPA_GERAL_FILL_FLAG)) {
+      const now = new Date().toISOString();
+      let mapaExists = false;
+      pages = pages.map((p) => {
+        if (p.areaId === "estado-atual" && p.title === "Mapa Geral do Sistema") {
+          mapaExists = true;
+          if (!p.content || p.content.trim() === "") {
+            return { ...p, content: MAPA_GERAL_CONTENT, updatedAt: now };
+          }
+        }
+        return p;
+      });
+      if (!mapaExists) {
+        pages = [
+          ...pages,
+          {
+            id: uid(),
+            areaId: "estado-atual",
+            title: "Mapa Geral do Sistema",
+            content: MAPA_GERAL_CONTENT,
+            tags: ["mapa", "visão-geral"],
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+        ];
+      }
+      localStorage.setItem(MAPA_GERAL_FILL_FLAG, "1");
+    }
+
+
 
     // Seed Princípio Mestre once (independent flag so existing installs also receive it)
     const PRINCIPIO_FLAG = "nucleo_principio_mestre_seed_v1";
