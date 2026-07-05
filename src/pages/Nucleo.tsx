@@ -213,7 +213,32 @@ function loadPages(): DocPage[] {
       pages = [...seeded, ...pages];
       localStorage.setItem(SEED_FLAG_KEY, "1");
     }
+    // Seed consciência once
+    if (!localStorage.getItem(CONSCIENCIA_SEED_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "consciencia").map((p) => p.title)
+      );
+      const now = new Date().toISOString();
+      const seeded = CONSCIENCIA_SEED.filter(
+        (s) => !existingTitles.has(s.title)
+      ).map<DocPage>((s) => ({
+        id: uid(),
+        areaId: "consciencia",
+        title: s.title,
+        content: s.content,
+        tags: s.tags,
+        createdAt: now,
+        updatedAt: now,
+        versions: [],
+      }));
+      pages = [...seeded, ...pages];
+      localStorage.setItem(CONSCIENCIA_SEED_FLAG_KEY, "1");
+    }
     return pages;
+  } catch {
+    return [];
+  }
+}
   } catch {
     return [];
   }
