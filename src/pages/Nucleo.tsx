@@ -1126,6 +1126,592 @@ const BANCO_DE_DADOS_CONTENT =
 
 const BANCO_DE_DADOS_FILL_FLAG = "nucleo_estado_atual_banco_de_dados_fill_v1";
 
+const FUNCIONALIDADES_IMPLEMENTADAS_CONTENT = `# Funcionalidades Implementadas — Estado Atual
+
+Inventário das funcionalidades já em produção no Painel Central. Para cada item: **Nome**, **Módulo**, **Descrição**, **Status** e **Dependências**. Documento descritivo — nada foi alterado.
+
+Legenda de status: **Ativa** (em uso pleno) · **Parcial** (funciona, com limitações conhecidas) · **Beta** (uso experimental).
+
+---
+
+## Autenticação e Usuários
+
+### Login por e-mail e senha
+- **Módulo:** Autenticação
+- **Descrição:** Sessão via Supabase Auth com JWT em localStorage; \`AuthProvider\` propaga sessão; \`ProtectedRoute\` guarda rotas internas.
+- **Status:** Ativa
+- **Dependências:** Lovable Cloud (Auth), \`AuthContext\`, \`ProtectedRoute\`.
+
+### Papéis e permissões (\`has_role\`)
+- **Módulo:** Autenticação
+- **Descrição:** Tabela \`user_roles\` + função SECURITY DEFINER \`has_role(uid, role)\` usada em RLS.
+- **Status:** Ativa
+- **Dependências:** \`user_roles\`, RLS.
+
+### Perfil operacional multi-usuário
+- **Módulo:** Colaboradores
+- **Descrição:** Tabela \`app_users\` centraliza operadores; isolamento de rotinas e alertas por operador.
+- **Status:** Ativa
+- **Dependências:** \`app_users\`.
+
+---
+
+## Organograma / Node Tree
+
+### Árvore hierárquica interativa
+- **Módulo:** Organograma
+- **Descrição:** Nó-raiz obrigatório "Deividi"; múltiplos modos de visualização (Padrão, Linhas, CEO, Horizontal); prevenção de ciclos.
+- **Status:** Ativa
+- **Dependências:** \`nodes\`, integridade de \`parent_id\`.
+
+### Gestos móveis (pan/zoom)
+- **Módulo:** Organograma
+- **Descrição:** Interações touch específicas para navegação em mobile.
+- **Status:** Ativa
+- **Dependências:** Node Tree.
+
+---
+
+## CRM
+
+### Kanban de leads com score e prioridade
+- **Módulo:** CRM
+- **Descrição:** Lead Score (4 níveis), tiers visuais de urgência (3), ordenação automática por pontuação e inatividade.
+- **Status:** Ativa
+- **Dependências:** \`crm_leads\`, \`contacts\`.
+
+### Timeline de eventos do contato
+- **Módulo:** CRM
+- **Descrição:** Trilha cronológica auditável e editável de interações.
+- **Status:** Ativa
+- **Dependências:** \`crm_timeline\`.
+
+### Classificação de clientes (4 tiers)
+- **Módulo:** CRM
+- **Descrição:** Segmentação estratégica de contatos.
+- **Status:** Ativa
+- **Dependências:** \`contacts\`.
+
+### Detecção de não-resposta (ghosting)
+- **Módulo:** CRM
+- **Descrição:** Badges automáticos para leads sem resposta há X dias.
+- **Status:** Ativa
+- **Dependências:** \`crm_timeline\`.
+
+### Follow-ups automáticos 1-clique
+- **Módulo:** CRM
+- **Descrição:** Templates estratégicos sugeridos por tempo de inatividade.
+- **Status:** Ativa
+- **Dependências:** CRM + WhatsApp deep links.
+
+### Conversão bidirecional lead ↔ pedido
+- **Módulo:** CRM ↔ Operações
+- **Descrição:** Dados de lead preenchem venda; venda atualiza health do cliente.
+- **Status:** Ativa
+- **Dependências:** \`orders\`, \`crm_leads\`.
+
+### Sync CRM ↔ Atendimento
+- **Módulo:** CRM
+- **Descrição:** Conversas, funil e timeline totalmente integrados.
+- **Status:** Ativa
+- **Dependências:** \`service_conversations\`, \`service_messages\`.
+
+### Sugestões de WhatsApp por IA
+- **Módulo:** CRM
+- **Descrição:** Mensagens personalizadas com base nos dados do cliente.
+- **Status:** Ativa
+- **Dependências:** Edge \`smart-whatsapp-message\`, Lovable AI Gateway.
+
+### Disparo em massa WhatsApp (Queue mode)
+- **Módulo:** CRM
+- **Descrição:** Envio sequencial guiado com logging automático.
+- **Status:** Ativa
+- **Dependências:** \`BulkWhatsAppDispatch\`, WhatsApp deep links.
+
+### Busca fuzzy por telefone (sufixo)
+- **Módulo:** CRM
+- **Descrição:** Localiza contatos por final do número.
+- **Status:** Ativa
+- **Dependências:** \`contacts\`.
+
+### Página centralizada de tarefas do CRM
+- **Módulo:** CRM
+- **Descrição:** View dedicada apenas para tarefas agendadas do CRM.
+- **Status:** Ativa
+- **Dependências:** \`tasks\`.
+
+### Health do cliente automático
+- **Módulo:** CRM
+- **Descrição:** Sincroniza funil e LTV a partir de pedidos e pagamentos.
+- **Status:** Ativa
+- **Dependências:** \`orders\`, \`financial_entries\`.
+
+### Checklist de execução automático
+- **Módulo:** CRM
+- **Descrição:** Marca progresso a partir de eventos da timeline.
+- **Status:** Ativa
+- **Dependências:** \`crm_timeline\`.
+
+### "Smart Attend" contextual
+- **Módulo:** CRM
+- **Descrição:** Escolhe ação/WhatsApp mais adequado ao contexto do lead.
+- **Status:** Ativa
+- **Dependências:** IA + timeline.
+
+### Performance com virtualização
+- **Módulo:** CRM
+- **Descrição:** Listas grandes usam lazy-loading/virtualização.
+- **Status:** Ativa
+- **Dependências:** —
+
+---
+
+## Atendimento
+
+### Hub conversacional multi-plataforma
+- **Módulo:** Atendimento
+- **Descrição:** Conversas agrupadas por contato/plataforma; IA sugere intenção e próxima ação.
+- **Status:** Parcial (sem conectores externos ativos — envios via deep link)
+- **Dependências:** \`service_conversations\`, \`service_messages\`, IA.
+
+### Criação automática de conversa por novo contato
+- **Módulo:** Atendimento
+- **Descrição:** Trigger \`auto_create_service_conversation\`.
+- **Status:** Ativa
+- **Dependências:** PL/pgSQL.
+
+---
+
+## Operações / Vendas
+
+### Pedidos com 2 fluxos (Estoque / Produção)
+- **Módulo:** Operações
+- **Descrição:** Ciclo de 4 etapas; produção gera OP e consome insumos.
+- **Status:** Ativa
+- **Dependências:** \`orders\`, \`order_items\`, \`production_orders\`.
+
+### Prioridade automática (5 níveis)
+- **Módulo:** Operações
+- **Descrição:** Calculada por data de entrega, tipo, cliente.
+- **Status:** Ativa
+- **Dependências:** \`orders\`.
+
+### Ajustes de venda (desconto/frete)
+- **Módulo:** Operações
+- **Descrição:** Persistidos dinamicamente nas notas do pedido.
+- **Status:** Ativa
+- **Dependências:** \`orders\`.
+
+### Integração automática com Financeiro
+- **Módulo:** Operações → Financeiro
+- **Descrição:** Confirmação de venda cria "A Receber".
+- **Status:** Ativa
+- **Dependências:** \`financial_entries\`.
+
+### Planejamento de produção por entrega
+- **Módulo:** Operações
+- **Descrição:** Visão organizada por data com ações em massa.
+- **Status:** Ativa
+- **Dependências:** \`production_orders\`.
+
+### Alerta visual de OP atrasada
+- **Módulo:** Operações
+- **Descrição:** Badge pulsante quando \`due_date\` vence.
+- **Status:** Ativa
+- **Dependências:** \`production_orders\`.
+
+---
+
+## Produção
+
+### Modelo de custo em 3 camadas
+- **Módulo:** Produção
+- **Descrição:** BOM + processos + logística opcional.
+- **Status:** Ativa
+- **Dependências:** \`products\`, \`bom\`.
+
+### Kanban semanal de OPs
+- **Módulo:** Produção
+- **Descrição:** Drag-and-drop para reagendar.
+- **Status:** Ativa
+- **Dependências:** \`production_orders\`.
+
+### Consumo por local (location-aware)
+- **Módulo:** Produção ↔ Estoque
+- **Descrição:** Consumo direcionado a warehouse específico.
+- **Status:** Ativa
+- **Dependências:** \`inventory_locations\`, \`inventory_movements\`.
+
+### Dimensões e peso do produto
+- **Módulo:** Produção
+- **Descrição:** Campos detalhados de SKU para logística.
+- **Status:** Ativa
+- **Dependências:** \`products\`.
+
+### Fluxo OP → Estoque para itens de estoque
+- **Módulo:** Produção
+- **Descrição:** Finalização gera entrada automática no local destino.
+- **Status:** Ativa
+- **Dependências:** \`inventory_movements\`.
+
+---
+
+## Estoque
+
+### Inventário unificado com movimentos atômicos
+- **Módulo:** Estoque
+- **Descrição:** Cada movimento vinculado a local; saldo sempre derivado.
+- **Status:** Ativa
+- **Dependências:** \`inventory_movements\`, \`inventory_locations\`.
+
+### Wizard de ajuste em 4 passos
+- **Módulo:** Estoque
+- **Descrição:** Ajustes controlados com motivo e revisão.
+- **Status:** Ativa
+- **Dependências:** \`inventory_movements\`.
+
+### KPI global de valor de estoque
+- **Módulo:** Estoque
+- **Descrição:** Em tempo real com \`numeric(20,10)\`.
+- **Status:** Ativa
+- **Dependências:** \`products\`, \`inventory_movements\`.
+
+---
+
+## Financeiro
+
+### Contas a pagar / receber com recorrência
+- **Módulo:** Financeiro
+- **Descrição:** Recorrência configurável e parcelas futuras.
+- **Status:** Ativa
+- **Dependências:** \`financial_entries\`.
+
+### Pagamentos parciais com desconto/juros
+- **Módulo:** Financeiro
+- **Descrição:** Tabela dedicada mantém histórico.
+- **Status:** Ativa
+- **Dependências:** \`financial_entries\` + tabela de pagamentos.
+
+### Filtro global de período (calendário duplo)
+- **Módulo:** Financeiro
+- **Descrição:** Popover com fuso America/Sao_Paulo.
+- **Status:** Ativa
+- **Dependências:** —
+
+### Interface mobile one-hand
+- **Módulo:** Financeiro
+- **Descrição:** UX otimizada para uso com uma mão.
+- **Status:** Ativa
+- **Dependências:** —
+
+### Precificação hierárquica (V2)
+- **Módulo:** Financeiro
+- **Descrição:** Simulação multi-tier com taxas dinâmicas e histórico.
+- **Status:** Ativa
+- **Dependências:** \`pricing_*\`.
+
+---
+
+## Digital / Marketing
+
+### Ideia central com variações por plataforma
+- **Módulo:** Digital
+- **Descrição:** Campos custom em JSONB por variação.
+- **Status:** Ativa
+- **Dependências:** \`digital_ideas\`.
+
+### Auto-fill ideia ↔ SKU
+- **Módulo:** Digital
+- **Descrição:** Vincular a produto preenche título e mídia.
+- **Status:** Ativa
+- **Dependências:** \`products\`.
+
+### Agendamento multi-datas por variação
+- **Módulo:** Digital
+- **Descrição:** Cada variação pode ser publicada em várias datas.
+- **Status:** Ativa
+- **Dependências:** —
+
+### Cards visuais estratégicos (Kanban)
+- **Módulo:** Digital
+- **Descrição:** Ações diretas: agendar, publicar, duplicar, IA.
+- **Status:** Ativa
+- **Dependências:** —
+
+### Geração de conteúdo por IA
+- **Módulo:** Digital
+- **Descrição:** Copies e adaptação de variações.
+- **Status:** Ativa
+- **Dependências:** Edge \`digital-content-ai\`.
+
+### Tendências por IA
+- **Módulo:** Digital
+- **Descrição:** Sugestões de temas em alta.
+- **Status:** Ativa
+- **Dependências:** Edge \`digital-trends\`.
+
+### Melhoria de imagem por IA
+- **Módulo:** Digital
+- **Descrição:** Aprimoramento visual.
+- **Status:** Ativa
+- **Dependências:** Edges \`enhance-image\` / \`media-enhance\`.
+
+### Preview visual com mockup por aspect-ratio
+- **Módulo:** Digital
+- **Descrição:** Renderiza mídia no formato real da plataforma.
+- **Status:** Ativa
+- **Dependências:** —
+
+### Automações orientadas a objetivo
+- **Módulo:** Digital ↔ CRM
+- **Descrição:** Estratégias disparam triggers no CRM.
+- **Status:** Ativa
+- **Dependências:** —
+
+### Hierarquia recursiva de plataformas
+- **Módulo:** Digital
+- **Descrição:** Seletor com breadcrumbs e duplicação.
+- **Status:** Ativa
+- **Dependências:** —
+
+---
+
+## Rotas / Entregas
+
+### Planejamento e navegação de rota
+- **Módulo:** Rotas
+- **Descrição:** Ordena paradas por proximidade e prioridade.
+- **Status:** Ativa
+- **Dependências:** \`orders\`.
+
+### Comprovante de entrega
+- **Módulo:** Rotas
+- **Descrição:** Upload no bucket \`delivery-proof\`.
+- **Status:** Ativa
+- **Dependências:** Storage.
+
+---
+
+## Agenda / Calendário
+
+### Hub anual unificado
+- **Módulo:** Calendário
+- **Descrição:** Consolida tarefas, entregas, reuniões, conteúdo digital, dias sazonais.
+- **Status:** Ativa
+- **Dependências:** múltiplos módulos.
+
+### Dias sazonais recorrentes
+- **Módulo:** Calendário
+- **Descrição:** Preparo e urgência visual.
+- **Status:** Ativa
+- **Dependências:** —
+
+### Sync 3 camadas para Digital
+- **Módulo:** Calendário ↔ Digital
+- **Descrição:** Planejado, agendado, publicado.
+- **Status:** Ativa
+- **Dependências:** —
+
+### Popover com pointer-events-auto
+- **Módulo:** Calendário/Dialogs
+- **Descrição:** Pickers de data/hora funcionam dentro de ResponsiveDialog.
+- **Status:** Ativa
+- **Dependências:** —
+
+---
+
+## Reuniões
+
+### Roteiro estruturado + pauta + itens de ação
+- **Módulo:** Reuniões
+- **Descrição:** Sincroniza com calendário e Minha Área.
+- **Status:** Ativa
+- **Dependências:** \`meetings\`, \`tasks\`.
+
+### Dashboard "Minha Área"
+- **Módulo:** Reuniões / Tarefas
+- **Descrição:** Filtra tarefas e reuniões do usuário ativo.
+- **Status:** Ativa
+- **Dependências:** \`app_users\`.
+
+---
+
+## Rotina / Foco / Planejamento
+
+### Planejamento drag-and-drop
+- **Módulo:** Planejamento
+- **Descrição:** Sincroniza fila via localStorage para o Foco.
+- **Status:** Ativa
+- **Dependências:** —
+
+### Fila de execução do Foco
+- **Módulo:** Foco
+- **Descrição:** Consome planejamento e tarefas ativas do DB.
+- **Status:** Ativa
+- **Dependências:** \`tasks\`.
+
+### Time-tracking acoplado ao Foco
+- **Módulo:** Foco
+- **Descrição:** Inicia \`time_entries.started_at\` ao começar a tarefa.
+- **Status:** Ativa
+- **Dependências:** \`time_entries\`.
+
+### Rotina com Métodos de Trabalho (MT)
+- **Módulo:** Rotina
+- **Descrição:** Templates pré-configurados por área.
+- **Status:** Ativa
+- **Dependências:** \`routine_*\`.
+
+### Alertas inteligentes e checklists globais
+- **Módulo:** Rotina
+- **Descrição:** Alertas interativos com snooze e execução central.
+- **Status:** Ativa
+- **Dependências:** —
+
+### Hub central de execução (blocos)
+- **Módulo:** Rotina
+- **Descrição:** Integra tarefas agendadas cross-module.
+- **Status:** Ativa
+- **Dependências:** múltiplos módulos.
+
+### Hierarquia de status de tarefa (4 níveis)
+- **Módulo:** Tarefas
+- **Descrição:** Ordenação estrutural → concluído.
+- **Status:** Ativa
+- **Dependências:** \`tasks\`.
+
+### Status "on-hold"
+- **Módulo:** Tarefas
+- **Descrição:** Espera independente com contexto e data de retorno.
+- **Status:** Ativa
+- **Dependências:** \`tasks\`.
+
+---
+
+## IA / Assistente
+
+### CEO IA conversacional
+- **Módulo:** IA
+- **Descrição:** Chat com contexto amplo; executa ações via ferramentas.
+- **Status:** Ativa
+- **Dependências:** Edge \`ai-ceo\`, Lovable AI Gateway.
+
+### Persistência de histórico e insights
+- **Módulo:** IA
+- **Descrição:** Sessões, mensagens e insights em tabelas dedicadas.
+- **Status:** Ativa
+- **Dependências:** \`ai_chat_sessions\`, \`ai_chat_messages\`, \`ai_insights\`.
+
+### Governança e autopilot
+- **Módulo:** IA
+- **Descrição:** \`ai_policies.max_risk\` define ações executáveis automaticamente.
+- **Status:** Ativa
+- **Dependências:** \`ai_policies\`, \`ai_actions\`.
+
+### Persona de marketing
+- **Módulo:** IA (Digital)
+- **Descrição:** IA atua como especialista para geração de conteúdo.
+- **Status:** Ativa
+- **Dependências:** \`digital-content-ai\`.
+
+### Resumo e criação de contato por IA
+- **Módulo:** IA (CRM)
+- **Descrição:** \`contact-summary\` e \`contact-from-media\`.
+- **Status:** Ativa
+- **Dependências:** edges dedicadas.
+
+---
+
+## Núcleo
+
+### Biblioteca estratégica navegável
+- **Módulo:** Núcleo
+- **Descrição:** Áreas, páginas, tags, versões, busca — fonte oficial de conhecimento.
+- **Status:** Ativa
+- **Dependências:** localStorage / persistência interna do Núcleo.
+
+### Documentação "Estado Atual" (Mapa, Arquitetura, DB, Integrações, Agentes, Fluxos, Funcionalidades)
+- **Módulo:** Núcleo
+- **Descrição:** Seed automático das páginas de referência.
+- **Status:** Ativa
+- **Dependências:** —
+
+---
+
+## Padrões Técnicos e UX Transversais
+
+### Mobile-first (sticky headers, bottom nav, ResponsiveDialog)
+- **Módulo:** UI Global
+- **Descrição:** Safe-area, fullscreen em mobile, framer-motion.
+- **Status:** Ativa
+- **Dependências:** —
+
+### Timezone America/Sao_Paulo + \`parseISO\`
+- **Módulo:** Data/Hora Global
+- **Descrição:** Nunca \`new Date()\` para strings do backend; exibição DD/MM/YYYY.
+- **Status:** Ativa
+- **Dependências:** \`date-fns\` (ptBR).
+
+### Precisão decimal global (\`numeric(20,10)\`)
+- **Módulo:** Cálculos Financeiros/Estoque
+- **Descrição:** Sem arredondamento prematuro.
+- **Status:** Ativa
+- **Dependências:** —
+
+### LightboxProvider global (mídia)
+- **Módulo:** UI Global
+- **Descrição:** Um único contexto no App para evitar conflitos.
+- **Status:** Ativa
+- **Dependências:** —
+
+### Download fetch-to-blob e substituição in-place
+- **Módulo:** Mídia
+- **Descrição:** Evita navegação do browser; preserva links ao substituir.
+- **Status:** Ativa
+- **Dependências:** Storage.
+
+### Biblioteca unificada de mídia
+- **Módulo:** Mídia
+- **Descrição:** Fonte única para Digital e imagens de produto.
+- **Status:** Ativa
+- **Dependências:** Storage.
+
+### Spreadsheet com grid HTML/Tailwind customizado
+- **Módulo:** Planilhas
+- **Descrição:** Sem \`react-data-grid\` (restrição arquitetural).
+- **Status:** Ativa
+- **Dependências:** —
+
+### Lazy-loading de módulos pesados
+- **Módulo:** Performance Global
+- **Descrição:** Divisão de componentes por rota.
+- **Status:** Ativa
+- **Dependências:** React Router.
+
+### Estratégia multi-tier de compartilhamento WhatsApp
+- **Módulo:** Compartilhamento
+- **Descrição:** Anexos de arquivo com fallback em camadas.
+- **Status:** Ativa
+- **Dependências:** WhatsApp deep links.
+
+---
+
+## Funcionalidades Explicitamente Não Ativas (para transparência)
+
+- **Sign-up anônimo:** desativado por decisão.
+- **Confirmação automática de e-mail:** desativada.
+- **Google OAuth:** disponível, ativado somente se configurado.
+- **Conectores externos de mensageria (WhatsApp API oficial, Instagram, etc.):** ainda não conectados — envios usam deep links.
+- **Webhooks públicos:** inexistentes; automações internas via triggers PL/pgSQL.
+- **Gateway de pagamento:** nenhum ativo (Stripe/Paddle disponíveis, não habilitados).
+
+---
+
+Documento gerado pelo próprio Painel. Nenhuma funcionalidade foi alterada.
+`;
+
+const FUNCIONALIDADES_IMPLEMENTADAS_FILL_FLAG = "nucleo_estado_atual_funcionalidades_implementadas_fill_v1";
+
 
 const BIBLIOTECA_SEED: Array<{ title: string; content: string; tags: string[] }> = [
   {
