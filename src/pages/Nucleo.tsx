@@ -16,6 +16,7 @@ import {
   Eye,
   Building2,
   TrendingUp,
+  Activity,
   Plus,
   Trash2,
   FileText,
