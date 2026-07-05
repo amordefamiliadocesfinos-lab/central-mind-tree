@@ -1712,6 +1712,404 @@ Documento gerado pelo próprio Painel. Nenhuma funcionalidade foi alterada.
 
 const FUNCIONALIDADES_IMPLEMENTADAS_FILL_FLAG = "nucleo_estado_atual_funcionalidades_implementadas_fill_v1";
 
+const FUNCIONALIDADES_INCOMPLETAS_CONTENT = `# Funcionalidades Incompletas — Estado Atual
+
+Itens presentes no sistema hoje que **funcionam parcialmente**, dependem de configuração externa, ou ainda não têm o ciclo completo implementado. Documento descritivo — nada foi alterado.
+
+Legenda: **Parcial** (usável, com lacuna conhecida) · **Rascunho** (estrutura pronta, uso limitado) · **Aguardando integração** (depende de terceiro).
+
+---
+
+### 1. Atendimento multi-plataforma — envio real
+- **Módulo:** Atendimento
+- **Estado:** Parcial
+- **O que funciona:** Recebimento manual, agrupamento por contato/plataforma, IA de intenção, timeline.
+- **O que falta:** Conectores oficiais (WhatsApp Business API, Instagram DM, Messenger). Envio hoje ocorre por deep link.
+- **Impacto:** Automação de resposta e recebimento em tempo real limitados.
+
+### 2. WhatsApp — envio programado / API oficial
+- **Módulo:** CRM / Atendimento
+- **Estado:** Aguardando integração
+- **O que funciona:** Deep links (\`api.whatsapp.com\`, \`wa.me\`), disparo em massa Queue mode, logging na timeline.
+- **O que falta:** Envio server-side (API oficial), templates HSM aprovados, agendamento sem intervenção humana.
+
+### 3. Webhooks públicos
+- **Módulo:** Integrações
+- **Estado:** Rascunho
+- **O que funciona:** Automações internas via triggers PL/pgSQL.
+- **O que falta:** Endpoints públicos para receber eventos externos (formulários, Meta Ads, gateways).
+
+### 4. Conectores MCP / App Connectors
+- **Módulo:** Integrações
+- **Estado:** Rascunho
+- **O que funciona:** Infra do Lovable disponível.
+- **O que falta:** Nenhuma conexão ativa (Google Calendar, Gmail, Drive, Meta, etc.).
+
+### 5. Gateway de pagamento
+- **Módulo:** Financeiro
+- **Estado:** Não ativo
+- **O que funciona:** Registro manual de recebimentos, parciais, recorrência.
+- **O que falta:** Stripe/Paddle habilitados; cobrança automática via link.
+
+### 6. Google OAuth
+- **Módulo:** Autenticação
+- **Estado:** Parcial
+- **O que funciona:** Provider disponível no Supabase Auth.
+- **O que falta:** Configuração do provedor efetivamente ativa; hoje o padrão é e-mail/senha.
+
+### 7. Notificações (push / e-mail transacional)
+- **Módulo:** Global
+- **Estado:** Rascunho
+- **O que funciona:** Alertas globais dentro do app (Rotina).
+- **O que falta:** Push mobile, e-mail transacional configurado com domínio, SMS.
+
+### 8. Rotas — otimização geográfica avançada
+- **Módulo:** Rotas
+- **Estado:** Parcial
+- **O que funciona:** Planejamento por proximidade/prioridade, navegação, comprovante de entrega.
+- **O que falta:** Otimização multi-veículo, janelas de entrega, integração com mapa/tráfego em tempo real.
+
+### 9. Módulo "Compras" isolado
+- **Módulo:** Operações
+- **Estado:** Ausente como módulo próprio
+- **O que funciona:** Fluxo composto por Operações + Estoque + Financeiro.
+- **O que falta:** Tela dedicada de cotação, aprovação e histórico de fornecedores.
+
+### 10. Cadastro/gestão de fornecedores
+- **Módulo:** CRM / Compras
+- **Estado:** Parcial
+- **O que funciona:** Fornecedores tratados como contatos.
+- **O que falta:** Segmentação específica, catálogo por fornecedor, prazos e SLAs.
+
+### 11. Relatórios exportáveis (PDF/Excel)
+- **Módulo:** Global
+- **Estado:** Parcial
+- **O que funciona:** KPIs e dashboards em tela.
+- **O que falta:** Exportação padronizada de DRE, curva ABC, extratos, timelines.
+
+### 12. Autopilot da IA em ações de alto risco
+- **Módulo:** IA
+- **Estado:** Parcial por design
+- **O que funciona:** \`ai_policies.max_risk\` limita o autopilot; execução de ações baixas.
+- **O que falta:** Ampliação segura para ações críticas (envio massivo, alterações financeiras).
+
+### 13. Analytics agregado histórico
+- **Módulo:** Dashboard Panorâmico
+- **Estado:** Parcial
+- **O que funciona:** KPIs cross-module em tempo real.
+- **O que falta:** Séries históricas longas, comparativos ano/ano, coortes.
+
+### 14. Onboarding e permissões granulares
+- **Módulo:** Colaboradores
+- **Estado:** Parcial
+- **O que funciona:** \`user_roles\` + \`has_role\`.
+- **O que falta:** UI de gestão de papéis, permissões por módulo/ação, convites.
+
+### 15. Recuperação de senha / troca de e-mail
+- **Módulo:** Autenticação
+- **Estado:** Parcial (usa fluxo padrão do backend, sem UI própria polida)
+- **O que falta:** Telas dedicadas com templates de e-mail personalizados.
+
+### 16. Backup e restauração pelo usuário
+- **Módulo:** Global
+- **Estado:** Ausente
+- **O que falta:** Exportação completa a pedido, snapshots restauráveis pelo painel.
+
+### 17. Testes automatizados
+- **Módulo:** Engenharia
+- **Estado:** Ausente
+- **O que falta:** Suíte de testes unitários/integrados/E2E.
+
+---
+
+Nenhuma dessas funcionalidades foi alterada por esta documentação.
+`;
+
+const FUNCIONALIDADES_INCOMPLETAS_FILL_FLAG = "nucleo_estado_atual_funcionalidades_incompletas_fill_v1";
+
+const PONTOS_FORTES_CONTENT = `# Pontos Fortes — Estado Atual
+
+Aspectos em que o Painel Central hoje se destaca. Base para preservar decisões e evitar regressão.
+
+---
+
+### 1. Núcleo estratégico como fonte oficial
+Consulta obrigatória antes de novos módulos, agentes ou automações. Garante coerência de longo prazo.
+
+### 2. Organograma hierárquico com nó-raiz obrigatório ("Deividi")
+Previne dependências circulares e mantém integridade da árvore. Múltiplos modos de visualização.
+
+### 3. CRM com inteligência de urgência
+Lead Score, tiers de prioridade, detecção de ghosting, follow-up 1-clique, health automático — foco em velocidade de resposta.
+
+### 4. Sync bidirecional CRM ↔ Atendimento ↔ Operações
+Conversas, timeline, funil, pedidos e financeiro conversam. Reduz retrabalho.
+
+### 5. Precisão decimal global (\`numeric(20,10)\`)
+Custos, preços e quantidades sem arredondamento prematuro. Confiabilidade financeira e de estoque.
+
+### 6. Timezone e datas padronizados
+America/Sao_Paulo sempre; \`parseISO\`; exibição DD/MM/YYYY. Evita bugs comuns de fuso.
+
+### 7. Inventário atômico e location-aware
+Cada movimento vinculado a local; saldo sempre derivado. Produção consome do local certo.
+
+### 8. Modelo de custo em 3 camadas na produção
+BOM + processos + logística opcional. Custo real do produto acabado.
+
+### 9. Financeiro completo com recorrência e parciais
+Contas a pagar/receber, parcelas, desconto/juros, filtro global de período com fuso local.
+
+### 10. Digital estratégico (Ideia → Variações)
+Núcleo estratégico único com variações por plataforma. Auto-fill via SKU, IA de conteúdo, tendências e mockups por aspect-ratio.
+
+### 11. Rotina e Foco integrados ao tempo real
+Planejamento drag-and-drop → Foco → \`time_entries\` acoplado. Multi-usuário isolado.
+
+### 12. IA governada (autopilot com \`max_risk\`)
+Ações executáveis com política clara. Histórico e insights persistidos.
+
+### 13. Mobile-first consistente
+Sticky headers com safe-area, bottom nav, ResponsiveDialog fullscreen, popovers com \`pointer-events-auto\`.
+
+### 14. Autonomia do usuário sobre estruturas
+Campos, categorias, canais e plataformas dinâmicos — sem hardcode.
+
+### 15. Segurança de acesso
+RLS em todas as tabelas relevantes; papéis via \`has_role\` (SECURITY DEFINER); sem sign-up anônimo.
+
+### 16. Reuso de padrões técnicos
+LightboxProvider global único, fetch-to-blob para mídia, biblioteca unificada de mídia, disparo WhatsApp com log automático.
+
+### 17. Performance em listas grandes (CRM)
+Virtualização e lazy-loading; sync otimista via eventos.
+
+### 18. Documentação viva no Núcleo
+Estado atual (Mapa, Arquitetura, DB, Integrações, Agentes, Fluxos, Funcionalidades) mantido dentro do próprio painel.
+`;
+
+const PONTOS_FORTES_FILL_FLAG = "nucleo_estado_atual_pontos_fortes_fill_v1";
+
+const PONTOS_MELHORIA_CONTENT = `# Pontos de Melhoria — Estado Atual
+
+Oportunidades identificadas a partir da análise do sistema atual. Documento descritivo — nenhuma melhoria foi implementada.
+
+---
+
+### 1. Integrações externas ativas
+Conectar WhatsApp Business API, e-mail transacional com domínio próprio, Google Calendar, Meta Ads, gateway de pagamento. Hoje muitos fluxos dependem de deep link ou registro manual.
+
+### 2. Módulo "Compras" próprio
+Extrair de Operações/Financeiro uma tela dedicada com cotação, aprovação, fornecedores e SLAs.
+
+### 3. Gestão granular de permissões
+UI para papéis, permissões por módulo/ação e convites de novos usuários.
+
+### 4. Relatórios exportáveis
+PDF/Excel padronizados para DRE, curva ABC, timelines, extratos, funil.
+
+### 5. Analytics histórico
+Séries longas, comparativos ano/ano, coortes de clientes, retenção.
+
+### 6. Notificações fora do app
+Push mobile, e-mail transacional configurado, SMS opcional.
+
+### 7. Rotas — otimização avançada
+Multi-veículo, janelas de entrega, integração com mapa/tráfego em tempo real.
+
+### 8. Testes automatizados
+Cobertura unitária/integração/E2E para módulos críticos (Financeiro, Estoque, CRM).
+
+### 9. Onboarding assistido
+Tour interativo por módulo, dados de exemplo, checklist inicial.
+
+### 10. Templates aprovados de WhatsApp (HSM)
+Necessários para envios proativos via API oficial.
+
+### 11. Autopilot da IA em risco maior (com salvaguardas)
+Aprovação em lote, dry-run, auditoria reforçada para ações críticas.
+
+### 12. Exportação/backup a pedido do usuário
+Download completo, snapshots restauráveis.
+
+### 13. UI de rastreio de mudanças
+Diff visual entre versões de páginas do Núcleo, entradas financeiras e pedidos.
+
+### 14. Melhoria contínua da IA
+Fine-tuning de tom por persona (Marketing, CEO), memória de longo prazo por contato.
+
+### 15. Padronização de cadastro de fornecedores
+Segmento específico separado dos clientes, com catálogo próprio.
+
+### 16. Configuração via UI de dias sazonais e regras de recorrência
+Reduzir dependência de código para novas regras.
+
+### 17. Observabilidade
+Logs estruturados, dashboards de erros, alertas de falha em edge functions.
+
+### 18. Design system explicitado
+Tokens semânticos documentados no Núcleo (cores, tipografia, espaçamento) para novas telas.
+`;
+
+const PONTOS_MELHORIA_FILL_FLAG = "nucleo_estado_atual_pontos_melhoria_fill_v1";
+
+const DIVIDA_TECNICA_CONTENT = `# Dívida Técnica — Estado Atual
+
+Registro das dívidas técnicas conhecidas. Nada foi refatorado por esta documentação.
+
+---
+
+### 1. Ausência de testes automatizados
+- **Área:** Global
+- **Descrição:** Não há suíte unitária/integração/E2E.
+- **Risco:** Regressões silenciosas em módulos críticos (Financeiro, Estoque, Produção).
+
+### 2. Persistência do Núcleo em localStorage
+- **Área:** Núcleo
+- **Descrição:** Conteúdo estratégico depende do navegador do usuário; não é sincronizado no backend.
+- **Risco:** Perda de conteúdo ao limpar dados; ausência de colaboração multi-dispositivo.
+
+### 3. Envio de WhatsApp via deep link
+- **Área:** CRM / Atendimento
+- **Descrição:** Sem API oficial; requer interação humana.
+- **Risco:** Não há confirmação de entrega/leitura server-side.
+
+### 4. Storage buckets públicos
+- **Área:** Mídia
+- **Descrição:** \`media\`, \`contact-avatars\`, \`delivery-proof\` acessíveis publicamente.
+- **Risco:** Exposição indevida de arquivos sensíveis se URLs vazarem.
+
+### 5. Lógica de negócio no cliente
+- **Área:** Financeiro, CRM, KPIs
+- **Descrição:** Cálculos de KPI (valor de estoque, score, urgência) rodam em grande parte no front.
+- **Risco:** Divergência entre usuários; peso em datasets grandes.
+
+### 6. Ausência de camada de tipos compartilhada além do gerado pelo Supabase
+- **Área:** Engenharia
+- **Descrição:** Regras de domínio repetidas em vários componentes.
+- **Risco:** Inconsistência entre módulos.
+
+### 7. Componentes grandes em módulos críticos
+- **Área:** CRM, Digital, Operações
+- **Descrição:** Existem componentes com muita responsabilidade; parcialmente mitigado por lazy-loading.
+- **Risco:** Dificuldade de manutenção e testes.
+
+### 8. Duplicação de estilos ad-hoc
+- **Área:** UI
+- **Descrição:** Uso ocasional de utilitários fora do design system quando pressão de prazo apertou.
+- **Risco:** Divergência visual em telas novas.
+
+### 9. Sem observabilidade
+- **Área:** Global / Edge functions
+- **Descrição:** Falhas de edges e queries lentas dependem de inspeção manual.
+- **Risco:** MTTR alto em incidentes.
+
+### 10. Autopilot restrito por ausência de auditoria robusta
+- **Área:** IA
+- **Descrição:** Registrar diffs completos e reverter ações em lote ainda não é trivial.
+- **Risco:** Limita expansão do autopilot.
+
+### 11. Datas de arquivos legados
+- **Área:** Data/Hora
+- **Descrição:** Podem existir consumos residuais de \`new Date()\` fora do padrão \`parseISO\`.
+- **Risco:** Bugs de fuso em telas antigas.
+
+### 12. Sem migrações versionadas descritivas por feature
+- **Área:** Banco de dados
+- **Descrição:** Histórico de migrações existe, mas nem sempre nomeado por feature.
+- **Risco:** Dificuldade em auditar quando/por que um campo mudou.
+
+### 13. Sem CI/CD explícito para verificações
+- **Área:** Engenharia
+- **Descrição:** Deploy contínuo do Lovable, mas sem pipeline com lint/tsc/tests obrigatórios.
+- **Risco:** Erros só descobertos em runtime.
+
+### 14. Documentação técnica interna limitada
+- **Área:** Engenharia
+- **Descrição:** Núcleo cobre estratégia; falta ADRs (Architecture Decision Records) técnicos.
+- **Risco:** Perda de contexto em decisões futuras.
+
+### 15. Ausência de rate limiting em edges
+- **Área:** IA / Edges
+- **Descrição:** Sem controle explícito de uso por usuário.
+- **Risco:** Custo elevado em caso de mau uso.
+`;
+
+const DIVIDA_TECNICA_FILL_FLAG = "nucleo_estado_atual_divida_tecnica_fill_v1";
+
+const RESUMO_EXECUTIVO_CONTENT = `# Resumo Executivo — Estado Atual do Painel Central
+
+## Visão geral
+O **Painel Central – Cérebro** é um sistema hierárquico interativo (organograma vivo) que unifica operação, comercial, financeiro, marketing digital, produção, logística e rotina em um único painel. É construído sobre React + Vite + Tailwind e usa Lovable Cloud (Supabase) como backend com RLS, PostgREST, Realtime, Storage e Edge Functions.
+
+## O que já é forte hoje
+- **Núcleo estratégico oficial** como fonte de verdade antes de qualquer nova feature.
+- **CRM inteligente** com score, urgência, follow-ups, detecção de ghosting e sync com Atendimento e Operações.
+- **Financeiro** com recorrência, parciais, filtro global de período (fuso local) e integração automática com Vendas.
+- **Estoque atômico e location-aware**, com KPI global em \`numeric(20,10)\`.
+- **Produção com custo em 3 camadas** (BOM + processos + logística) e Kanban semanal.
+- **Digital estratégico** (Ideia → Variações), auto-fill via SKU, IA para copies/tendências/imagens, mockups por aspect-ratio.
+- **Rotina + Foco + Planejamento** integrados a \`time_entries\`, multi-usuário isolado.
+- **IA governada** com autopilot limitado por \`ai_policies.max_risk\` e histórico persistido.
+- **Padrões consistentes:** mobile-first, timezone America/Sao_Paulo, LightboxProvider global, RLS ativa, sem sign-up anônimo.
+
+## Onde ainda há lacunas
+- **Integrações externas** (WhatsApp Business API, e-mail transacional, Google Calendar, Meta Ads, gateways de pagamento) ainda não ativas.
+- **Módulo Compras isolado**, gestão de fornecedores segmentada e relatórios exportáveis (PDF/Excel) são funcionalidades ausentes ou parciais.
+- **Analytics histórico**, notificações fora do app e testes automatizados são frentes a evoluir.
+- **Autopilot** limitado por ausência de auditoria robusta para ações críticas.
+
+## Principais dívidas técnicas
+- **Sem testes automatizados** e sem CI/CD com verificações obrigatórias.
+- **Núcleo persiste em localStorage** — não sincronizado no backend.
+- **WhatsApp por deep link**, sem confirmação server-side.
+- **Storage buckets públicos** exigem cuidado com URLs.
+- **KPIs calculados no cliente**, pesados em datasets grandes.
+- **Observabilidade limitada** em edge functions.
+- **Rate limiting inexistente** em chamadas à IA.
+
+## Riscos e mitigação implícita
+- **Segurança:** mitigada por RLS + \`has_role\` + ausência de sign-up anônimo.
+- **Precisão financeira:** mitigada por \`numeric(20,10)\` global.
+- **Fuso horário:** mitigada por \`parseISO\` e America/Sao_Paulo obrigatórios.
+- **Regressão UX:** mitigada por padrões de mobile-first e ResponsiveDialog.
+- **Desalinhamento estratégico:** mitigado pelo Núcleo como fonte oficial.
+
+## Maturidade por área
+| Área | Maturidade |
+|---|---|
+| Autenticação e papéis | Alta |
+| CRM | Alta |
+| Atendimento | Média (falta conector externo) |
+| Operações / Vendas | Alta |
+| Produção | Alta |
+| Estoque | Alta |
+| Financeiro | Alta (falta gateway) |
+| Digital | Alta |
+| Rotas | Média |
+| Calendário / Agenda | Alta |
+| Rotina / Foco / Planejamento | Alta |
+| IA / Assistente | Média-alta (autopilot restrito) |
+| Núcleo (documentação) | Alta |
+| Observabilidade / Testes | Baixa |
+| Integrações externas | Baixa |
+
+## Recomendação de leitura complementar
+- **Mapa Geral do Sistema** — módulos, páginas, rotas, componentes.
+- **Arquitetura Atual** — organização, estrutura de pastas, camadas.
+- **Banco de Dados** — tabelas, chaves, RLS, funções.
+- **Integrações** — APIs, IA, storage, autenticação.
+- **Agentes de IA** — nome, responsabilidade, fluxo, ferramentas, limitações.
+- **Fluxos do Sistema** — login, financeiro, CRM, estoque, vendas, agenda, demais módulos.
+- **Funcionalidades Implementadas / Incompletas** — inventário completo.
+- **Pontos Fortes / Pontos de Melhoria / Dívida Técnica** — leitura estratégica.
+
+## Conclusão
+O Painel Central já opera como cérebro unificado com regras claras (Núcleo), precisão financeira, integridade hierárquica e IA governada. As próximas evoluções passam por **integrações externas oficiais**, **observabilidade + testes**, **relatórios exportáveis** e **ampliação segura do autopilot da IA**, sem comprometer os princípios que sustentam a coerência atual.
+`;
+
+const RESUMO_EXECUTIVO_FILL_FLAG = "nucleo_estado_atual_resumo_executivo_fill_v1";
+
 
 const BIBLIOTECA_SEED: Array<{ title: string; content: string; tags: string[] }> = [
   {
@@ -2119,6 +2517,69 @@ function loadPages(): DocPage[] {
         ];
       }
       localStorage.setItem(FUNCIONALIDADES_IMPLEMENTADAS_FILL_FLAG, "1");
+    }
+    // Generic filler for remaining Estado Atual pages
+    const REMAINING_FILLS: Array<{ flag: string; title: string; content: string; tags: string[] }> = [
+      {
+        flag: FUNCIONALIDADES_INCOMPLETAS_FILL_FLAG,
+        title: "Funcionalidades Incompletas",
+        content: FUNCIONALIDADES_INCOMPLETAS_CONTENT,
+        tags: ["incompletas", "parcial", "pendentes"],
+      },
+      {
+        flag: PONTOS_FORTES_FILL_FLAG,
+        title: "Pontos Fortes",
+        content: PONTOS_FORTES_CONTENT,
+        tags: ["pontos-fortes", "estratégia"],
+      },
+      {
+        flag: PONTOS_MELHORIA_FILL_FLAG,
+        title: "Pontos de Melhoria",
+        content: PONTOS_MELHORIA_CONTENT,
+        tags: ["melhoria", "oportunidades"],
+      },
+      {
+        flag: DIVIDA_TECNICA_FILL_FLAG,
+        title: "Dívida Técnica",
+        content: DIVIDA_TECNICA_CONTENT,
+        tags: ["dívida-técnica", "engenharia"],
+      },
+      {
+        flag: RESUMO_EXECUTIVO_FILL_FLAG,
+        title: "Resumo Executivo",
+        content: RESUMO_EXECUTIVO_CONTENT,
+        tags: ["resumo", "executivo", "visão-geral"],
+      },
+    ];
+    for (const entry of REMAINING_FILLS) {
+      if (localStorage.getItem(entry.flag)) continue;
+      const now = new Date().toISOString();
+      let exists = false;
+      pages = pages.map((p) => {
+        if (p.areaId === "estado-atual" && p.title === entry.title) {
+          exists = true;
+          if (!p.content || p.content.trim() === "") {
+            return { ...p, content: entry.content, updatedAt: now };
+          }
+        }
+        return p;
+      });
+      if (!exists) {
+        pages = [
+          ...pages,
+          {
+            id: uid(),
+            areaId: "estado-atual",
+            title: entry.title,
+            content: entry.content,
+            tags: entry.tags,
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+        ];
+      }
+      localStorage.setItem(entry.flag, "1");
     }
 
 
