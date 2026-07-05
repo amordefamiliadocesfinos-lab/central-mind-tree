@@ -629,6 +629,38 @@ function loadPages(): DocPage[] {
       pages = [...pages, ...seeded];
       localStorage.setItem(ESTADO_ATUAL_SEED_FLAG_KEY, "1");
     }
+    // Fill "Mapa Geral do Sistema" content once (safe: only if page is empty)
+    if (!localStorage.getItem(MAPA_GERAL_FILL_FLAG)) {
+      const now = new Date().toISOString();
+      let mapaExists = false;
+      pages = pages.map((p) => {
+        if (p.areaId === "estado-atual" && p.title === "Mapa Geral do Sistema") {
+          mapaExists = true;
+          if (!p.content || p.content.trim() === "") {
+            return { ...p, content: MAPA_GERAL_CONTENT, updatedAt: now };
+          }
+        }
+        return p;
+      });
+      if (!mapaExists) {
+        pages = [
+          ...pages,
+          {
+            id: uid(),
+            areaId: "estado-atual",
+            title: "Mapa Geral do Sistema",
+            content: MAPA_GERAL_CONTENT,
+            tags: ["mapa", "visão-geral"],
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+        ];
+      }
+      localStorage.setItem(MAPA_GERAL_FILL_FLAG, "1");
+    }
+
+
 
     // Seed Princípio Mestre once (independent flag so existing installs also receive it)
     const PRINCIPIO_FLAG = "nucleo_principio_mestre_seed_v1";
