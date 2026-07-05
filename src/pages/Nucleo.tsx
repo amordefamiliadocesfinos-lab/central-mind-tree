@@ -1474,6 +1474,36 @@ function loadPages(): DocPage[] {
       }
       localStorage.setItem(AGENTES_IA_FILL_FLAG, "1");
     }
+    // Fill "Fluxos do Sistema" content once (safe: only if page is empty)
+    if (!localStorage.getItem(FLUXOS_SISTEMA_FILL_FLAG)) {
+      const now = new Date().toISOString();
+      let exists = false;
+      pages = pages.map((p) => {
+        if (p.areaId === "estado-atual" && p.title === "Fluxos do Sistema") {
+          exists = true;
+          if (!p.content || p.content.trim() === "") {
+            return { ...p, content: FLUXOS_SISTEMA_CONTENT, updatedAt: now };
+          }
+        }
+        return p;
+      });
+      if (!exists) {
+        pages = [
+          ...pages,
+          {
+            id: uid(),
+            areaId: "estado-atual",
+            title: "Fluxos do Sistema",
+            content: FLUXOS_SISTEMA_CONTENT,
+            tags: ["fluxos", "processos", "operação"],
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+        ];
+      }
+      localStorage.setItem(FLUXOS_SISTEMA_FILL_FLAG, "1");
+    }
 
 
 
