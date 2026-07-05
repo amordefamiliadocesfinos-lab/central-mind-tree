@@ -1218,6 +1218,36 @@ function loadPages(): DocPage[] {
       }
       localStorage.setItem(INTEGRACOES_FILL_FLAG, "1");
     }
+    // Fill "Agentes de IA" content once (safe: only if page is empty)
+    if (!localStorage.getItem(AGENTES_IA_FILL_FLAG)) {
+      const now = new Date().toISOString();
+      let exists = false;
+      pages = pages.map((p) => {
+        if (p.areaId === "estado-atual" && p.title === "Agentes de IA") {
+          exists = true;
+          if (!p.content || p.content.trim() === "") {
+            return { ...p, content: AGENTES_IA_CONTENT, updatedAt: now };
+          }
+        }
+        return p;
+      });
+      if (!exists) {
+        pages = [
+          ...pages,
+          {
+            id: uid(),
+            areaId: "estado-atual",
+            title: "Agentes de IA",
+            content: AGENTES_IA_CONTENT,
+            tags: ["ia", "agentes", "edge-functions"],
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+        ];
+      }
+      localStorage.setItem(AGENTES_IA_FILL_FLAG, "1");
+    }
 
 
 
