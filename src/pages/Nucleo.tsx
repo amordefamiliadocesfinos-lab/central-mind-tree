@@ -2518,6 +2518,69 @@ function loadPages(): DocPage[] {
       }
       localStorage.setItem(FUNCIONALIDADES_IMPLEMENTADAS_FILL_FLAG, "1");
     }
+    // Generic filler for remaining Estado Atual pages
+    const REMAINING_FILLS: Array<{ flag: string; title: string; content: string; tags: string[] }> = [
+      {
+        flag: FUNCIONALIDADES_INCOMPLETAS_FILL_FLAG,
+        title: "Funcionalidades Incompletas",
+        content: FUNCIONALIDADES_INCOMPLETAS_CONTENT,
+        tags: ["incompletas", "parcial", "pendentes"],
+      },
+      {
+        flag: PONTOS_FORTES_FILL_FLAG,
+        title: "Pontos Fortes",
+        content: PONTOS_FORTES_CONTENT,
+        tags: ["pontos-fortes", "estratégia"],
+      },
+      {
+        flag: PONTOS_MELHORIA_FILL_FLAG,
+        title: "Pontos de Melhoria",
+        content: PONTOS_MELHORIA_CONTENT,
+        tags: ["melhoria", "oportunidades"],
+      },
+      {
+        flag: DIVIDA_TECNICA_FILL_FLAG,
+        title: "Dívida Técnica",
+        content: DIVIDA_TECNICA_CONTENT,
+        tags: ["dívida-técnica", "engenharia"],
+      },
+      {
+        flag: RESUMO_EXECUTIVO_FILL_FLAG,
+        title: "Resumo Executivo",
+        content: RESUMO_EXECUTIVO_CONTENT,
+        tags: ["resumo", "executivo", "visão-geral"],
+      },
+    ];
+    for (const entry of REMAINING_FILLS) {
+      if (localStorage.getItem(entry.flag)) continue;
+      const now = new Date().toISOString();
+      let exists = false;
+      pages = pages.map((p) => {
+        if (p.areaId === "estado-atual" && p.title === entry.title) {
+          exists = true;
+          if (!p.content || p.content.trim() === "") {
+            return { ...p, content: entry.content, updatedAt: now };
+          }
+        }
+        return p;
+      });
+      if (!exists) {
+        pages = [
+          ...pages,
+          {
+            id: uid(),
+            areaId: "estado-atual",
+            title: entry.title,
+            content: entry.content,
+            tags: entry.tags,
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+        ];
+      }
+      localStorage.setItem(entry.flag, "1");
+    }
 
 
 
