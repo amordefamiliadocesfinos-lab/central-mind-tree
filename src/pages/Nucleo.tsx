@@ -265,7 +265,7 @@ const BIBLIOTECA_SEED: Array<{ title: string; content: string; tags: string[] }>
       "• Arquitetura — Módulos, agentes de IA, banco de dados, fluxos, APIs, integrações, estrutura da plataforma.\n" +
       "• Evolução do Projeto — Roadmap, melhorias, ideias, decisões importantes, histórico de alterações.",
   },
-
+  {
     title: "Carta Zero — A Teoria do Painel Central",
     tags: ["carta", "teoria", "fundamento"],
     content:
