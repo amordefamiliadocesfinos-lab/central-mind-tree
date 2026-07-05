@@ -6,6 +6,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   Brain,
   BookOpen,
   Eye,
@@ -17,6 +22,8 @@ import {
   Save,
   Search,
   ChevronRight,
+  History,
+  RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -33,6 +40,14 @@ interface AreaMeta {
   color: string;
 }
 
+interface PageVersion {
+  id: string;
+  title: string;
+  content: string;
+  createdAt: string;
+  label?: string;
+}
+
 interface DocPage {
   id: string;
   areaId: AreaId;
@@ -41,6 +56,7 @@ interface DocPage {
   tags: string[];
   createdAt: string;
   updatedAt: string;
+  versions: PageVersion[];
 }
 
 // ---------- Config ----------
@@ -76,16 +92,102 @@ const AREAS: AreaMeta[] = [
   },
 ];
 
-const STORAGE_KEY = "nucleo_painel_central_pages_v2";
+const STORAGE_KEY = "nucleo_painel_central_pages_v3";
+const SEED_FLAG_KEY = "nucleo_biblioteca_seed_v1";
+
+const BIBLIOTECA_SEED: Array<{ title: string; content: string; tags: string[] }> = [
+  {
+    title: "Carta Zero — A Teoria do Painel Central",
+    tags: ["carta", "teoria", "fundamento"],
+    content:
+      "Carta Zero — A Teoria do Painel Central\n\n" +
+      "Documento fundacional que apresenta a teoria por trás do Painel Central: a razão de existir, o problema que resolve e a visão que sustenta todo o sistema.\n\n" +
+      "— Escreva aqui a teoria completa.",
+  },
+  {
+    title: "Carta I — Manifesto",
+    tags: ["carta", "manifesto"],
+    content:
+      "Carta I — Manifesto\n\n" +
+      "Declaração pública dos princípios, crenças e compromissos que guiam o Painel Central.\n\n" +
+      "— Escreva aqui o manifesto.",
+  },
+  {
+    title: "Carta II — Constituição",
+    tags: ["carta", "constituição", "regras"],
+    content:
+      "Carta II — Constituição\n\n" +
+      "Conjunto de regras, direitos e deveres que estruturam o funcionamento do Painel Central.\n\n" +
+      "— Escreva aqui a constituição.",
+  },
+  {
+    title: "Carta III — Consciência",
+    tags: ["carta", "consciência"],
+    content:
+      "Carta III — Consciência\n\n" +
+      "Reflexão sobre a consciência do sistema: propósito, autopercepção e responsabilidade.\n\n" +
+      "— Escreva aqui a carta da consciência.",
+  },
+  {
+    title: "Carta IV — Filosofia da Experiência",
+    tags: ["carta", "filosofia", "experiência"],
+    content:
+      "Carta IV — Filosofia da Experiência\n\n" +
+      "Como o Painel Central entende, projeta e entrega experiência ao usuário.\n\n" +
+      "— Escreva aqui a filosofia da experiência.",
+  },
+  {
+    title: "Carta V — Arquitetura da Inteligência",
+    tags: ["carta", "arquitetura", "inteligência"],
+    content:
+      "Carta V — Arquitetura da Inteligência\n\n" +
+      "Como a inteligência do sistema é estruturada: dados, decisões, automações e IA.\n\n" +
+      "— Escreva aqui a arquitetura da inteligência.",
+  },
+];
 
 // ---------- Persistence ----------
+
+function uid() {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
 
 function loadPages(): DocPage[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    let pages: DocPage[] = [];
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        pages = parsed.map((p) => ({
+          ...p,
+          versions: Array.isArray(p.versions) ? p.versions : [],
+          tags: Array.isArray(p.tags) ? p.tags : [],
+        }));
+      }
+    }
+    // Seed biblioteca once
+    if (!localStorage.getItem(SEED_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "biblioteca").map((p) => p.title)
+      );
+      const now = new Date().toISOString();
+      const seeded = BIBLIOTECA_SEED.filter(
+        (s) => !existingTitles.has(s.title)
+      ).map<DocPage>((s) => ({
+        id: uid(),
+        areaId: "biblioteca",
+        title: s.title,
+        content: s.content,
+        tags: s.tags,
+        createdAt: now,
+        updatedAt: now,
+        versions: [],
+      }));
+      pages = [...seeded, ...pages];
+      localStorage.setItem(SEED_FLAG_KEY, "1");
+    }
+    return pages;
   } catch {
     return [];
   }
@@ -95,10 +197,6 @@ function savePages(pages: DocPage[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(pages));
 }
 
-function uid() {
-  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
 function formatDate(iso: string) {
   try {
     const d = new Date(iso);
@@ -106,6 +204,21 @@ function formatDate(iso: string) {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
+    });
+  } catch {
+    return "";
+  }
+}
+
+function formatDateTime(iso: string) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   } catch {
     return "";
@@ -162,6 +275,7 @@ export default function Nucleo() {
       tags: [],
       createdAt: now,
       updatedAt: now,
+      versions: [],
     };
     setPages((prev) => [page, ...prev]);
     setActivePageId(page.id);
@@ -180,6 +294,59 @@ export default function Nucleo() {
     setPages((prev) => prev.filter((p) => p.id !== id));
     if (activePageId === id) setActivePageId(null);
     toast.success("Página excluída");
+  };
+
+  const saveVersion = (id: string, label?: string) => {
+    setPages((prev) =>
+      prev.map((p) => {
+        if (p.id !== id) return p;
+        const version: PageVersion = {
+          id: uid(),
+          title: p.title,
+          content: p.content,
+          createdAt: new Date().toISOString(),
+          label,
+        };
+        return { ...p, versions: [version, ...p.versions] };
+      })
+    );
+    toast.success("Versão salva");
+  };
+
+  const restoreVersion = (id: string, versionId: string) => {
+    setPages((prev) =>
+      prev.map((p) => {
+        if (p.id !== id) return p;
+        const v = p.versions.find((x) => x.id === versionId);
+        if (!v) return p;
+        // Snapshot current before restoring
+        const snapshot: PageVersion = {
+          id: uid(),
+          title: p.title,
+          content: p.content,
+          createdAt: new Date().toISOString(),
+          label: "auto — antes de restaurar",
+        };
+        return {
+          ...p,
+          title: v.title,
+          content: v.content,
+          updatedAt: new Date().toISOString(),
+          versions: [snapshot, ...p.versions],
+        };
+      })
+    );
+    toast.success("Versão restaurada");
+  };
+
+  const deleteVersion = (id: string, versionId: string) => {
+    setPages((prev) =>
+      prev.map((p) =>
+        p.id === id
+          ? { ...p, versions: p.versions.filter((v) => v.id !== versionId) }
+          : p
+      )
+    );
   };
 
   const selectArea = (id: AreaId) => {
@@ -334,6 +501,8 @@ export default function Nucleo() {
                           </p>
                           <p className="text-[11px] text-muted-foreground truncate">
                             {formatDate(p.updatedAt)}
+                            {p.versions.length > 0 &&
+                              ` · v${p.versions.length}`}
                             {p.tags.length > 0 &&
                               ` · ${p.tags.slice(0, 2).join(", ")}`}
                           </p>
@@ -385,6 +554,9 @@ export default function Nucleo() {
                 page={activePage}
                 onChange={(patch) => updatePage(activePage.id, patch)}
                 onDelete={() => deletePage(activePage.id)}
+                onSaveVersion={(label) => saveVersion(activePage.id, label)}
+                onRestoreVersion={(vid) => restoreVersion(activePage.id, vid)}
+                onDeleteVersion={(vid) => deleteVersion(activePage.id, vid)}
                 areaColor={activeAreaMeta.color}
               />
             )}
@@ -406,11 +578,23 @@ interface PageEditorProps {
   page: DocPage;
   onChange: (patch: Partial<DocPage>) => void;
   onDelete: () => void;
+  onSaveVersion: (label?: string) => void;
+  onRestoreVersion: (versionId: string) => void;
+  onDeleteVersion: (versionId: string) => void;
   areaColor: string;
 }
 
-function PageEditor({ page, onChange, onDelete, areaColor }: PageEditorProps) {
+function PageEditor({
+  page,
+  onChange,
+  onDelete,
+  onSaveVersion,
+  onRestoreVersion,
+  onDeleteVersion,
+  areaColor,
+}: PageEditorProps) {
   const [tagInput, setTagInput] = useState("");
+  const [versionLabel, setVersionLabel] = useState("");
 
   const addTag = () => {
     const t = tagInput.trim();
@@ -427,6 +611,11 @@ function PageEditor({ page, onChange, onDelete, areaColor }: PageEditorProps) {
     onChange({ tags: page.tags.filter((x) => x !== t) });
   };
 
+  const handleSaveVersion = () => {
+    onSaveVersion(versionLabel.trim() || undefined);
+    setVersionLabel("");
+  };
+
   return (
     <div className="flex flex-col h-full min-h-[380px]">
       <div className="flex items-center gap-2 mb-3">
@@ -436,6 +625,97 @@ function PageEditor({ page, onChange, onDelete, areaColor }: PageEditorProps) {
           placeholder="Título da página"
           className="text-base font-semibold border-0 shadow-none px-0 h-auto py-1 focus-visible:ring-0"
         />
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="sm" className="gap-1 shrink-0">
+              <History className="h-4 w-4" />
+              <span className="text-xs">
+                {page.versions.length > 0
+                  ? `${page.versions.length} versões`
+                  : "Versões"}
+              </span>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-80 p-3" align="end">
+            <div className="space-y-2">
+              <div>
+                <p className="text-sm font-semibold">Salvar versão</p>
+                <p className="text-[11px] text-muted-foreground">
+                  Cria um snapshot do conteúdo atual.
+                </p>
+              </div>
+              <div className="flex gap-1.5">
+                <Input
+                  value={versionLabel}
+                  onChange={(e) => setVersionLabel(e.target.value)}
+                  placeholder="Rótulo (opcional)"
+                  className="h-8 text-xs"
+                />
+                <Button size="sm" onClick={handleSaveVersion} className="gap-1">
+                  <Save className="h-3.5 w-3.5" />
+                  Salvar
+                </Button>
+              </div>
+
+              <div className="pt-2 border-t">
+                <p className="text-xs font-semibold mb-1.5">Histórico</p>
+                {page.versions.length === 0 ? (
+                  <p className="text-[11px] text-muted-foreground py-3 text-center">
+                    Nenhuma versão salva ainda.
+                  </p>
+                ) : (
+                  <ScrollArea className="max-h-64 -mx-1">
+                    <div className="px-1 space-y-1">
+                      {page.versions.map((v, idx) => (
+                        <div
+                          key={v.id}
+                          className="rounded border border-border p-2 text-xs"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium truncate">
+                                v{page.versions.length - idx}
+                                {v.label ? ` — ${v.label}` : ""}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {formatDateTime(v.createdAt)}
+                              </p>
+                            </div>
+                            <div className="flex gap-0.5 shrink-0">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                title="Restaurar"
+                                onClick={() => onRestoreVersion(v.id)}
+                              >
+                                <RotateCcw className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-destructive hover:text-destructive"
+                                title="Excluir versão"
+                                onClick={() => onDeleteVersion(v.id)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground mt-1 line-clamp-2">
+                            {v.content.slice(0, 120) || "(vazio)"}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+
         <Button
           variant="ghost"
           size="sm"
@@ -450,6 +730,12 @@ function PageEditor({ page, onChange, onDelete, areaColor }: PageEditorProps) {
         <span>Criada em {formatDate(page.createdAt)}</span>
         <span>·</span>
         <span>Atualizada em {formatDate(page.updatedAt)}</span>
+        {page.versions.length > 0 && (
+          <>
+            <span>·</span>
+            <span>{page.versions.length} versões</span>
+          </>
+        )}
       </div>
 
       {/* Tags */}
