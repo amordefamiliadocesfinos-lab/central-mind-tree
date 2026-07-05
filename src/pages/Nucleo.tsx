@@ -668,6 +668,232 @@ const AGENTES_IA_CONTENT =
 
 const AGENTES_IA_FILL_FLAG = "nucleo_estado_atual_agentes_ia_fill_v1";
 
+const FLUXOS_SISTEMA_CONTENT = `# Fluxos do Sistema — Estado Atual
+
+Documentação dos principais fluxos operacionais do Painel Central. Cada fluxo descreve o caminho real percorrido pelo usuário e pelos dados, incluindo páginas envolvidas, tabelas afetadas e integrações acionadas. Nenhum fluxo foi alterado — este é apenas um mapa do comportamento atual.
+
+---
+
+## 1. Login e Autenticação
+
+**Rota:** \`/auth\` (público) → redireciona para \`/\` após sessão válida.
+
+**Passos:**
+1. Usuário acessa \`/auth\` (\`src/pages/Auth.tsx\`).
+2. Informa e-mail e senha; front chama \`supabase.auth.signInWithPassword\` (client em \`src/integrations/supabase/client.ts\`).
+3. Supabase Auth valida credenciais e devolve sessão JWT (armazenada em localStorage pelo SDK).
+4. \`AuthProvider\` (\`src/contexts/AuthContext.tsx\`) escuta \`onAuthStateChange\` e propaga \`user\` / \`session\` para o app.
+5. \`ProtectedRoute\` libera as rotas internas; sem sessão, redireciona novamente para \`/auth\`.
+6. Papéis são resolvidos via \`user_roles\` + função \`has_role(uid, role)\` (SECURITY DEFINER).
+7. Perfil operacional é lido de \`app_users\` para nome, avatar e permissões de módulo.
+
+**Observações:** não há sign-up anônimo, não há confirmação automática de e-mail, e o Google provider só é ativo se configurado explicitamente.
+
+---
+
+## 2. Financeiro (Contas a Pagar / Receber / Conciliação)
+
+**Rota:** \`/financeiro\` (\`src/pages/Financeiro.tsx\` + subcomponentes em \`src/components/financial/\`).
+
+**Fluxo típico de lançamento:**
+1. Usuário abre o Financeiro e escolhe o período (Popover de calendário duplo, fuso America/Sao_Paulo).
+2. Cria entrada em \`financial_entries\` (tipo: a_pagar / a_receber, categoria, contato, vencimento, valor com \`numeric(20,10)\`).
+3. Se recorrente, sistema aplica regra de recorrência configurável e gera parcelas futuras.
+4. Pagamentos parciais são registrados em tabela dedicada, mantendo desconto/juros e recalculando saldo.
+5. KPIs (a vencer, vencidos, recebidos, pagos, DRE do período) são calculados no cliente sobre o dataset filtrado.
+6. Entradas ligadas a pedidos são criadas automaticamente pelo módulo Operações (ver fluxo Vendas).
+
+**Integrações:** apenas banco (Lovable Cloud). Nenhum gateway de pagamento ativo.
+
+---
+
+## 3. CRM (Lead → Cliente → Recorrência)
+
+**Rota:** \`/crm\` (\`src/pages/CRM.tsx\` + \`src/components/crm/\`).
+
+**Fluxo de atendimento:**
+1. Lead entra manualmente ou via Atendimento (\`/atendimento\`), gravado em \`contacts\` + \`crm_leads\`.
+2. Origem multi-canal é armazenada como JSONB ordenado (jornada de aquisição).
+3. Sistema calcula **Lead Score** (4 níveis) e **prioridade** (3 tiers visuais) automaticamente.
+4. Ordenação por urgência: pontuação + tempo sem resposta + agendamentos vencidos.
+5. Timeline (\`crm_timeline\`) registra cada interação (mensagem, ligação, reunião, mudança de etapa) — editável e auditável.
+6. Follow-ups automáticos sugerem templates 1-clique conforme inatividade.
+7. Envio de WhatsApp usa deep links (\`api.whatsapp.com\` / \`wa.me\`) via \`useWhatsAppWithLog\`, que grava evento na timeline.
+8. Conversão em pedido dispara fluxo bidirecional (dados do lead preenchem a venda; venda atualiza health do cliente).
+9. Dashboard e listas atualizam via eventos otimistas (padrão descrito em \`crm-optimistic-sync-pattern\`).
+
+**IA envolvida:** \`smart-whatsapp-message\` (sugestão personalizada), \`contact-summary\`, \`contact-from-media\`.
+
+---
+
+## 4. Atendimento Multiplataforma
+
+**Rota:** \`/atendimento\`.
+
+**Fluxo:**
+1. Conversas ficam em \`service_conversations\` + \`service_messages\`, agrupadas por contato e plataforma.
+2. Novo contato dispara \`auto_create_service_conversation\` (trigger PL/pgSQL).
+3. IA classifica intenção e sugere próxima ação; agente humano confirma ou edita.
+4. Toda troca é espelhada na timeline do CRM (sincronização descrita em \`atendimento-sync\`).
+5. Envio efetivo ocorre via WhatsApp deep link (não há API oficial conectada ainda).
+
+---
+
+## 5. Estoque (Inventário Unificado)
+
+**Rota:** \`/estoque\` / \`/operacoes\` (componentes em \`src/components/inventory/\` e \`src/components/operations/\`).
+
+**Fluxo:**
+1. Cada movimento é atômico e vinculado a um local (\`inventory_locations\`) em \`inventory_movements\`.
+2. Tipos: entrada (compra/produção), saída (venda/consumo), ajuste (wizard em 4 passos), transferência entre locais.
+3. Saldo por SKU/local é derivado da soma dos movimentos (nunca sobrescrito).
+4. KPI global de valor de estoque calcula em tempo real usando \`numeric(20,10)\` (sem arredondamento prematuro).
+5. Produção consome insumos do local configurado na OP e devolve produto acabado ao local de destino.
+6. Vendas geram baixa automática ao confirmar expedição (fluxo Vendas).
+
+---
+
+## 6. Compras (Aquisição de Insumos)
+
+**Fluxo atual (embutido em Operações/Financeiro):**
+1. Necessidade identificada manualmente ou por produção planejada.
+2. Registro do pedido de compra como entrada futura de estoque + lançamento em \`financial_entries\` (a_pagar).
+3. Recebimento gera movimento de entrada em \`inventory_movements\` no local escolhido.
+4. Baixa financeira ocorre no pagamento (parcial ou total) via módulo Financeiro.
+
+**Observação:** não existe módulo "Compras" isolado — o processo é composto por Operações + Estoque + Financeiro.
+
+---
+
+## 7. Vendas / Pedidos
+
+**Rota:** \`/operacoes\` (aba Pedidos) — componentes em \`src/components/operations/\`.
+
+**Fluxo:**
+1. Pedido criado a partir do CRM ou diretamente na tela de Pedidos (\`orders\` + \`order_items\`).
+2. Tipo do pedido define o caminho:
+   - **Estoque:** reserva imediata → separação → expedição → entrega.
+   - **Produção:** gera Ordem de Produção (\`production_orders\`), consome insumos, finaliza estoque, depois expede.
+3. Prioridade é calculada automaticamente em 5 níveis (data de entrega, tipo, cliente).
+4. Ajustes de venda (desconto, frete) são persistidos dinamicamente nas notas do pedido.
+5. Confirmação da venda cria automaticamente a entrada "A Receber" no Financeiro.
+6. Ao mudar de etapa, dispara \`apply_funnel_automations\` e sincroniza health do cliente no CRM.
+7. Entrega segue para o módulo Rotas quando aplicável.
+
+---
+
+## 8. Produção (Ordens de Produção)
+
+**Rota:** \`/producao\` / dentro de Operações.
+
+**Fluxo:**
+1. OP criada a partir de pedido (produção) ou reposição de estoque.
+2. Custo do produto usa modelo de 3 camadas: BOM + processos + logística opcional.
+3. Kanban semanal permite drag-and-drop para reagendar OPs.
+4. Ao iniciar, consome insumos do local configurado (\`inventory_movements\` saída).
+5. Ao finalizar, gera entrada de produto acabado no local de destino.
+6. Alertas visuais pulsantes indicam OPs atrasadas (\`due_date\` vencido).
+
+---
+
+## 9. Rotas / Entregas
+
+**Rota:** \`/rotas\`.
+
+**Fluxo:**
+1. Pedidos prontos para expedir entram no planejador de rotas.
+2. Sistema organiza paradas por proximidade e prioridade.
+3. Motorista navega pelo app; comprovante de entrega é anexado no bucket \`delivery-proof\`.
+4. Confirmação atualiza status do pedido e dispara baixa final se necessário.
+
+---
+
+## 10. Agenda / Calendário Unificado
+
+**Rota:** \`/calendario\` / \`/agenda\`.
+
+**Fluxo:**
+1. Hub anual consolida tarefas, pedidos (entregas), reuniões, conteúdos digitais e dias sazonais.
+2. Sincronização em 3 camadas para o Digital (planejado, agendado, publicado).
+3. Dias sazonais recorrentes exibem preparo e urgência visual.
+4. Reuniões geram roteiro estruturado, pauta e itens de ação (fluxo Reuniões).
+5. Eventos alimentam a "Minha Área" filtrando por usuário ativo.
+
+---
+
+## 11. Digital (Marketing / Conteúdo)
+
+**Rota:** \`/digital\`.
+
+**Fluxo:**
+1. "Ideia" estratégica é o núcleo; cada plataforma vira uma variação conectada (JSONB de campos custom).
+2. Vincular uma ideia a um SKU preenche automaticamente título e mídias (padrão \`product-link-auto-fill\`).
+3. Kanban de cards visuais permite ações diretas (agendar, publicar, duplicar, gerar variação com IA).
+4. Agendamento multi-datas por variação; status derivado no filtro (\`platform-specific-status-logic\`).
+5. IA (\`digital-content-ai\`, \`digital-trends\`, \`enhance-image\`) gera copies, tendências e melhora imagens.
+6. Automações orientadas a objetivo conectam Digital ao CRM (leads gerados por campanha).
+
+---
+
+## 12. Rotina / Foco / Planejamento
+
+**Rotas:** \`/rotina\`, \`/foco\`, \`/planejamento\`.
+
+**Fluxo:**
+1. **Planejamento:** drag-and-drop organiza tarefas do dia; sincroniza fila via localStorage.
+2. **Foco:** consome a fila; iniciar tarefa cria \`time_entries.started_at\`; encerrar fecha o intervalo.
+3. **Rotina:** Métodos de Trabalho (MT) por área, alertas globais interativos, snooze, checklists.
+4. Multi-usuário: cada operador vê apenas seus alertas e rotinas (isolamento por sessão).
+5. Hub central de execução integra tarefas de todos os módulos.
+
+---
+
+## 13. Reuniões
+
+**Rota:** \`/reunioes\`.
+
+**Fluxo:**
+1. Criação com roteiro estruturado e pauta.
+2. Durante a reunião, itens de ação são registrados e viram tarefas.
+3. Sincronização com o calendário e com a "Minha Área" do participante.
+
+---
+
+## 14. IA (CEO IA e assistentes)
+
+**Rota:** \`/assistente\` (e widgets embutidos em vários módulos).
+
+**Fluxo:**
+1. Usuário envia mensagem; front chama edge function \`ai-ceo\` (\`supabase/functions/ai-ceo/\`).
+2. Edge function consulta o Lovable AI Gateway (\`google/gemini-2.5-flash\`) com contexto amplo.
+3. Ações executáveis são gravadas em \`ai_actions\` e podem rodar em autopilot conforme \`ai_policies.max_risk\`.
+4. Histórico persiste em \`ai_chat_sessions\` + \`ai_chat_messages\`; insights em \`ai_insights\`.
+5. Outras edges (\`smart-whatsapp-message\`, \`contact-summary\`, etc.) seguem o mesmo padrão de gateway.
+
+---
+
+## 15. Núcleo (Documentação Estratégica)
+
+**Rota:** \`/nucleo\`.
+
+**Fluxo:**
+1. Repositório oficial de conhecimento (princípios, arquitetura, estado atual, roadmap).
+2. Consultado antes de qualquer novo módulo, agente ou automação.
+3. Estritamente estratégico — não interfere na operação.
+
+---
+
+## Observações Gerais
+
+- Todos os fluxos usam o cliente único do backend em \`src/integrations/supabase/client.ts\`.
+- Datas seguem SEMPRE America/Sao_Paulo e são parseadas com \`parseISO\`; exibição em DD/MM/YYYY.
+- Precisão decimal global \`numeric(20,10)\` em custos, preços e quantidades.
+- RLS habilitada em todas as tabelas públicas relevantes; papéis via \`has_role\`.
+- Nenhum fluxo foi alterado nesta documentação.
+`;
+
+const FLUXOS_SISTEMA_FILL_FLAG = "nucleo_estado_atual_fluxos_sistema_fill_v1";
+
 const INTEGRACOES_CONTENT =
   "Integrações — Estado Atual\n" +
   "=========================================\n\n" +
@@ -1247,6 +1473,36 @@ function loadPages(): DocPage[] {
         ];
       }
       localStorage.setItem(AGENTES_IA_FILL_FLAG, "1");
+    }
+    // Fill "Fluxos do Sistema" content once (safe: only if page is empty)
+    if (!localStorage.getItem(FLUXOS_SISTEMA_FILL_FLAG)) {
+      const now = new Date().toISOString();
+      let exists = false;
+      pages = pages.map((p) => {
+        if (p.areaId === "estado-atual" && p.title === "Fluxos do Sistema") {
+          exists = true;
+          if (!p.content || p.content.trim() === "") {
+            return { ...p, content: FLUXOS_SISTEMA_CONTENT, updatedAt: now };
+          }
+        }
+        return p;
+      });
+      if (!exists) {
+        pages = [
+          ...pages,
+          {
+            id: uid(),
+            areaId: "estado-atual",
+            title: "Fluxos do Sistema",
+            content: FLUXOS_SISTEMA_CONTENT,
+            tags: ["fluxos", "processos", "operação"],
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+        ];
+      }
+      localStorage.setItem(FLUXOS_SISTEMA_FILL_FLAG, "1");
     }
 
 
