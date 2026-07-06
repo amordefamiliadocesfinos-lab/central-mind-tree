@@ -34,7 +34,7 @@ import { cn } from "@/lib/utils";
 
 // ---------- Types ----------
 
-type AreaId = "biblioteca" | "consciencia" | "arquitetura" | "principios" | "atlas" | "evolucao" | "estado-atual";
+type AreaId = "biblioteca" | "consciencia" | "arquitetura" | "principios" | "atlas" | "ia-orquestradora" | "evolucao" | "estado-atual";
 
 interface AreaMeta {
   id: AreaId;
