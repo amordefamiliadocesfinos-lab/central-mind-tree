@@ -102,6 +102,13 @@ const AREAS: AreaMeta[] = [
     color: "#0EA5E9",
   },
   {
+    id: "ia-orquestradora",
+    title: "IA Orquestradora (Cérebro Central)",
+    description: "Inteligência central que observa, interpreta e coordena módulos, agentes e usuários.",
+    icon: Cpu,
+    color: "#A855F7",
+  },
+  {
     id: "evolucao",
     title: "Evolução do Projeto",
     description: "Marcos, aprendizados e histórico de mudanças.",
