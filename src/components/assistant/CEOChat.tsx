@@ -650,9 +650,7 @@ export function CEOChat() {
           const content = parsed.choices?.[0]?.delta?.content as string | undefined;
           if (content) {
             assistantContent += content;
-            // Parse actions from content
-            const actions = parseActionsFromResponse(assistantContent);
-            updateAssistant(assistantContent, actions.length > 0 ? actions : undefined);
+            updateAssistant(assistantContent, detectActionIntent(assistantContent) ? [] : undefined);
           }
         } catch {
           textBuffer = line + '\n' + textBuffer;
@@ -672,8 +670,7 @@ export function CEOChat() {
           const content = parsed.choices?.[0]?.delta?.content;
           if (content) {
             assistantContent += content;
-            const actions = parseActionsFromResponse(assistantContent);
-            updateAssistant(assistantContent, actions.length > 0 ? actions : undefined);
+            updateAssistant(assistantContent, detectActionIntent(assistantContent) ? [] : undefined);
           }
         } catch {}
       }
@@ -696,7 +693,7 @@ export function CEOChat() {
     try {
       await streamChat(newMessages);
 
-      // Salva a última resposta do assistente e executa automaticamente ações detectadas
+      // Salva a última resposta do assistente. Execução direta foi removida do chat: a IA só planeja.
       setMessages((prev) => {
         const lastIndex = prev.length - 1;
         const lastMsg = prev[lastIndex];
@@ -704,10 +701,6 @@ export function CEOChat() {
         if (lastMsg?.role === 'assistant') {
           saveMessage('assistant', lastMsg.content);
 
-          if (lastMsg.pendingActions?.length && !lastMsg.actionsExecuted) {
-            // Executa direto no chat (sem exigir aprovação)
-            setTimeout(() => executeActions(lastIndex), 0);
-          }
         }
 
         return prev;
@@ -799,30 +792,13 @@ export function CEOChat() {
                 )}
               </div>
               
-              {/* Execute button for messages with pending actions */}
-              {msg.role === 'assistant' && msg.pendingActions && msg.pendingActions.length > 0 && (
+              {/* Governance notice for action-like responses */}
+              {msg.role === 'assistant' && msg.pendingActions && (
                 <div className="ml-11 mt-2">
-                  {msg.actionsExecuted ? (
-                    <Button variant="outline" size="sm" disabled className="gap-2">
-                      <CheckCircle className="h-4 w-4 text-emerald-500" />
-                      Ações executadas
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="default"
-                      size="sm"
-                      onClick={() => executeActions(i)}
-                      disabled={isExecuting}
-                      className="gap-2"
-                    >
-                      {isExecuting ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <Play className="h-4 w-4" />
-                      )}
-                      Executar
-                    </Button>
-                  )}
+                  <div className="inline-flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+                    <ShieldCheck className="h-4 w-4" />
+                    Modo planejamento: nenhuma ação foi executada pelo chat.
+                  </div>
                 </div>
               )}
             </div>
