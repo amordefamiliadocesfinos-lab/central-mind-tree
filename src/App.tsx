@@ -35,6 +35,7 @@ import Academia from "./pages/Academia";
 import Metas from "./pages/Metas";
 import Oportunidades from "./pages/Oportunidades";
 import Nucleo from "./pages/Nucleo";
+import OAuthConsent from "./pages/OAuthConsent";
 import { NucleoLauncherButton } from "@/components/NucleoLauncherButton";
 import NotFound from "./pages/NotFound";
 import { QuickConversationFAB } from "@/components/crm/QuickConversationFAB";
@@ -105,6 +106,7 @@ function AnimatedRoutes() {
           <Route path="/oportunidades" element={<Oportunidades />} />
           <Route path="/nucleo" element={<Nucleo />} />
           <Route path="/task/:id" element={<TaskEdit />} />
+          <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </motion.div>
