@@ -330,6 +330,25 @@ const PRINCIPIOS_SEED: Array<{ title: string; content: string; tags: string[] }>
       "• Novos especialistas podem ser integrados sem alterar o centro do sistema, pois o centro é a coordenação, não um módulo.\n\n" +
       "— Este princípio orienta a divisão de responsabilidades, a priorização de evoluções e a avaliação de novos módulos no Painel Central.",
   },
+  {
+    title: "Princípio da Proatividade da IA",
+    tags: ["princípio", "ia", "proatividade", "orquestracao", "contexto"],
+    content:
+      "Princípio da Proatividade da IA\n\n" +
+      "A IA do Painel Central não reage apenas a comandos do usuário.\n\n" +
+      "Ela observa continuamente eventos do sistema, analisa o contexto global e decide quais especialistas devem participar antes de sugerir ou executar qualquer ação.\n\n" +
+      "Comportamento esperado:\n" +
+      "• Observação — a IA monitora sinais, métricas, alertas e mudanças de estado dos módulos e do ambiente, mesmo sem comando explícito.\n" +
+      "• Análise de contexto global — a IA cruza dados de múltiplos especialistas, histórico, objetivos e regras do Núcleo para formar uma visão unificada antes de agir.\n" +
+      "• Seleção de especialistas — antes de sugerir ou executar uma ação, a IA identifica e convoca os especialistas cujos domínios são relevantes para o contexto detectado.\n" +
+      "• Antecipação — a IA antecipa necessidades e gargalos com base em padrões observados, propondo ações preventivas, não apenas reativas.\n" +
+      "• Coordenação inteligente — a IA Orquestradora distribui tarefas entre especialistas selecionados, garantindo que cada um atue dentro de sua competência.\n\n" +
+      "Limites:\n" +
+      "• A proatividade respeita as políticas de autonomia e níveis de risco configurados.\n" +
+      "• Ações de alto risco ou impacto estratégico exigem aprovação do usuário, mesmo quando antecipadas pela IA.\n" +
+      "• O usuário pode sempre interromper, ajustar ou redefinir as sugestões proativas da IA.\n\n" +
+      "— Este princípio assegura que a IA opere como parceira inteligente, não como mera executora de comandos.",
+  },
 ];
 
 const PRINCIPIO_SEQUENCIA_DECISAO_FLAG_KEY = "nucleo_principio_sequencia_decisao_v1";
@@ -369,6 +388,28 @@ const PRINCIPIO_COORDENACAO_ESPECIALISTAS_PAGE: { title: string; content: string
     "• Nenhum módulo pode ser projetado como dependência obrigatória de todos os outros; a arquitetura deve permitir evolução independente.\n" +
     "• Novos especialistas podem ser integrados sem alterar o centro do sistema, pois o centro é a coordenação, não um módulo.\n\n" +
     "— Este princípio orienta a divisão de responsabilidades, a priorização de evoluções e a avaliação de novos módulos no Painel Central.",
+};
+
+const PRINCIPIO_PROATIVIDADE_IA_FLAG_KEY = "nucleo_principio_proatividade_ia_v1";
+
+const PRINCIPIO_PROATIVIDADE_IA_PAGE: { title: string; content: string; tags: string[] } = {
+  title: "Princípio da Proatividade da IA",
+  tags: ["princípio", "ia", "proatividade", "orquestracao", "contexto"],
+  content:
+    "Princípio da Proatividade da IA\n\n" +
+    "A IA do Painel Central não reage apenas a comandos do usuário.\n\n" +
+    "Ela observa continuamente eventos do sistema, analisa o contexto global e decide quais especialistas devem participar antes de sugerir ou executar qualquer ação.\n\n" +
+    "Comportamento esperado:\n" +
+    "• Observação — a IA monitora sinais, métricas, alertas e mudanças de estado dos módulos e do ambiente, mesmo sem comando explícito.\n" +
+    "• Análise de contexto global — a IA cruza dados de múltiplos especialistas, histórico, objetivos e regras do Núcleo para formar uma visão unificada antes de agir.\n" +
+    "• Seleção de especialistas — antes de sugerir ou executar uma ação, a IA identifica e convoca os especialistas cujos domínios são relevantes para o contexto detectado.\n" +
+    "• Antecipação — a IA antecipa necessidades e gargalos com base em padrões observados, propondo ações preventivas, não apenas reativas.\n" +
+    "• Coordenação inteligente — a IA Orquestradora distribui tarefas entre especialistas selecionados, garantindo que cada um atue dentro de sua competência.\n\n" +
+    "Limites:\n" +
+    "• A proatividade respeita as políticas de autonomia e níveis de risco configurados.\n" +
+    "• Ações de alto risco ou impacto estratégico exigem aprovação do usuário, mesmo quando antecipadas pela IA.\n" +
+    "• O usuário pode sempre interromper, ajustar ou redefinir as sugestões proativas da IA.\n\n" +
+    "— Este princípio assegura que a IA opere como parceira inteligente, não como mera executora de comandos.",
 };
 
 const IA_ORQUESTRADORA_SEED_FLAG_KEY = "nucleo_ia_orquestradora_seed_v1";
@@ -2894,6 +2935,29 @@ function loadPages(): DocPage[] {
         ];
       }
       localStorage.setItem(PRINCIPIO_COORDENACAO_ESPECIALISTAS_FLAG_KEY, "1");
+    }
+    // Seed Princípio da Proatividade da IA (append-only, safe)
+    if (!localStorage.getItem(PRINCIPIO_PROATIVIDADE_IA_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "principios").map((p) => p.title)
+      );
+      if (!existingTitles.has(PRINCIPIO_PROATIVIDADE_IA_PAGE.title)) {
+        const now = new Date().toISOString();
+        pages = [
+          {
+            id: uid(),
+            areaId: "principios",
+            title: PRINCIPIO_PROATIVIDADE_IA_PAGE.title,
+            content: PRINCIPIO_PROATIVIDADE_IA_PAGE.content,
+            tags: PRINCIPIO_PROATIVIDADE_IA_PAGE.tags,
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+          ...pages,
+        ];
+      }
+      localStorage.setItem(PRINCIPIO_PROATIVIDADE_IA_FLAG_KEY, "1");
     }
     // Seed atlas do painel central once
     if (!localStorage.getItem(ATLAS_SEED_FLAG_KEY)) {
