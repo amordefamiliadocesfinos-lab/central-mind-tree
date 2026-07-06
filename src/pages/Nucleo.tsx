@@ -2936,6 +2936,29 @@ function loadPages(): DocPage[] {
       }
       localStorage.setItem(PRINCIPIO_COORDENACAO_ESPECIALISTAS_FLAG_KEY, "1");
     }
+    // Seed Princípio da Proatividade da IA (append-only, safe)
+    if (!localStorage.getItem(PRINCIPIO_PROATIVIDADE_IA_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "principios").map((p) => p.title)
+      );
+      if (!existingTitles.has(PRINCIPIO_PROATIVIDADE_IA_PAGE.title)) {
+        const now = new Date().toISOString();
+        pages = [
+          {
+            id: uid(),
+            areaId: "principios",
+            title: PRINCIPIO_PROATIVIDADE_IA_PAGE.title,
+            content: PRINCIPIO_PROATIVIDADE_IA_PAGE.content,
+            tags: PRINCIPIO_PROATIVIDADE_IA_PAGE.tags,
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+          ...pages,
+        ];
+      }
+      localStorage.setItem(PRINCIPIO_PROATIVIDADE_IA_FLAG_KEY, "1");
+    }
     // Seed atlas do painel central once
     if (!localStorage.getItem(ATLAS_SEED_FLAG_KEY)) {
       const existingTitles = new Set(
