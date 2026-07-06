@@ -395,7 +395,33 @@ const IA_ORQUESTRADORA_SEED: Array<{ title: string; content: string; tags: strin
   },
 ];
 
+const IA_ORQUESTRADORA_ORIENTACAO_FLAG_KEY = "nucleo_ia_orquestradora_orientacao_objetivos_v1";
 
+const IA_ORQUESTRADORA_ORIENTACAO_PAGE: { title: string; content: string; tags: string[] } = {
+  title: "Orientação por Objetivos (Nova Diretriz Arquitetural)",
+  tags: ["ia-orquestradora", "orientacao-por-objetivos", "especialistas", "diretriz"],
+  content:
+    "Orientação por Objetivos — Nova Diretriz Arquitetural do Painel Central\n\n" +
+    "A partir desta diretriz, o Painel Central deixa de ser orientado por módulos e passa a ser orientado por objetivos.\n\n" +
+    "Princípios da nova orientação:\n" +
+    "• O ponto de partida do sistema deixa de ser o módulo e passa a ser o objetivo do usuário ou do negócio.\n" +
+    "• Cada objetivo define quais especialistas, agentes, dados e fluxos serão mobilizados.\n" +
+    "• Os módulos existentes tornam-se especialistas em suas áreas, com competências claras e escopo bem definido.\n" +
+    "• A IA Orquestradora (Cérebro Central) coordena todo o ecossistema, distribuindo trabalho entre especialistas, agentes e usuários.\n\n" +
+    "Papéis:\n" +
+    "• Objetivo — unidade central de organização do trabalho no Painel Central.\n" +
+    "• Especialistas (antigos módulos) — executam ações no seu domínio de competência.\n" +
+    "• Agentes de IA — apoiam ou automatizam etapas dentro dos objetivos, respeitando políticas de autonomia.\n" +
+    "• IA Orquestradora — interpreta o objetivo, seleciona especialistas, coordena a execução e valida o resultado contra o Núcleo.\n" +
+    "• Usuário — define objetivos, aprova decisões relevantes e mantém o controle estratégico.\n\n" +
+    "Impactos:\n" +
+    "• Interfaces, dashboards e rotinas passam a ser organizados por objetivos, não por módulos.\n" +
+    "• Especialistas deixam de operar de forma isolada e passam a colaborar sob coordenação da Orquestradora.\n" +
+    "• A avaliação de sucesso deixa de ser 'módulo funcionando' e passa a ser 'objetivo alcançado'.\n" +
+    "• Toda evolução futura deve considerar primeiro o objetivo a ser atendido e, depois, quais especialistas serão envolvidos.\n\n" +
+    "Regra permanente:\n" +
+    "Nenhum novo recurso deve ser projetado apenas como 'mais um módulo'. Todo novo recurso deve responder a um objetivo claro e se integrar como especialista sob a coordenação da IA Orquestradora.",
+};
 
 const ATLAS_SEED_FLAG_KEY = "nucleo_atlas_seed_v1";
 
@@ -2792,6 +2818,29 @@ function loadPages(): DocPage[] {
       }));
       pages = [...seeded, ...pages];
       localStorage.setItem(IA_ORQUESTRADORA_SEED_FLAG_KEY, "1");
+    }
+    // Seed IA Orquestradora — Orientação por Objetivos (append-only, safe)
+    if (!localStorage.getItem(IA_ORQUESTRADORA_ORIENTACAO_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "ia-orquestradora").map((p) => p.title)
+      );
+      if (!existingTitles.has(IA_ORQUESTRADORA_ORIENTACAO_PAGE.title)) {
+        const now = new Date().toISOString();
+        pages = [
+          {
+            id: uid(),
+            areaId: "ia-orquestradora",
+            title: IA_ORQUESTRADORA_ORIENTACAO_PAGE.title,
+            content: IA_ORQUESTRADORA_ORIENTACAO_PAGE.content,
+            tags: IA_ORQUESTRADORA_ORIENTACAO_PAGE.tags,
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+          ...pages,
+        ];
+      }
+      localStorage.setItem(IA_ORQUESTRADORA_ORIENTACAO_FLAG_KEY, "1");
     }
     // Seed evolução once
     if (!localStorage.getItem(EVOLUCAO_SEED_FLAG_KEY)) {
