@@ -94,6 +94,13 @@ const AREAS: AreaMeta[] = [
     color: "#6366F1",
   },
   {
+    id: "atlas",
+    title: "Atlas do Painel Central",
+    description: "Mapa oficial da arquitetura da plataforma.",
+    icon: MapIcon,
+    color: "#0EA5E9",
+  },
+  {
     id: "evolucao",
     title: "Evolução do Projeto",
     description: "Marcos, aprendizados e histórico de mudanças.",
