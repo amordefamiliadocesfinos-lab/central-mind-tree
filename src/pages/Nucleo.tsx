@@ -3093,6 +3093,29 @@ function loadPages(): DocPage[] {
       }
       localStorage.setItem(PRINCIPIO_ORGANISMO_UNICO_FLAG_KEY, "1");
     }
+    // Seed Princípio da Veracidade Operacional da IA (append-only, safe)
+    if (!localStorage.getItem(PRINCIPIO_VERACIDADE_OPERACIONAL_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "principios").map((p) => p.title)
+      );
+      if (!existingTitles.has(PRINCIPIO_VERACIDADE_OPERACIONAL_PAGE.title)) {
+        const now = new Date().toISOString();
+        pages = [
+          {
+            id: uid(),
+            areaId: "principios",
+            title: PRINCIPIO_VERACIDADE_OPERACIONAL_PAGE.title,
+            content: PRINCIPIO_VERACIDADE_OPERACIONAL_PAGE.content,
+            tags: PRINCIPIO_VERACIDADE_OPERACIONAL_PAGE.tags,
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+          ...pages,
+        ];
+      }
+      localStorage.setItem(PRINCIPIO_VERACIDADE_OPERACIONAL_FLAG_KEY, "1");
+    }
     // Seed atlas do painel central once
     if (!localStorage.getItem(ATLAS_SEED_FLAG_KEY)) {
       const existingTitles = new Set(
