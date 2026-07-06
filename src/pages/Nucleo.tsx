@@ -2708,6 +2708,27 @@ function loadPages(): DocPage[] {
       pages = [...pages, ...seeded];
       localStorage.setItem(ESTADO_ATUAL_SEED_FLAG_KEY, "1");
     }
+    // Seed indicadores arquiteturais do estado atual (append-only, safe)
+    if (!localStorage.getItem(ESTADO_ATUAL_INDICADORES_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "estado-atual").map((p) => p.title)
+      );
+      const now = new Date().toISOString();
+      const seeded = ESTADO_ATUAL_INDICADORES.filter(
+        (s) => !existingTitles.has(s.title)
+      ).map<DocPage>((s) => ({
+        id: uid(),
+        areaId: "estado-atual",
+        title: s.title,
+        content: s.content,
+        tags: s.tags,
+        createdAt: now,
+        updatedAt: now,
+        versions: [],
+      }));
+      pages = [...pages, ...seeded];
+      localStorage.setItem(ESTADO_ATUAL_INDICADORES_FLAG_KEY, "1");
+    }
     // Fill "Mapa Geral do Sistema" content once (safe: only if page is empty)
     if (!localStorage.getItem(MAPA_GERAL_FILL_FLAG)) {
       const now = new Date().toISOString();
