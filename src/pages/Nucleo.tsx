@@ -2819,6 +2819,29 @@ function loadPages(): DocPage[] {
       pages = [...seeded, ...pages];
       localStorage.setItem(IA_ORQUESTRADORA_SEED_FLAG_KEY, "1");
     }
+    // Seed IA Orquestradora — Orientação por Objetivos (append-only, safe)
+    if (!localStorage.getItem(IA_ORQUESTRADORA_ORIENTACAO_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "ia-orquestradora").map((p) => p.title)
+      );
+      if (!existingTitles.has(IA_ORQUESTRADORA_ORIENTACAO_PAGE.title)) {
+        const now = new Date().toISOString();
+        pages = [
+          {
+            id: uid(),
+            areaId: "ia-orquestradora",
+            title: IA_ORQUESTRADORA_ORIENTACAO_PAGE.title,
+            content: IA_ORQUESTRADORA_ORIENTACAO_PAGE.content,
+            tags: IA_ORQUESTRADORA_ORIENTACAO_PAGE.tags,
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+          ...pages,
+        ];
+      }
+      localStorage.setItem(IA_ORQUESTRADORA_ORIENTACAO_FLAG_KEY, "1");
+    }
     // Seed evolução once
     if (!localStorage.getItem(EVOLUCAO_SEED_FLAG_KEY)) {
       const existingTitles = new Set(
