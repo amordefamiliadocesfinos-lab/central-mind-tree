@@ -299,6 +299,104 @@ const PRINCIPIOS_SEED: Array<{ title: string; content: string; tags: string[] }>
   },
 ];
 
+const IA_ORQUESTRADORA_SEED_FLAG_KEY = "nucleo_ia_orquestradora_seed_v1";
+
+const IA_ORQUESTRADORA_SEED: Array<{ title: string; content: string; tags: string[] }> = [
+  {
+    title: "Visão Geral — IA Orquestradora (Cérebro Central)",
+    tags: ["ia-orquestradora", "visao", "cerebro-central"],
+    content:
+      "IA Orquestradora — Cérebro Central do Painel Central\n\n" +
+      "A IA Orquestradora é a inteligência central do Painel Central.\n\n" +
+      "Missão:\n" +
+      "• Observar continuamente o estado do sistema.\n" +
+      "• Compreender o contexto operacional, estratégico e humano.\n" +
+      "• Interpretar eventos relevantes emitidos por módulos, agentes e usuários.\n" +
+      "• Coordenar módulos, agentes especialistas e usuários em direção aos objetivos definidos.\n" +
+      "• Respeitar sempre o Núcleo do Painel Central e as políticas de autonomia vigentes.\n\n" +
+      "Ela não substitui os módulos nem os agentes especialistas: ela os orquestra, garantindo coerência, prioridade e alinhamento com a estratégia.",
+  },
+  {
+    title: "Responsabilidades",
+    tags: ["ia-orquestradora", "responsabilidades"],
+    content:
+      "Responsabilidades da IA Orquestradora\n\n" +
+      "• Observação contínua — monitorar sinais, métricas, alertas e mudanças de estado.\n" +
+      "• Compreensão de contexto — cruzar dados de múltiplos módulos para formar uma visão unificada.\n" +
+      "• Interpretação de eventos — classificar, priorizar e correlacionar acontecimentos.\n" +
+      "• Coordenação — acionar módulos, agentes especialistas e usuários com a tarefa certa, no momento certo.\n" +
+      "• Aderência ao Núcleo — validar toda decisão contra os princípios e diretrizes registrados no Núcleo.\n" +
+      "• Governança de autonomia — respeitar níveis de risco, aprovação e autopilot configurados.",
+  },
+  {
+    title: "Ciclo de Operação",
+    tags: ["ia-orquestradora", "ciclo", "loop"],
+    content:
+      "Ciclo de Operação (Observar → Compreender → Interpretar → Coordenar → Aprender)\n\n" +
+      "1. Observar — coletar eventos, métricas e sinais do sistema.\n" +
+      "2. Compreender — construir contexto a partir de estado atual, histórico e objetivos.\n" +
+      "3. Interpretar — identificar oportunidades, riscos, gargalos e prioridades.\n" +
+      "4. Coordenar — delegar ações a módulos, agentes ou usuários, respeitando políticas.\n" +
+      "5. Aprender — registrar resultados, ajustar heurísticas e alimentar a memória do Núcleo.",
+  },
+  {
+    title: "Relação com o Núcleo",
+    tags: ["ia-orquestradora", "nucleo", "governanca"],
+    content:
+      "Relação com o Núcleo do Painel Central\n\n" +
+      "• O Núcleo é a fonte oficial de conhecimento, princípios e diretrizes.\n" +
+      "• A IA Orquestradora consulta o Núcleo antes de decidir ou coordenar ações relevantes.\n" +
+      "• Nenhuma decisão da Orquestradora pode contrariar princípios arquiteturais registrados.\n" +
+      "• Aprendizados relevantes retornam ao Núcleo como atualizações documentais.",
+  },
+  {
+    title: "Coordenação de Módulos, Agentes e Usuários",
+    tags: ["ia-orquestradora", "coordenacao", "agentes"],
+    content:
+      "Coordenação\n\n" +
+      "• Módulos (Especialistas) — recebem tarefas específicas dentro da sua competência.\n" +
+      "• Agentes de IA — executam ações delegadas, respeitando escopo e políticas.\n" +
+      "• Usuários — recebem sugestões, alertas e pedidos de decisão quando necessário.\n\n" +
+      "A Orquestradora garante que cada ator atue no papel certo, evitando sobreposição, retrabalho ou conflito.",
+  },
+  {
+    title: "Políticas de Autonomia",
+    tags: ["ia-orquestradora", "autonomia", "politicas"],
+    content:
+      "Políticas de Autonomia\n\n" +
+      "• Toda ação autônoma respeita o nível de risco (max_risk) configurado por área.\n" +
+      "• Ações de baixo risco podem ser executadas em autopilot quando habilitado.\n" +
+      "• Ações de alto risco exigem aprovação explícita do usuário.\n" +
+      "• Toda execução autônoma é registrada, auditável e reversível quando possível.\n" +
+      "• Em caso de conflito entre autonomia e princípio do Núcleo, o Núcleo prevalece.",
+  },
+  {
+    title: "Interfaces com o Sistema",
+    tags: ["ia-orquestradora", "interfaces", "integracoes"],
+    content:
+      "Interfaces com o Sistema\n\n" +
+      "• Consciência — fornece contexto interpretado à Orquestradora.\n" +
+      "• Motor de IA — provê capacidades de raciocínio (local ou nuvem).\n" +
+      "• Hub Universal de Integrações — canal para acionar serviços externos.\n" +
+      "• Core do Sistema — fornece dados canônicos e regras compartilhadas.\n" +
+      "• Especialistas — executam ações no domínio de cada módulo.\n" +
+      "• Rotina — canal preferencial para materializar tarefas junto ao usuário.",
+  },
+  {
+    title: "Roadmap Inicial",
+    tags: ["ia-orquestradora", "roadmap", "evolucao"],
+    content:
+      "Roadmap Inicial da IA Orquestradora\n\n" +
+      "• Fase 1 — Observação: coletar eventos e construir visão unificada de contexto.\n" +
+      "• Fase 2 — Interpretação: gerar insights e priorizações a partir do contexto.\n" +
+      "• Fase 3 — Coordenação assistida: sugerir ações a usuários e agentes.\n" +
+      "• Fase 4 — Coordenação autônoma controlada: executar ações de baixo risco em autopilot.\n" +
+      "• Fase 5 — Aprendizado contínuo: retroalimentar Núcleo e políticas com resultados.",
+  },
+];
+
+const ATLAS_SEED_FLAG_KEY_MARKER_KEEP_BELOW = 1; void ATLAS_SEED_FLAG_KEY_MARKER_KEEP_BELOW;
+
 const ATLAS_SEED_FLAG_KEY = "nucleo_atlas_seed_v1";
 
 const ATLAS_SEED: Array<{ title: string; content: string; tags: string[] }> = [
