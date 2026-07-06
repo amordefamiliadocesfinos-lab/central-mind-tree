@@ -86,6 +86,13 @@ const AREAS: AreaMeta[] = [
     color: "#F59E0B",
   },
   {
+    id: "principios",
+    title: "Princípios Arquiteturais",
+    description: "Princípios permanentes que orientam a evolução do Painel Central.",
+    icon: Compass,
+    color: "#6366F1",
+  },
+  {
     id: "evolucao",
     title: "Evolução do Projeto",
     description: "Marcos, aprendizados e histórico de mudanças.",
