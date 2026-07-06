@@ -2506,6 +2506,27 @@ function loadPages(): DocPage[] {
       pages = [...seeded, ...pages];
       localStorage.setItem(PRINCIPIOS_SEED_FLAG_KEY, "1");
     }
+    // Seed atlas do painel central once
+    if (!localStorage.getItem(ATLAS_SEED_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "atlas").map((p) => p.title)
+      );
+      const now = new Date().toISOString();
+      const seeded = ATLAS_SEED.filter(
+        (s) => !existingTitles.has(s.title)
+      ).map<DocPage>((s) => ({
+        id: uid(),
+        areaId: "atlas",
+        title: s.title,
+        content: s.content,
+        tags: s.tags,
+        createdAt: now,
+        updatedAt: now,
+        versions: [],
+      }));
+      pages = [...seeded, ...pages];
+      localStorage.setItem(ATLAS_SEED_FLAG_KEY, "1");
+    }
     // Seed evolução once
     if (!localStorage.getItem(EVOLUCAO_SEED_FLAG_KEY)) {
       const existingTitles = new Set(
