@@ -446,6 +446,7 @@ const PRINCIPIO_PROATIVIDADE_IA_PAGE: { title: string; content: string; tags: st
 const PRINCIPIO_ORIENTACAO_OBJETIVOS_FLAG_KEY = "nucleo_principio_orientacao_objetivos_v1";
 
 const PRINCIPIO_ORGANISMO_UNICO_FLAG_KEY = "nucleo_principio_organismo_unico_v1";
+const PRINCIPIO_VERACIDADE_OPERACIONAL_FLAG_KEY = "nucleo_principio_veracidade_operacional_ia_v1";
 
 const PRINCIPIO_ORGANISMO_UNICO_PAGE: { title: string; content: string; tags: string[] } = {
   title: "Princípio do Organismo Único",
@@ -462,6 +463,25 @@ const PRINCIPIO_ORGANISMO_UNICO_PAGE: { title: string; content: string; tags: st
     "• Nenhum módulo pode criar uma experiência fragmentada ou exigir que o usuário recontextualize informações já fornecidas.\n" +
     "• A IA Orquestradora garante que a resposta final ao usuário seja coerente, unificada e alinhada aos objetivos ativos, independentemente de quantos especialistas participaram.\n\n" +
     "— Este princípio transforma o Painel Central de uma coleção de módulos em um organismo inteligente e contínuo.",
+};
+
+const PRINCIPIO_VERACIDADE_OPERACIONAL_PAGE: { title: string; content: string; tags: string[] } = {
+  title: "Princípio da Veracidade Operacional da IA",
+  tags: ["princípio", "ia", "governanca", "execucao", "auditoria"],
+  content:
+    "Princípio da Veracidade Operacional da IA\n\n" +
+    "A IA do Painel Central nunca pode afirmar que executou uma ação sem confirmação real, explícita e auditável da camada de execução do sistema.\n\n" +
+    "Regra central:\n" +
+    "• Resposta não é execução. Plano não é execução. Intenção detectada não é execução.\n" +
+    "• A IA só pode dizer que criou, editou, excluiu, removeu, concluiu, deu baixa ou executou algo quando houver retorno técnico confirmado da ferramenta responsável.\n" +
+    "• Na ausência dessa confirmação, a IA deve declarar que está apenas propondo um plano, aguardando validação ou solicitando confirmação.\n" +
+    "• Comandos críticos, especialmente exclusões, exigem identificação exata do alvo, validação contra dados existentes, análise de impacto e confirmação do usuário antes de qualquer execução.\n" +
+    "• A IA não pode inventar IDs, nomes, resultados ou status de execução. Toda resposta deve separar claramente: objetivo identificado, especialistas envolvidos, plano proposto, riscos e estado real da execução.\n\n" +
+    "Antipadrões proibidos:\n" +
+    "• Dizer 'feito', 'excluído', 'executei', 'já removi' ou equivalente sem confirmação da camada de execução.\n" +
+    "• Tratar uma resposta textual do modelo como comando executado.\n" +
+    "• Executar ação destrutiva a partir de interpretação frágil, ambígua ou não validada.\n\n" +
+    "— Este princípio torna a IA auditável, confiável e alinhada à Consciência e ao Núcleo do Painel Central.",
 };
 
 const PRINCIPIO_ORIENTACAO_OBJETIVOS_PAGE: { title: string; content: string; tags: string[] } = {
@@ -3072,6 +3092,29 @@ function loadPages(): DocPage[] {
         ];
       }
       localStorage.setItem(PRINCIPIO_ORGANISMO_UNICO_FLAG_KEY, "1");
+    }
+    // Seed Princípio da Veracidade Operacional da IA (append-only, safe)
+    if (!localStorage.getItem(PRINCIPIO_VERACIDADE_OPERACIONAL_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "principios").map((p) => p.title)
+      );
+      if (!existingTitles.has(PRINCIPIO_VERACIDADE_OPERACIONAL_PAGE.title)) {
+        const now = new Date().toISOString();
+        pages = [
+          {
+            id: uid(),
+            areaId: "principios",
+            title: PRINCIPIO_VERACIDADE_OPERACIONAL_PAGE.title,
+            content: PRINCIPIO_VERACIDADE_OPERACIONAL_PAGE.content,
+            tags: PRINCIPIO_VERACIDADE_OPERACIONAL_PAGE.tags,
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+          ...pages,
+        ];
+      }
+      localStorage.setItem(PRINCIPIO_VERACIDADE_OPERACIONAL_FLAG_KEY, "1");
     }
     // Seed atlas do painel central once
     if (!localStorage.getItem(ATLAS_SEED_FLAG_KEY)) {

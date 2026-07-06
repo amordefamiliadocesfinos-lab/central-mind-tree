@@ -121,10 +121,19 @@ serve(async (req) => {
         today,
       };
 
-      // System prompt for CEO agent
-      const systemPrompt = `Você é um CEO operacional de IA com AUTONOMIA TOTAL para operar o sistema. Seu objetivo é maximizar a entrega de projetos e manter a saúde financeira.
+      // System prompt for AI Orchestrator insights
+      const systemPrompt = `Você é a IA Orquestradora do Painel Central. Você NÃO é um módulo isolado e NÃO deve afirmar que executou ações quando apenas propôs decisões. Seu papel é perceber o contexto global, coordenar especialistas e gerar propostas rastreáveis.
 
-VOCÊ PODE EXECUTAR QUALQUER OPERAÇÃO (todas requerem aprovação do usuário):
+PRINCÍPIO PERMANENTE — SEQUÊNCIA DE DECISÃO:
+Perceber → Compreender → Priorizar → Decidir → Coordenar → Aprender.
+
+MODO DE OPERAÇÃO:
+- Gere apenas insights/propostas de ação, nunca mensagens dizendo que algo já foi executado.
+- Ações CRUD (criar, editar, excluir, dar baixa) sempre ficam como proposta pendente de aprovação humana.
+- Somente notificações de baixo risco podem ser autoexecutadas pela camada de política do sistema.
+- Para exclusões, só proponha quando houver ID explícito nos dados recebidos e a intenção estiver bem fundamentada.
+
+AÇÕES QUE PODEM SER PROPOSTAS (não declaradas como executadas):
 - CRIAR, EDITAR, EXCLUIR tarefas (tasks)
 - CRIAR, EDITAR, EXCLUIR nós/projetos (nodes)
 - CRIAR, EDITAR, EXCLUIR pedidos (orders)
@@ -167,9 +176,9 @@ TIPOS DE AÇÃO DISPONÍVEIS:
 - post_create, post_update, post_delete
 - notification
 
-Analise os dados e gere de 1 a 5 insights acionáveis com operações concretas.`;
+Analise os dados e gere de 1 a 5 insights acionáveis com propostas concretas. Não use linguagem de execução concluída.`;
 
-      const userPrompt = `Analise estes dados e gere insights acionáveis com operações CONCRETAS:
+      const userPrompt = `Analise estes dados e gere insights acionáveis com propostas CONCRETAS, sem afirmar execução:
 
 TAREFAS (${context.tasks.length} total):
 ${JSON.stringify(context.tasks.slice(0, 50), null, 2)}
@@ -208,7 +217,7 @@ Retorne um array JSON com insights no formato:
   ]
 }
 
-EXEMPLOS DE PAYLOAD:
+EXEMPLOS DE PAYLOAD PARA PROPOSTA:
 - task_create: { "node_id": "uuid", "title": "Nova tarefa", "status": "pendente" }
 - task_update: { "id": "uuid", "status": "concluído", "progress": 100 }
 - task_delete: { "id": "uuid" }
@@ -434,6 +443,9 @@ EXEMPLOS DE PAYLOAD:
 
       const systemPrompt = `Você é a IA Orquestradora do Painel Central — o primeiro núcleo funcional da orquestração inteligente do sistema. Você NÃO é um módulo. Você coordena especialistas (CRM, Financeiro, Operações/Produção, Rotina, Agenda, Digital, Conteúdo, Estudos, etc.).
 
+REGRA ABSOLUTA DE VERACIDADE OPERACIONAL:
+Você nunca deve dizer que criou, editou, excluiu, executou, concluiu, removeu ou deu baixa em algo a menos que receba uma confirmação explícita da camada de execução do sistema. Neste chat, essa confirmação não existe. Portanto, toda solicitação de ação deve ser tratada como PLANO/PROPOSTA, não execução.
+
 PRINCÍPIO PERMANENTE — SEQUÊNCIA DE DECISÃO (obrigatória em toda resposta):
 Perceber → Compreender → Priorizar → Decidir → Coordenar → Aprender.
 
@@ -449,6 +461,8 @@ Antes de qualquer resposta, você deve raciocinar internamente e então apresent
 REGRAS DESTA FASE:
 - Nenhuma automação, criação, edição ou exclusão deve ser executada. Você está em modo PLANEJAMENTO apenas.
 - Não prometa "vou fazer" — diga "proponho fazer" / "sugiro este plano".
+- Não use frases como "feito", "excluído", "executei", "já removi", "criei" ou "alterei". Use "para executar com segurança, o plano é...".
+- Para comandos de exclusão, identifique exatamente o alvo, valide se há ambiguidade e peça confirmação; não invente IDs, nomes ou resultados.
 - Se o pedido for uma pergunta simples de consulta (ex: "qual o saldo?"), responda direto de forma curta, sem inflar em plano.
 - Se o pedido envolver ação sobre dados do sistema, SEMPRE use a estrutura de plano acima.
 - Fale como um organismo único: nunca diga "eu vou pedir para o módulo X"; diga "coordenarei o CRM e o Financeiro".
@@ -507,56 +521,14 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
       });
     }
 
-    // POST /execute - Execute action directly from chat (no insight creation needed)
+    // POST /execute - Direct chat execution is intentionally disabled.
+    // The IA Orquestradora must not claim or perform CRUD actions from chat without a validated execution layer.
     if (req.method === "POST" && path === "/execute") {
-      const { action } = await req.json();
-
-      if (!action || !action.type) {
-        return new Response(JSON.stringify({ error: "Action required" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      // Create a temporary insight for logging purposes
-      const { data: insightRecord, error: insertError } = await supabase
-        .from("ai_insights")
-        .insert({
-          area: action.area || "Projetos",
-          title: action.title || `Execução direta: ${action.type}`,
-          description: action.description || "Ação executada diretamente via chat",
-          severity: "media",
-          confidence: 1.0,
-          impact: 0.5,
-          risk: 0.3,
-          decision: action,
-          status: "aprovado",
-        })
-        .select()
-        .single();
-
-      if (insertError) {
-        console.error("Error creating insight:", insertError);
-        return new Response(JSON.stringify({ error: "Failed to create action record" }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      // Execute the action immediately
-      const actionResult = await executeAction(supabase, action, insightRecord.id);
-
-      // Update insight status
-      await supabase
-        .from("ai_insights")
-        .update({ status: actionResult.status === "ok" ? "executado" : "aprovado" })
-        .eq("id", insightRecord.id);
-
-      return new Response(JSON.stringify({ 
-        success: actionResult.status === "ok", 
-        result: actionResult.result,
-        insightId: insightRecord.id
+      return new Response(JSON.stringify({
+        success: false,
+        error: "Execução direta pelo chat desativada. A IA Orquestradora deve apenas identificar o objetivo, coordenar especialistas e apresentar um plano para confirmação.",
       }), {
+        status: 409,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
