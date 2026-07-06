@@ -2992,6 +2992,29 @@ function loadPages(): DocPage[] {
       }
       localStorage.setItem(PRINCIPIO_PROATIVIDADE_IA_FLAG_KEY, "1");
     }
+    // Seed Princípio da Orientação por Objetivos (append-only, safe)
+    if (!localStorage.getItem(PRINCIPIO_ORIENTACAO_OBJETIVOS_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "principios").map((p) => p.title)
+      );
+      if (!existingTitles.has(PRINCIPIO_ORIENTACAO_OBJETIVOS_PAGE.title)) {
+        const now = new Date().toISOString();
+        pages = [
+          {
+            id: uid(),
+            areaId: "principios",
+            title: PRINCIPIO_ORIENTACAO_OBJETIVOS_PAGE.title,
+            content: PRINCIPIO_ORIENTACAO_OBJETIVOS_PAGE.content,
+            tags: PRINCIPIO_ORIENTACAO_OBJETIVOS_PAGE.tags,
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+          ...pages,
+        ];
+      }
+      localStorage.setItem(PRINCIPIO_ORIENTACAO_OBJETIVOS_FLAG_KEY, "1");
+    }
     // Seed atlas do painel central once
     if (!localStorage.getItem(ATLAS_SEED_FLAG_KEY)) {
       const existingTitles = new Set(
