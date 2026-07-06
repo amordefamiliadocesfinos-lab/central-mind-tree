@@ -316,6 +316,20 @@ const PRINCIPIOS_SEED: Array<{ title: string; content: string; tags: string[] }>
       "• Este princípio se aplica à IA Orquestradora, aos agentes especialistas e a qualquer automação com capacidade de decisão.\n\n" +
       "— Este princípio é referência obrigatória para projetar, revisar e auditar qualquer fluxo de decisão da IA no Painel Central.",
   },
+  {
+    title: "Princípio da Coordenação por Especialistas",
+    tags: ["princípio", "especialistas", "modularidade", "orquestracao"],
+    content:
+      "Princípio da Coordenação por Especialistas\n\n" +
+      "Nenhum módulo é o centro do sistema.\n\n" +
+      "Cada módulo representa um especialista em sua área — CRM, Financeiro, Produção, Digital, Rotina, Agenda e demais — com responsabilidade clara sobre seu domínio.\n\n" +
+      "• Os módulos não competem entre si; complementam-se como especialistas de um mesmo ecossistema.\n" +
+      "• A centralidade do sistema reside na coordenação inteligente, não em nenhum módulo isolado.\n" +
+      "• A IA Orquestradora é quem observa, interpreta e coordena todos os especialistas para alcançar os objetivos definidos.\n" +
+      "• Nenhum módulo pode ser projetado como dependência obrigatória de todos os outros; a arquitetura deve permitir evolução independente.\n" +
+      "• Novos especialistas podem ser integrados sem alterar o centro do sistema, pois o centro é a coordenação, não um módulo.\n\n" +
+      "— Este princípio orienta a divisão de responsabilidades, a priorização de evoluções e a avaliação de novos módulos no Painel Central.",
+  },
 ];
 
 const PRINCIPIO_SEQUENCIA_DECISAO_FLAG_KEY = "nucleo_principio_sequencia_decisao_v1";
@@ -337,7 +351,24 @@ const PRINCIPIO_SEQUENCIA_DECISAO_PAGE: { title: string; content: string; tags: 
     "• Em situações de urgência extrema, a IA pode acelerar a sequência, mas nunca omiti-la por completo.\n" +
     "• O aprendizado de cada ciclo retroalimenta as etapas de Perceber e Compreender do ciclo seguinte.\n" +
     "• Este princípio se aplica à IA Orquestradora, aos agentes especialistas e a qualquer automação com capacidade de decisão.\n\n" +
-    "— Este princípio é referência obrigatória para projetar, revisar e auditar qualquer fluxo de decisão da IA no Painel Central.",
+      "— Este princípio é referência obrigatória para projetar, revisar e auditar qualquer fluxo de decisão da IA no Painel Central.",
+};
+
+const PRINCIPIO_COORDENACAO_ESPECIALISTAS_FLAG_KEY = "nucleo_principio_coordenacao_especialistas_v1";
+
+const PRINCIPIO_COORDENACAO_ESPECIALISTAS_PAGE: { title: string; content: string; tags: string[] } = {
+  title: "Princípio da Coordenação por Especialistas",
+  tags: ["princípio", "especialistas", "modularidade", "orquestracao"],
+  content:
+    "Princípio da Coordenação por Especialistas\n\n" +
+    "Nenhum módulo é o centro do sistema.\n\n" +
+    "Cada módulo representa um especialista em sua área — CRM, Financeiro, Produção, Digital, Rotina, Agenda e demais — com responsabilidade clara sobre seu domínio.\n\n" +
+    "• Os módulos não competem entre si; complementam-se como especialistas de um mesmo ecossistema.\n" +
+    "• A centralidade do sistema reside na coordenação inteligente, não em nenhum módulo isolado.\n" +
+    "• A IA Orquestradora é quem observa, interpreta e coordena todos os especialistas para alcançar os objetivos definidos.\n" +
+    "• Nenhum módulo pode ser projetado como dependência obrigatória de todos os outros; a arquitetura deve permitir evolução independente.\n" +
+    "• Novos especialistas podem ser integrados sem alterar o centro do sistema, pois o centro é a coordenação, não um módulo.\n\n" +
+    "— Este princípio orienta a divisão de responsabilidades, a priorização de evoluções e a avaliação de novos módulos no Painel Central.",
 };
 
 const IA_ORQUESTRADORA_SEED_FLAG_KEY = "nucleo_ia_orquestradora_seed_v1";
@@ -2840,6 +2871,29 @@ function loadPages(): DocPage[] {
         ];
       }
       localStorage.setItem(PRINCIPIO_SEQUENCIA_DECISAO_FLAG_KEY, "1");
+    }
+    // Seed Princípio da Coordenação por Especialistas (append-only, safe)
+    if (!localStorage.getItem(PRINCIPIO_COORDENACAO_ESPECIALISTAS_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "principios").map((p) => p.title)
+      );
+      if (!existingTitles.has(PRINCIPIO_COORDENACAO_ESPECIALISTAS_PAGE.title)) {
+        const now = new Date().toISOString();
+        pages = [
+          {
+            id: uid(),
+            areaId: "principios",
+            title: PRINCIPIO_COORDENACAO_ESPECIALISTAS_PAGE.title,
+            content: PRINCIPIO_COORDENACAO_ESPECIALISTAS_PAGE.content,
+            tags: PRINCIPIO_COORDENACAO_ESPECIALISTAS_PAGE.tags,
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+          ...pages,
+        ];
+      }
+      localStorage.setItem(PRINCIPIO_COORDENACAO_ESPECIALISTAS_FLAG_KEY, "1");
     }
     // Seed atlas do painel central once
     if (!localStorage.getItem(ATLAS_SEED_FLAG_KEY)) {
