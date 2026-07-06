@@ -429,6 +429,25 @@ const PRINCIPIO_PROATIVIDADE_IA_PAGE: { title: string; content: string; tags: st
 
 const PRINCIPIO_ORIENTACAO_OBJETIVOS_FLAG_KEY = "nucleo_principio_orientacao_objetivos_v1";
 
+const PRINCIPIO_ORGANISMO_UNICO_FLAG_KEY = "nucleo_principio_organismo_unico_v1";
+
+const PRINCIPIO_ORGANISMO_UNICO_PAGE: { title: string; content: string; tags: string[] } = {
+  title: "Princípio do Organismo Único",
+  tags: ["princípio", "ia", "orquestracao", "organismo", "integracao"],
+  content:
+    "Princípio do Organismo Único\n\n" +
+    "O usuário conversa com um único sistema inteligente.\n\n" +
+    "A coordenação entre módulos acontece internamente pela IA Orquestradora, tornando o Painel Central um organismo único, contínuo e integrado.\n\n" +
+    "Regras:\n" +
+    "• O usuário nunca precisa saber qual módulo está sendo acionado; ele interage com o sistema como um todo.\n" +
+    "• A IA Orquestradora é a única interface de coordenação entre especialistas; nenhum módulo expõe sua lógica interna diretamente ao usuário.\n" +
+    "• Transições entre contextos (CRM → Financeiro → Produção → Digital) devem ser fluidas e transparentes, mantendo a continuidade da conversa.\n" +
+    "• O sistema deve preservar o estado e o contexto da interação do usuário em todas as transições entre especialistas.\n" +
+    "• Nenhum módulo pode criar uma experiência fragmentada ou exigir que o usuário recontextualize informações já fornecidas.\n" +
+    "• A IA Orquestradora garante que a resposta final ao usuário seja coerente, unificada e alinhada aos objetivos ativos, independentemente de quantos especialistas participaram.\n\n" +
+    "— Este princípio transforma o Painel Central de uma coleção de módulos em um organismo inteligente e contínuo.",
+};
+
 const PRINCIPIO_ORIENTACAO_OBJETIVOS_PAGE: { title: string; content: string; tags: string[] } = {
   title: "Princípio da Orientação por Objetivos",
   tags: ["princípio", "ia", "objetivos", "orientacao", "orquestracao"],
