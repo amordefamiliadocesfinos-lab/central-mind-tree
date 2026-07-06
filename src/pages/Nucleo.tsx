@@ -364,6 +364,22 @@ const PRINCIPIOS_SEED: Array<{ title: string; content: string; tags: string[] }>
       "• Quando não houver objetivos ativos definidos, a IA deve incentivar o usuário a estabelecê-los antes de propor automações de grande escopo.\n\n" +
       "— Este princípio garante que a inteligência do Painel Central esteja sempre alinhada às intenções reais do usuário, tornando o sistema um verdadeiro facilitador de resultados.",
   },
+  {
+    title: "Princípio do Organismo Único",
+    tags: ["princípio", "ia", "orquestracao", "organismo", "integracao"],
+    content:
+      "Princípio do Organismo Único\n\n" +
+      "O usuário conversa com um único sistema inteligente.\n\n" +
+      "A coordenação entre módulos acontece internamente pela IA Orquestradora, tornando o Painel Central um organismo único, contínuo e integrado.\n\n" +
+      "Regras:\n" +
+      "• O usuário nunca precisa saber qual módulo está sendo acionado; ele interage com o sistema como um todo.\n" +
+      "• A IA Orquestradora é a única interface de coordenação entre especialistas; nenhum módulo expõe sua lógica interna diretamente ao usuário.\n" +
+      "• Transições entre contextos (CRM → Financeiro → Produção → Digital) devem ser fluidas e transparentes, mantendo a continuidade da conversa.\n" +
+      "• O sistema deve preservar o estado e o contexto da interação do usuário em todas as transições entre especialistas.\n" +
+      "• Nenhum módulo pode criar uma experiência fragmentada ou exigir que o usuário recontextualize informações já fornecidas.\n" +
+      "• A IA Orquestradora garante que a resposta final ao usuário seja coerente, unificada e alinhada aos objetivos ativos, independentemente de quantos especialistas participaram.\n\n" +
+      "— Este princípio transforma o Painel Central de uma coleção de módulos em um organismo inteligente e contínuo.",
+  },
 ];
 
 const PRINCIPIO_SEQUENCIA_DECISAO_FLAG_KEY = "nucleo_principio_sequencia_decisao_v1";
