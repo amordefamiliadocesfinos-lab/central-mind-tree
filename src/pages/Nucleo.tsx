@@ -486,6 +486,145 @@ const ESTADO_ATUAL_TITLES: Array<{ title: string; tags: string[] }> = [
   { title: "Resumo Executivo", tags: ["resumo", "executivo"] },
 ];
 
+const ESTADO_ATUAL_INDICADORES_FLAG_KEY = "nucleo_estado_atual_indicadores_v1";
+
+const ESTADO_ATUAL_INDICADORES: Array<{ title: string; content: string; tags: string[] }> = [
+  {
+    title: "Core do Sistema",
+    tags: ["indicador", "core", "estado-atual"],
+    content:
+      "Core do Sistema — Estado Atual\n\n" +
+      "Snapshot do núcleo funcional que sustenta a plataforma.\n\n" +
+      "• Entidades centrais em uso — \n" +
+      "• Serviços compartilhados ativos — \n" +
+      "• Contratos internos entre módulos — \n" +
+      "• Cobertura por testes / observabilidade — \n" +
+      "• Riscos e limites conhecidos — \n\n" +
+      "Atualize periodicamente para refletir o estado real do core.",
+  },
+  {
+    title: "Orquestrador",
+    tags: ["indicador", "orquestrador", "estado-atual"],
+    content:
+      "Orquestrador — Estado Atual\n\n" +
+      "Situação do componente que coordena agentes, ferramentas e filas.\n\n" +
+      "• Nível de maturidade — (Planejado / Parcial / Ativo / Estável)\n" +
+      "• Fluxos orquestrados hoje — \n" +
+      "• Filas, retries e políticas em vigor — \n" +
+      "• Integrações com Motor de IA, Especialistas e Core — \n" +
+      "• Gaps atuais — \n\n" +
+      "Registre aqui a evolução do Orquestrador.",
+  },
+  {
+    title: "Motor de IA",
+    tags: ["indicador", "motor-ia", "estado-atual"],
+    content:
+      "Motor de IA — Estado Atual\n\n" +
+      "Situação do motor que executa modelos, prompts e ferramentas.\n\n" +
+      "• Provedores ativos — \n" +
+      "• Modelos em uso (chat, imagem, embeddings, TTS, STT) — \n" +
+      "• Custo/limites atuais — \n" +
+      "• Observabilidade (logs, métricas) — \n" +
+      "• Riscos e dependências — \n\n" +
+      "Atualize sempre que houver mudança de provedor ou modelo.",
+  },
+  {
+    title: "IA Local",
+    tags: ["indicador", "ia-local", "estado-atual"],
+    content:
+      "IA Local — Estado Atual\n\n" +
+      "Componentes de inteligência que rodam localmente (no navegador ou em ambiente controlado).\n\n" +
+      "• Componentes ativos — \n" +
+      "• Casos de uso cobertos — \n" +
+      "• Limites de hardware/browser — \n" +
+      "• Planejamento futuro — \n\n" +
+      "Documente aqui o que hoje roda sem depender de nuvem.",
+  },
+  {
+    title: "IA em Nuvem",
+    tags: ["indicador", "ia-nuvem", "estado-atual"],
+    content:
+      "IA em Nuvem — Estado Atual\n\n" +
+      "Componentes de inteligência que dependem de provedores externos.\n\n" +
+      "• Provedores utilizados — \n" +
+      "• Modelos e endpoints ativos — \n" +
+      "• Custos observados — \n" +
+      "• Contingências (fallback, cache, retry) — \n\n" +
+      "Mantenha atualizado o mapa de dependências em nuvem.",
+  },
+  {
+    title: "Hub Universal de Integrações",
+    tags: ["indicador", "hub", "integrações", "estado-atual"],
+    content:
+      "Hub Universal de Integrações — Estado Atual\n\n" +
+      "Situação do ponto central de entrada e saída de integrações externas.\n\n" +
+      "• Nível de maturidade — \n" +
+      "• Conectores unificados hoje — \n" +
+      "• Conectores ainda fora do hub — \n" +
+      "• Padrões adotados (REST, Webhooks, Realtime, MCP) — \n" +
+      "• Observabilidade e retries — \n\n" +
+      "Este indicador mostra o quão universal está o hub.",
+  },
+  {
+    title: "Especialistas Existentes",
+    tags: ["indicador", "especialistas", "ia", "estado-atual"],
+    content:
+      "Especialistas Existentes — Estado Atual\n\n" +
+      "Lista viva dos perfis especializados de IA implementados.\n\n" +
+      "Formato sugerido:\n" +
+      "• Nome — Domínio — Ferramentas — Status (Beta / Ativo / Descontinuado)\n\n" +
+      "— Especialistas atuais:\n" +
+      "  - \n" +
+      "  - \n" +
+      "  - \n\n" +
+      "Atualize sempre que um especialista for criado, alterado ou removido.",
+  },
+  {
+    title: "Integrações Ativas",
+    tags: ["indicador", "integrações", "estado-atual"],
+    content:
+      "Integrações Ativas — Estado Atual\n\n" +
+      "Snapshot das integrações externas que estão em produção.\n\n" +
+      "Formato sugerido:\n" +
+      "• Nome — Tipo (API / Webhook / Realtime / MCP) — Módulos que usam — Status — Última verificação\n\n" +
+      "Integrações atuais:\n" +
+      "  - \n" +
+      "  - \n" +
+      "  - \n\n" +
+      "Referência rápida para saber com quem o Painel Central conversa hoje.",
+  },
+  {
+    title: "Banco de Dados Atual",
+    tags: ["indicador", "banco-de-dados", "estado-atual"],
+    content:
+      "Banco de Dados Atual — Estado Atual\n\n" +
+      "Visão resumida do estado real do banco.\n\n" +
+      "• Nº de tabelas no schema public — \n" +
+      "• Tabelas com RLS habilitada — \n" +
+      "• Tabelas sem políticas (risco) — \n" +
+      "• Precisão decimal padrão — numeric(20,10)\n" +
+      "• Migrations recentes relevantes — \n" +
+      "• Dívidas de schema — \n\n" +
+      "Este indicador aponta a saúde estrutural do banco.",
+  },
+  {
+    title: "Saúde da Plataforma",
+    tags: ["indicador", "saúde", "estado-atual"],
+    content:
+      "Saúde da Plataforma — Estado Atual\n\n" +
+      "Painel rápido de sinais vitais do sistema.\n\n" +
+      "• Build — (verde / amarelo / vermelho)\n" +
+      "• Erros de runtime recorrentes — \n" +
+      "• Performance percebida (mobile / desktop) — \n" +
+      "• Cobertura de testes — \n" +
+      "• Uso de credenciais e secrets — \n" +
+      "• Incidentes recentes — \n\n" +
+      "Atualize com frequência para leitura rápida do estado geral.",
+  },
+];
+
+
+
 const MAPA_GERAL_CONTENT =
   "Mapa Geral do Sistema — Painel Central\n" +
   "Snapshot da estrutura atual da plataforma. Documento descritivo — nenhuma funcionalidade foi alterada.\n\n" +
