@@ -2772,6 +2772,27 @@ function loadPages(): DocPage[] {
       pages = [...seeded, ...pages];
       localStorage.setItem(ATLAS_SEED_FLAG_KEY, "1");
     }
+    // Seed IA Orquestradora (Cérebro Central) once
+    if (!localStorage.getItem(IA_ORQUESTRADORA_SEED_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "ia-orquestradora").map((p) => p.title)
+      );
+      const now = new Date().toISOString();
+      const seeded = IA_ORQUESTRADORA_SEED.filter(
+        (s) => !existingTitles.has(s.title)
+      ).map<DocPage>((s) => ({
+        id: uid(),
+        areaId: "ia-orquestradora",
+        title: s.title,
+        content: s.content,
+        tags: s.tags,
+        createdAt: now,
+        updatedAt: now,
+        versions: [],
+      }));
+      pages = [...seeded, ...pages];
+      localStorage.setItem(IA_ORQUESTRADORA_SEED_FLAG_KEY, "1");
+    }
     // Seed evolução once
     if (!localStorage.getItem(EVOLUCAO_SEED_FLAG_KEY)) {
       const existingTitles = new Set(
