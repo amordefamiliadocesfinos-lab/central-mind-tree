@@ -26,7 +26,7 @@ import {
   History,
   RotateCcw,
   Compass,
-  Map,
+  Map as MapIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
