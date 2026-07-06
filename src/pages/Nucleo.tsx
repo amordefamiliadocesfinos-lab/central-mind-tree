@@ -25,13 +25,14 @@ import {
   ChevronRight,
   History,
   RotateCcw,
+  Compass,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 // ---------- Types ----------
 
-type AreaId = "biblioteca" | "consciencia" | "arquitetura" | "evolucao" | "estado-atual";
+type AreaId = "biblioteca" | "consciencia" | "arquitetura" | "principios" | "evolucao" | "estado-atual";
 
 interface AreaMeta {
   id: AreaId;
@@ -83,6 +84,13 @@ const AREAS: AreaMeta[] = [
     description: "Estrutura, módulos, fluxos e decisões técnicas.",
     icon: Building2,
     color: "#F59E0B",
+  },
+  {
+    id: "principios",
+    title: "Princípios Arquiteturais",
+    description: "Princípios permanentes que orientam a evolução do Painel Central.",
+    icon: Compass,
+    color: "#6366F1",
   },
   {
     id: "evolucao",
@@ -195,6 +203,83 @@ const ARQUITETURA_SEED: Array<{ title: string; content: string; tags: string[] }
       "Estrutura Geral da Plataforma\n\n" +
       "Camadas de frontend, backend, banco, storage, edge functions, autenticação e deploy. Como tudo se encaixa.\n\n" +
       "— Documente aqui a estrutura geral.",
+  },
+];
+
+const PRINCIPIOS_SEED_FLAG_KEY = "nucleo_principios_seed_v1";
+
+const PRINCIPIOS_SEED: Array<{ title: string; content: string; tags: string[] }> = [
+  {
+    title: "Princípio Mestre",
+    tags: ["princípio", "mestre", "fundamento"],
+    content:
+      "Princípio Mestre\n\n" +
+      "Princípio que rege todos os demais. Define a intenção fundamental por trás de cada decisão arquitetural do Painel Central.\n\n" +
+      "• Enunciado — descreva aqui, em uma frase, o princípio que orienta tudo.\n" +
+      "• Motivação — por que esse princípio existe.\n" +
+      "• Implicações — o que ele obriga, permite e proíbe.\n" +
+      "• Exemplos — situações concretas em que ele foi aplicado.\n\n" +
+      "— Edite livremente. Esta página é referência permanente para decisões futuras.",
+  },
+  {
+    title: "Princípio da Integração Universal",
+    tags: ["princípio", "integração", "universal"],
+    content:
+      "Princípio da Integração Universal\n\n" +
+      "Todo módulo, dado e agente do Painel Central deve poder se comunicar com qualquer outro, sem barreiras artificiais.\n\n" +
+      "• Enunciado — \n" +
+      "• Motivação — \n" +
+      "• Implicações práticas (APIs, eventos, contratos, contexto compartilhado) — \n" +
+      "• Antipadrões a evitar — \n\n" +
+      "— Documente aqui como a integração universal deve ser aplicada em cada evolução.",
+  },
+  {
+    title: "Princípio da Modularidade",
+    tags: ["princípio", "modularidade"],
+    content:
+      "Princípio da Modularidade\n\n" +
+      "O sistema deve ser composto por módulos coesos, com responsabilidades claras e baixo acoplamento.\n\n" +
+      "• Enunciado — \n" +
+      "• Critérios de coesão e acoplamento — \n" +
+      "• Regras para criação e remoção de módulos — \n" +
+      "• Exemplos de boa e má modularidade — \n\n" +
+      "— Edite conforme a arquitetura evolui.",
+  },
+  {
+    title: "Princípio da Escalabilidade",
+    tags: ["princípio", "escalabilidade"],
+    content:
+      "Princípio da Escalabilidade\n\n" +
+      "Toda decisão deve considerar crescimento: em dados, em usuários, em módulos e em complexidade operacional.\n\n" +
+      "• Enunciado — \n" +
+      "• Dimensões de escala (dados, tráfego, times, integrações) — \n" +
+      "• Estratégias adotadas (índices, paginação, cache, filas, workers) — \n" +
+      "• Limites conhecidos e planos de mitigação — \n\n" +
+      "— Registre aqui as diretrizes de escala do Painel Central.",
+  },
+  {
+    title: "Princípio da Baixa Complexidade",
+    tags: ["princípio", "simplicidade", "complexidade"],
+    content:
+      "Princípio da Baixa Complexidade\n\n" +
+      "A solução mais simples que resolve o problema é a solução correta. Complexidade só se paga com valor real e comprovado.\n\n" +
+      "• Enunciado — \n" +
+      "• Como avaliar complexidade essencial vs acidental — \n" +
+      "• Regras de simplicidade (nomes, camadas, dependências, abstrações) — \n" +
+      "• Sinais de alerta (over-engineering, duplicação de conceitos, camadas inúteis) — \n\n" +
+      "— Este princípio deve ser consultado antes de introduzir qualquer nova abstração.",
+  },
+  {
+    title: "Princípio da Independência Tecnológica",
+    tags: ["princípio", "independência", "tecnologia"],
+    content:
+      "Princípio da Independência Tecnológica\n\n" +
+      "O Painel Central não deve ficar refém de nenhum fornecedor, framework ou tecnologia específica além do estritamente necessário.\n\n" +
+      "• Enunciado — \n" +
+      "• Camadas de isolamento (portas, adaptadores, contratos internos) — \n" +
+      "• Tecnologias-chave e seus planos de substituição — \n" +
+      "• Critérios para adotar ou abandonar uma tecnologia — \n\n" +
+      "— Documente aqui as decisões que preservam a independência da plataforma.",
   },
 ];
 
@@ -2265,6 +2350,27 @@ function loadPages(): DocPage[] {
       }));
       pages = [...seeded, ...pages];
       localStorage.setItem(ARQUITETURA_SEED_FLAG_KEY, "1");
+    }
+    // Seed princípios arquiteturais once
+    if (!localStorage.getItem(PRINCIPIOS_SEED_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "principios").map((p) => p.title)
+      );
+      const now = new Date().toISOString();
+      const seeded = PRINCIPIOS_SEED.filter(
+        (s) => !existingTitles.has(s.title)
+      ).map<DocPage>((s) => ({
+        id: uid(),
+        areaId: "principios",
+        title: s.title,
+        content: s.content,
+        tags: s.tags,
+        createdAt: now,
+        updatedAt: now,
+        versions: [],
+      }));
+      pages = [...seeded, ...pages];
+      localStorage.setItem(PRINCIPIOS_SEED_FLAG_KEY, "1");
     }
     // Seed evolução once
     if (!localStorage.getItem(EVOLUCAO_SEED_FLAG_KEY)) {
