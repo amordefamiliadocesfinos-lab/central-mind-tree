@@ -507,56 +507,14 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
       });
     }
 
-    // POST /execute - Execute action directly from chat (no insight creation needed)
+    // POST /execute - Direct chat execution is intentionally disabled.
+    // The IA Orquestradora must not claim or perform CRUD actions from chat without a validated execution layer.
     if (req.method === "POST" && path === "/execute") {
-      const { action } = await req.json();
-
-      if (!action || !action.type) {
-        return new Response(JSON.stringify({ error: "Action required" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      // Create a temporary insight for logging purposes
-      const { data: insightRecord, error: insertError } = await supabase
-        .from("ai_insights")
-        .insert({
-          area: action.area || "Projetos",
-          title: action.title || `Execução direta: ${action.type}`,
-          description: action.description || "Ação executada diretamente via chat",
-          severity: "media",
-          confidence: 1.0,
-          impact: 0.5,
-          risk: 0.3,
-          decision: action,
-          status: "aprovado",
-        })
-        .select()
-        .single();
-
-      if (insertError) {
-        console.error("Error creating insight:", insertError);
-        return new Response(JSON.stringify({ error: "Failed to create action record" }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      // Execute the action immediately
-      const actionResult = await executeAction(supabase, action, insightRecord.id);
-
-      // Update insight status
-      await supabase
-        .from("ai_insights")
-        .update({ status: actionResult.status === "ok" ? "executado" : "aprovado" })
-        .eq("id", insightRecord.id);
-
-      return new Response(JSON.stringify({ 
-        success: actionResult.status === "ok", 
-        result: actionResult.result,
-        insightId: insightRecord.id
+      return new Response(JSON.stringify({
+        success: false,
+        error: "Execução direta pelo chat desativada. A IA Orquestradora deve apenas identificar o objetivo, coordenar especialistas e apresentar um plano para confirmação.",
       }), {
+        status: 409,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
