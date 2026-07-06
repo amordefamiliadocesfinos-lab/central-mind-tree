@@ -316,6 +316,20 @@ const PRINCIPIOS_SEED: Array<{ title: string; content: string; tags: string[] }>
       "• Este princípio se aplica à IA Orquestradora, aos agentes especialistas e a qualquer automação com capacidade de decisão.\n\n" +
       "— Este princípio é referência obrigatória para projetar, revisar e auditar qualquer fluxo de decisão da IA no Painel Central.",
   },
+  {
+    title: "Princípio da Coordenação por Especialistas",
+    tags: ["princípio", "especialistas", "modularidade", "orquestracao"],
+    content:
+      "Princípio da Coordenação por Especialistas\n\n" +
+      "Nenhum módulo é o centro do sistema.\n\n" +
+      "Cada módulo representa um especialista em sua área — CRM, Financeiro, Produção, Digital, Rotina, Agenda e demais — com responsabilidade clara sobre seu domínio.\n\n" +
+      "• Os módulos não competem entre si; complementam-se como especialistas de um mesmo ecossistema.\n" +
+      "• A centralidade do sistema reside na coordenação inteligente, não em nenhum módulo isolado.\n" +
+      "• A IA Orquestradora é quem observa, interpreta e coordena todos os especialistas para alcançar os objetivos definidos.\n" +
+      "• Nenhum módulo pode ser projetado como dependência obrigatória de todos os outros; a arquitetura deve permitir evolução independente.\n" +
+      "• Novos especialistas podem ser integrados sem alterar o centro do sistema, pois o centro é a coordenação, não um módulo.\n\n" +
+      "— Este princípio orienta a divisão de responsabilidades, a priorização de evoluções e a avaliação de novos módulos no Painel Central.",
+  },
 ];
 
 const PRINCIPIO_SEQUENCIA_DECISAO_FLAG_KEY = "nucleo_principio_sequencia_decisao_v1";
