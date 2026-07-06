@@ -349,6 +349,21 @@ const PRINCIPIOS_SEED: Array<{ title: string; content: string; tags: string[] }>
       "• O usuário pode sempre interromper, ajustar ou redefinir as sugestões proativas da IA.\n\n" +
       "— Este princípio assegura que a IA opere como parceira inteligente, não como mera executora de comandos.",
   },
+  {
+    title: "Princípio da Orientação por Objetivos",
+    tags: ["princípio", "ia", "objetivos", "orientacao", "orquestracao"],
+    content:
+      "Princípio da Orientação por Objetivos\n\n" +
+      "A principal responsabilidade da IA é conduzir o usuário aos seus objetivos.\n\n" +
+      "Todas as decisões, sugestões e automações da IA Orquestradora devem considerar os objetivos ativos do usuário antes de qualquer outra ação.\n\n" +
+      "Regras:\n" +
+      "• Os objetivos ativos são o critério máximo de prioridade para qualquer decisão da IA.\n" +
+      "• Sempre que a IA sugerir, decidir ou automatizar algo, ela deve validar se a ação contribui direta ou indiretamente para um objetivo ativo.\n" +
+      "• Caso existam múltiplos objetivos ativos, a IA deve priorizar segundo impacto, urgência e dependências entre eles.\n" +
+      "• Nenhuma ação da IA deve ser considerada isoladamente; toda ação deve ser avaliada pelo seu efeito sobre o progresso dos objetivos ativos.\n" +
+      "• Quando não houver objetivos ativos definidos, a IA deve incentivar o usuário a estabelecê-los antes de propor automações de grande escopo.\n\n" +
+      "— Este princípio garante que a inteligência do Painel Central esteja sempre alinhada às intenções reais do usuário, tornando o sistema um verdadeiro facilitador de resultados.",
+  },
 ];
 
 const PRINCIPIO_SEQUENCIA_DECISAO_FLAG_KEY = "nucleo_principio_sequencia_decisao_v1";
