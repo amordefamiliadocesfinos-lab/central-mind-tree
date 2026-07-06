@@ -3050,6 +3050,29 @@ function loadPages(): DocPage[] {
       }
       localStorage.setItem(PRINCIPIO_ORIENTACAO_OBJETIVOS_FLAG_KEY, "1");
     }
+    // Seed Princípio do Organismo Único (append-only, safe)
+    if (!localStorage.getItem(PRINCIPIO_ORGANISMO_UNICO_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "principios").map((p) => p.title)
+      );
+      if (!existingTitles.has(PRINCIPIO_ORGANISMO_UNICO_PAGE.title)) {
+        const now = new Date().toISOString();
+        pages = [
+          {
+            id: uid(),
+            areaId: "principios",
+            title: PRINCIPIO_ORGANISMO_UNICO_PAGE.title,
+            content: PRINCIPIO_ORGANISMO_UNICO_PAGE.content,
+            tags: PRINCIPIO_ORGANISMO_UNICO_PAGE.tags,
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+          ...pages,
+        ];
+      }
+      localStorage.setItem(PRINCIPIO_ORGANISMO_UNICO_FLAG_KEY, "1");
+    }
     // Seed atlas do painel central once
     if (!localStorage.getItem(ATLAS_SEED_FLAG_KEY)) {
       const existingTitles = new Set(
