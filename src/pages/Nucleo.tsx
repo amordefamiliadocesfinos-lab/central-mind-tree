@@ -291,6 +291,132 @@ const PRINCIPIOS_SEED: Array<{ title: string; content: string; tags: string[] }>
   },
 ];
 
+const ATLAS_SEED_FLAG_KEY = "nucleo_atlas_seed_v1";
+
+const ATLAS_SEED: Array<{ title: string; content: string; tags: string[] }> = [
+  {
+    title: "Mapa Geral do Sistema",
+    tags: ["atlas", "mapa-geral", "sistema"],
+    content:
+      "Mapa Geral do Sistema\n\n" +
+      "Visão panorâmica de todas as camadas do Painel Central e como elas se conectam.\n\n" +
+      "• Camadas principais — \n" +
+      "• Módulos e suas fronteiras — \n" +
+      "• Fluxos principais de dados e decisões — \n" +
+      "• Pontos de integração — \n\n" +
+      "Documente aqui em texto, listas, diagramas e imagens. Esta página é a porta de entrada do Atlas.",
+  },
+  {
+    title: "Mapa da Consciência",
+    tags: ["atlas", "consciência"],
+    content:
+      "Mapa da Consciência\n\n" +
+      "Estrutura da camada de Consciência: memória, aprendizagem, personalidade, regras e especialistas.\n\n" +
+      "• Componentes internos — \n" +
+      "• Como cada componente se conecta ao restante da plataforma — \n" +
+      "• Entradas, saídas e sinais que a Consciência interpreta — \n" +
+      "• Diagramas — \n\n" +
+      "Anexe imagens e diagramas conforme evoluir.",
+  },
+  {
+    title: "Mapa do Orquestrador",
+    tags: ["atlas", "orquestrador"],
+    content:
+      "Mapa do Orquestrador\n\n" +
+      "Como o Orquestrador coordena agentes, ferramentas, filas e contextos.\n\n" +
+      "• Responsabilidades — \n" +
+      "• Ciclo de decisão (planejar → executar → avaliar) — \n" +
+      "• Filas, retries e estados — \n" +
+      "• Integração com Motor de IA, Especialistas e Core — \n\n" +
+      "Documente aqui o funcionamento e os diagramas do Orquestrador.",
+  },
+  {
+    title: "Mapa do Motor de IA",
+    tags: ["atlas", "motor-ia", "ia"],
+    content:
+      "Mapa do Motor de IA\n\n" +
+      "Estrutura do motor que executa modelos, prompts, contextos e ferramentas.\n\n" +
+      "• Provedores e modelos utilizados — \n" +
+      "• Pipeline de prompt (contexto → sistema → usuário → ferramentas) — \n" +
+      "• Custos, limites e fallback — \n" +
+      "• Observabilidade (logs, métricas, auditoria) — \n\n" +
+      "Registre aqui os diagramas do motor de IA.",
+  },
+  {
+    title: "Mapa do Core do Sistema",
+    tags: ["atlas", "core"],
+    content:
+      "Mapa do Core do Sistema\n\n" +
+      "Núcleo funcional que sustenta todos os módulos: modelos de domínio, regras compartilhadas, serviços base.\n\n" +
+      "• Entidades centrais — \n" +
+      "• Serviços compartilhados — \n" +
+      "• Contratos internos entre módulos — \n" +
+      "• Regras invariantes — \n\n" +
+      "Documente aqui o coração operacional da plataforma.",
+  },
+  {
+    title: "Mapa do Hub Universal de Integrações",
+    tags: ["atlas", "integrações", "hub"],
+    content:
+      "Mapa do Hub Universal de Integrações\n\n" +
+      "Ponto único onde entram e saem todas as integrações externas do Painel Central.\n\n" +
+      "• Conectores ativos (WhatsApp, IA, pagamentos, storage, e-mail, etc.) — \n" +
+      "• Padrões de contrato (REST, Webhooks, Realtime, MCP) — \n" +
+      "• Autenticação e credenciais — \n" +
+      "• Estratégias de retry, circuit breaker e observabilidade — \n\n" +
+      "Documente aqui cada integração e seu diagrama de fluxo.",
+  },
+  {
+    title: "Mapa dos Especialistas",
+    tags: ["atlas", "especialistas", "ia"],
+    content:
+      "Mapa dos Especialistas\n\n" +
+      "Perfis especializados de IA (comercial, financeiro, produção, marketing, etc.) e seus domínios.\n\n" +
+      "• Lista de especialistas — \n" +
+      "• Domínio, contexto e ferramentas de cada um — \n" +
+      "• Como o Orquestrador seleciona o especialista adequado — \n" +
+      "• Limites e políticas de decisão — \n\n" +
+      "Documente aqui a arquitetura dos especialistas.",
+  },
+  {
+    title: "Mapa do Banco de Dados",
+    tags: ["atlas", "banco-de-dados", "schema"],
+    content:
+      "Mapa do Banco de Dados\n\n" +
+      "Modelo lógico e físico do banco de dados: entidades, relacionamentos, políticas e convenções.\n\n" +
+      "• Domínios / esquemas — \n" +
+      "• Tabelas centrais e suas relações — \n" +
+      "• Políticas de acesso (RLS) — \n" +
+      "• Convenções (nomes, IDs, timestamps, precisão decimal) — \n\n" +
+      "Anexe diagramas ER e descrições evolutivas do schema.",
+  },
+  {
+    title: "Mapa dos Fluxos",
+    tags: ["atlas", "fluxos", "processos"],
+    content:
+      "Mapa dos Fluxos\n\n" +
+      "Principais fluxos que atravessam o sistema, do gatilho ao resultado.\n\n" +
+      "• Lead → Venda → Produção → Entrega — \n" +
+      "• Atendimento → CRM → Financeiro — \n" +
+      "• Ideia → Conteúdo → Publicação → Engajamento — \n" +
+      "• Rotina → Foco → Execução — \n\n" +
+      "Documente cada fluxo com etapas, atores e diagramas.",
+  },
+  {
+    title: "Mapa da Experiência do Usuário (UX)",
+    tags: ["atlas", "ux", "experiência"],
+    content:
+      "Mapa da Experiência do Usuário (UX)\n\n" +
+      "Como o usuário percorre a plataforma: jornadas, telas, decisões e pontos críticos de fricção.\n\n" +
+      "• Jornadas principais por perfil de usuário — \n" +
+      "• Padrões de UI adotados (mobile-first, sticky headers, bottom nav, dialogs responsivos) — \n" +
+      "• Momentos de decisão e feedback — \n" +
+      "• Oportunidades de melhoria de UX — \n\n" +
+      "Anexe wireframes, prints e diagramas de jornada.",
+  },
+];
+
+
 const EVOLUCAO_SEED_FLAG_KEY = "nucleo_evolucao_seed_v1";
 
 const EVOLUCAO_SEED: Array<{ title: string; content: string; tags: string[] }> = [
