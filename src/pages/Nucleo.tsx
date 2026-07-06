@@ -2799,6 +2799,29 @@ function loadPages(): DocPage[] {
       pages = [...seeded, ...pages];
       localStorage.setItem(PRINCIPIOS_SEED_FLAG_KEY, "1");
     }
+    // Seed Princípio da Sequência de Decisão da IA (append-only, safe)
+    if (!localStorage.getItem(PRINCIPIO_SEQUENCIA_DECISAO_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "principios").map((p) => p.title)
+      );
+      if (!existingTitles.has(PRINCIPIO_SEQUENCIA_DECISAO_PAGE.title)) {
+        const now = new Date().toISOString();
+        pages = [
+          {
+            id: uid(),
+            areaId: "principios",
+            title: PRINCIPIO_SEQUENCIA_DECISAO_PAGE.title,
+            content: PRINCIPIO_SEQUENCIA_DECISAO_PAGE.content,
+            tags: PRINCIPIO_SEQUENCIA_DECISAO_PAGE.tags,
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+          ...pages,
+        ];
+      }
+      localStorage.setItem(PRINCIPIO_SEQUENCIA_DECISAO_FLAG_KEY, "1");
+    }
     // Seed atlas do painel central once
     if (!localStorage.getItem(ATLAS_SEED_FLAG_KEY)) {
       const existingTitles = new Set(
