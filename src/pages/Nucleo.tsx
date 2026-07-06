@@ -395,7 +395,7 @@ const IA_ORQUESTRADORA_SEED: Array<{ title: string; content: string; tags: strin
   },
 ];
 
-const ATLAS_SEED_FLAG_KEY_MARKER_KEEP_BELOW = 1; void ATLAS_SEED_FLAG_KEY_MARKER_KEEP_BELOW;
+
 
 const ATLAS_SEED_FLAG_KEY = "nucleo_atlas_seed_v1";
 
