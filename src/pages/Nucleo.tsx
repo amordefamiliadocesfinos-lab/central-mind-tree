@@ -299,6 +299,28 @@ const PRINCIPIOS_SEED: Array<{ title: string; content: string; tags: string[] }>
   },
 ];
 
+const PRINCIPIO_SEQUENCIA_DECISAO_FLAG_KEY = "nucleo_principio_sequencia_decisao_v1";
+
+const PRINCIPIO_SEQUENCIA_DECISAO_PAGE: { title: string; content: string; tags: string[] } = {
+  title: "Princípio da Sequência de Decisão da IA",
+  tags: ["princípio", "ia", "sequencia-decisao", "orquestracao"],
+  content:
+    "Princípio da Sequência de Decisão da IA\n\n" +
+    "Princípio permanente que define a ordem obrigatória de raciocínio de toda inteligência artificial do Painel Central.\n\n" +
+    "A sequência é:\n" +
+    "1. Perceber — captar sinais, eventos, métricas e mudanças de estado do sistema e do ambiente.\n" +
+    "2. Compreender — construir contexto a partir dos sinais captados, cruzando com histórico, objetivos e regras do Núcleo.\n" +
+    "3. Priorizar — ordenar oportunidades, riscos e gargalos segundo urgência, impacto e alinhamento estratégico.\n" +
+    "4. Decidir — escolher a ação mais adequada com base no contexto compreendido e nas prioridades estabelecidas.\n" +
+    "5. Coordenar — delegar ações a módulos, agentes especialistas ou usuários, respeitando escopo e políticas de autonomia.\n" +
+    "6. Aprender — registrar resultados, ajustar heurísticas, alimentar a memória do Núcleo e melhorar ciclos futuros.\n\n" +
+    "• Nenhuma decisão da IA pode pular etapas da sequência sem justificativa documentada.\n" +
+    "• Em situações de urgência extrema, a IA pode acelerar a sequência, mas nunca omiti-la por completo.\n" +
+    "• O aprendizado de cada ciclo retroalimenta as etapas de Perceber e Compreender do ciclo seguinte.\n" +
+    "• Este princípio se aplica à IA Orquestradora, aos agentes especialistas e a qualquer automação com capacidade de decisão.\n\n" +
+    "— Este princípio é referência obrigatória para projetar, revisar e auditar qualquer fluxo de decisão da IA no Painel Central.",
+};
+
 const IA_ORQUESTRADORA_SEED_FLAG_KEY = "nucleo_ia_orquestradora_seed_v1";
 
 const IA_ORQUESTRADORA_SEED: Array<{ title: string; content: string; tags: string[] }> = [
