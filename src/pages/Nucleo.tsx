@@ -390,6 +390,28 @@ const PRINCIPIO_COORDENACAO_ESPECIALISTAS_PAGE: { title: string; content: string
     "— Este princípio orienta a divisão de responsabilidades, a priorização de evoluções e a avaliação de novos módulos no Painel Central.",
 };
 
+const PRINCIPIO_PROATIVIDADE_IA_FLAG_KEY = "nucleo_principio_proatividade_ia_v1";
+
+const PRINCIPIO_PROATIVIDADE_IA_PAGE: { title: string; content: string; tags: string[] } = {
+  title: "Princípio da Proatividade da IA",
+  tags: ["princípio", "ia", "proatividade", "orquestracao", "contexto"],
+  content:
+    "Princípio da Proatividade da IA\n\n" +
+    "A IA do Painel Central não reage apenas a comandos do usuário.\n\n" +
+    "Ela observa continuamente eventos do sistema, analisa o contexto global e decide quais especialistas devem participar antes de sugerir ou executar qualquer ação.\n\n" +
+    "Comportamento esperado:\n" +
+    "• Observação — a IA monitora sinais, métricas, alertas e mudanças de estado dos módulos e do ambiente, mesmo sem comando explícito.\n" +
+    "• Análise de contexto global — a IA cruza dados de múltiplos especialistas, histórico, objetivos e regras do Núcleo para formar uma visão unificada antes de agir.\n" +
+    "• Seleção de especialistas — antes de sugerir ou executar uma ação, a IA identifica e convoca os especialistas cujos domínios são relevantes para o contexto detectado.\n" +
+    "• Antecipação — a IA antecipa necessidades e gargalos com base em padrões observados, propondo ações preventivas, não apenas reativas.\n" +
+    "• Coordenação inteligente — a IA Orquestradora distribui tarefas entre especialistas selecionados, garantindo que cada um atue dentro de sua competência.\n\n" +
+    "Limites:\n" +
+    "• A proatividade respeita as políticas de autonomia e níveis de risco configurados.\n" +
+    "• Ações de alto risco ou impacto estratégico exigem aprovação do usuário, mesmo quando antecipadas pela IA.\n" +
+    "• O usuário pode sempre interromper, ajustar ou redefinir as sugestões proativas da IA.\n\n" +
+    "— Este princípio assegura que a IA opere como parceira inteligente, não como mera executora de comandos.",
+};
+
 const IA_ORQUESTRADORA_SEED_FLAG_KEY = "nucleo_ia_orquestradora_seed_v1";
 
 const IA_ORQUESTRADORA_SEED: Array<{ title: string; content: string; tags: string[] }> = [
