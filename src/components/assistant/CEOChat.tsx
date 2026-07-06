@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card } from '@/components/ui/card';
-import { Send, Loader2, Bot, User, Sparkles, Play, CheckCircle, Trash2 } from 'lucide-react';
+import { Send, Loader2, Bot, User, Sparkles, Trash2, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -25,6 +25,9 @@ interface PendingAction {
 
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-ceo/chat`;
 const EXECUTE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-ceo/execute`;
+
+const detectActionIntent = (content: string) =>
+  /\b(criar|cadastrar|adicionar|editar|alterar|atualizar|excluir|deletar|remover|apagar|concluir|finalizar|dar\s+baixa|quitar|executar)\b/i.test(content);
 
 // Parse actions from AI response - comprehensive patterns
 function parseActionsFromResponse(content: string): PendingAction[] {
@@ -365,7 +368,7 @@ function parseActionsFromResponse(content: string): PendingAction[] {
 
 const WELCOME_MESSAGE: Message = {
   role: 'assistant',
-  content: '👋 Olá! Sou o CEO IA, seu assistente executivo. Posso ajudar com:\n\n• **Análise** de tarefas, finanças e agenda\n• **Criar, editar ou excluir** qualquer item do sistema\n• **Orientações** sobre prioridades e decisões\n• **Resumos** do estado atual dos projetos\n\n💡 **Dica**: Quando eu propor ações, clique em "Já pode executar" para executar diretamente!\n\nComo posso ajudar você hoje?',
+  content: '👋 Olá! Sou a IA Orquestradora do Painel Central. Antes de qualquer ação, identifico seu objetivo, conecto os especialistas relevantes e apresento um plano seguro. Nesta fase, eu não executo automações, criações, edições ou exclusões diretamente pelo chat.',
 };
 
 export function CEOChat() {
