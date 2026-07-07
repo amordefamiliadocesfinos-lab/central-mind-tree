@@ -546,3 +546,28 @@ export async function execCrmEditContact(
   );
   return toExecutorResult(result);
 }
+
+export interface ExecDeleteContactInput {
+  id?: string | null;
+  phone_digits?: string | null;
+  email_lookup?: string | null;
+  name_lookup?: string | null;
+}
+
+export async function execCrmDeleteContact(
+  input: ExecDeleteContactInput,
+  ctx?: ExecutorContext,
+): Promise<ExecutorResult> {
+  const result = await runBaseExecution(
+    {
+      correlation_id: ctx?.correlation_id,
+      requested_by: ctx?.requested_by,
+      specialist: "crm",
+      entity: "contato",
+      operation: "excluir",
+      params: input as unknown as Record<string, unknown>,
+    },
+    CRM_OPERATIONS,
+  );
+  return toExecutorResult(result);
+}
