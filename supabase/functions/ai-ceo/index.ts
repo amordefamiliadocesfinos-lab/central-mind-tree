@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
-import { renderCatalogForPrompt, listModules } from "../_shared/capabilities-catalog.ts";
+import { renderCatalogForPrompt, listModules, CAPABILITIES_CATALOG } from "../_shared/capabilities-catalog.ts";
 import { coordinateRequest, type CoordinationResponse } from "../_shared/coordination-motor.ts";
 
 
