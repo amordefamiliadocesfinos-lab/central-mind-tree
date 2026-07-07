@@ -1027,7 +1027,7 @@ async function extractActionIntent(userMessage: string): Promise<
 > {
   if (!userMessage || userMessage.trim().length < 3) return null;
 
-  const catalog = listModules().map((m) => ({
+  const catalog = CAPABILITIES_CATALOG.map((m) => ({
     id: m.id,
     name: m.name,
     entities: m.entities.map((e) => ({ id: e.id, name: e.name, operations: e.operations })),
