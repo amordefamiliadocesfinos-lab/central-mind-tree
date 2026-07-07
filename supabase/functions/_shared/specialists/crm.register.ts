@@ -30,3 +30,10 @@ SpecialistRegistry.register({
   operation: "listar",
   handler: (params, ctx) => crmListContacts(params as any, ctx),
 });
+
+SpecialistRegistry.register({
+  module_id: "crm",
+  entity_id: "contato",
+  operation: "editar",
+  handler: (params, ctx) => crmEditContact(params as any, ctx),
+});
