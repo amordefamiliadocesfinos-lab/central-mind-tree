@@ -1056,6 +1056,19 @@ Se FOR pedido de ação, responda estritamente JSON:
   "scope": "all|one|opcional",
   "params": { ...campos_extraidos_da_mensagem }
 }
+
+REGRA CRÍTICA — CRM / contato / editar:
+- SEMPRE separe o VALOR ATUAL (para localizar) do NOVO VALOR (a aplicar).
+- Use OBRIGATORIAMENTE o formato: "params": { "locator": {...}, "updates": {...} }
+- "locator" = como identificar o contato hoje (name, whatsapp, phone, email, id).
+- "updates" = os novos valores desejados (name, whatsapp, phone, email, notes).
+- "updates" NUNCA pode ficar vazio em uma edição.
+Exemplo:
+  Usuário: "Altere o contato Deividi Teste para o nome Deividi Teste Editado"
+  params: { "locator": { "name": "Deividi Teste" }, "updates": { "name": "Deividi Teste Editado" } }
+  Usuário: "Mude o email do contato 11999999999 para novo@x.com"
+  params: { "locator": { "whatsapp": "11999999999" }, "updates": { "email": "novo@x.com" } }
+
 Use o catálogo abaixo como referência (mas pode sugerir module/entity mesmo se não estiver registrado):
 ${JSON.stringify(catalog)}`;
 
