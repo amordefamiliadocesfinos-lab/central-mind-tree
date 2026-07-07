@@ -1,14 +1,16 @@
 // ============================================================================
 // Handlers reais do módulo Assistente IA / IA Orquestradora
 // ----------------------------------------------------------------------------
-// Conecta capacidades do Catálogo Universal a operações reais no banco.
-// Todas as capacidades destrutivas exigem `payload.confirm === true`.
+// Conecta (módulo=assistente, entidade, operação) a operações reais no banco.
+// A confirmação de operações destrutivas é feita pelo Executor Universal.
+// O escopo ("all" | "one") define entre operação em massa e alvo único.
 // ============================================================================
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import {
   registerActionHandler,
   type ActionHandler,
+  type HandlerContext,
 } from "../action-executor.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -18,18 +20,13 @@ function sb() {
   return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 }
 
-function requireConfirm(request: Parameters<ActionHandler>[0]) {
-  const confirm = Boolean((request.payload as Record<string, unknown> | undefined)?.confirm);
-  if (!confirm) {
-    throw new Error(
-      "confirmation_required: esta ação é destrutiva. Reenvie com payload.confirm = true após o usuário autorizar.",
-    );
-  }
+function payload(ctx: HandlerContext): Record<string, unknown> {
+  return (ctx.request.payload as Record<string, unknown> | undefined) ?? {};
 }
 
-// -------- consultar chat_assistente --------------------------------------
-const listChats: ActionHandler = async (req) => {
-  const limit = Number((req.payload as Record<string, unknown> | undefined)?.limit ?? 50);
+// -------- assistente / chat / listar --------------------------------------
+const listChats: ActionHandler = async (ctx) => {
+  const limit = Number(payload(ctx).limit ?? 50);
   const { data, error } = await sb()
     .from("ai_chat_messages")
     .select("id, role, content, created_at")
@@ -39,9 +36,9 @@ const listChats: ActionHandler = async (req) => {
   return { message: `Encontradas ${data?.length ?? 0} mensagens no histórico.`, data };
 };
 
-// -------- consultar decisao_assistente -----------------------------------
-const listDecisions: ActionHandler = async (req) => {
-  const status = (req.payload as Record<string, unknown> | undefined)?.status as string | undefined;
+// -------- assistente / decisao / listar -----------------------------------
+const listDecisions: ActionHandler = async (ctx) => {
+  const status = payload(ctx).status as string | undefined;
   let q = sb()
     .from("ai_insights")
     .select("id, area, title, severity, confidence, impact, risk, status, created_at")
@@ -53,11 +50,20 @@ const listDecisions: ActionHandler = async (req) => {
   return { message: `Encontradas ${data?.length ?? 0} decisões.`, data };
 };
 
-// -------- excluir decisao_assistente -------------------------------------
-const deleteDecision: ActionHandler = async (req) => {
-  const id = (req.payload as Record<string, unknown> | undefined)?.id as string | undefined;
-  if (!id) throw new Error("invalid_payload: informe payload.id da decisão a excluir.");
-  requireConfirm(req);
+// -------- assistente / decisao / excluir ----------------------------------
+// Escopo "all" → apaga todas; caso contrário exige payload.id.
+const deleteDecision: ActionHandler = async (ctx) => {
+  const scope = ctx.scope;
+  if (scope === "all") {
+    const { error, count } = await sb()
+      .from("ai_insights")
+      .delete({ count: "exact" })
+      .not("id", "is", null);
+    if (error) throw new Error(error.message);
+    return { message: `${count ?? 0} decisões excluídas.`, data: { deleted: count ?? 0, scope: "all" } };
+  }
+  const id = payload(ctx).id as string | undefined;
+  if (!id) throw new Error("invalid_payload: informe payload.id da decisão a excluir ou scope='all'.");
   const { error, count } = await sb()
     .from("ai_insights")
     .delete({ count: "exact" })
@@ -67,18 +73,7 @@ const deleteDecision: ActionHandler = async (req) => {
   return { message: `Decisão ${id} excluída.`, data: { id, deleted: count } };
 };
 
-// -------- excluir todas_decisoes_assistente ------------------------------
-const deleteAllDecisions: ActionHandler = async (req) => {
-  requireConfirm(req);
-  const { error, count } = await sb()
-    .from("ai_insights")
-    .delete({ count: "exact" })
-    .not("id", "is", null);
-  if (error) throw new Error(error.message);
-  return { message: `${count ?? 0} decisões excluídas.`, data: { deleted: count ?? 0 } };
-};
-
-// -------- consultar politica_assistente ----------------------------------
+// -------- assistente / politica / listar ----------------------------------
 const listPolicies: ActionHandler = async () => {
   const { data, error } = await sb()
     .from("ai_policies")
@@ -88,9 +83,9 @@ const listPolicies: ActionHandler = async () => {
   return { message: `Encontradas ${data?.length ?? 0} políticas.`, data };
 };
 
-// -------- consultar log_assistente ---------------------------------------
-const listLogs: ActionHandler = async (req) => {
-  const limit = Number((req.payload as Record<string, unknown> | undefined)?.limit ?? 100);
+// -------- assistente / log / listar ---------------------------------------
+const listLogs: ActionHandler = async (ctx) => {
+  const limit = Number(payload(ctx).limit ?? 100);
   const { data, error } = await sb()
     .from("ai_actions")
     .select("id, insight_id, action_type, status, result, created_at, executed_at")
@@ -100,9 +95,8 @@ const listLogs: ActionHandler = async (req) => {
   return { message: `Encontrados ${data?.length ?? 0} logs de execução.`, data };
 };
 
-// -------- excluir todos_logs_assistente ----------------------------------
-const clearLogs: ActionHandler = async (req) => {
-  requireConfirm(req);
+// -------- assistente / log / limpar ---------------------------------------
+const clearLogs: ActionHandler = async () => {
   const { error, count } = await sb()
     .from("ai_actions")
     .delete({ count: "exact" })
@@ -115,12 +109,19 @@ const clearLogs: ActionHandler = async (req) => {
 let _registered = false;
 export function registerAssistenteHandlers() {
   if (_registered) return;
-  registerActionHandler("consultar", "chat_assistente", listChats);
-  registerActionHandler("consultar", "decisao_assistente", listDecisions);
-  registerActionHandler("excluir",   "decisao_assistente", deleteDecision);
-  registerActionHandler("excluir",   "todas_decisoes_assistente", deleteAllDecisions);
-  registerActionHandler("consultar", "politica_assistente", listPolicies);
-  registerActionHandler("consultar", "log_assistente", listLogs);
-  registerActionHandler("excluir",   "todos_logs_assistente", clearLogs);
+  // Chat
+  registerActionHandler("assistente", "chat",     "listar",    listChats);
+  registerActionHandler("assistente", "chat",     "consultar", listChats);
+  // Decisão
+  registerActionHandler("assistente", "decisao",  "listar",    listDecisions);
+  registerActionHandler("assistente", "decisao",  "consultar", listDecisions);
+  registerActionHandler("assistente", "decisao",  "excluir",   deleteDecision);
+  // Política
+  registerActionHandler("assistente", "politica", "listar",    listPolicies);
+  registerActionHandler("assistente", "politica", "consultar", listPolicies);
+  // Log
+  registerActionHandler("assistente", "log",      "listar",    listLogs);
+  registerActionHandler("assistente", "log",      "consultar", listLogs);
+  registerActionHandler("assistente", "log",      "limpar",    clearLogs);
   _registered = true;
 }
