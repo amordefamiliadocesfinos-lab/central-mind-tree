@@ -1096,9 +1096,104 @@ ${JSON.stringify(catalog)}`;
   }
 }
 
+// Normaliza params de operações específicas para o formato padrão do Especialista.
+// Regra atual: CRM / contato / editar → sempre { locator, updates }.
+function normalizeParamsForSpecialist(
+  entity: string | undefined,
+  operation: string | undefined,
+  raw: Record<string, unknown> | undefined,
+): Record<string, unknown> {
+  const params = { ...(raw ?? {}) };
+  const entId = String(entity ?? "").toLowerCase();
+  const op = String(operation ?? "").toLowerCase();
+
+  if ((entId === "contato" || entId === "contatos") && op === "editar") {
+    // Se já veio no formato padrão, apenas garante estrutura e retorna.
+    const hasLocator = params.locator && typeof params.locator === "object";
+    const hasUpdates = params.updates && typeof params.updates === "object";
+    if (hasLocator && hasUpdates) {
+      return { locator: params.locator, updates: params.updates };
+    }
+
+    const pick = (...keys: string[]) => {
+      for (const k of keys) {
+        const v = (params as Record<string, unknown>)[k];
+        if (v !== undefined && v !== null && String(v).trim() !== "") return v;
+      }
+      return undefined;
+    };
+
+    // Localização (valores atuais/antigos do contato)
+    const locator: Record<string, unknown> = { ...((params.locator as object) ?? {}) };
+    const locId = pick("id", "contact_id", "contato_id");
+    const locName = pick(
+      "nome_original", "nome_antigo", "nome_atual", "name_original", "name_old",
+      "contato", "contact", "target_name", "target",
+      // "name"/"nome" só entram como locator se NÃO houver novo_nome
+    );
+    const locWhats = pick("whatsapp_original", "whatsapp_antigo", "whatsapp_atual", "whatsapp");
+    const locPhone = pick("telefone_original", "telefone_antigo", "telefone_atual", "telefone", "phone");
+    const locEmail = pick("email_original", "email_antigo", "email_atual", "email");
+
+    if (locId !== undefined) locator.id = locId;
+    if (locName !== undefined && locator.name === undefined) locator.name = locName;
+    if (locWhats !== undefined && locator.whatsapp === undefined) locator.whatsapp = locWhats;
+    if (locPhone !== undefined && locator.phone === undefined) locator.phone = locPhone;
+    if (locEmail !== undefined && locator.email === undefined) locator.email = locEmail;
+
+    // Atualizações (novos valores)
+    const updates: Record<string, unknown> = { ...((params.updates as object) ?? {}) };
+    const newName = pick("novo_nome", "nome_novo", "new_name", "name_new");
+    const newWhats = pick("novo_whatsapp", "whatsapp_novo", "new_whatsapp");
+    const newPhone = pick("novo_telefone", "telefone_novo", "new_phone");
+    const newEmail = pick("novo_email", "email_novo", "new_email");
+    const newNotes = pick("novas_observacoes", "observacoes_novas", "novas_notas", "notes_new", "new_notes");
+
+    if (newName !== undefined) updates.name = newName;
+    if (newWhats !== undefined) updates.whatsapp = newWhats;
+    if (newPhone !== undefined) updates.phone = newPhone;
+    if (newEmail !== undefined) updates.email = newEmail;
+    if (newNotes !== undefined) updates.notes = newNotes;
+
+    // Se não houve "novo_*", campos flat name/nome/whatsapp/telefone/email podem
+    // representar tanto locator quanto updates. Convenção: se locator já tem esse
+    // campo, o flat vira update; caso contrário, vira locator.
+    const flatName = pick("nome", "name");
+    const flatWhats = pick("whatsapp");
+    const flatPhone = pick("telefone", "phone");
+    const flatEmail = pick("email");
+
+    const assignFlat = (
+      value: unknown,
+      key: "name" | "whatsapp" | "phone" | "email",
+    ) => {
+      if (value === undefined) return;
+      if (locator[key] === undefined && updates[key] === undefined) {
+        locator[key] = value;
+      } else if (updates[key] === undefined) {
+        updates[key] = value;
+      }
+    };
+    assignFlat(flatName, "name");
+    assignFlat(flatWhats, "whatsapp");
+    assignFlat(flatPhone, "phone");
+    assignFlat(flatEmail, "email");
+
+    return { locator, updates };
+  }
+
+  return params;
+}
+
 async function runCoordinationMotor(userMessage: string): Promise<CoordinationResponse | null> {
   const intent = await extractActionIntent(userMessage);
   if (!intent) return null;
+
+  const normalizedParams = normalizeParamsForSpecialist(
+    intent.entity,
+    intent.operation,
+    intent.params,
+  );
 
   return await coordinateRequest({
     objective: intent.objective,
@@ -1106,7 +1201,7 @@ async function runCoordinationMotor(userMessage: string): Promise<CoordinationRe
     entity: intent.entity,
     operation: intent.operation,
     scope: intent.scope,
-    params: intent.params,
+    params: normalizedParams,
   });
 }
 
