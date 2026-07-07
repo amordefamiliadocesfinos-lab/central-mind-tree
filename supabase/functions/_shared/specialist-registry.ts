@@ -141,9 +141,24 @@ export const SpecialistRegistry = {
   assertConsistent(): void {
     const issues = SpecialistRegistry.validate();
     if (issues.length === 0) return;
-    const lines = issues.map((i) => ` - [${i.kind}] ${i.message}`).join("\n");
-    throw new Error(
-      `[SpecialistRegistry] Inconsistência arquitetural detectada:\n${lines}`,
-    );
+
+    // Capacidades declaradas como "disponivel" no catálogo mas ainda sem
+    // Especialista registrado são apenas AVISOS (a implementação é incremental:
+    // uma entidade pode ter algumas operações já conectadas e outras não).
+    // Já handlers registrados sem capacidade no catálogo são ERRO arquitetural.
+    const warnings = issues.filter((i) => i.kind === "capability_without_specialist");
+    const errors = issues.filter((i) => i.kind !== "capability_without_specialist");
+
+    if (warnings.length > 0) {
+      const lines = warnings.map((i) => ` - [${i.kind}] ${i.message}`).join("\n");
+      console.warn(`[SpecialistRegistry] Capacidades pendentes de registro:\n${lines}`);
+    }
+
+    if (errors.length > 0) {
+      const lines = errors.map((i) => ` - [${i.kind}] ${i.message}`).join("\n");
+      throw new Error(
+        `[SpecialistRegistry] Inconsistência arquitetural detectada:\n${lines}`,
+      );
+    }
   },
 };
