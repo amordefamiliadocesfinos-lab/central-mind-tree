@@ -541,6 +541,24 @@ Contas: ${JSON.stringify(accounts || [])}
 Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
 
 
+      // ==========================================================
+      // PASSO OBRIGATÓRIO: MOTOR DE COORDENAÇÃO
+      // Toda mensagem do usuário passa primeiro pelo Motor.
+      // Se houver intenção de ação, o Motor devolve resposta estruturada
+      // que é emitida ANTES do stream da IA.
+      // ==========================================================
+      const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user")?.content ?? "";
+      const coordination = await runCoordinationMotor(lastUserMsg);
+      const motorBlock = formatMotorBlock(coordination);
+
+      const enrichedSystemPrompt = systemPrompt + (coordination ? `
+
+MOTOR DE COORDENAÇÃO — RETORNO REAL DESTA SOLICITAÇÃO (já emitido ao usuário no início da resposta):
+${JSON.stringify(coordination, null, 2)}
+
+Instrução: sua resposta ao usuário será concatenada APÓS o bloco do Motor de Coordenação que já foi emitido.
+Continue a partir dali com o Plano estruturado, sem repetir o bloco do Motor.` : "");
+
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -550,7 +568,7 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
         body: JSON.stringify({
           model: "google/gemini-2.5-flash",
           messages: [
-            { role: "system", content: systemPrompt },
+            { role: "system", content: enrichedSystemPrompt },
             ...messages,
           ],
           stream: true,
@@ -573,9 +591,13 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
         throw new Error(`AI error: ${response.status}`);
       }
 
-      return new Response(response.body, {
+      // Concatena o bloco do Motor ao stream SSE da IA
+      const combined = prependSSEText(motorBlock, response.body!);
+
+      return new Response(combined, {
         headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
       });
+
     }
 
     // POST /execute - Direct chat execution is intentionally disabled.
