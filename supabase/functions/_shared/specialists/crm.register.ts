@@ -8,7 +8,7 @@
 // ============================================================================
 
 import { SpecialistRegistry } from "../specialist-registry.ts";
-import { crmCreateContact, crmGetContact, crmListContacts } from "./crm.ts";
+import { crmCreateContact, crmEditContact, crmGetContact, crmListContacts } from "./crm.ts";
 
 SpecialistRegistry.register({
   module_id: "crm",
