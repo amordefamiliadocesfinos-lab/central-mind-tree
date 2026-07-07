@@ -201,7 +201,7 @@ export async function coordinateRequest(
 
   if (executor) {
     try {
-      const result = await executor(request.params);
+      const result = await executor(request.params, { correlation_id });
       const resp: CoordinationResponse = {
         status: result.ok ? "executed" : "execution_failed",
         message: result.ok
