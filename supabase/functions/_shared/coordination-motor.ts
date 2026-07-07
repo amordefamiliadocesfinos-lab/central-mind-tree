@@ -14,12 +14,19 @@
 // ============================================================================
 
 import { CAPABILITIES_CATALOG, resolveCapability } from "./capabilities-catalog.ts";
-import {
-  crmCreateContact,
-  crmGetContact,
-  crmListContacts,
-  type SpecialistResult,
-} from "./specialists/crm.ts";
+import { SpecialistRegistry } from "./specialist-registry.ts";
+// Bootstrap: carrega auto-registros de todos os Especialistas. O Motor NÃO
+// conhece nenhum Especialista diretamente; ele só conversa com o Registro.
+import "./specialists/bootstrap.ts";
+
+// Valida consistência entre CAPABILITIES_CATALOG e Registro Universal na
+// primeira carga do módulo. Qualquer inconsistência lança erro arquitetural.
+let __registryValidated = false;
+function ensureRegistryValidated(): void {
+  if (__registryValidated) return;
+  SpecialistRegistry.assertConsistent();
+  __registryValidated = true;
+}
 
 // ---------- Contratos ------------------------------------------------------
 
@@ -37,12 +44,12 @@ export interface CoordinationRequest {
 }
 
 export type CoordinationStatus =
-  | "planned"                  // solicitação aceita, sem especialista real ainda
-  | "executed"                 // especialista executou a ação com sucesso
-  | "execution_failed"         // especialista tentou executar e retornou erro
-  | "specialist_not_found"     // não há especialista para essa capacidade
-  | "invalid_request"          // faltam campos obrigatórios
-  | "confirmation_required";   // ação destrutiva sem confirmação explícita
+  | "planned"
+  | "executed"
+  | "execution_failed"
+  | "specialist_not_found"
+  | "invalid_request"
+  | "confirmation_required";
 
 export interface CoordinationResponse {
   status: CoordinationStatus;
@@ -72,24 +79,6 @@ export interface CoordinationResponse {
   error?: string;
 }
 
-// ---------- Registro de especialistas conectados --------------------------
-// Cada entrada mapeia (module_id + entity_id + operation) para o executor real.
-// Nesta etapa, apenas CRM / Contato / criar está conectado.
-type SpecialistExecutor = (
-  params: Record<string, unknown> | undefined,
-  ctx?: { correlation_id?: string },
-) => Promise<SpecialistResult>;
-
-const SPECIALIST_REGISTRY: Record<string, SpecialistExecutor> = {
-  "crm:contato:criar": (params, ctx) => crmCreateContact(params as any, ctx),
-  "crm:contato:consultar": (params, ctx) => crmGetContact(params as any, ctx),
-  "crm:contato:listar": (params, ctx) => crmListContacts(params as any, ctx),
-};
-
-function specialistKey(moduleId: string, entityId: string, operation: string): string {
-  return `${moduleId}:${entityId}:${operation}`;
-}
-
 // ---------- Log em memória (validação desta etapa) ------------------------
 
 interface CoordinationLogEntry {
@@ -115,6 +104,7 @@ export function clearCoordinationLog(): void {
 export async function coordinateRequest(
   request: CoordinationRequest,
 ): Promise<CoordinationResponse> {
+  ensureRegistryValidated();
   const correlation_id = request.correlation_id ?? crypto.randomUUID();
   const received_at = new Date().toISOString();
 
@@ -181,9 +171,8 @@ export async function coordinateRequest(
     return resp;
   }
 
-  // 4. Dispatch para o Especialista real, se conectado
-  const key = specialistKey(mod.id, ent.id, operation);
-  const executor = SPECIALIST_REGISTRY[key];
+  // 4. Localiza Especialista no Registro Universal (única fonte de descoberta)
+  const executor = SpecialistRegistry.find(mod.id, ent.id, operation);
 
   const baseSpecialist = {
     module_id: mod.id,
@@ -201,7 +190,7 @@ export async function coordinateRequest(
 
   if (executor) {
     try {
-      const result = await executor(request.params, { correlation_id });
+      const result = await executor(request.params, { correlation_id, requested_by: request.requested_by });
       const resp: CoordinationResponse = {
         status: result.ok ? "executed" : "execution_failed",
         message: result.ok
@@ -274,7 +263,22 @@ export function listSpecialists() {
     entities: (Array.isArray(mod.entities) ? mod.entities : []).map((e) => ({
       entity_id: e.id,
       entity_name: e.name,
-      operations: Array.isArray(e.operations) ? e.operations : [],
+      operations: (Array.isArray(e.operations) ? e.operations : []).map((op) => ({
+        operation: op,
+        registered: SpecialistRegistry.has(mod.id, e.id, op),
+      })),
     })),
   }));
+}
+
+export function listRegisteredSpecialists() {
+  return SpecialistRegistry.list().map((r) => ({
+    module_id: r.module_id,
+    entity_id: r.entity_id,
+    operation: r.operation,
+  }));
+}
+
+export function validateSpecialistRegistry() {
+  return SpecialistRegistry.validate();
 }
