@@ -182,8 +182,132 @@ const CRM_OPERATIONS: Record<string, BaseOperationDefinition> = {
     },
   },
 
+  // --- editar contato ----------------------------------------------------
+  editar: {
+
+    handler: async (params, ctx) => {
+      const id = params.id as string | undefined;
+      const phone_digits = params.phone_digits as string | undefined;
+      const email_lookup = params.email_lookup as string | undefined;
+      const name_lookup = params.name_lookup as string | undefined;
+
+      if (!id && !phone_digits && !email_lookup && !name_lookup) {
+        return {
+          status: "validation_error",
+          ok: false,
+          error: "Informe id, phone_digits, email_lookup ou name_lookup para localizar o contato.",
+        };
+      }
+
+      const updates = (params.updates ?? {}) as Record<string, unknown>;
+      const allowed = ["name", "phone", "whatsapp", "email", "notes"];
+      const cleanUpdates: Record<string, unknown> = {};
+      for (const k of allowed) {
+        if (updates[k] !== undefined && updates[k] !== null && updates[k] !== "") {
+          cleanUpdates[k] = updates[k];
+        }
+      }
+      if (Object.keys(cleanUpdates).length === 0) {
+        return {
+          status: "validation_error",
+          ok: false,
+          error: "Nenhum campo válido para atualizar (permitidos: name, phone, whatsapp, email, notes).",
+        };
+      }
+
+      // 1) Localizar contato
+      let targetId: string | null = null;
+      if (id) {
+        const { data, error } = await ctx.supabase
+          .from("contacts")
+          .select("id")
+          .eq("id", id)
+          .eq("is_active", true)
+          .maybeSingle();
+        if (error) return { status: "error", ok: false, error: `Falha técnica: ${error.message}` };
+        if (!data) return { status: "not_found", ok: false, error: "Contato não encontrado." };
+        targetId = data.id;
+      } else {
+        let query = ctx.supabase
+          .from("contacts")
+          .select("id,name,whatsapp,phone,email,funnel_status,city,state")
+          .eq("is_active", true)
+          .limit(10);
+        if (phone_digits) {
+          query = query.or(
+            `whatsapp.eq.${phone_digits},phone.eq.${phone_digits},mobile.eq.${phone_digits}`,
+          );
+        } else if (email_lookup) {
+          query = query.ilike("email", email_lookup);
+        } else if (name_lookup) {
+          query = query.ilike("name", `%${name_lookup}%`);
+        }
+        const { data, error } = await query;
+        if (error) return { status: "error", ok: false, error: `Falha técnica: ${error.message}` };
+        const rows = data ?? [];
+        if (rows.length === 0) {
+          return { status: "not_found", ok: false, error: "Contato não encontrado para edição." };
+        }
+        if (rows.length > 1) {
+          return {
+            ok: true,
+            status: "ok",
+            message: `Encontrados ${rows.length} contatos parecidos. Escolha um antes de editar.`,
+            data: {
+              ambiguous: true,
+              match_count: rows.length,
+              options: rows.map((r: any) => ({
+                id: r.id,
+                name: r.name,
+                whatsapp: r.whatsapp ?? null,
+                phone: r.phone ?? null,
+                email: r.email ?? null,
+                funnel_status: r.funnel_status ?? null,
+                city: r.city ?? null,
+                state: r.state ?? null,
+              })),
+            },
+          };
+        }
+        targetId = rows[0].id;
+      }
+
+      // 2) Aplicar atualização
+      const { data: updated, error: upErr } = await ctx.supabase
+        .from("contacts")
+        .update({ ...cleanUpdates, updated_at: new Date().toISOString() })
+        .eq("id", targetId!)
+        .select("id,name,email,phone,whatsapp,notes")
+        .maybeSingle();
+
+      if (upErr) {
+        return {
+          status: "error",
+          ok: false,
+          error: `Falha técnica ao atualizar contato: ${upErr.message}`,
+          details: upErr,
+        };
+      }
+      if (!updated) {
+        return { status: "not_found", ok: false, error: "Contato não encontrado após atualização." };
+      }
+
+      return {
+        ok: true,
+        message: `Contato "${updated.name}" atualizado com sucesso.`,
+        entity_id: updated.id,
+        data: {
+          id: updated.id,
+          updated_fields: Object.keys(cleanUpdates),
+          contact: updated,
+        },
+      };
+    },
+  },
+
   // --- listar contatos ---------------------------------------------------
   listar: {
+
     handler: async (params, ctx) => {
       const limit = Math.max(1, Math.min(Number(params.limit) || 25, 100));
       let query = ctx.supabase
@@ -288,6 +412,38 @@ export async function execCrmListContacts(
       entity: "contato",
       operation: "listar",
       params: (input ?? {}) as unknown as Record<string, unknown>,
+    },
+    CRM_OPERATIONS,
+  );
+  return toExecutorResult(result);
+}
+
+export interface ExecEditContactInput {
+  id?: string | null;
+  phone_digits?: string | null;
+  email_lookup?: string | null;
+  name_lookup?: string | null;
+  updates: {
+    name?: string;
+    phone?: string;
+    whatsapp?: string;
+    email?: string;
+    notes?: string;
+  };
+}
+
+export async function execCrmEditContact(
+  input: ExecEditContactInput,
+  ctx?: ExecutorContext,
+): Promise<ExecutorResult> {
+  const result = await runBaseExecution(
+    {
+      correlation_id: ctx?.correlation_id,
+      requested_by: ctx?.requested_by,
+      specialist: "crm",
+      entity: "contato",
+      operation: "editar",
+      params: input as unknown as Record<string, unknown>,
     },
     CRM_OPERATIONS,
   );
