@@ -95,14 +95,19 @@ export function useAICEO() {
   }, []);
 
   const fetchActions = useCallback(async () => {
+    const doFetch = () => fetch(`${API_BASE}/actions`, {
+      headers: {
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+    });
     try {
-      const response = await fetch(`${API_BASE}/actions`, {
-        headers: {
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-        },
-      });
-
-      if (!response.ok) throw new Error('Failed to fetch actions');
+      let response = await doFetch();
+      // Retry once on transient 5xx (Cloudflare 522 / cold start)
+      if (response.status >= 500) {
+        await new Promise((r) => setTimeout(r, 800));
+        response = await doFetch();
+      }
+      if (!response.ok) throw new Error(`Failed to fetch actions (${response.status})`);
       const data = await response.json();
       setActions(data.actions || []);
     } catch (error) {
