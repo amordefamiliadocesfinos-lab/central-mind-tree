@@ -1151,6 +1151,15 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
 /**
  * Prepend um texto como chunks SSE no formato OpenAI antes de pipear o stream original.
  */
+function emptyStream(): ReadableStream<Uint8Array> {
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
+      controller.close();
+    },
+  });
+}
+
 function prependSSEText(text: string, upstream: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
 
