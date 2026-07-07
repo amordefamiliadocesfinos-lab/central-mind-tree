@@ -591,6 +591,43 @@ const ARQUITETURA_EXECUTOR_PAGE: { title: string; content: string; tags: string[
     "— Este documento oficializa a Camada Executor como a peça que traduz a intenção do Especialista em ação técnica real no Painel Central.",
 };
 
+const CONTRATO_ESPECIALISTA_FLAG_KEY = "nucleo_contrato_oficial_especialista_v1";
+const CONTRATO_ESPECIALISTA_PAGE: { title: string; content: string; tags: string[] } = {
+  title: "Contrato Oficial do Especialista",
+  tags: ["arquitetura", "especialistas", "contrato", "motor-de-coordenacao", "executor"],
+  content:
+    "Contrato Oficial do Especialista\n\n" +
+    "Este documento padroniza oficialmente como todo Especialista do Painel Central deve ser definido, registrado e conectado ao Motor de Coordenação.\n\n" +
+    "Todo Especialista deve possuir obrigatoriamente:\n\n" +
+    "• Nome\n" +
+    "• Módulo relacionado\n" +
+    "• Missão\n" +
+    "• Domínio de atuação\n" +
+    "• Entidades controladas\n" +
+    "• Operações suportadas\n" +
+    "• Executor responsável\n" +
+    "• Hooks / funções utilizados\n" +
+    "• Eventos que pode gerar\n" +
+    "• Eventos que pode consumir\n" +
+    "• Status: planejado, beta ou ativo\n" +
+    "• Versão\n" +
+    "• Limites de atuação\n" +
+    "• Regras de validação\n" +
+    "• Formato de entrada\n" +
+    "• Formato de saída\n" +
+    "• Correlation ID obrigatório\n\n" +
+    "Regras permanentes:\n\n" +
+    "• O Especialista não conversa diretamente com o usuário.\n" +
+    "• O Especialista não toma decisão estratégica.\n" +
+    "• O Especialista executa apenas operações do seu domínio.\n" +
+    "• Toda solicitação chega pelo Motor de Coordenação.\n" +
+    "• Todo retorno volta pelo Motor de Coordenação.\n" +
+    "• Todo Especialista deve se registrar no Registro Universal de Especialistas.\n" +
+    "• Todo Especialista deve utilizar o Executor Base direta ou indiretamente.\n" +
+    "• Toda execução deve retornar sucesso, erro ou pendência de forma padronizada.\n\n" +
+    "— Este contrato é parte permanente da arquitetura do Núcleo do Painel Central e deve ser respeitado por todo Especialista existente ou futuro.",
+};
+
 const PRINCIPIO_SEPARACAO_FLAG_KEY = "nucleo_principio_separacao_inteligencia_regra_execucao_v1";
 const PRINCIPIO_SEPARACAO_PAGE: { title: string; content: string; tags: string[] } = {
   title: "Princípio da Separação entre Inteligência, Regra e Execução",
@@ -3735,6 +3772,29 @@ function loadPages(): DocPage[] {
         ];
       }
       localStorage.setItem(ARQUITETURA_EXECUTOR_FLAG_KEY, "1");
+    }
+    // Seed Contrato Oficial do Especialista (append-only, safe)
+    if (!localStorage.getItem(CONTRATO_ESPECIALISTA_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "arquitetura").map((p) => p.title)
+      );
+      if (!existingTitles.has(CONTRATO_ESPECIALISTA_PAGE.title)) {
+        const now = new Date().toISOString();
+        pages = [
+          {
+            id: uid(),
+            areaId: "arquitetura",
+            title: CONTRATO_ESPECIALISTA_PAGE.title,
+            content: CONTRATO_ESPECIALISTA_PAGE.content,
+            tags: CONTRATO_ESPECIALISTA_PAGE.tags,
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+          ...pages,
+        ];
+      }
+      localStorage.setItem(CONTRATO_ESPECIALISTA_FLAG_KEY, "1");
     }
     // Seed Princípio da Separação entre Inteligência, Regra e Execução (append-only, safe)
     if (!localStorage.getItem(PRINCIPIO_SEPARACAO_FLAG_KEY)) {
