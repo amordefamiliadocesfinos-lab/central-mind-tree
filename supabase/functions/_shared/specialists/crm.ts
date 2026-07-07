@@ -178,14 +178,25 @@ export async function crmEditContact(
 ): Promise<SpecialistResult> {
   const params = rawParams ?? {};
 
-  // Localização
-  const id = (params.id ?? params.contact_id) as string | undefined;
+  // Suporte ao payload padrão { locator: {...}, updates: {...} }
+  const locator = (params.locator ?? {}) as Record<string, unknown>;
+
+  // Localização (aceita locator.* ou campos flat de compatibilidade)
+  const id = (locator.id ?? locator.contact_id ?? params.id ?? params.contact_id) as
+    | string
+    | undefined;
   const phone_digits =
+    normalizePhoneDigits(locator.whatsapp) ??
+    normalizePhoneDigits(locator.telefone) ??
+    normalizePhoneDigits(locator.phone) ??
     normalizePhoneDigits(params.whatsapp) ??
     normalizePhoneDigits(params.telefone) ??
     normalizePhoneDigits(params.phone);
-  const email_lookup = params.email ? String(params.email).trim() : null;
-  const name_lookup = String(params.name ?? params.nome ?? "").trim() || null;
+  const email_lookup =
+    (locator.email ? String(locator.email).trim() : null) ??
+    (params.email ? String(params.email).trim() : null);
+  const name_lookup =
+    String(locator.name ?? locator.nome ?? params.name ?? params.nome ?? "").trim() || null;
 
   if (!id && !phone_digits && !email_lookup && !name_lookup) {
     return {
@@ -194,6 +205,7 @@ export async function crmEditContact(
       correlation_id: ctx?.correlation_id,
     };
   }
+
 
   // Atualizações — aceita bloco `updates` ou campos "novo_*"
   const src = (params.updates ?? {}) as Record<string, unknown>;
