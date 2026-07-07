@@ -3833,6 +3833,29 @@ function loadPages(): DocPage[] {
       }
       localStorage.setItem(CONTRATO_ESPECIALISTA_FLAG_KEY, "1");
     }
+    // Seed Modelo Oficial de Criação de Especialistas (append-only, safe)
+    if (!localStorage.getItem(MODELO_CRIACAO_ESPECIALISTA_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "arquitetura").map((p) => p.title)
+      );
+      if (!existingTitles.has(MODELO_CRIACAO_ESPECIALISTA_PAGE.title)) {
+        const now = new Date().toISOString();
+        pages = [
+          {
+            id: uid(),
+            areaId: "arquitetura",
+            title: MODELO_CRIACAO_ESPECIALISTA_PAGE.title,
+            content: MODELO_CRIACAO_ESPECIALISTA_PAGE.content,
+            tags: MODELO_CRIACAO_ESPECIALISTA_PAGE.tags,
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+          ...pages,
+        ];
+      }
+      localStorage.setItem(MODELO_CRIACAO_ESPECIALISTA_FLAG_KEY, "1");
+    }
     // Seed Princípio da Separação entre Inteligência, Regra e Execução (append-only, safe)
     if (!localStorage.getItem(PRINCIPIO_SEPARACAO_FLAG_KEY)) {
       const existingTitles = new Set(
