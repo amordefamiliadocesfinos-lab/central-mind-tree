@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
-import { renderCatalogForPrompt, listModules } from "../_shared/capabilities-catalog.ts";
+import { renderCatalogForPrompt, listModules, CAPABILITIES_CATALOG } from "../_shared/capabilities-catalog.ts";
 import { coordinateRequest, type CoordinationResponse } from "../_shared/coordination-motor.ts";
 
 
@@ -1027,7 +1027,7 @@ async function extractActionIntent(userMessage: string): Promise<
 > {
   if (!userMessage || userMessage.trim().length < 3) return null;
 
-  const catalog = listModules().map((m) => ({
+  const catalog = CAPABILITIES_CATALOG.map((m) => ({
     id: m.id,
     name: m.name,
     entities: m.entities.map((e) => ({ id: e.id, name: e.name, operations: e.operations })),
