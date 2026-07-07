@@ -120,3 +120,109 @@ export async function crmCreateContact(
     return { ok: false, error: message };
   }
 }
+
+// ---------------------------------------------------------------------------
+// Operação: consultar contato
+// ---------------------------------------------------------------------------
+export interface CrmGetContactParams {
+  id?: string;
+  contact_id?: string;
+  whatsapp?: string;
+  telefone?: string;
+  phone?: string;
+  email?: string;
+  name?: string;
+  nome?: string;
+  [k: string]: unknown;
+}
+
+export async function crmGetContact(
+  rawParams: CrmGetContactParams | undefined,
+): Promise<SpecialistResult> {
+  const params = rawParams ?? {};
+  try {
+    const supabase = getSupabase();
+    const id = (params.id ?? params.contact_id) as string | undefined;
+    const phone =
+      normalizePhoneDigits(params.whatsapp) ??
+      normalizePhoneDigits(params.telefone) ??
+      normalizePhoneDigits(params.phone);
+    const email = params.email ? String(params.email).trim() : null;
+    const name = String(params.name ?? params.nome ?? "").trim();
+
+    let query = supabase
+      .from("contacts")
+      .select(
+        "id,name,email,phone,whatsapp,funnel_status,client_classification,lifetime_value,city,state,ultimo_contato,notes",
+      )
+      .eq("is_active", true)
+      .limit(1);
+
+    if (id) {
+      query = query.eq("id", id);
+    } else if (phone) {
+      query = query.or(`whatsapp.eq.${phone},phone.eq.${phone},mobile.eq.${phone}`);
+    } else if (email) {
+      query = query.ilike("email", email);
+    } else if (name) {
+      query = query.ilike("name", `%${name}%`);
+    } else {
+      return { ok: false, error: "Informe id, whatsapp, email ou nome para consultar o contato." };
+    }
+
+    const { data, error } = await query.maybeSingle();
+    if (error) return { ok: false, error: `Falha ao consultar contato: ${error.message}` };
+    if (!data) return { ok: false, error: "Contato não encontrado." };
+
+    return { ok: true, entity_id: data.id, data };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: message };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Operação: listar contatos
+// ---------------------------------------------------------------------------
+export interface CrmListContactsParams {
+  search?: string;
+  funnel_status?: string;
+  limit?: number;
+  [k: string]: unknown;
+}
+
+export async function crmListContacts(
+  rawParams: CrmListContactsParams | undefined,
+): Promise<SpecialistResult> {
+  const params = rawParams ?? {};
+  try {
+    const supabase = getSupabase();
+    const limit = Math.max(1, Math.min(Number(params.limit) || 25, 100));
+    let query = supabase
+      .from("contacts")
+      .select(
+        "id,name,email,phone,whatsapp,funnel_status,client_classification,lifetime_value,ultimo_contato",
+      )
+      .eq("is_active", true)
+      .order("updated_at", { ascending: false })
+      .limit(limit);
+
+    if (params.funnel_status) {
+      query = query.eq("funnel_status", String(params.funnel_status));
+    }
+    if (params.search) {
+      const s = `%${String(params.search)}%`;
+      query = query.or(`name.ilike.${s},email.ilike.${s},phone.ilike.${s},whatsapp.ilike.${s}`);
+    }
+
+    const { data, error } = await query;
+    if (error) return { ok: false, error: `Falha ao listar contatos: ${error.message}` };
+    return {
+      ok: true,
+      data: { count: data?.length ?? 0, items: data ?? [] },
+    };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    return { ok: false, error: message };
+  }
+}

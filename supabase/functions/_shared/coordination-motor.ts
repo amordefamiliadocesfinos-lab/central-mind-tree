@@ -14,7 +14,12 @@
 // ============================================================================
 
 import { CAPABILITIES_CATALOG, resolveCapability } from "./capabilities-catalog.ts";
-import { crmCreateContact, type SpecialistResult } from "./specialists/crm.ts";
+import {
+  crmCreateContact,
+  crmGetContact,
+  crmListContacts,
+  type SpecialistResult,
+} from "./specialists/crm.ts";
 
 // ---------- Contratos ------------------------------------------------------
 
@@ -76,6 +81,8 @@ type SpecialistExecutor = (
 
 const SPECIALIST_REGISTRY: Record<string, SpecialistExecutor> = {
   "crm:contato:criar": (params) => crmCreateContact(params as any),
+  "crm:contato:consultar": (params) => crmGetContact(params as any),
+  "crm:contato:listar": (params) => crmListContacts(params as any),
 };
 
 function specialistKey(moduleId: string, entityId: string, operation: string): string {
