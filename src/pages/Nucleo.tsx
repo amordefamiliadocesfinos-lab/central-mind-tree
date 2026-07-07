@@ -3183,7 +3183,77 @@ function loadPages(): DocPage[] {
       }
       localStorage.setItem(PRINCIPIO_VERACIDADE_OPERACIONAL_FLAG_KEY, "1");
     }
+    // Seed Arquitetura dos Especialistas (append-only, safe)
+    if (!localStorage.getItem(ARQUITETURA_ESPECIALISTAS_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "arquitetura").map((p) => p.title)
+      );
+      if (!existingTitles.has(ARQUITETURA_ESPECIALISTAS_PAGE.title)) {
+        const now = new Date().toISOString();
+        pages = [
+          {
+            id: uid(),
+            areaId: "arquitetura",
+            title: ARQUITETURA_ESPECIALISTAS_PAGE.title,
+            content: ARQUITETURA_ESPECIALISTAS_PAGE.content,
+            tags: ARQUITETURA_ESPECIALISTAS_PAGE.tags,
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+          ...pages,
+        ];
+      }
+      localStorage.setItem(ARQUITETURA_ESPECIALISTAS_FLAG_KEY, "1");
+    }
+    // Seed Princípio dos Especialistas (append-only, safe)
+    if (!localStorage.getItem(PRINCIPIO_ESPECIALISTAS_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "principios").map((p) => p.title)
+      );
+      if (!existingTitles.has(PRINCIPIO_ESPECIALISTAS_PAGE.title)) {
+        const now = new Date().toISOString();
+        pages = [
+          {
+            id: uid(),
+            areaId: "principios",
+            title: PRINCIPIO_ESPECIALISTAS_PAGE.title,
+            content: PRINCIPIO_ESPECIALISTAS_PAGE.content,
+            tags: PRINCIPIO_ESPECIALISTAS_PAGE.tags,
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+          ...pages,
+        ];
+      }
+      localStorage.setItem(PRINCIPIO_ESPECIALISTAS_FLAG_KEY, "1");
+    }
+    // Seed Catálogo de Especialistas no Atlas (append-only, safe)
+    if (!localStorage.getItem(CATALOGO_ESPECIALISTAS_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "atlas").map((p) => p.title)
+      );
+      if (!existingTitles.has(CATALOGO_ESPECIALISTAS_PAGE.title)) {
+        const now = new Date().toISOString();
+        pages = [
+          {
+            id: uid(),
+            areaId: "atlas",
+            title: CATALOGO_ESPECIALISTAS_PAGE.title,
+            content: CATALOGO_ESPECIALISTAS_PAGE.content,
+            tags: CATALOGO_ESPECIALISTAS_PAGE.tags,
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+          ...pages,
+        ];
+      }
+      localStorage.setItem(CATALOGO_ESPECIALISTAS_FLAG_KEY, "1");
+    }
     // Seed atlas do painel central once
+
     if (!localStorage.getItem(ATLAS_SEED_FLAG_KEY)) {
       const existingTitles = new Set(
         pages.filter((p) => p.areaId === "atlas").map((p) => p.title)
