@@ -190,10 +190,10 @@ export function listSpecialists() {
     module_id: mod.id,
     module_name: mod.name,
     purpose: mod.purpose,
-    entities: mod.entities.map((e) => ({
+    entities: (Array.isArray(mod.entities) ? mod.entities : []).map((e) => ({
       entity_id: e.id,
       entity_name: e.name,
-      operations: e.operations,
+      operations: Array.isArray(e.operations) ? e.operations : [],
     })),
   }));
 }

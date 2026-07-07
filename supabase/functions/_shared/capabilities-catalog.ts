@@ -231,11 +231,13 @@ export function resolveCapability(input: {
     : CAPABILITIES_CATALOG;
 
   for (const mod of modules) {
-    const ent = mod.entities.find(
+    const entities = Array.isArray(mod.entities) ? mod.entities : [];
+    const ent = entities.find(
       (e) => e.id === entityId || e.synonyms?.some((s) => s.toLowerCase() === entityId),
     );
     if (!ent) continue;
-    if (!ent.operations.includes(op)) continue;
+    const operations = Array.isArray(ent.operations) ? ent.operations : [];
+    if (!operations.includes(op)) continue;
     return {
       module: mod,
       entity: ent,
@@ -273,8 +275,10 @@ export function renderCatalogForPrompt(): string {
   for (const mod of CAPABILITIES_CATALOG) {
     lines.push(`\n### Módulo: ${mod.name} (id: ${mod.id})`);
     lines.push(`Função: ${mod.purpose}`);
-    for (const ent of mod.entities) {
-      const ops = ent.operations.join(", ");
+    const entities = Array.isArray(mod.entities) ? mod.entities : [];
+    for (const ent of entities) {
+      const operations = Array.isArray(ent.operations) ? ent.operations : [];
+      const ops = operations.join(", ");
       const destr = ent.destructive?.length ? ` [destrutivas: ${ent.destructive.join(", ")}]` : "";
       const syn = ent.synonyms?.length ? ` [sinônimos: ${ent.synonyms.join(", ")}]` : "";
       const st = ent.status ?? "planejada";

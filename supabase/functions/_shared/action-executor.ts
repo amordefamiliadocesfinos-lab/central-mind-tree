@@ -262,12 +262,12 @@ export function snapshotExecutor(): ExecutorSnapshot {
       id: mod.id,
       name: mod.name,
       purpose: mod.purpose,
-      entities: mod.entities.map((ent) => ({
+      entities: (Array.isArray(mod.entities) ? mod.entities : []).map((ent) => ({
         id: ent.id,
         name: ent.name,
         declared_status: ent.status,
         synonyms: ent.synonyms,
-        operations: ent.operations.map((op) => ({
+        operations: (Array.isArray(ent.operations) ? ent.operations : []).map((op) => ({
           operation: op,
           destructive: Boolean(ent.destructive?.includes(op)),
           runtime_available: HANDLERS.has(handlerKey(mod.id, ent.id, op)),
