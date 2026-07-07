@@ -51,9 +51,10 @@ serve(async (req) => {
         return json({ ok: false, error: "invalid_json" }, { status: 400 });
       }
 
-      if (!body || typeof body.verb !== "string" || typeof body.entity !== "string") {
+      const op = body?.operation ?? body?.verb;
+      if (!body || typeof body.entity !== "string" || typeof op !== "string") {
         return json(
-          { ok: false, error: "invalid_request", detail: "Campos obrigatórios: verb, entity." },
+          { ok: false, error: "invalid_request", detail: "Campos obrigatórios: entity, operation (module e scope são opcionais)." },
           { status: 400 },
         );
       }
