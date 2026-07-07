@@ -251,3 +251,66 @@ export async function crmEditContact(
     ctx,
   );
 }
+
+// ---------------------------------------------------------------------------
+// excluir contato (ação destrutiva — confirmação é validada pelo Motor)
+// ---------------------------------------------------------------------------
+export interface CrmDeleteContactParams {
+  locator?: {
+    id?: string;
+    contact_id?: string;
+    name?: string;
+    nome?: string;
+    whatsapp?: string;
+    telefone?: string;
+    phone?: string;
+    email?: string;
+  };
+  id?: string;
+  contact_id?: string;
+  whatsapp?: string;
+  telefone?: string;
+  phone?: string;
+  email?: string;
+  name?: string;
+  nome?: string;
+  confirm?: boolean;
+  [k: string]: unknown;
+}
+
+export async function crmDeleteContact(
+  rawParams: CrmDeleteContactParams | undefined,
+  ctx?: ExecutorContext,
+): Promise<SpecialistResult> {
+  const params = rawParams ?? {};
+  const locator = (params.locator ?? {}) as Record<string, unknown>;
+
+  const id = (locator.id ?? locator.contact_id ?? params.id ?? params.contact_id) as
+    | string
+    | undefined;
+  const phone_digits =
+    normalizePhoneDigits(locator.whatsapp) ??
+    normalizePhoneDigits(locator.telefone) ??
+    normalizePhoneDigits(locator.phone) ??
+    normalizePhoneDigits(params.whatsapp) ??
+    normalizePhoneDigits(params.telefone) ??
+    normalizePhoneDigits(params.phone);
+  const email_lookup =
+    (locator.email ? String(locator.email).trim() : null) ??
+    (params.email ? String(params.email).trim() : null);
+  const name_lookup =
+    String(locator.name ?? locator.nome ?? params.name ?? params.nome ?? "").trim() || null;
+
+  if (!id && !phone_digits && !email_lookup && !name_lookup) {
+    return {
+      ok: false,
+      error: "Informe id, whatsapp, email ou nome para localizar o contato a excluir.",
+      correlation_id: ctx?.correlation_id,
+    };
+  }
+
+  return execCrmDeleteContact(
+    { id, phone_digits, email_lookup, name_lookup },
+    ctx,
+  );
+}
