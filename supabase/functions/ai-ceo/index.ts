@@ -1100,7 +1100,7 @@ async function runCoordinationMotor(userMessage: string): Promise<CoordinationRe
   const intent = await extractActionIntent(userMessage);
   if (!intent) return null;
 
-  return coordinateRequest({
+  return await coordinateRequest({
     objective: intent.objective,
     module: intent.module,
     entity: intent.entity,
@@ -1114,7 +1114,9 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
   if (!resp) return "";
 
   const statusLabel: Record<string, string> = {
-    planned: "✅ Recebido — encaminhado ao Especialista",
+    planned: "✅ Recebido — encaminhado ao Especialista (execução real pendente)",
+    executed: "🟢 Executado pelo Especialista",
+    execution_failed: "🔴 Falha na execução do Especialista",
     specialist_not_found: "⚠️ Especialista não encontrado no catálogo",
     invalid_request: "❌ Solicitação inválida",
     confirmation_required: "🔒 Confirmação necessária",
@@ -1131,6 +1133,34 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
       ? "```json\n" + JSON.stringify(resp.planned_action.params, null, 2) + "\n```"
       : "_nenhum_";
 
+  // Bloco de execução real (quando houver)
+  let execLines: string[] = [];
+  if (resp.execution?.performed) {
+    if (resp.execution.ok) {
+      execLines = [
+        `- **Execução real:** ✅ realizada com sucesso`,
+        `- **ID criado:** \`${resp.execution.entity_id ?? "—"}\``,
+      ];
+      if (resp.execution.data) {
+        execLines.push(
+          "- **Dados salvos:** ```json\n" +
+            JSON.stringify(resp.execution.data, null, 2) +
+            "\n```",
+        );
+      }
+    } else {
+      execLines = [
+        `- **Execução real:** ❌ falhou`,
+        `- **Erro:** ${resp.execution.error ?? "erro desconhecido"}`,
+      ];
+    }
+  } else {
+    execLines = [
+      `- **Execução real:** não executada nesta etapa`,
+      `- **Próximo passo:** conectar Especialista responsável`,
+    ];
+  }
+
   return [
     "🛰️ **Motor de Coordenação**",
     `- **Status:** ${statusLabel[resp.status] ?? resp.status}`,
@@ -1139,8 +1169,7 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
     `- **Operação:** ${operacao}`,
     `- **Escopo:** ${escopo}`,
     `- **Parâmetros recebidos:** ${params}`,
-    `- **Execução real:** não executada nesta etapa`,
-    `- **Próximo passo:** conectar Especialista responsável`,
+    ...execLines,
     `- **Correlation ID:** \`${resp.correlation_id}\``,
     "",
     "---",
