@@ -14,7 +14,12 @@
 // ============================================================================
 
 import { CAPABILITIES_CATALOG, resolveCapability } from "./capabilities-catalog.ts";
-import { crmCreateContact, type SpecialistResult } from "./specialists/crm.ts";
+import {
+  crmCreateContact,
+  crmGetContact,
+  crmListContacts,
+  type SpecialistResult,
+} from "./specialists/crm.ts";
 
 // ---------- Contratos ------------------------------------------------------
 
