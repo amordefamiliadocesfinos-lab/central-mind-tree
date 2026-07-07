@@ -1027,11 +1027,20 @@ async function extractActionIntent(userMessage: string): Promise<
 > {
   if (!userMessage || userMessage.trim().length < 3) return null;
 
-  const catalog = CAPABILITIES_CATALOG.map((m) => ({
-    id: m.id,
-    name: m.name,
-    entities: m.entities.map((e) => ({ id: e.id, name: e.name, operations: e.operations })),
-  }));
+  const catalog = Array.isArray(CAPABILITIES_CATALOG)
+    ? CAPABILITIES_CATALOG.map((m) => {
+        const entities = Array.isArray(m?.entities) ? m.entities : [];
+        return {
+          id: m?.id ?? "",
+          name: m?.name ?? "",
+          entities: entities.map((e) => ({
+            id: e?.id ?? "",
+            name: e?.name ?? "",
+            operations: Array.isArray(e?.operations) ? e.operations : [],
+          })),
+        };
+      })
+    : [];
 
   const sys = `Você é um extrator de intenção. Dada uma mensagem do usuário, decida se ela pede uma AÇÃO sobre dados do sistema (criar, editar, excluir, listar, consultar, mover, publicar, aprovar, etc.).
 Se NÃO for pedido de ação (é conversa, dúvida geral, saudação), responda: {"is_action": false}.
