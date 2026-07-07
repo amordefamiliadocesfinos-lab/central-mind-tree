@@ -549,7 +549,61 @@ const CATALOGO_ESPECIALISTAS_PAGE: { title: string; content: string; tags: strin
     "\n— Estrutura inicial. Cada Especialista deve ser preenchido conforme for conectado ao Motor de Coordenação.",
 };
 
+const ARQUITETURA_EXECUTOR_FLAG_KEY = "nucleo_arquitetura_executor_v1";
+const ARQUITETURA_EXECUTOR_PAGE: { title: string; content: string; tags: string[] } = {
+  title: "Camada Executor",
+  tags: ["arquitetura", "executor", "especialistas", "execucao", "motor-de-coordenacao"],
+  content:
+    "Camada Executor\n\n" +
+    "A Camada Executor é responsável pela execução técnica das operações solicitadas pelos Especialistas.\n\n" +
+    "Fluxo oficial:\n\n" +
+    "Núcleo\n" +
+    "↓\n" +
+    "Consciência\n" +
+    "↓\n" +
+    "IA Orquestradora\n" +
+    "↓\n" +
+    "Motor de Coordenação\n" +
+    "↓\n" +
+    "Especialista\n" +
+    "↓\n" +
+    "Executor\n" +
+    "↓\n" +
+    "Hooks / Supabase / Banco de Dados\n" +
+    "↓\n" +
+    "Executor\n" +
+    "↓\n" +
+    "Especialista\n" +
+    "↓\n" +
+    "Motor de Coordenação\n" +
+    "↓\n" +
+    "IA Orquestradora\n" +
+    "↓\n" +
+    "Usuário\n\n" +
+    "Definições:\n\n" +
+    "• A IA Orquestradora compreende objetivos e coordena o sistema.\n" +
+    "• O Motor de Coordenação encaminha a solicitação ao Especialista correto.\n" +
+    "• O Especialista entende a regra de negócio do seu módulo.\n" +
+    "• O Executor realiza a operação técnica no sistema.\n" +
+    "• O Executor não toma decisões estratégicas.\n" +
+    "• O Executor não conversa com o usuário.\n" +
+    "• O Executor apenas executa, valida retorno técnico e devolve resultado ao Especialista.\n\n" +
+    "— Este documento oficializa a Camada Executor como a peça que traduz a intenção do Especialista em ação técnica real no Painel Central.",
+};
 
+const PRINCIPIO_SEPARACAO_FLAG_KEY = "nucleo_principio_separacao_inteligencia_regra_execucao_v1";
+const PRINCIPIO_SEPARACAO_PAGE: { title: string; content: string; tags: string[] } = {
+  title: "Princípio da Separação entre Inteligência, Regra e Execução",
+  tags: ["princípio", "ia", "especialistas", "executor", "separacao", "arquitetura"],
+  content:
+    "Princípio da Separação entre Inteligência, Regra e Execução\n\n" +
+    "A IA Orquestradora decide e coordena.\n\n" +
+    "O Especialista interpreta a regra de negócio do módulo.\n\n" +
+    "O Executor realiza a execução técnica.\n\n" +
+    "Nenhuma dessas responsabilidades deve ser misturada.\n\n" +
+    "Objetivo:\n" +
+    "Garantir escalabilidade, segurança, baixa complexidade e facilidade para trocar ou evoluir tecnologias no futuro.",
+};
 
 const PRINCIPIO_ORIENTACAO_OBJETIVOS_PAGE: { title: string; content: string; tags: string[] } = {
   title: "Princípio da Orientação por Objetivos",
@@ -3659,6 +3713,52 @@ function loadPages(): DocPage[] {
 
 
 
+    // Seed Camada Executor (append-only, safe)
+    if (!localStorage.getItem(ARQUITETURA_EXECUTOR_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "arquitetura").map((p) => p.title)
+      );
+      if (!existingTitles.has(ARQUITETURA_EXECUTOR_PAGE.title)) {
+        const now = new Date().toISOString();
+        pages = [
+          {
+            id: uid(),
+            areaId: "arquitetura",
+            title: ARQUITETURA_EXECUTOR_PAGE.title,
+            content: ARQUITETURA_EXECUTOR_PAGE.content,
+            tags: ARQUITETURA_EXECUTOR_PAGE.tags,
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+          ...pages,
+        ];
+      }
+      localStorage.setItem(ARQUITETURA_EXECUTOR_FLAG_KEY, "1");
+    }
+    // Seed Princípio da Separação entre Inteligência, Regra e Execução (append-only, safe)
+    if (!localStorage.getItem(PRINCIPIO_SEPARACAO_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "principios").map((p) => p.title)
+      );
+      if (!existingTitles.has(PRINCIPIO_SEPARACAO_PAGE.title)) {
+        const now = new Date().toISOString();
+        pages = [
+          {
+            id: uid(),
+            areaId: "principios",
+            title: PRINCIPIO_SEPARACAO_PAGE.title,
+            content: PRINCIPIO_SEPARACAO_PAGE.content,
+            tags: PRINCIPIO_SEPARACAO_PAGE.tags,
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+          ...pages,
+        ];
+      }
+      localStorage.setItem(PRINCIPIO_SEPARACAO_FLAG_KEY, "1");
+    }
     // Seed Princípio Mestre once (independent flag so existing installs also receive it)
     const PRINCIPIO_FLAG = "nucleo_principio_mestre_seed_v1";
     if (!localStorage.getItem(PRINCIPIO_FLAG)) {
