@@ -3773,6 +3773,29 @@ function loadPages(): DocPage[] {
       }
       localStorage.setItem(ARQUITETURA_EXECUTOR_FLAG_KEY, "1");
     }
+    // Seed Contrato Oficial do Especialista (append-only, safe)
+    if (!localStorage.getItem(CONTRATO_ESPECIALISTA_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "arquitetura").map((p) => p.title)
+      );
+      if (!existingTitles.has(CONTRATO_ESPECIALISTA_PAGE.title)) {
+        const now = new Date().toISOString();
+        pages = [
+          {
+            id: uid(),
+            areaId: "arquitetura",
+            title: CONTRATO_ESPECIALISTA_PAGE.title,
+            content: CONTRATO_ESPECIALISTA_PAGE.content,
+            tags: CONTRATO_ESPECIALISTA_PAGE.tags,
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+          ...pages,
+        ];
+      }
+      localStorage.setItem(CONTRATO_ESPECIALISTA_FLAG_KEY, "1");
+    }
     // Seed Princípio da Separação entre Inteligência, Regra e Execução (append-only, safe)
     if (!localStorage.getItem(PRINCIPIO_SEPARACAO_FLAG_KEY)) {
       const existingTitles = new Set(
