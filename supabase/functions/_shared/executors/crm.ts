@@ -117,30 +117,68 @@ const CRM_OPERATIONS: Record<string, BaseOperationDefinition> = {
         };
       }
 
+      const SELECT_COLS =
+        "id,name,email,phone,whatsapp,mobile,funnel_status,client_classification,lifetime_value,city,state,ultimo_contato,notes";
+
+      // 1) ID exato → resposta única e determinística
+      if (id) {
+        const { data, error } = await ctx.supabase
+          .from("contacts")
+          .select(SELECT_COLS)
+          .eq("id", id)
+          .eq("is_active", true)
+          .maybeSingle();
+        if (error) return { status: "error", ok: false, error: `Falha técnica: ${error.message}` };
+        if (!data) return { status: "not_found", ok: false, error: "Contato não encontrado." };
+        return { ok: true, entity_id: data.id, data };
+      }
+
+      // 2) Demais critérios: buscar até 10 e decidir se é único ou ambíguo
       let query = ctx.supabase
         .from("contacts")
-        .select(
-          "id,name,email,phone,whatsapp,funnel_status,client_classification,lifetime_value,city,state,ultimo_contato,notes",
-        )
+        .select(SELECT_COLS)
         .eq("is_active", true)
-        .limit(1);
+        .limit(10);
 
-      if (id) query = query.eq("id", id);
-      else if (phone_digits) {
+      if (phone_digits) {
         query = query.or(
           `whatsapp.eq.${phone_digits},phone.eq.${phone_digits},mobile.eq.${phone_digits}`,
         );
-      } else if (email) query = query.ilike("email", email);
-      else if (name) query = query.ilike("name", `%${name}%`);
-
-      const { data, error } = await query.maybeSingle();
-      if (error) {
-        return { status: "error", ok: false, error: `Falha técnica: ${error.message}` };
+      } else if (email) {
+        query = query.ilike("email", email);
+      } else if (name) {
+        query = query.ilike("name", `%${name}%`);
       }
-      if (!data) {
+
+      const { data, error } = await query;
+      if (error) return { status: "error", ok: false, error: `Falha técnica: ${error.message}` };
+      const rows = data ?? [];
+      if (rows.length === 0) {
         return { status: "not_found", ok: false, error: "Contato não encontrado." };
       }
-      return { ok: true, entity_id: data.id, data };
+      if (rows.length === 1) {
+        return { ok: true, entity_id: rows[0].id, data: rows[0] };
+      }
+      // Ambíguo: devolver opções para a IA Orquestradora oferecer escolha
+      return {
+        ok: true,
+        status: "ok",
+        message: `Encontrados ${rows.length} contatos parecidos. Escolha um para consultar.`,
+        data: {
+          ambiguous: true,
+          match_count: rows.length,
+          options: rows.map((r: any) => ({
+            id: r.id,
+            name: r.name,
+            whatsapp: r.whatsapp ?? null,
+            phone: r.phone ?? null,
+            email: r.email ?? null,
+            funnel_status: r.funnel_status ?? null,
+            city: r.city ?? null,
+            state: r.state ?? null,
+          })),
+        },
+      };
     },
   },
 
