@@ -263,7 +263,22 @@ export function listSpecialists() {
     entities: (Array.isArray(mod.entities) ? mod.entities : []).map((e) => ({
       entity_id: e.id,
       entity_name: e.name,
-      operations: Array.isArray(e.operations) ? e.operations : [],
+      operations: (Array.isArray(e.operations) ? e.operations : []).map((op) => ({
+        operation: op,
+        registered: SpecialistRegistry.has(mod.id, e.id, op),
+      })),
     })),
   }));
+}
+
+export function listRegisteredSpecialists() {
+  return SpecialistRegistry.list().map((r) => ({
+    module_id: r.module_id,
+    entity_id: r.entity_id,
+    operation: r.operation,
+  }));
+}
+
+export function validateSpecialistRegistry() {
+  return SpecialistRegistry.validate();
 }
