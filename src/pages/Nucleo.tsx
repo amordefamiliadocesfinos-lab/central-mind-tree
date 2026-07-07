@@ -3713,6 +3713,52 @@ function loadPages(): DocPage[] {
 
 
 
+    // Seed Camada Executor (append-only, safe)
+    if (!localStorage.getItem(ARQUITETURA_EXECUTOR_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "arquitetura").map((p) => p.title)
+      );
+      if (!existingTitles.has(ARQUITETURA_EXECUTOR_PAGE.title)) {
+        const now = new Date().toISOString();
+        pages = [
+          {
+            id: uid(),
+            areaId: "arquitetura",
+            title: ARQUITETURA_EXECUTOR_PAGE.title,
+            content: ARQUITETURA_EXECUTOR_PAGE.content,
+            tags: ARQUITETURA_EXECUTOR_PAGE.tags,
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+          ...pages,
+        ];
+      }
+      localStorage.setItem(ARQUITETURA_EXECUTOR_FLAG_KEY, "1");
+    }
+    // Seed Princípio da Separação entre Inteligência, Regra e Execução (append-only, safe)
+    if (!localStorage.getItem(PRINCIPIO_SEPARACAO_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "principios").map((p) => p.title)
+      );
+      if (!existingTitles.has(PRINCIPIO_SEPARACAO_PAGE.title)) {
+        const now = new Date().toISOString();
+        pages = [
+          {
+            id: uid(),
+            areaId: "principios",
+            title: PRINCIPIO_SEPARACAO_PAGE.title,
+            content: PRINCIPIO_SEPARACAO_PAGE.content,
+            tags: PRINCIPIO_SEPARACAO_PAGE.tags,
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+          ...pages,
+        ];
+      }
+      localStorage.setItem(PRINCIPIO_SEPARACAO_FLAG_KEY, "1");
+    }
     // Seed Princípio Mestre once (independent flag so existing installs also receive it)
     const PRINCIPIO_FLAG = "nucleo_principio_mestre_seed_v1";
     if (!localStorage.getItem(PRINCIPIO_FLAG)) {
