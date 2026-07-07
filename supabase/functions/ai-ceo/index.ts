@@ -567,8 +567,13 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
     });
   } catch (error) {
     console.error("AI CEO Error:", error);
+    const msg = error instanceof Error
+      ? error.message
+      : (error && typeof error === "object")
+        ? ((error as any).message || (error as any).details || (error as any).hint || JSON.stringify(error))
+        : "Unknown error";
     return new Response(
-      JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }),
+      JSON.stringify({ error: msg }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
