@@ -104,6 +104,7 @@ export function clearCoordinationLog(): void {
 export async function coordinateRequest(
   request: CoordinationRequest,
 ): Promise<CoordinationResponse> {
+  ensureRegistryValidated();
   const correlation_id = request.correlation_id ?? crypto.randomUUID();
   const received_at = new Date().toISOString();
 
@@ -170,9 +171,8 @@ export async function coordinateRequest(
     return resp;
   }
 
-  // 4. Dispatch para o Especialista real, se conectado
-  const key = specialistKey(mod.id, ent.id, operation);
-  const executor = SPECIALIST_REGISTRY[key];
+  // 4. Localiza Especialista no Registro Universal (única fonte de descoberta)
+  const executor = SpecialistRegistry.find(mod.id, ent.id, operation);
 
   const baseSpecialist = {
     module_id: mod.id,
@@ -190,7 +190,7 @@ export async function coordinateRequest(
 
   if (executor) {
     try {
-      const result = await executor(request.params, { correlation_id });
+      const result = await executor(request.params, { correlation_id, requested_by: request.requested_by });
       const resp: CoordinationResponse = {
         status: result.ok ? "executed" : "execution_failed",
         message: result.ok
