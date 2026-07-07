@@ -14,6 +14,10 @@ import {
   snapshotExecutor,
   type ActionRequest,
 } from "../_shared/action-executor.ts";
+import { registerAssistenteHandlers } from "../_shared/handlers/assistente.ts";
+
+// Registra handlers reais no boot da função (idempotente).
+registerAssistenteHandlers();
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
