@@ -484,6 +484,73 @@ const PRINCIPIO_VERACIDADE_OPERACIONAL_PAGE: { title: string; content: string; t
     "— Este princípio torna a IA auditável, confiável e alinhada à Consciência e ao Núcleo do Painel Central.",
 };
 
+const ARQUITETURA_ESPECIALISTAS_FLAG_KEY = "nucleo_arquitetura_especialistas_v1";
+const ARQUITETURA_ESPECIALISTAS_PAGE: { title: string; content: string; tags: string[] } = {
+  title: "Arquitetura dos Especialistas",
+  tags: ["arquitetura", "especialistas", "ia", "orquestracao", "motor-de-coordenacao"],
+  content:
+    "Arquitetura dos Especialistas\n\n" +
+    "Todo módulo operacional do Painel Central deve ser tratado como um Especialista.\n\n" +
+    "Regras fundamentais:\n" +
+    "• Especialistas possuem conhecimento profundo do seu próprio domínio.\n" +
+    "• Especialistas executam operações reais dentro do seu módulo.\n" +
+    "• Especialistas não tomam decisões estratégicas.\n" +
+    "• Especialistas não conversam diretamente com o usuário.\n" +
+    "• Toda coordenação passa pela IA Orquestradora e pelo Motor de Coordenação.\n\n" +
+    "Fluxo oficial:\n" +
+    "IA Orquestradora → Motor de Coordenação → Especialista → Motor de Coordenação → IA Orquestradora → Usuário\n\n" +
+    "— Este documento registra oficialmente que os módulos do Painel Central são Especialistas coordenados pela IA Orquestradora.",
+};
+
+const PRINCIPIO_ESPECIALISTAS_FLAG_KEY = "nucleo_principio_especialistas_v1";
+const PRINCIPIO_ESPECIALISTAS_PAGE: { title: string; content: string; tags: string[] } = {
+  title: "Princípio dos Especialistas",
+  tags: ["princípio", "especialistas", "modulos", "orquestracao"],
+  content:
+    "Princípio dos Especialistas\n\n" +
+    "Todo módulo operacional do Painel Central é um Especialista.\n\n" +
+    "Cada Especialista executa apenas operações do seu próprio domínio, respeitando o Núcleo, a IA Orquestradora e o Motor de Coordenação.",
+};
+
+const CATALOGO_ESPECIALISTAS_FLAG_KEY = "nucleo_atlas_catalogo_especialistas_v1";
+const CATALOGO_ESPECIALISTAS_PAGE: { title: string; content: string; tags: string[] } = {
+  title: "Catálogo de Especialistas",
+  tags: ["atlas", "especialistas", "catalogo"],
+  content:
+    "Catálogo de Especialistas\n\n" +
+    "Registro oficial dos Especialistas do Painel Central. Cada Especialista abaixo deve ser detalhado nos campos: Nome, Missão, Domínio, Entidades controladas, Operações suportadas, Eventos gerados, Eventos consumidos, Status e Versão.\n\n" +
+    [
+      "Especialista CRM",
+      "Especialista Financeiro",
+      "Especialista Produção",
+      "Especialista Digital",
+      "Especialista Rotina",
+      "Especialista Agenda",
+      "Especialista Estoque",
+      "Especialista Operações",
+      "Especialista Compras",
+      "Especialista Reuniões",
+      "Especialista IA",
+    ]
+      .map(
+        (nome) =>
+          `━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n${nome}\n\n` +
+          "• Nome — \n" +
+          "• Missão — \n" +
+          "• Domínio — \n" +
+          "• Entidades controladas — \n" +
+          "• Operações suportadas — \n" +
+          "• Eventos gerados — \n" +
+          "• Eventos consumidos — \n" +
+          "• Status — \n" +
+          "• Versão — \n",
+      )
+      .join("\n") +
+    "\n— Estrutura inicial. Cada Especialista deve ser preenchido conforme for conectado ao Motor de Coordenação.",
+};
+
+
+
 const PRINCIPIO_ORIENTACAO_OBJETIVOS_PAGE: { title: string; content: string; tags: string[] } = {
   title: "Princípio da Orientação por Objetivos",
   tags: ["princípio", "ia", "objetivos", "orientacao", "orquestracao"],
@@ -3116,7 +3183,77 @@ function loadPages(): DocPage[] {
       }
       localStorage.setItem(PRINCIPIO_VERACIDADE_OPERACIONAL_FLAG_KEY, "1");
     }
+    // Seed Arquitetura dos Especialistas (append-only, safe)
+    if (!localStorage.getItem(ARQUITETURA_ESPECIALISTAS_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "arquitetura").map((p) => p.title)
+      );
+      if (!existingTitles.has(ARQUITETURA_ESPECIALISTAS_PAGE.title)) {
+        const now = new Date().toISOString();
+        pages = [
+          {
+            id: uid(),
+            areaId: "arquitetura",
+            title: ARQUITETURA_ESPECIALISTAS_PAGE.title,
+            content: ARQUITETURA_ESPECIALISTAS_PAGE.content,
+            tags: ARQUITETURA_ESPECIALISTAS_PAGE.tags,
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+          ...pages,
+        ];
+      }
+      localStorage.setItem(ARQUITETURA_ESPECIALISTAS_FLAG_KEY, "1");
+    }
+    // Seed Princípio dos Especialistas (append-only, safe)
+    if (!localStorage.getItem(PRINCIPIO_ESPECIALISTAS_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "principios").map((p) => p.title)
+      );
+      if (!existingTitles.has(PRINCIPIO_ESPECIALISTAS_PAGE.title)) {
+        const now = new Date().toISOString();
+        pages = [
+          {
+            id: uid(),
+            areaId: "principios",
+            title: PRINCIPIO_ESPECIALISTAS_PAGE.title,
+            content: PRINCIPIO_ESPECIALISTAS_PAGE.content,
+            tags: PRINCIPIO_ESPECIALISTAS_PAGE.tags,
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+          ...pages,
+        ];
+      }
+      localStorage.setItem(PRINCIPIO_ESPECIALISTAS_FLAG_KEY, "1");
+    }
+    // Seed Catálogo de Especialistas no Atlas (append-only, safe)
+    if (!localStorage.getItem(CATALOGO_ESPECIALISTAS_FLAG_KEY)) {
+      const existingTitles = new Set(
+        pages.filter((p) => p.areaId === "atlas").map((p) => p.title)
+      );
+      if (!existingTitles.has(CATALOGO_ESPECIALISTAS_PAGE.title)) {
+        const now = new Date().toISOString();
+        pages = [
+          {
+            id: uid(),
+            areaId: "atlas",
+            title: CATALOGO_ESPECIALISTAS_PAGE.title,
+            content: CATALOGO_ESPECIALISTAS_PAGE.content,
+            tags: CATALOGO_ESPECIALISTAS_PAGE.tags,
+            createdAt: now,
+            updatedAt: now,
+            versions: [],
+          },
+          ...pages,
+        ];
+      }
+      localStorage.setItem(CATALOGO_ESPECIALISTAS_FLAG_KEY, "1");
+    }
     // Seed atlas do painel central once
+
     if (!localStorage.getItem(ATLAS_SEED_FLAG_KEY)) {
       const existingTitles = new Set(
         pages.filter((p) => p.areaId === "atlas").map((p) => p.title)
