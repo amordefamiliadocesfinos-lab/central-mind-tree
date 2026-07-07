@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
     // POST /coordination-motor  (ou /coordination-motor/coordinate)
     if (req.method === "POST") {
       const body = (await req.json().catch(() => ({}))) as CoordinationRequest;
-      const response = coordinateRequest(body);
+      const response = await coordinateRequest(body);
       return json(response);
     }
 
