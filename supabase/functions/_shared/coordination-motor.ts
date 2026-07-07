@@ -77,12 +77,13 @@ export interface CoordinationResponse {
 // Nesta etapa, apenas CRM / Contato / criar está conectado.
 type SpecialistExecutor = (
   params: Record<string, unknown> | undefined,
+  ctx?: { correlation_id?: string },
 ) => Promise<SpecialistResult>;
 
 const SPECIALIST_REGISTRY: Record<string, SpecialistExecutor> = {
-  "crm:contato:criar": (params) => crmCreateContact(params as any),
-  "crm:contato:consultar": (params) => crmGetContact(params as any),
-  "crm:contato:listar": (params) => crmListContacts(params as any),
+  "crm:contato:criar": (params, ctx) => crmCreateContact(params as any, ctx),
+  "crm:contato:consultar": (params, ctx) => crmGetContact(params as any, ctx),
+  "crm:contato:listar": (params, ctx) => crmListContacts(params as any, ctx),
 };
 
 function specialistKey(moduleId: string, entityId: string, operation: string): string {
