@@ -17,6 +17,7 @@
 
 import {
   execCrmCreateContact,
+  execCrmDeleteContact,
   execCrmEditContact,
   execCrmGetContact,
   execCrmListContacts,
