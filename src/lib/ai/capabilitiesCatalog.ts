@@ -152,6 +152,20 @@ export const CAPABILITIES_CATALOG: ModuleCapabilities[] = [
       { verb: "concluir",  entity: "parada_entrega",description: "Marcar parada como entregue.", status: "planejada" },
     ],
   },
+  {
+    id: "assistente",
+    name: "Assistente IA / IA Orquestradora",
+    purpose: "Gestão do próprio Assistente IA: histórico de chats, decisões propostas, políticas e logs de execução.",
+    capabilities: [
+      { verb: "consultar", entity: "chat_assistente",            description: "Listar mensagens do histórico de chat da IA.", status: "disponivel", synonyms: ["listar chats","ver conversas","histórico do assistente"] },
+      { verb: "consultar", entity: "decisao_assistente",         description: "Listar decisões/insights propostos pela IA.", status: "disponivel", synonyms: ["listar decisões","ver insights","decisões da ia"] },
+      { verb: "excluir",   entity: "decisao_assistente",         description: "Excluir uma decisão/insight específico (requer confirmação).", status: "disponivel", synonyms: ["deletar decisão","apagar insight","remover decisão"] },
+      { verb: "excluir",   entity: "todas_decisoes_assistente",  description: "Excluir TODAS as decisões/insights da IA (requer confirmação).", status: "disponivel", synonyms: ["excluir todas decisões","limpar decisões","apagar todos insights"] },
+      { verb: "consultar", entity: "politica_assistente",        description: "Listar políticas de autopilot da IA por área.", status: "disponivel", synonyms: ["listar políticas","ver autopilot"] },
+      { verb: "consultar", entity: "log_assistente",             description: "Listar logs de execução de ações da IA.", status: "disponivel", synonyms: ["listar logs","ver logs da ia","histórico de ações"] },
+      { verb: "excluir",   entity: "todos_logs_assistente",      description: "Limpar TODOS os logs de execução da IA (requer confirmação).", status: "disponivel", synonyms: ["limpar logs","apagar logs","zerar logs da ia"] },
+    ],
+  },
 ];
 
 // ---------------------------------------------------------------------------
