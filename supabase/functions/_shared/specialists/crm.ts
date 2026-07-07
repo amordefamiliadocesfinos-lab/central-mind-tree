@@ -154,6 +154,18 @@ export async function crmListContacts(
 // editar contato
 // ---------------------------------------------------------------------------
 export interface CrmEditContactParams {
+  // Payload padrão (recomendado)
+  locator?: {
+    id?: string;
+    contact_id?: string;
+    name?: string;
+    nome?: string;
+    whatsapp?: string;
+    telefone?: string;
+    phone?: string;
+    email?: string;
+  };
+  // Compatibilidade (campos flat)
   id?: string;
   contact_id?: string;
   whatsapp?: string;
@@ -163,7 +175,6 @@ export interface CrmEditContactParams {
   name?: string;
   nome?: string;
   updates?: Record<string, unknown>;
-  // aceita também campos "flat" para edição
   novo_nome?: string;
   novo_email?: string;
   novo_whatsapp?: string;
@@ -171,6 +182,7 @@ export interface CrmEditContactParams {
   novas_observacoes?: string;
   [k: string]: unknown;
 }
+
 
 export async function crmEditContact(
   rawParams: CrmEditContactParams | undefined,
