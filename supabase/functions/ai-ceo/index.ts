@@ -1056,6 +1056,19 @@ Se FOR pedido de ação, responda estritamente JSON:
   "scope": "all|one|opcional",
   "params": { ...campos_extraidos_da_mensagem }
 }
+
+REGRA CRÍTICA — CRM / contato / editar:
+- SEMPRE separe o VALOR ATUAL (para localizar) do NOVO VALOR (a aplicar).
+- Use OBRIGATORIAMENTE o formato: "params": { "locator": {...}, "updates": {...} }
+- "locator" = como identificar o contato hoje (name, whatsapp, phone, email, id).
+- "updates" = os novos valores desejados (name, whatsapp, phone, email, notes).
+- "updates" NUNCA pode ficar vazio em uma edição.
+Exemplo:
+  Usuário: "Altere o contato Deividi Teste para o nome Deividi Teste Editado"
+  params: { "locator": { "name": "Deividi Teste" }, "updates": { "name": "Deividi Teste Editado" } }
+  Usuário: "Mude o email do contato 11999999999 para novo@x.com"
+  params: { "locator": { "whatsapp": "11999999999" }, "updates": { "email": "novo@x.com" } }
+
 Use o catálogo abaixo como referência (mas pode sugerir module/entity mesmo se não estiver registrado):
 ${JSON.stringify(catalog)}`;
 
@@ -1108,71 +1121,82 @@ function normalizeParamsForSpecialist(
   const op = String(operation ?? "").toLowerCase();
 
   if ((entId === "contato" || entId === "contatos") && op === "editar") {
-    // Se já veio no formato padrão, apenas garante estrutura e retorna.
-    const hasLocator = params.locator && typeof params.locator === "object";
-    const hasUpdates = params.updates && typeof params.updates === "object";
-    if (hasLocator && hasUpdates) {
-      return { locator: params.locator, updates: params.updates };
-    }
-
-    const pick = (...keys: string[]) => {
+    const pick = (src: Record<string, unknown>, ...keys: string[]) => {
       for (const k of keys) {
-        const v = (params as Record<string, unknown>)[k];
+        const v = src[k];
         if (v !== undefined && v !== null && String(v).trim() !== "") return v;
       }
       return undefined;
     };
 
-    // Localização (valores atuais/antigos do contato)
-    const locator: Record<string, unknown> = { ...((params.locator as object) ?? {}) };
-    const locId = pick("id", "contact_id", "contato_id");
-    const locName = pick(
-      "nome_original", "nome_antigo", "nome_atual", "name_original", "name_old",
-      "contato", "contact", "target_name", "target",
-      // "name"/"nome" só entram como locator se NÃO houver novo_nome
-    );
-    const locWhats = pick("whatsapp_original", "whatsapp_antigo", "whatsapp_atual", "whatsapp");
-    const locPhone = pick("telefone_original", "telefone_antigo", "telefone_atual", "telefone", "phone");
-    const locEmail = pick("email_original", "email_antigo", "email_atual", "email");
+    const rawLocator = (params.locator && typeof params.locator === "object"
+      ? params.locator
+      : {}) as Record<string, unknown>;
+    const rawUpdates = (params.updates && typeof params.updates === "object"
+      ? params.updates
+      : {}) as Record<string, unknown>;
 
-    if (locId !== undefined) locator.id = locId;
+    const locator: Record<string, unknown> = { ...rawLocator };
+    const updates: Record<string, unknown> = { ...rawUpdates };
+
+    // Localização — variantes explícitas de "valor atual/antigo"
+    const locId = pick(params, "id", "contact_id", "contato_id");
+    const locName = pick(
+      params,
+      "nome_original", "nome_antigo", "nome_atual",
+      "name_original", "name_old", "name_current",
+      "contato", "contact", "target_name", "target",
+    );
+    const locWhats = pick(
+      params, "whatsapp_original", "whatsapp_antigo", "whatsapp_atual",
+    );
+    const locPhone = pick(
+      params, "telefone_original", "telefone_antigo", "telefone_atual",
+      "phone_original", "phone_old",
+    );
+    const locEmail = pick(
+      params, "email_original", "email_antigo", "email_atual",
+      "email_old", "email_current",
+    );
+
+    if (locId !== undefined && locator.id === undefined) locator.id = locId;
     if (locName !== undefined && locator.name === undefined) locator.name = locName;
     if (locWhats !== undefined && locator.whatsapp === undefined) locator.whatsapp = locWhats;
     if (locPhone !== undefined && locator.phone === undefined) locator.phone = locPhone;
     if (locEmail !== undefined && locator.email === undefined) locator.email = locEmail;
 
-    // Atualizações (novos valores)
-    const updates: Record<string, unknown> = { ...((params.updates as object) ?? {}) };
-    const newName = pick("novo_nome", "nome_novo", "new_name", "name_new");
-    const newWhats = pick("novo_whatsapp", "whatsapp_novo", "new_whatsapp");
-    const newPhone = pick("novo_telefone", "telefone_novo", "new_phone");
-    const newEmail = pick("novo_email", "email_novo", "new_email");
-    const newNotes = pick("novas_observacoes", "observacoes_novas", "novas_notas", "notes_new", "new_notes");
+    // Atualizações — variantes explícitas de "novo valor"
+    const newName = pick(params, "novo_nome", "nome_novo", "new_name", "name_new");
+    const newWhats = pick(params, "novo_whatsapp", "whatsapp_novo", "new_whatsapp");
+    const newPhone = pick(params, "novo_telefone", "telefone_novo", "new_phone");
+    const newEmail = pick(params, "novo_email", "email_novo", "new_email");
+    const newNotes = pick(
+      params, "novas_observacoes", "observacoes_novas",
+      "novas_notas", "notes_new", "new_notes",
+    );
 
-    if (newName !== undefined) updates.name = newName;
-    if (newWhats !== undefined) updates.whatsapp = newWhats;
-    if (newPhone !== undefined) updates.phone = newPhone;
-    if (newEmail !== undefined) updates.email = newEmail;
-    if (newNotes !== undefined) updates.notes = newNotes;
+    if (newName !== undefined && updates.name === undefined) updates.name = newName;
+    if (newWhats !== undefined && updates.whatsapp === undefined) updates.whatsapp = newWhats;
+    if (newPhone !== undefined && updates.phone === undefined) updates.phone = newPhone;
+    if (newEmail !== undefined && updates.email === undefined) updates.email = newEmail;
+    if (newNotes !== undefined && updates.notes === undefined) updates.notes = newNotes;
 
-    // Se não houve "novo_*", campos flat name/nome/whatsapp/telefone/email podem
-    // representar tanto locator quanto updates. Convenção: se locator já tem esse
-    // campo, o flat vira update; caso contrário, vira locator.
-    const flatName = pick("nome", "name");
-    const flatWhats = pick("whatsapp");
-    const flatPhone = pick("telefone", "phone");
-    const flatEmail = pick("email");
+    // Campos flat ambíguos: só usados quando nem locator nem updates têm o campo,
+    // como fallback para localização (nunca sobrescrevem updates existente).
+    const flatName = pick(params, "nome", "name");
+    const flatWhats = pick(params, "whatsapp");
+    const flatPhone = pick(params, "telefone", "phone");
+    const flatEmail = pick(params, "email");
 
     const assignFlat = (
       value: unknown,
       key: "name" | "whatsapp" | "phone" | "email",
     ) => {
       if (value === undefined) return;
-      if (locator[key] === undefined && updates[key] === undefined) {
-        locator[key] = value;
-      } else if (updates[key] === undefined) {
-        updates[key] = value;
-      }
+      // Se já foi capturado como update explícito ou já está no locator, ignora.
+      if (updates[key] !== undefined || locator[key] !== undefined) return;
+      // Fallback conservador: usa como locator (identificação do contato atual).
+      locator[key] = value;
     };
     assignFlat(flatName, "name");
     assignFlat(flatWhats, "whatsapp");
@@ -1194,6 +1218,37 @@ async function runCoordinationMotor(userMessage: string): Promise<CoordinationRe
     intent.operation,
     intent.params,
   );
+
+  // Validação semântica: editar contato exige locator e updates preenchidos.
+  const entId = String(intent.entity ?? "").toLowerCase();
+  const op = String(intent.operation ?? "").toLowerCase();
+  if ((entId === "contato" || entId === "contatos") && op === "editar") {
+    const locator = (normalizedParams.locator ?? {}) as Record<string, unknown>;
+    const updates = (normalizedParams.updates ?? {}) as Record<string, unknown>;
+    const locatorFilled = Object.values(locator).some(
+      (v) => v !== undefined && v !== null && String(v).trim() !== "",
+    );
+    const updatesFilled = Object.values(updates).some(
+      (v) => v !== undefined && v !== null && String(v).trim() !== "",
+    );
+    if (!locatorFilled || !updatesFilled) {
+      return {
+        status: "invalid_request",
+        message: !updatesFilled
+          ? "Interpretação incompleta: nenhum novo valor foi identificado para a edição. Informe explicitamente o campo e o novo valor (ex.: 'altere o contato X para o nome Y')."
+          : "Interpretação incompleta: não foi possível identificar qual contato editar. Informe nome, WhatsApp, telefone, e-mail ou ID.",
+        planned_action: {
+          operation: intent.operation,
+          scope: intent.scope,
+          params: normalizedParams,
+          destructive: false,
+          requires_confirmation: false,
+        },
+        correlation_id: crypto.randomUUID(),
+        received_at: new Date().toISOString(),
+      };
+    }
+  }
 
   return await coordinateRequest({
     objective: intent.objective,
