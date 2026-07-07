@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import { renderCatalogForPrompt, listModules } from "../_shared/capabilities-catalog.ts";
+import { coordinateRequest, type CoordinationResponse } from "../_shared/coordination-motor.ts";
+
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -539,6 +541,24 @@ Contas: ${JSON.stringify(accounts || [])}
 Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
 
 
+      // ==========================================================
+      // PASSO OBRIGATÓRIO: MOTOR DE COORDENAÇÃO
+      // Toda mensagem do usuário passa primeiro pelo Motor.
+      // Se houver intenção de ação, o Motor devolve resposta estruturada
+      // que é emitida ANTES do stream da IA.
+      // ==========================================================
+      const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user")?.content ?? "";
+      const coordination = await runCoordinationMotor(lastUserMsg);
+      const motorBlock = formatMotorBlock(coordination);
+
+      const enrichedSystemPrompt = systemPrompt + (coordination ? `
+
+MOTOR DE COORDENAÇÃO — RETORNO REAL DESTA SOLICITAÇÃO (já emitido ao usuário no início da resposta):
+${JSON.stringify(coordination, null, 2)}
+
+Instrução: sua resposta ao usuário será concatenada APÓS o bloco do Motor de Coordenação que já foi emitido.
+Continue a partir dali com o Plano estruturado, sem repetir o bloco do Motor.` : "");
+
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -548,7 +568,7 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
         body: JSON.stringify({
           model: "google/gemini-2.5-flash",
           messages: [
-            { role: "system", content: systemPrompt },
+            { role: "system", content: enrichedSystemPrompt },
             ...messages,
           ],
           stream: true,
@@ -571,9 +591,13 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
         throw new Error(`AI error: ${response.status}`);
       }
 
-      return new Response(response.body, {
+      // Concatena o bloco do Motor ao stream SSE da IA
+      const combined = prependSSEText(motorBlock, response.body!);
+
+      return new Response(combined, {
         headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
       });
+
     }
 
     // POST /execute - Direct chat execution is intentionally disabled.
@@ -980,3 +1004,168 @@ async function executeAction(
 
   return { status: actionRecord.status, result: actionRecord.result || "" };
 }
+
+// ============================================================================
+// MOTOR DE COORDENAÇÃO — integração obrigatória no /chat
+// ============================================================================
+
+/**
+ * Detecta intenção de ação na mensagem do usuário e devolve os 4 elementos
+ * padronizados (module, entity, operation, scope, params) usando a IA.
+ * Retorna null se não for pedido de ação (ex: apenas consulta/conversa).
+ */
+async function extractActionIntent(userMessage: string): Promise<
+  | {
+      objective: string;
+      module?: string;
+      entity: string;
+      operation: string;
+      scope?: string;
+      params?: Record<string, unknown>;
+    }
+  | null
+> {
+  if (!userMessage || userMessage.trim().length < 3) return null;
+
+  const catalog = listModules().map((m) => ({
+    id: m.id,
+    name: m.name,
+    entities: m.entities.map((e) => ({ id: e.id, name: e.name, operations: e.operations })),
+  }));
+
+  const sys = `Você é um extrator de intenção. Dada uma mensagem do usuário, decida se ela pede uma AÇÃO sobre dados do sistema (criar, editar, excluir, listar, consultar, mover, publicar, aprovar, etc.).
+Se NÃO for pedido de ação (é conversa, dúvida geral, saudação), responda: {"is_action": false}.
+Se FOR pedido de ação, responda estritamente JSON:
+{
+  "is_action": true,
+  "objective": "frase curta",
+  "module": "id_modulo_do_catalogo_ou_melhor_palpite",
+  "entity": "id_entidade",
+  "operation": "criar|listar|consultar|editar|excluir|limpar|mover|gerar|publicar|aprovar|enviar|concluir|agendar|importar|exportar",
+  "scope": "all|one|opcional",
+  "params": { ...campos_extraidos_da_mensagem }
+}
+Use o catálogo abaixo como referência (mas pode sugerir module/entity mesmo se não estiver registrado):
+${JSON.stringify(catalog)}`;
+
+  try {
+    const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          { role: "system", content: sys },
+          { role: "user", content: userMessage },
+        ],
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) return null;
+    const parsed = JSON.parse(content);
+    if (!parsed?.is_action) return null;
+    if (!parsed.entity || !parsed.operation) return null;
+    return {
+      objective: parsed.objective ?? userMessage.slice(0, 120),
+      module: parsed.module,
+      entity: parsed.entity,
+      operation: parsed.operation,
+      scope: parsed.scope,
+      params: parsed.params ?? {},
+    };
+  } catch (err) {
+    console.error("extractActionIntent error", err);
+    return null;
+  }
+}
+
+async function runCoordinationMotor(userMessage: string): Promise<CoordinationResponse | null> {
+  const intent = await extractActionIntent(userMessage);
+  if (!intent) return null;
+
+  return coordinateRequest({
+    objective: intent.objective,
+    module: intent.module,
+    entity: intent.entity,
+    operation: intent.operation,
+    scope: intent.scope,
+    params: intent.params,
+  });
+}
+
+function formatMotorBlock(resp: CoordinationResponse | null): string {
+  if (!resp) return "";
+
+  const statusLabel: Record<string, string> = {
+    planned: "✅ Recebido — encaminhado ao Especialista",
+    specialist_not_found: "⚠️ Especialista não encontrado no catálogo",
+    invalid_request: "❌ Solicitação inválida",
+    confirmation_required: "🔒 Confirmação necessária",
+  };
+
+  const especialista = resp.suggested_specialist
+    ? `${resp.suggested_specialist.module_name} / ${resp.suggested_specialist.entity_name}`
+    : "não identificado";
+
+  const operacao = resp.planned_action?.operation ?? "—";
+  const escopo = resp.planned_action?.scope ?? "—";
+  const params =
+    resp.planned_action?.params && Object.keys(resp.planned_action.params).length > 0
+      ? "```json\n" + JSON.stringify(resp.planned_action.params, null, 2) + "\n```"
+      : "_nenhum_";
+
+  return [
+    "🛰️ **Motor de Coordenação**",
+    `- **Status:** ${statusLabel[resp.status] ?? resp.status}`,
+    `- **Especialista sugerido:** ${especialista}`,
+    `- **Entidade:** ${resp.suggested_specialist?.entity_name ?? "—"}`,
+    `- **Operação:** ${operacao}`,
+    `- **Escopo:** ${escopo}`,
+    `- **Parâmetros recebidos:** ${params}`,
+    `- **Execução real:** não executada nesta etapa`,
+    `- **Próximo passo:** conectar Especialista responsável`,
+    `- **Correlation ID:** \`${resp.correlation_id}\``,
+    "",
+    "---",
+    "",
+  ].join("\n");
+}
+
+/**
+ * Prepend um texto como chunks SSE no formato OpenAI antes de pipear o stream original.
+ */
+function prependSSEText(text: string, upstream: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
+  const encoder = new TextEncoder();
+
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      if (text) {
+        // Emite como um único delta.content SSE compatível com o parser do CEOChat
+        const payload = {
+          choices: [{ delta: { content: text } }],
+        };
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify(payload)}\n\n`));
+      }
+
+      const reader = upstream.getReader();
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          controller.enqueue(value);
+        }
+      } catch (err) {
+        controller.error(err);
+        return;
+      }
+      controller.close();
+    },
+  });
+}
+
