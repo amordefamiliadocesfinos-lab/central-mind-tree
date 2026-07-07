@@ -16,7 +16,7 @@
 // ============================================================================
 
 import {
-  execCrmCreateContact,
+  execCrmEditContact,
   execCrmGetContact,
   execCrmListContacts,
   type ExecutorContext,
