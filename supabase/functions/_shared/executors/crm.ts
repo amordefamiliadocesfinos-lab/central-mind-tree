@@ -178,8 +178,13 @@ const CRM_OPERATIONS: Record<string, BaseOperationDefinition> = {
             state: r.state ?? null,
           })),
         },
+      };
+    },
+  },
+
   // --- editar contato ----------------------------------------------------
   editar: {
+
     handler: async (params, ctx) => {
       const id = params.id as string | undefined;
       const phone_digits = params.phone_digits as string | undefined;
