@@ -549,16 +549,21 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
       // ==========================================================
       const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user")?.content ?? "";
       const coordination = await runCoordinationMotor(lastUserMsg);
-      const motorBlock = formatMotorBlock(coordination);
 
-      const enrichedSystemPrompt = systemPrompt + (coordination ? `
+      // FLUXO OPERACIONAL: se o Motor de Coordenação identificou uma solicitação
+      // operacional, a resposta oficial da IA é APENAS o retorno estruturado do Motor.
+      // Não chamamos o LLM nem geramos plano/objetivo/especialistas — isso evita
+      // resposta duplicada e faz o Motor assumir oficialmente o fluxo operacional.
+      if (coordination) {
+        const motorOnly = formatMotorBlock(coordination);
+        const stream = prependSSEText(motorOnly, emptyStream());
+        return new Response(stream, {
+          headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+        });
+      }
 
-MOTOR DE COORDENAÇÃO — RETORNO REAL DESTA SOLICITAÇÃO (já emitido ao usuário no início da resposta):
-${JSON.stringify(coordination, null, 2)}
-
-Instrução: sua resposta ao usuário será concatenada APÓS o bloco do Motor de Coordenação que já foi emitido.
-Continue a partir dali com o Plano estruturado, sem repetir o bloco do Motor.` : "");
-
+      // FLUXO CONVERSACIONAL / PLANEJAMENTO: sem intenção operacional detectada,
+      // a IA responde normalmente (consulta, análise, estratégia, planejamento).
       const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -568,7 +573,7 @@ Continue a partir dali com o Plano estruturado, sem repetir o bloco do Motor.` :
         body: JSON.stringify({
           model: "google/gemini-2.5-flash",
           messages: [
-            { role: "system", content: enrichedSystemPrompt },
+            { role: "system", content: systemPrompt },
             ...messages,
           ],
           stream: true,
@@ -591,10 +596,7 @@ Continue a partir dali com o Plano estruturado, sem repetir o bloco do Motor.` :
         throw new Error(`AI error: ${response.status}`);
       }
 
-      // Concatena o bloco do Motor ao stream SSE da IA
-      const combined = prependSSEText(motorBlock, response.body!);
-
-      return new Response(combined, {
+      return new Response(response.body, {
         headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
       });
 
@@ -1149,6 +1151,15 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
 /**
  * Prepend um texto como chunks SSE no formato OpenAI antes de pipear o stream original.
  */
+function emptyStream(): ReadableStream<Uint8Array> {
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(new TextEncoder().encode("data: [DONE]\n\n"));
+      controller.close();
+    },
+  });
+}
+
 function prependSSEText(text: string, upstream: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
 
