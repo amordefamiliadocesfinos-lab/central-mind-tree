@@ -304,12 +304,10 @@ const CRM_OPERATIONS: Record<string, BaseOperationDefinition> = {
       };
     },
   },
-};
-    },
-  },
 
   // --- listar contatos ---------------------------------------------------
   listar: {
+
     handler: async (params, ctx) => {
       const limit = Math.max(1, Math.min(Number(params.limit) || 25, 100));
       let query = ctx.supabase
