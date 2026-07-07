@@ -104,7 +104,9 @@ export function clearCoordinationLog(): void {
 
 // ---------- Recepção e encaminhamento -------------------------------------
 
-export function coordinateRequest(request: CoordinationRequest): CoordinationResponse {
+export async function coordinateRequest(
+  request: CoordinationRequest,
+): Promise<CoordinationResponse> {
   const correlation_id = request.correlation_id ?? crypto.randomUUID();
   const received_at = new Date().toISOString();
 
@@ -171,24 +173,70 @@ export function coordinateRequest(request: CoordinationRequest): CoordinationRes
     return resp;
   }
 
-  // 4. Encaminhamento planejado (sem execução real)
+  // 4. Dispatch para o Especialista real, se conectado
+  const key = specialistKey(mod.id, ent.id, operation);
+  const executor = SPECIALIST_REGISTRY[key];
+
+  const baseSpecialist = {
+    module_id: mod.id,
+    module_name: mod.name,
+    entity_id: ent.id,
+    entity_name: ent.name,
+  };
+  const basePlan = {
+    operation,
+    scope,
+    params: request.params,
+    destructive: Boolean(requires_confirmation),
+    requires_confirmation: needsConfirm,
+  };
+
+  if (executor) {
+    try {
+      const result = await executor(request.params);
+      const resp: CoordinationResponse = {
+        status: result.ok ? "executed" : "execution_failed",
+        message: result.ok
+          ? `Especialista "${mod.name}" executou a operação "${operation}" em ${ent.name} com sucesso.`
+          : `Especialista "${mod.name}" retornou erro ao executar "${operation}": ${result.error ?? "erro desconhecido"}`,
+        suggested_specialist: baseSpecialist,
+        planned_action: basePlan,
+        execution: {
+          performed: true,
+          ok: result.ok,
+          entity_id: result.entity_id,
+          data: result.data,
+          error: result.error,
+        },
+        correlation_id,
+        received_at,
+      };
+      record(request, resp);
+      return resp;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const resp: CoordinationResponse = {
+        status: "execution_failed",
+        message: `Falha inesperada no Especialista "${mod.name}": ${message}`,
+        suggested_specialist: baseSpecialist,
+        planned_action: basePlan,
+        execution: { performed: true, ok: false, error: message },
+        correlation_id,
+        received_at,
+      };
+      record(request, resp);
+      return resp;
+    }
+  }
+
+  // 5. Sem especialista conectado ainda — apenas planejamento
   const resp: CoordinationResponse = {
     status: "planned",
     message:
-      `Solicitação recebida e encaminhada ao Especialista "${mod.name}" para a entidade "${ent.name}" (operação: ${operation}). Nenhuma ação real foi executada nesta etapa.`,
-    suggested_specialist: {
-      module_id: mod.id,
-      module_name: mod.name,
-      entity_id: ent.id,
-      entity_name: ent.name,
-    },
-    planned_action: {
-      operation,
-      scope,
-      params: request.params,
-      destructive: Boolean(requires_confirmation),
-      requires_confirmation: needsConfirm,
-    },
+      `Solicitação recebida e encaminhada ao Especialista "${mod.name}" para a entidade "${ent.name}" (operação: ${operation}). Especialista real ainda não conectado nesta etapa.`,
+    suggested_specialist: baseSpecialist,
+    planned_action: basePlan,
+    execution: { performed: false },
     correlation_id,
     received_at,
   };
