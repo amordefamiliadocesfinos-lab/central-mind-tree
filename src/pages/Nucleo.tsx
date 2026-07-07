@@ -628,6 +628,43 @@ const CONTRATO_ESPECIALISTA_PAGE: { title: string; content: string; tags: string
     "— Este contrato é parte permanente da arquitetura do Núcleo do Painel Central e deve ser respeitado por todo Especialista existente ou futuro.",
 };
 
+const MODELO_CRIACAO_ESPECIALISTA_FLAG_KEY = "nucleo_modelo_criacao_especialistas_v1";
+const MODELO_CRIACAO_ESPECIALISTA_PAGE: { title: string; content: string; tags: string[] } = {
+  title: "Modelo Oficial de Criação de Especialistas",
+  tags: ["arquitetura", "especialistas", "modelo", "criacao", "motor-de-coordenacao", "executor"],
+  content:
+    "Modelo Oficial de Criação de Especialistas\n\n" +
+    "Este documento estabelece o processo oficial para criação de qualquer novo Especialista do Painel Central.\n\n" +
+    "A partir deste registro, todo novo Especialista obrigatoriamente seguirá a sequência abaixo:\n\n" +
+    "1. Definir missão\n" +
+    "   — Estabelecer o propósito único do Especialista dentro do ecossistema do Painel Central.\n\n" +
+    "2. Definir domínio de atuação\n" +
+    "   — Delimitar claramente o escopo, as fronteiras e as responsabilidades do Especialista.\n\n" +
+    "3. Definir entidades\n" +
+    "   — Identificar as entidades do sistema sobre as quais o Especialista atuará.\n\n" +
+    "4. Definir operações\n" +
+    "   — Listar as operações genéricas que o Especialista poderá executar sobre cada entidade.\n\n" +
+    "5. Registrar no Catálogo Universal de Capacidades\n" +
+    "   — Declarar o módulo, as entidades, as operações e o status de cada capacidade no catálogo oficial.\n\n" +
+    "6. Registrar no Registro Universal de Especialistas\n" +
+    "   — Auto-registrar o Especialista e suas operações no registro runtime, tornando-o descobrível pelo Motor de Coordenação.\n\n" +
+    "7. Criar Executor do Especialista\n" +
+    "   — Implementar o executor específico do módulo, responsável pela tradução técnica das operações.\n\n" +
+    "8. Conectar ao Executor Base\n" +
+    "   — Fazer com que o Executor do Especialista utilize o Executor Base para padronização de entrada, validação e retorno.\n\n" +
+    "9. Conectar aos Hooks existentes\n" +
+    "   — Integrar o Executor aos hooks, funções e serviços já disponíveis no Core do Sistema.\n\n" +
+    "10. Validar funcionamento\n" +
+    "    — Executar testes de fluxo completo: IA Orquestradora → Motor de Coordenação → Especialista → Executor → Banco → Retorno.\n\n" +
+    "11. Ativar o Especialista\n" +
+    "    — Alterar o status da capacidade no catálogo para ativo e garantir que o Registro Universal esteja consistente.\n\n" +
+    "Regra permanente:\n\n" +
+    "• Este é o único processo oficial para criação de novos Especialistas no Painel Central.\n" +
+    "• Nenhum Especialista pode ser ativado sem passar por todas as etapas acima.\n" +
+    "• Desvios só são permitidos mediante registro documentado e aprovado no Núcleo.\n\n" +
+    "— Este modelo é parte permanente da arquitetura do Núcleo do Painel Central e deve ser seguido em toda industrialização de Especialistas.",
+};
+
 const PRINCIPIO_SEPARACAO_FLAG_KEY = "nucleo_principio_separacao_inteligencia_regra_execucao_v1";
 const PRINCIPIO_SEPARACAO_PAGE: { title: string; content: string; tags: string[] } = {
   title: "Princípio da Separação entre Inteligência, Regra e Execução",
