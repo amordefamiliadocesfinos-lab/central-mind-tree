@@ -417,3 +417,35 @@ export async function execCrmListContacts(
   );
   return toExecutorResult(result);
 }
+
+export interface ExecEditContactInput {
+  id?: string | null;
+  phone_digits?: string | null;
+  email_lookup?: string | null;
+  name_lookup?: string | null;
+  updates: {
+    name?: string;
+    phone?: string;
+    whatsapp?: string;
+    email?: string;
+    notes?: string;
+  };
+}
+
+export async function execCrmEditContact(
+  input: ExecEditContactInput,
+  ctx?: ExecutorContext,
+): Promise<ExecutorResult> {
+  const result = await runBaseExecution(
+    {
+      correlation_id: ctx?.correlation_id,
+      requested_by: ctx?.requested_by,
+      specialist: "crm",
+      entity: "contato",
+      operation: "editar",
+      params: input as unknown as Record<string, unknown>,
+    },
+    CRM_OPERATIONS,
+  );
+  return toExecutorResult(result);
+}
