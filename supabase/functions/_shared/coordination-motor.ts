@@ -14,6 +14,7 @@
 // ============================================================================
 
 import { CAPABILITIES_CATALOG, resolveCapability } from "./capabilities-catalog.ts";
+import { crmCreateContact, type SpecialistResult } from "./specialists/crm.ts";
 
 // ---------- Contratos ------------------------------------------------------
 
@@ -31,7 +32,9 @@ export interface CoordinationRequest {
 }
 
 export type CoordinationStatus =
-  | "planned"                  // solicitação aceita e encaminhada (planejamento)
+  | "planned"                  // solicitação aceita, sem especialista real ainda
+  | "executed"                 // especialista executou a ação com sucesso
+  | "execution_failed"         // especialista tentou executar e retornou erro
   | "specialist_not_found"     // não há especialista para essa capacidade
   | "invalid_request"          // faltam campos obrigatórios
   | "confirmation_required";   // ação destrutiva sem confirmação explícita
@@ -52,9 +55,31 @@ export interface CoordinationResponse {
     destructive: boolean;
     requires_confirmation: boolean;
   };
+  execution?: {
+    performed: boolean;
+    ok?: boolean;
+    entity_id?: string;
+    data?: Record<string, unknown>;
+    error?: string;
+  };
   correlation_id: string;
   received_at: string;
   error?: string;
+}
+
+// ---------- Registro de especialistas conectados --------------------------
+// Cada entrada mapeia (module_id + entity_id + operation) para o executor real.
+// Nesta etapa, apenas CRM / Contato / criar está conectado.
+type SpecialistExecutor = (
+  params: Record<string, unknown> | undefined,
+) => Promise<SpecialistResult>;
+
+const SPECIALIST_REGISTRY: Record<string, SpecialistExecutor> = {
+  "crm:contato:criar": (params) => crmCreateContact(params as any),
+};
+
+function specialistKey(moduleId: string, entityId: string, operation: string): string {
+  return `${moduleId}:${entityId}:${operation}`;
 }
 
 // ---------- Log em memória (validação desta etapa) ------------------------
