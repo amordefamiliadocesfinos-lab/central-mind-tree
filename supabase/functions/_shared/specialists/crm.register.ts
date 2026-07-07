@@ -8,7 +8,7 @@
 // ============================================================================
 
 import { SpecialistRegistry } from "../specialist-registry.ts";
-import { crmCreateContact, crmEditContact, crmGetContact, crmListContacts } from "./crm.ts";
+import { crmCreateContact, crmDeleteContact, crmEditContact, crmGetContact, crmListContacts } from "./crm.ts";
 
 SpecialistRegistry.register({
   module_id: "crm",
@@ -36,4 +36,11 @@ SpecialistRegistry.register({
   entity_id: "contato",
   operation: "editar",
   handler: (params, ctx) => crmEditContact(params as any, ctx),
+});
+
+SpecialistRegistry.register({
+  module_id: "crm",
+  entity_id: "contato",
+  operation: "excluir",
+  handler: (params, ctx) => crmDeleteContact(params as any, ctx),
 });

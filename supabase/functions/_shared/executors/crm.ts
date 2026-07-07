@@ -337,6 +337,103 @@ const CRM_OPERATIONS: Record<string, BaseOperationDefinition> = {
       };
     },
   },
+
+  // --- excluir contato ---------------------------------------------------
+  excluir: {
+    handler: async (params, ctx) => {
+      const id = params.id as string | undefined;
+      const phone_digits = params.phone_digits as string | undefined;
+      const email_lookup = params.email_lookup as string | undefined;
+      const name_lookup = params.name_lookup as string | undefined;
+
+      if (!id && !phone_digits && !email_lookup && !name_lookup) {
+        return {
+          status: "validation_error",
+          ok: false,
+          error: "Informe id, phone_digits, email_lookup ou name_lookup para localizar o contato a excluir.",
+        };
+      }
+
+      // 1) Localizar contato
+      let target: { id: string; name: string } | null = null;
+      if (id) {
+        const { data, error } = await ctx.supabase
+          .from("contacts")
+          .select("id,name")
+          .eq("id", id)
+          .eq("is_active", true)
+          .maybeSingle();
+        if (error) return { status: "error", ok: false, error: `Falha técnica: ${error.message}` };
+        if (!data) return { status: "not_found", ok: false, error: "Contato não encontrado." };
+        target = { id: data.id, name: data.name };
+      } else {
+        let query = ctx.supabase
+          .from("contacts")
+          .select("id,name,whatsapp,phone,email,funnel_status,city,state")
+          .eq("is_active", true)
+          .limit(10);
+        if (phone_digits) {
+          query = query.or(
+            `whatsapp.eq.${phone_digits},phone.eq.${phone_digits},mobile.eq.${phone_digits}`,
+          );
+        } else if (email_lookup) {
+          query = query.ilike("email", email_lookup);
+        } else if (name_lookup) {
+          query = query.ilike("name", `%${name_lookup}%`);
+        }
+        const { data, error } = await query;
+        if (error) return { status: "error", ok: false, error: `Falha técnica: ${error.message}` };
+        const rows = data ?? [];
+        if (rows.length === 0) {
+          return { status: "not_found", ok: false, error: "Contato não encontrado para exclusão." };
+        }
+        if (rows.length > 1) {
+          return {
+            ok: true,
+            status: "ok",
+            message: `Encontrados ${rows.length} contatos parecidos. Escolha um antes de excluir.`,
+            data: {
+              ambiguous: true,
+              match_count: rows.length,
+              options: rows.map((r: any) => ({
+                id: r.id,
+                name: r.name,
+                whatsapp: r.whatsapp ?? null,
+                phone: r.phone ?? null,
+                email: r.email ?? null,
+                funnel_status: r.funnel_status ?? null,
+                city: r.city ?? null,
+                state: r.state ?? null,
+              })),
+            },
+          };
+        }
+        target = { id: rows[0].id, name: rows[0].name };
+      }
+
+      // 2) Executar exclusão real no banco
+      const { error: delErr } = await ctx.supabase
+        .from("contacts")
+        .delete()
+        .eq("id", target!.id);
+
+      if (delErr) {
+        return {
+          status: "error",
+          ok: false,
+          error: `Falha técnica ao excluir contato: ${delErr.message}. Pode haver vínculos (pedidos, financeiro, atendimentos) impedindo a remoção.`,
+          details: delErr,
+        };
+      }
+
+      return {
+        ok: true,
+        message: `Contato "${target!.name}" excluído com sucesso.`,
+        entity_id: target!.id,
+        data: { id: target!.id, name: target!.name, deleted: true },
+      };
+    },
+  },
 };
 
 // ---------------------------------------------------------------------------
@@ -443,6 +540,31 @@ export async function execCrmEditContact(
       specialist: "crm",
       entity: "contato",
       operation: "editar",
+      params: input as unknown as Record<string, unknown>,
+    },
+    CRM_OPERATIONS,
+  );
+  return toExecutorResult(result);
+}
+
+export interface ExecDeleteContactInput {
+  id?: string | null;
+  phone_digits?: string | null;
+  email_lookup?: string | null;
+  name_lookup?: string | null;
+}
+
+export async function execCrmDeleteContact(
+  input: ExecDeleteContactInput,
+  ctx?: ExecutorContext,
+): Promise<ExecutorResult> {
+  const result = await runBaseExecution(
+    {
+      correlation_id: ctx?.correlation_id,
+      requested_by: ctx?.requested_by,
+      specialist: "crm",
+      entity: "contato",
+      operation: "excluir",
       params: input as unknown as Record<string, unknown>,
     },
     CRM_OPERATIONS,
