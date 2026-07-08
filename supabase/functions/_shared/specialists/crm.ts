@@ -131,6 +131,17 @@ export async function crmGetContact(
 // ---------------------------------------------------------------------------
 export interface CrmListContactsParams {
   search?: string;
+  query?: string;
+  q?: string;
+  term?: string;
+  termo?: string;
+  name?: string;
+  nome?: string;
+  whatsapp?: string;
+  telefone?: string;
+  phone?: string;
+  email?: string;
+  filters?: Record<string, unknown>;
   funnel_status?: string;
   limit?: number;
   [k: string]: unknown;
@@ -141,10 +152,43 @@ export async function crmListContacts(
   ctx?: ExecutorContext,
 ): Promise<SpecialistResult> {
   const params = rawParams ?? {};
+  const filters = (params.filters ?? {}) as Record<string, unknown>;
+
+  const takeStr = (v: unknown) => {
+    if (v === undefined || v === null) return null;
+    const s = String(v).trim();
+    return s.length > 0 ? s : null;
+  };
+
+  // Consolida qualquer critério informado num único termo de pesquisa.
+  // O executor usa `search` com OR em name/email/phone/whatsapp.
+  const search =
+    takeStr(params.search) ??
+    takeStr(params.query) ??
+    takeStr(params.q) ??
+    takeStr(params.term) ??
+    takeStr(params.termo) ??
+    takeStr(filters.search) ??
+    takeStr(params.name) ??
+    takeStr(params.nome) ??
+    takeStr(filters.name) ??
+    takeStr(filters.nome) ??
+    takeStr(params.email) ??
+    takeStr(filters.email) ??
+    (normalizePhoneDigits(params.whatsapp) ??
+      normalizePhoneDigits(params.telefone) ??
+      normalizePhoneDigits(params.phone) ??
+      normalizePhoneDigits(filters.whatsapp) ??
+      normalizePhoneDigits(filters.telefone) ??
+      normalizePhoneDigits(filters.phone));
+
+  const funnel_status =
+    takeStr(params.funnel_status) ?? takeStr(filters.funnel_status);
+
   return execCrmListContacts(
     {
-      search: params.search ?? null,
-      funnel_status: params.funnel_status ?? null,
+      search,
+      funnel_status,
       limit: params.limit,
     },
     ctx,
