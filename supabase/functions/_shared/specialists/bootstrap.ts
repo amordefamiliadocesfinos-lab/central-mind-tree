@@ -8,7 +8,24 @@
 
 import "./crm.register.ts";
 
-// Futuros:
+// Futuros Especialistas — podem usar a Camada Universal Nível 1
+// (../universal/level1.ts) para receber criar/listar/consultar/pesquisar/
+// editar/excluir automaticamente via `registerLevel1Entity({...})`, sem
+// implementar operação por operação. Exemplo:
+//
+//   import { registerLevel1Entity } from "../universal/level1.ts";
+//   registerLevel1Entity({
+//     specialist: "financeiro",
+//     entity: "categoria",
+//     table: "financial_categories",
+//     primaryField: "name",
+//     requiredFields: ["name"],
+//     searchableFields: ["name"],
+//     editableFields: ["name", "type", "color"],
+//     activeField: "is_active",
+//     softDelete: true,
+//   });
+//
 // import "./financeiro.register.ts";
 // import "./producao.register.ts";
 // import "./digital.register.ts";
