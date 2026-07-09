@@ -548,7 +548,7 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
       // que é emitida ANTES do stream da IA.
       // ==========================================================
       const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user")?.content ?? "";
-      const coordination = await runCoordinationMotor(lastUserMsg);
+      const coordination = await runCoordinationMotor(lastUserMsg, messages);
 
       // FLUXO OPERACIONAL: se o Motor de Coordenação identificou uma solicitação
       // operacional, a resposta oficial da IA é APENAS o retorno estruturado do Motor.
