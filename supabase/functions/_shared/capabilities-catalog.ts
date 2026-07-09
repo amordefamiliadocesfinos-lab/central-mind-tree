@@ -17,6 +17,7 @@ export type Operation =
   | "criar"
   | "listar"
   | "consultar"
+  | "pesquisar"
   | "editar"
   | "excluir"
   | "limpar"
@@ -85,7 +86,7 @@ const LEGACY_VERB_ALIASES: Record<string, Operation> = {
   // formas antigas do "verb" já batem com Operation, mas normalizamos aqui:
   ver: "consultar",
   buscar: "consultar",
-  pesquisar: "listar",
+  pesquisar: "pesquisar",
   procurar: "listar",
   filtrar: "listar",
   listar_tudo: "listar",
@@ -108,7 +109,8 @@ export const CAPABILITIES_CATALOG: ModuleCapabilities[] = [
     name: "CRM / Contatos",
     purpose: "Gestão de contatos, leads, funil, atividades e histórico de relacionamento.",
     entities: [
-      { id: "contato", name: "Contato", operations: ["criar","listar","consultar","editar","excluir"], destructive: ["excluir"], synonyms: ["cliente","lead"], status: "disponivel" },
+      { id: "contato", name: "Contato", operations: ["criar","listar","consultar","pesquisar","editar","excluir"], destructive: ["excluir"], synonyms: ["cliente"], status: "disponivel" },
+      { id: "lead",    name: "Lead",    operations: ["criar","listar","consultar","pesquisar","editar","excluir"], destructive: ["excluir"], synonyms: ["prospect","oportunidade"], status: "disponivel" },
       { id: "funil",   name: "Funil",   operations: ["consultar","mover"], status: "planejada" },
       { id: "mensagem_whatsapp", name: "Mensagem WhatsApp", operations: ["gerar","enviar"], status: "planejada" },
     ],
@@ -214,7 +216,7 @@ function normalizeOperation(op: string): Operation | null {
   const aliased = LEGACY_VERB_ALIASES[lower];
   const finalOp = (aliased ?? lower) as Operation;
   const valid: Operation[] = [
-    "criar","listar","consultar","editar","excluir","limpar","mover","gerar",
+    "criar","listar","consultar","pesquisar","editar","excluir","limpar","mover","gerar",
     "publicar","aprovar","enviar","concluir","agendar","importar","exportar",
   ];
   return valid.includes(finalOp) ? finalOp : null;
