@@ -1231,8 +1231,11 @@ function normalizeParamsForSpecialist(
   return params;
 }
 
-async function runCoordinationMotor(userMessage: string): Promise<CoordinationResponse | null> {
-  const intent = await extractActionIntent(userMessage);
+async function runCoordinationMotor(
+  userMessage: string,
+  history: Array<{ role: string; content: string }> = [],
+): Promise<CoordinationResponse | null> {
+  const intent = await extractActionIntent(userMessage, history);
   if (!intent) return null;
 
   const normalizedParams = normalizeParamsForSpecialist(
