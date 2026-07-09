@@ -8,7 +8,39 @@
 // ============================================================================
 
 import { SpecialistRegistry } from "../specialist-registry.ts";
+import { registerLevel1Entity } from "../universal/level1.ts";
 import { crmCreateContact, crmDeleteContact, crmEditContact, crmGetContact, crmListContacts } from "./crm.ts";
+
+// ---------------------------------------------------------------------------
+// Entidade LEAD — usa a tabela `contacts` (leads são contatos com
+// funnel_status ativo no pipeline comercial). Registrada via Camada
+// Universal Nível 1 — sem CRUD manual.
+// ---------------------------------------------------------------------------
+registerLevel1Entity({
+  specialist: "crm",
+  entity: "lead",
+  table: "contacts",
+  primaryField: "name",
+  requiredFields: ["name"],
+  searchableFields: ["name", "email", "phone", "whatsapp", "mobile"],
+  editableFields: [
+    "name",
+    "email",
+    "phone",
+    "whatsapp",
+    "mobile",
+    "notes",
+    "funnel_status",
+    "lead_temperature",
+    "lead_source",
+    "client_classification",
+    "city",
+    "state",
+  ],
+  activeField: "is_active",
+  softDelete: true,
+  createDefaults: { funnel_status: "novo_lead" },
+});
 
 SpecialistRegistry.register({
   module_id: "crm",
