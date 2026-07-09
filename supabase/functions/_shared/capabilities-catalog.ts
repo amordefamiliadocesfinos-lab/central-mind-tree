@@ -109,7 +109,8 @@ export const CAPABILITIES_CATALOG: ModuleCapabilities[] = [
     name: "CRM / Contatos",
     purpose: "Gestão de contatos, leads, funil, atividades e histórico de relacionamento.",
     entities: [
-      { id: "contato", name: "Contato", operations: ["criar","listar","consultar","editar","excluir"], destructive: ["excluir"], synonyms: ["cliente","lead"], status: "disponivel" },
+      { id: "contato", name: "Contato", operations: ["criar","listar","consultar","pesquisar","editar","excluir"], destructive: ["excluir"], synonyms: ["cliente"], status: "disponivel" },
+      { id: "lead",    name: "Lead",    operations: ["criar","listar","consultar","pesquisar","editar","excluir"], destructive: ["excluir"], synonyms: ["prospect","oportunidade"], status: "disponivel" },
       { id: "funil",   name: "Funil",   operations: ["consultar","mover"], status: "planejada" },
       { id: "mensagem_whatsapp", name: "Mensagem WhatsApp", operations: ["gerar","enviar"], status: "planejada" },
     ],
