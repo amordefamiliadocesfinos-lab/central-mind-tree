@@ -216,7 +216,7 @@ function normalizeOperation(op: string): Operation | null {
   const aliased = LEGACY_VERB_ALIASES[lower];
   const finalOp = (aliased ?? lower) as Operation;
   const valid: Operation[] = [
-    "criar","listar","consultar","editar","excluir","limpar","mover","gerar",
+    "criar","listar","consultar","pesquisar","editar","excluir","limpar","mover","gerar",
     "publicar","aprovar","enviar","concluir","agendar","importar","exportar",
   ];
   return valid.includes(finalOp) ? finalOp : null;
