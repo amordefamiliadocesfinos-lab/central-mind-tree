@@ -284,13 +284,10 @@ export function CEOChat() {
                         : 'bg-muted rounded-bl-md'
                     )}
                   >
-                    <div className="whitespace-pre-wrap prose prose-sm dark:prose-invert max-w-none">
-                      {msg.content.split(/(\*\*.*?\*\*)/).map((part, j) => {
-                        if (part.startsWith('**') && part.endsWith('**')) {
-                          return <strong key={j}>{part.slice(2, -2)}</strong>;
-                        }
-                        return <span key={j}>{part}</span>;
-                      })}
+                    <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ol:my-1 prose-ul:my-1 [&_sub]:opacity-30 [&_sub]:text-[10px]">
+                      <ReactMarkdown rehypePlugins={[rehypeRaw]}>
+                        {msg.content}
+                      </ReactMarkdown>
                     </div>
                   </div>
 
