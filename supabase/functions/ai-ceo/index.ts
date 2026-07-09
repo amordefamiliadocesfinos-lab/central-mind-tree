@@ -548,7 +548,7 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
       // que é emitida ANTES do stream da IA.
       // ==========================================================
       const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user")?.content ?? "";
-      const coordination = await runCoordinationMotor(lastUserMsg);
+      const coordination = await runCoordinationMotor(lastUserMsg, messages);
 
       // FLUXO OPERACIONAL: se o Motor de Coordenação identificou uma solicitação
       // operacional, a resposta oficial da IA é APENAS o retorno estruturado do Motor.
@@ -1016,7 +1016,10 @@ async function executeAction(
  * padronizados (module, entity, operation, scope, params) usando a IA.
  * Retorna null se não for pedido de ação (ex: apenas consulta/conversa).
  */
-async function extractActionIntent(userMessage: string): Promise<
+async function extractActionIntent(
+  userMessage: string,
+  history: Array<{ role: string; content: string }> = [],
+): Promise<
   | {
       objective: string;
       module?: string;
@@ -1070,7 +1073,26 @@ Exemplo:
   params: { "locator": { "whatsapp": "11999999999" }, "updates": { "email": "novo@x.com" } }
 
 Use o catálogo abaixo como referência (mas pode sugerir module/entity mesmo se não estiver registrado):
-${JSON.stringify(catalog)}`;
+${JSON.stringify(catalog)}
+
+REGRA DE CONTEXTO — RESPOSTAS CURTAS DE SELEÇÃO/CONFIRMAÇÃO:
+- Se a última mensagem do assistente apresentou uma LISTA NUMERADA com um rodapé "ref: 1=UUID · 2=UUID · ..." e o usuário responder apenas um número, um nome ou um trecho ("1", "o primeiro", "Fulano"), você DEVE reconstruir a MESMA ação anterior (mesmo module/entity/operation) e colocar em "params.locator.id" o UUID COMPLETO correspondente ao índice escolhido (extraído do rodapé "ref:"). Se o usuário respondeu por nome, escolha pelo nome visível na lista e use o UUID daquele item.
+- Se a última mensagem do assistente pediu CONFIRMAÇÃO de exclusão ("Confirma excluir ...?") com um rodapé "ref: UUID" e o usuário responder "sim", "confirmar", "confirmo", "pode", "executar", "ok" ou similar, gere a ação **excluir** com "params.locator.id" igual ao UUID do rodapé e "params.confirm": true. Se responder "não", "cancelar", "aborta", devolva {"is_action": false}.
+- Nesses casos NUNCA retorne is_action=false; mantenha a continuidade da ação anterior.`;
+
+  const contextMessages = history
+    .filter((m) => m && (m.role === "user" || m.role === "assistant"))
+    .slice(-6)
+    .map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: String(m.content ?? "") }));
+
+  // Garante que a última mensagem enviada ao LLM seja a do usuário atual.
+  if (
+    contextMessages.length === 0 ||
+    contextMessages[contextMessages.length - 1].role !== "user" ||
+    contextMessages[contextMessages.length - 1].content !== userMessage
+  ) {
+    contextMessages.push({ role: "user", content: userMessage });
+  }
 
   try {
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -1083,7 +1105,7 @@ ${JSON.stringify(catalog)}`;
         model: "google/gemini-2.5-flash-lite",
         messages: [
           { role: "system", content: sys },
-          { role: "user", content: userMessage },
+          ...contextMessages,
         ],
         response_format: { type: "json_object" },
       }),
@@ -1209,8 +1231,11 @@ function normalizeParamsForSpecialist(
   return params;
 }
 
-async function runCoordinationMotor(userMessage: string): Promise<CoordinationResponse | null> {
-  const intent = await extractActionIntent(userMessage);
+async function runCoordinationMotor(
+  userMessage: string,
+  history: Array<{ role: string; content: string }> = [],
+): Promise<CoordinationResponse | null> {
+  const intent = await extractActionIntent(userMessage, history);
   if (!intent) return null;
 
   const normalizedParams = normalizeParamsForSpecialist(
@@ -1260,71 +1285,149 @@ async function runCoordinationMotor(userMessage: string): Promise<CoordinationRe
   });
 }
 
+// ---------- Helpers de formatação humana ---------------------------------
+
+function pickField(obj: any, keys: string[]): string | null {
+  if (!obj || typeof obj !== "object") return null;
+  for (const k of keys) {
+    const v = obj[k];
+    if (v !== undefined && v !== null && String(v).trim() !== "") return String(v);
+  }
+  return null;
+}
+
+function formatPhone(raw: string | null): string | null {
+  if (!raw) return null;
+  const d = raw.replace(/\D/g, "");
+  if (d.length === 11) return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+  if (d.length === 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return raw;
+}
+
+function shortId(id?: string | null): string {
+  if (!id) return "—";
+  return String(id).slice(0, 8);
+}
+
+function describeRow(row: any, entityName: string): string {
+  const name = pickField(row, ["name", "nome", "title", "descricao", "description"]) ?? entityName;
+  const phone = formatPhone(pickField(row, ["whatsapp", "phone", "telefone", "mobile"]));
+  const city = pickField(row, ["city", "cidade"]);
+  const company = pickField(row, ["company", "empresa", "organization"]);
+  const email = pickField(row, ["email"]);
+
+  const extras: string[] = [];
+  if (phone) extras.push(`📱 ${phone}`);
+  if (city) extras.push(`📍 ${city}`);
+  if (company) extras.push(`🏢 ${company}`);
+  if (!phone && !city && !company && email) extras.push(`✉️ ${email}`);
+
+  const suffix = extras.length ? ` — ${extras.join(" · ")}` : "";
+  const idTag = row?.id ? ` \`#${shortId(row.id)}\`` : "";
+  return `**${name}**${suffix}${idTag}`;
+}
+
 function formatMotorBlock(resp: CoordinationResponse | null): string {
   if (!resp) return "";
 
-  const statusLabel: Record<string, string> = {
-    planned: "✅ Recebido — encaminhado ao Especialista (execução real pendente)",
-    executed: "🟢 Executado pelo Especialista",
-    execution_failed: "🔴 Falha na execução do Especialista",
-    specialist_not_found: "⚠️ Especialista não encontrado no catálogo",
-    invalid_request: "❌ Solicitação inválida",
-    confirmation_required: "🔒 Confirmação necessária",
-  };
+  // Log técnico completo apenas no console — nunca no chat.
+  console.info("[Motor] resposta completa", JSON.stringify(resp));
 
-  const especialista = resp.suggested_specialist
-    ? `${resp.suggested_specialist.module_name} / ${resp.suggested_specialist.entity_name}`
-    : "não identificado";
+  const entityName = resp.suggested_specialist?.entity_name ?? "registro";
+  const operation = resp.planned_action?.operation ?? "";
 
-  const operacao = resp.planned_action?.operation ?? "—";
-  const escopo = resp.planned_action?.scope ?? "—";
-  const params =
-    resp.planned_action?.params && Object.keys(resp.planned_action.params).length > 0
-      ? "```json\n" + JSON.stringify(resp.planned_action.params, null, 2) + "\n```"
-      : "_nenhum_";
-
-  // Bloco de execução real (quando houver)
-  let execLines: string[] = [];
-  if (resp.execution?.performed) {
-    if (resp.execution.ok) {
-      execLines = [
-        `- **Execução real:** ✅ realizada com sucesso`,
-        `- **ID criado:** \`${resp.execution.entity_id ?? "—"}\``,
-      ];
-      if (resp.execution.data) {
-        execLines.push(
-          "- **Dados salvos:** ```json\n" +
-            JSON.stringify(resp.execution.data, null, 2) +
-            "\n```",
-        );
-      }
-    } else {
-      execLines = [
-        `- **Execução real:** ❌ falhou`,
-        `- **Erro:** ${resp.execution.error ?? "erro desconhecido"}`,
-      ];
-    }
-  } else {
-    execLines = [
-      `- **Execução real:** não executada nesta etapa`,
-      `- **Próximo passo:** conectar Especialista responsável`,
-    ];
+  // --- Falhas / estados que não executaram ------------------------------
+  if (resp.status === "invalid_request") {
+    return `⚠️ ${resp.message}\n`;
+  }
+  if (resp.status === "specialist_not_found") {
+    return `⚠️ Ainda não tenho um Especialista conectado para essa operação.\n`;
+  }
+  if (resp.status === "confirmation_required") {
+    return `🔒 A operação **${operation}** em ${entityName} exige confirmação. Responda **confirmar** para prosseguir.\n`;
   }
 
-  return [
-    "🛰️ **Motor de Coordenação**",
-    `- **Status:** ${statusLabel[resp.status] ?? resp.status}`,
-    `- **Especialista sugerido:** ${especialista}`,
-    `- **Entidade:** ${resp.suggested_specialist?.entity_name ?? "—"}`,
-    `- **Operação:** ${operacao}`,
-    `- **Escopo:** ${escopo}`,
-    `- **Parâmetros recebidos:** ${params}`,
-    ...execLines,
-    `- **Correlation ID:** \`${resp.correlation_id}\``,
-    "",
-    "---",
-    "",
-  ].join("\n");
+  // --- Sem execução real ------------------------------------------------
+  if (!resp.execution?.performed) {
+    return `✅ Solicitação recebida e encaminhada ao Especialista de ${entityName}. Execução real ainda não conectada nesta etapa.\n`;
+  }
+
+  // --- Execução com erro ------------------------------------------------
+  if (!resp.execution.ok) {
+    return `🔴 Não consegui executar. ${resp.execution.error ?? "Erro desconhecido."}\n`;
+  }
+
+  const data: any = resp.execution.data ?? {};
+
+  // --- Ambiguidade: múltiplos registros → lista numerada ---------------
+  if (data && data.ambiguous === true && Array.isArray(data.options)) {
+    const opts: any[] = data.options;
+    const lines = opts.map((row, i) => `${i + 1}. ${describeRow(row, entityName)}`);
+    const verbo = operation === "excluir" ? "excluir"
+      : operation === "editar" ? "editar"
+      : operation === "consultar" ? "consultar"
+      : "usar";
+    const refMap = opts
+      .map((row, i) => (row?.id ? `${i + 1}=${row.id}` : null))
+      .filter(Boolean)
+      .join(" · ");
+    return [
+      `🔎 Encontrei **${opts.length}** ${entityName}s que combinam com a busca. Qual você quer ${verbo}?`,
+      "",
+      ...lines,
+      "",
+      `Responda com o número da opção (ex.: **1**) ou informe o nome/WhatsApp.`,
+      refMap ? `\n<sub style="opacity:.35">ref: ${refMap}</sub>` : "",
+      "",
+    ].join("\n");
+  }
+
+  // --- Confirmação após alvo definido (excluir sem confirm) ------------
+  if (data && data.confirmation_required === true && data.target) {
+    const t = data.target;
+    return [
+      `🔒 Confirma **excluir** o ${entityName} abaixo?`,
+      "",
+      `- ${describeRow(t, entityName)}`,
+      "",
+      `Responda **sim** ou **confirmar** para executar, ou **cancelar** para abortar.`,
+      t?.id ? `\n<sub style="opacity:.35">ref: ${t.id}</sub>` : "",
+      "",
+    ].join("\n");
+  }
+
+  // --- Listar / Pesquisar: resumo com top itens ------------------------
+  if ((operation === "listar" || operation === "pesquisar") && data && Array.isArray(data.items)) {
+    const items: any[] = data.items;
+    const total = data.count ?? items.length;
+    if (total === 0) {
+      return `📭 Nenhum ${entityName} encontrado.\n`;
+    }
+    const shown = items.slice(0, 10);
+    const lines = shown.map((row, i) => `${i + 1}. ${describeRow(row, entityName)}`);
+    const more = total > shown.length ? `\n… e mais ${total - shown.length} registro(s).` : "";
+    return [
+      `📋 **${total}** ${entityName}(s) encontrado(s):`,
+      "",
+      ...lines,
+      more,
+      "",
+    ].join("\n");
+  }
+
+  // --- Sucesso genérico (criar / editar / consultar / excluir) ---------
+  const record = data?.record ?? data;
+  const descricao = describeRow(record, entityName);
+
+  const successVerb: Record<string, string> = {
+    criar: "criado",
+    editar: "atualizado",
+    excluir: "excluído",
+    consultar: "encontrado",
+  };
+  const verb = successVerb[operation] ?? "processado";
+
+  return `✅ ${entityName} ${verb} com sucesso: ${descricao}\n`;
 }
 
 /**

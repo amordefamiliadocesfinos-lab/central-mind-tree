@@ -1,4 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
+import ReactMarkdown from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -25,7 +27,13 @@ const WELCOME_MESSAGE: Message = {
 const ACTION_INTENT_PATTERN =
   /\b(criar|cadastrar|adicionar|editar|alterar|atualizar|excluir|deletar|remover|apagar|concluir|finalizar|dar\s+baixa|quitar|executar|executado|executada|excluído|excluída|criado|criada|alterado|alterada)\b/i;
 
+// Mensagens geradas pelo Motor de Coordenação começam com estes marcadores
+// e representam execução/estado real — não devem exibir o aviso de "planejamento".
+const MOTOR_RESPONSE_PREFIXES = ['✅', '🟢', '🔴', '🔎', '🔒', '📋', '📭', '⚠️'];
+
 function detectActionIntent(content: string) {
+  const trimmed = content.trimStart();
+  if (MOTOR_RESPONSE_PREFIXES.some((p) => trimmed.startsWith(p))) return false;
   return ACTION_INTENT_PATTERN.test(content);
 }
 
@@ -276,13 +284,10 @@ export function CEOChat() {
                         : 'bg-muted rounded-bl-md'
                     )}
                   >
-                    <div className="whitespace-pre-wrap prose prose-sm dark:prose-invert max-w-none">
-                      {msg.content.split(/(\*\*.*?\*\*)/).map((part, j) => {
-                        if (part.startsWith('**') && part.endsWith('**')) {
-                          return <strong key={j}>{part.slice(2, -2)}</strong>;
-                        }
-                        return <span key={j}>{part}</span>;
-                      })}
+                    <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ol:my-1 prose-ul:my-1 [&_sub]:opacity-30 [&_sub]:text-[10px]">
+                      <ReactMarkdown rehypePlugins={[rehypeRaw]}>
+                        {msg.content}
+                      </ReactMarkdown>
                     </div>
                   </div>
 
