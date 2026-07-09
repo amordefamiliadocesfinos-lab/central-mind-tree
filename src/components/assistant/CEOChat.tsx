@@ -25,7 +25,13 @@ const WELCOME_MESSAGE: Message = {
 const ACTION_INTENT_PATTERN =
   /\b(criar|cadastrar|adicionar|editar|alterar|atualizar|excluir|deletar|remover|apagar|concluir|finalizar|dar\s+baixa|quitar|executar|executado|executada|excluído|excluída|criado|criada|alterado|alterada)\b/i;
 
+// Mensagens geradas pelo Motor de Coordenação começam com estes marcadores
+// e representam execução/estado real — não devem exibir o aviso de "planejamento".
+const MOTOR_RESPONSE_PREFIXES = ['✅', '🟢', '🔴', '🔎', '🔒', '📋', '📭', '⚠️'];
+
 function detectActionIntent(content: string) {
+  const trimmed = content.trimStart();
+  if (MOTOR_RESPONSE_PREFIXES.some((p) => trimmed.startsWith(p))) return false;
   return ACTION_INTENT_PATTERN.test(content);
 }
 
