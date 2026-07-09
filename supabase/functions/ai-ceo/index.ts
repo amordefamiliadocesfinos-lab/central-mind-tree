@@ -1016,7 +1016,10 @@ async function executeAction(
  * padronizados (module, entity, operation, scope, params) usando a IA.
  * Retorna null se não for pedido de ação (ex: apenas consulta/conversa).
  */
-async function extractActionIntent(userMessage: string): Promise<
+async function extractActionIntent(
+  userMessage: string,
+  history: Array<{ role: string; content: string }> = [],
+): Promise<
   | {
       objective: string;
       module?: string;
