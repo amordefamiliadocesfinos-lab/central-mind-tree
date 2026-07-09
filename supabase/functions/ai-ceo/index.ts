@@ -1364,12 +1364,17 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
       : operation === "editar" ? "editar"
       : operation === "consultar" ? "consultar"
       : "usar";
+    const refMap = opts
+      .map((row, i) => (row?.id ? `${i + 1}=${row.id}` : null))
+      .filter(Boolean)
+      .join(" · ");
     return [
       `🔎 Encontrei **${opts.length}** ${entityName}s que combinam com a busca. Qual você quer ${verbo}?`,
       "",
       ...lines,
       "",
       `Responda com o número da opção (ex.: **1**) ou informe o nome/WhatsApp.`,
+      refMap ? `\n<sub style="opacity:.35">ref: ${refMap}</sub>` : "",
       "",
     ].join("\n");
   }
@@ -1383,6 +1388,7 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
       `- ${describeRow(t, entityName)}`,
       "",
       `Responda **sim** ou **confirmar** para executar, ou **cancelar** para abortar.`,
+      t?.id ? `\n<sub style="opacity:.35">ref: ${t.id}</sub>` : "",
       "",
     ].join("\n");
   }
