@@ -17,6 +17,7 @@ export type Operation =
   | "criar"
   | "listar"
   | "consultar"
+  | "pesquisar"
   | "editar"
   | "excluir"
   | "limpar"
