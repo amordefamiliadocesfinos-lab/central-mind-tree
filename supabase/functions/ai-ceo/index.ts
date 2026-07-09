@@ -1073,7 +1073,26 @@ Exemplo:
   params: { "locator": { "whatsapp": "11999999999" }, "updates": { "email": "novo@x.com" } }
 
 Use o catálogo abaixo como referência (mas pode sugerir module/entity mesmo se não estiver registrado):
-${JSON.stringify(catalog)}`;
+${JSON.stringify(catalog)}
+
+REGRA DE CONTEXTO — RESPOSTAS CURTAS DE SELEÇÃO/CONFIRMAÇÃO:
+- Se a última mensagem do assistente apresentou uma LISTA NUMERADA de opções (ex.: "1. **Fulano** ... \`#abc12345\`") e o usuário responder apenas um número, um nome ou um trecho ("1", "o primeiro", "Fulano"), você DEVE reconstruir a mesma ação anterior (mesmo module/entity/operation) usando o registro escolhido como locator. Use o id curto (\`#xxxxxxxx\`) visível na lista dentro de "params.locator.id_prefix" quando não houver o id completo — se o id completo aparecer no texto, use-o em "params.locator.id".
+- Se a última mensagem do assistente pediu CONFIRMAÇÃO de exclusão ("Confirma excluir ...?") e o usuário responder "sim", "confirmar", "confirmo", "pode", "executar", "ok" ou similar, gere a ação de excluir com o MESMO registro (use o id/id_prefix mostrado) e adicione "params.confirm": true. Se responder "não", "cancelar", "aborta", devolva {"is_action": false}.
+- Nesses casos NUNCA retorne is_action=false; mantenha a continuidade da ação anterior.`;
+
+  const contextMessages = history
+    .filter((m) => m && (m.role === "user" || m.role === "assistant"))
+    .slice(-6)
+    .map((m) => ({ role: m.role === "assistant" ? "assistant" : "user", content: String(m.content ?? "") }));
+
+  // Garante que a última mensagem enviada ao LLM seja a do usuário atual.
+  if (
+    contextMessages.length === 0 ||
+    contextMessages[contextMessages.length - 1].role !== "user" ||
+    contextMessages[contextMessages.length - 1].content !== userMessage
+  ) {
+    contextMessages.push({ role: "user", content: userMessage });
+  }
 
   try {
     const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
@@ -1086,7 +1105,7 @@ ${JSON.stringify(catalog)}`;
         model: "google/gemini-2.5-flash-lite",
         messages: [
           { role: "system", content: sys },
-          { role: "user", content: userMessage },
+          ...contextMessages,
         ],
         response_format: { type: "json_object" },
       }),
