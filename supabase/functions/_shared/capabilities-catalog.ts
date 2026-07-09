@@ -86,7 +86,7 @@ const LEGACY_VERB_ALIASES: Record<string, Operation> = {
   // formas antigas do "verb" já batem com Operation, mas normalizamos aqui:
   ver: "consultar",
   buscar: "consultar",
-  pesquisar: "listar",
+  pesquisar: "pesquisar",
   procurar: "listar",
   filtrar: "listar",
   listar_tudo: "listar",
