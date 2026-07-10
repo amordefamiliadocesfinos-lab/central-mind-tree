@@ -398,7 +398,7 @@ export function buildLevel1Operations(
         const { data: updated, error: upErr } = await ctx.supabase
           .from(cfg.table)
           .update(patch)
-          .eq("id", res.targetId)
+          .eq("id", found.targetId)
           .select(selectCols)
           .maybeSingle();
 
@@ -412,32 +412,36 @@ export function buildLevel1Operations(
         }
         return {
           ok: true,
-          message: `${cfg.entity} "${updated?.[cfg.primaryField] ?? res.targetId}" atualizado(a) com sucesso.`,
-          entity_id: res.targetId,
+          message: `${cfg.entity} "${updated?.[cfg.primaryField] ?? found.targetId}" atualizado(a) com sucesso.`,
+          entity_id: found.targetId,
           data: { updated_fields: Object.keys(updates), record: updated },
         };
       },
     },
 
     // ---------------- EXCLUIR (com confirmação obrigatória) -------------
+    // Regra invariante: ambiguidade NUNCA gera confirmação — o Target
+    // Resolution devolve a lista de candidatos e a operação é abortada.
     excluir: {
       handler: async (params, ctx) => {
         const locator = (params.locator ?? params) as Record<string, unknown>;
         const confirm = params.confirm === true || params.confirmar === true;
 
-        const res = await locate(cfg, ctx.supabase, locator);
-        if ("error" in res) return { status: "error", ok: false, error: `Falha: ${res.error}` };
-        if ("none" in res) return { status: "not_found", ok: false, error: `${cfg.entity} não encontrado(a) para exclusão.` };
-        if ("ambiguous" in res) return ambiguousResult(res.rows, cfg.primaryField, "excluir");
+        const res = await resolveTarget(cfg, ctx.supabase, locator);
+        const early = targetToResult(res, cfg, "excluir");
+        if (early) return early; // none | ambiguous | error → nada a confirmar
+        const found = res as Extract<TargetResolution, { kind: "found" }>;
 
         if (!confirm) {
           return {
             ok: true,
             status: "ok",
-            message: `Confirmação necessária: excluir ${cfg.entity} "${res.row[cfg.primaryField]}"? Reenvie com "confirm: true".`,
+            message: `Confirmação necessária: excluir ${cfg.entity} "${found.row[cfg.primaryField]}"? Reenvie com "confirm: true".`,
             data: {
               confirmation_required: true,
-              target: { id: res.targetId, [cfg.primaryField]: res.row[cfg.primaryField] },
+              specialist: cfg.specialist,
+              entity: cfg.entity,
+              target: summarizeRow(found.row, cfg),
             },
           };
         }
@@ -447,7 +451,7 @@ export function buildLevel1Operations(
           const { error } = await ctx.supabase
             .from(cfg.table)
             .update({ [cfg.activeField]: false })
-            .eq("id", res.targetId);
+            .eq("id", found.targetId);
           if (error) {
             return {
               status: "error",
@@ -458,9 +462,9 @@ export function buildLevel1Operations(
           }
           return {
             ok: true,
-            message: `${cfg.entity} "${res.row[cfg.primaryField]}" arquivado(a) com sucesso.`,
-            entity_id: res.targetId,
-            data: { id: res.targetId, archived: true },
+            message: `${cfg.entity} "${found.row[cfg.primaryField]}" arquivado(a) com sucesso.`,
+            entity_id: found.targetId,
+            data: { id: found.targetId, archived: true },
           };
         }
 
@@ -468,7 +472,7 @@ export function buildLevel1Operations(
         const { error: delErr } = await ctx.supabase
           .from(cfg.table)
           .delete()
-          .eq("id", res.targetId);
+          .eq("id", found.targetId);
         if (delErr) {
           return {
             status: "error",
@@ -479,14 +483,15 @@ export function buildLevel1Operations(
         }
         return {
           ok: true,
-          message: `${cfg.entity} "${res.row[cfg.primaryField]}" excluído(a) com sucesso.`,
-          entity_id: res.targetId,
-          data: { id: res.targetId, deleted: true },
+          message: `${cfg.entity} "${found.row[cfg.primaryField]}" excluído(a) com sucesso.`,
+          entity_id: found.targetId,
+          data: { id: found.targetId, deleted: true },
         };
       },
     },
   };
 }
+
 
 // ---------- Registro automático no SpecialistRegistry ---------------------
 
