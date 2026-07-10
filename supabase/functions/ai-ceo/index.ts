@@ -1076,10 +1076,13 @@ Use o catálogo abaixo como referência (mas pode sugerir module/entity mesmo se
 ${JSON.stringify(catalog)}
 
 REGRA DE CONTEXTO — RESPOSTAS CURTAS DE SELEÇÃO/CONFIRMAÇÃO:
-- SELEÇÃO DE ALVO (lista ambígua): se a última mensagem do assistente apresentou uma LISTA NUMERADA com rodapé "ref: 1=UUID · 2=UUID · ..." e o usuário respondeu um número, nome, trecho ou posição ("1", "o primeiro", "Fulano", "Z João"), reconstrua a MESMA ação anterior (mesmo module/entity/operation) e coloque em "params.locator.id" o UUID COMPLETO do item escolhido. NESTE CASO "params.confirm" DEVE ser SEMPRE false — escolher alvo NUNCA confirma a operação.
-- CONFIRMAÇÃO EXPLÍCITA: só use "params.confirm": true quando TODAS estas condições forem verdadeiras: (a) a última mensagem do assistente foi um pedido explícito de confirmação ("🔒 Confirma excluir …?") com rodapé "ref: UUID" (um único UUID), (b) o usuário respondeu "sim", "confirmar", "confirmo", "pode", "executar", "ok" ou equivalente, (c) o UUID do alvo está definido nesse rodapé. Reconstrua a ação **excluir** com "params.locator.id" = UUID e "params.confirm": true.
+- A continuidade é reconstruída deterministicamente a partir de um comentário oculto "<!-- pc-context:{...} -->" que o assistente insere ao final de listas ambíguas e pedidos de confirmação. Você NÃO precisa se preocupar com ele — o servidor o processa antes de invocar você. Se a última mensagem do assistente contiver esse comentário e o usuário responder com um número, nome, "sim", "confirmar" ou "cancelar", ainda assim reconstrua a MESMA ação anterior (mesmo module/entity/operation) com o alvo apropriado; NUNCA use params.confirm=true a menos que o usuário responda claramente "sim/confirmar/pode/ok" a um pedido explícito de confirmação.
 - Se responder "não", "cancelar", "aborta", devolva {"is_action": false}.
-- Nunca retorne is_action=false para seleção ou confirmação válida; mantenha a continuidade da ação anterior.`;
+
+REGRA DE LISTAGEM COM TERMO:
+- "liste contatos", "mostre os contatos", "listar contatos" (sem termo) → operation="listar", sem params.search.
+- "liste João Teste", "liste os contatos João", "mostre contatos com João", "listar João" → operation="listar" e params.search="João Teste" (preserve o termo exato informado após o verbo).
+- Nunca invente filtros — apenas preserve o termo escrito pelo usuário.`;
 
   const contextMessages = history
     .filter((m) => m && (m.role === "user" || m.role === "assistant"))
