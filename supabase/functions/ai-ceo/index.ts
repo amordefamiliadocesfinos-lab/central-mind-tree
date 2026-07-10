@@ -1527,7 +1527,7 @@ function reducedAmbiguity(
     .filter((m) => m && m.id)
     .map((m, i) => ({ index: i + 1, id: String(m.id), name: m.name != null ? String(m.name) : "" }));
   if (options.length === 0) return { kind: "passthrough" };
-  const lines = options.map((o) => `${o.index}. **${o.name || entityName}**`);
+  const lines = options.map((o) => `[${o.index}] **${o.name || entityName}**`);
   const ctxComment = pcContext({ type: "ambiguous", module, entity, operation, options });
   return {
     kind: "local",
