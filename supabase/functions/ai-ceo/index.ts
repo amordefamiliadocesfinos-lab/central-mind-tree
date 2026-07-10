@@ -1398,10 +1398,116 @@ function describeRowBlock(row: any, entityName: string): string {
   return lines.join("\n");
 }
 
-/** Rodapé técnico invisível — mantém rastreio determinístico sem vazar ao usuário. */
-function hiddenRef(content: string): string {
-  return `\n<sub style="display:none" aria-hidden="true">ref: ${content}</sub>`;
+/** Contexto oculto (comentário HTML) — nunca renderizado ao usuário,
+ * mas preservado no histórico para reconstrução determinística. */
+function pcContext(payload: Record<string, unknown>): string {
+  const json = JSON.stringify(payload).replace(/--/g, "-\\u002d");
+  return `\n<!-- pc-context:${json} -->`;
 }
+
+/** Extrai o último bloco pc-context da mensagem do assistente. */
+function readPcContext(text: string): Record<string, unknown> | null {
+  if (!text) return null;
+  const matches = [...text.matchAll(/<!--\s*pc-context:(.*?)-->/g)];
+  if (matches.length === 0) return null;
+  try {
+    const raw = matches[matches.length - 1][1].trim().replace(/-\\u002d/g, "--");
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+const AFFIRMATIVE_RE = /^(sim|s|confirmar|confirmo|confirma|pode|pode\s+excluir|executar|ok|okay|prossiga|prossegue|isso|isso\s+mesmo)\b/i;
+const CANCEL_RE = /^(n[aã]o|nao|cancelar|cancela|aborta|abortar|desistir)\b/i;
+
+/** Reconstrói a intenção a partir do pc-context, sem chamar o LLM.
+ *  Retorna a intenção reconstruída, "cancel" para abortar, ou null se não aplica. */
+function resolveFromPcContext(
+  userMessage: string,
+  history: Array<{ role?: string; content?: string }>,
+): {
+  objective: string;
+  module?: string;
+  entity: string;
+  operation: string;
+  scope?: string;
+  params: Record<string, unknown>;
+} | "cancel" | null {
+  const lastAssistant = [...history].reverse().find((m) => m?.role === "assistant");
+  const ctx = readPcContext(String(lastAssistant?.content ?? ""));
+  if (!ctx) return null;
+
+  const userTrim = String(userMessage ?? "").trim();
+  if (!userTrim) return null;
+
+  const type = String(ctx.type ?? "");
+  const module = ctx.module as string | undefined;
+  const entity = String(ctx.entity ?? "");
+  const operation = String(ctx.operation ?? "");
+  if (!entity || !operation) return null;
+
+  if (type === "confirmation") {
+    if (CANCEL_RE.test(userTrim)) return "cancel";
+    if (!AFFIRMATIVE_RE.test(userTrim)) return null;
+    const target_id = String(ctx.target_id ?? "");
+    if (!target_id) return null;
+    return {
+      objective: `${operation} ${entity}`,
+      module,
+      entity,
+      operation,
+      params: { locator: { id: target_id }, confirm: true },
+    };
+  }
+
+  if (type === "ambiguous") {
+    if (CANCEL_RE.test(userTrim)) return "cancel";
+    const options = Array.isArray(ctx.options) ? (ctx.options as Array<Record<string, unknown>>) : [];
+    if (options.length === 0) return null;
+
+    // Escolha por número
+    let chosen: Record<string, unknown> | null = null;
+    const numMatch = userTrim.match(/^\s*#?\s*(\d{1,3})\b/);
+    if (numMatch) {
+      const idx = parseInt(numMatch[1], 10);
+      chosen = options.find((o) => Number(o.index) === idx) ?? null;
+    }
+    // "o primeiro", "primeira", "segundo"
+    if (!chosen) {
+      const ordinals: Record<string, number> = {
+        primeiro: 1, primeira: 1, "1o": 1, "1a": 1,
+        segundo: 2, segunda: 2, "2o": 2, "2a": 2,
+        terceiro: 3, terceira: 3, quarto: 4, quarta: 4, quinto: 5, quinta: 5,
+      };
+      const key = userTrim.toLowerCase().replace(/[°º]/g, "");
+      for (const [k, v] of Object.entries(ordinals)) {
+        if (key.includes(k)) { chosen = options.find((o) => Number(o.index) === v) ?? null; break; }
+      }
+    }
+    // Escolha por nome (match parcial case-insensitive)
+    if (!chosen) {
+      const needle = userTrim.toLowerCase();
+      chosen = options.find((o) => {
+        const nm = String(o.name ?? "").toLowerCase();
+        return nm && (nm.includes(needle) || needle.includes(nm));
+      }) ?? null;
+    }
+    if (!chosen) return null;
+    const id = String(chosen.id ?? "");
+    if (!id) return null;
+    return {
+      objective: `${operation} ${entity}`,
+      module,
+      entity,
+      operation,
+      params: { locator: { id }, confirm: false },
+    };
+  }
+
+  return null;
+}
+
 
 function formatMotorBlock(resp: CoordinationResponse | null): string {
   if (!resp) return "";
