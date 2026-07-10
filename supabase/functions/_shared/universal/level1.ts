@@ -175,16 +175,36 @@ export async function resolveTarget(
     const id = locator?.id as string | undefined;
     const selectCols = cfg.selectColumns ?? "*";
 
+/**
+ * Fluxo Universal de Resolução de Alvo (Target Resolution).
+ *
+ * ÚNICA forma permitida de resolver um registro dentro das operações
+ * Nível 1 de qualquer Especialista. Nenhum Especialista pode implementar
+ * lógica própria de pesquisa/desambiguação/escolha.
+ *
+ * Retorna sempre um dos estados universais: FOUND | NOT_FOUND | AMBIGUOUS | ERROR.
+ * (CONFIRMATION_REQUIRED e CANCELLED são estados operacionais posteriores,
+ * emitidos pelas operações que dependem de confirmação — ex.: excluir.)
+ */
+export async function resolveEntityTarget(
+  cfg: Level1EntityConfig,
+  supabase: any,
+  locator: Record<string, unknown>,
+): Promise<TargetResolution> {
+  try {
+    const id = locator?.id as string | undefined;
+    const selectCols = cfg.selectColumns ?? "*";
+
     if (id) {
       let q = supabase.from(cfg.table).select(selectCols).eq("id", id);
       if (cfg.activeField) q = q.eq(cfg.activeField, true);
       const { data, error } = await q.maybeSingle();
       if (error) {
         console.error("[TargetResolution] erro por id", { entity: cfg.entity, error });
-        return { kind: "error", error: error.message };
+        return { status: "ERROR", kind: "error", error: error.message };
       }
-      if (!data) return { kind: "none" };
-      return { kind: "found", targetId: data.id, row: data };
+      if (!data) return { status: "NOT_FOUND", kind: "none" };
+      return { status: "FOUND", kind: "found", targetId: data.id, row: data };
     }
 
     let query = supabase.from(cfg.table).select(selectCols).limit(10);
@@ -198,37 +218,40 @@ export async function resolveTarget(
       applied = true;
       break;
     }
-    if (!applied) return { kind: "none" };
+    if (!applied) return { status: "NOT_FOUND", kind: "none" };
 
     const { data, error } = await query;
     if (error) {
       console.error("[TargetResolution] erro na busca", { entity: cfg.entity, error });
-      return { kind: "error", error: error.message };
+      return { status: "ERROR", kind: "error", error: error.message };
     }
     const rows = data ?? [];
-    if (rows.length === 0) return { kind: "none" };
-    if (rows.length === 1) return { kind: "found", targetId: rows[0].id, row: rows[0] };
+    if (rows.length === 0) return { status: "NOT_FOUND", kind: "none" };
+    if (rows.length === 1) return { status: "FOUND", kind: "found", targetId: rows[0].id, row: rows[0] };
     console.info("[TargetResolution] ambiguidade", { entity: cfg.entity, count: rows.length });
-    return { kind: "ambiguous", rows };
+    return { status: "AMBIGUOUS", kind: "ambiguous", rows };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[TargetResolution] exceção", { entity: cfg.entity, msg });
-    return { kind: "error", error: msg };
+    return { status: "ERROR", kind: "error", error: msg };
   }
 }
 
+/** Alias legado — mantém compatibilidade com chamadas antigas. */
+export const resolveTarget = resolveEntityTarget;
+
 /**
  * Traduz o resultado do Target Resolution para a resposta padrão do Base.
- * Devolve `null` apenas quando o alvo foi único e o chamador deve prosseguir.
+ * Devolve `null` apenas quando o alvo foi único (FOUND) e o chamador deve prosseguir.
  */
 function targetToResult(
   res: TargetResolution,
   cfg: Level1EntityConfig,
   action: string,
 ): Partial<import("../executors/base.ts").BaseExecutionResult> | null {
-  if (res.kind === "error")     return { status: "error", ok: false, error: `Falha: ${res.error}` };
-  if (res.kind === "none")      return { status: "not_found", ok: false, error: `${cfg.entity} não encontrado(a) para ${action}.` };
-  if (res.kind === "ambiguous") return ambiguousResult(cfg, res.rows, action);
+  if (res.status === "ERROR")     return { status: "error", ok: false, error: `Falha: ${res.error}` };
+  if (res.status === "NOT_FOUND") return { status: "not_found", ok: false, error: `${cfg.entity} não encontrado(a) para ${action}.` };
+  if (res.status === "AMBIGUOUS") return ambiguousResult(cfg, res.rows, action);
   return null;
 }
 
