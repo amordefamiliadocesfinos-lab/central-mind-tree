@@ -1292,8 +1292,9 @@ function normalizeParamsForSpecialist(
 async function runCoordinationMotor(
   userMessage: string,
   history: Array<{ role: string; content: string }> = [],
+  preIntent: IntentPayload | null = null,
 ): Promise<CoordinationResponse | null> {
-  const intent = await extractActionIntent(userMessage, history);
+  const intent = preIntent ?? (await extractActionIntent(userMessage, history));
   if (!intent) return null;
 
   const normalizedParams = normalizeParamsForSpecialist(
