@@ -101,11 +101,26 @@ function pick(
 // pela camada de apresentação a partir do payload padronizado retornado.
 // ============================================================================
 
+/**
+ * Estados universais e ÚNICOS de qualquer operação Nível 1 que dependa
+ * de localizar/confirmar um registro. Nenhum Especialista pode inventar
+ * status próprios — toda a semântica passa por este enum.
+ */
+export const TargetStatus = {
+  FOUND: "FOUND",
+  NOT_FOUND: "NOT_FOUND",
+  AMBIGUOUS: "AMBIGUOUS",
+  CONFIRMATION_REQUIRED: "CONFIRMATION_REQUIRED",
+  CANCELLED: "CANCELLED",
+  ERROR: "ERROR",
+} as const;
+export type TargetStatus = (typeof TargetStatus)[keyof typeof TargetStatus];
+
 export type TargetResolution =
-  | { kind: "found"; targetId: string; row: any }
-  | { kind: "ambiguous"; rows: any[] }
-  | { kind: "none" }
-  | { kind: "error"; error: string };
+  | { status: "FOUND"; kind: "found"; targetId: string; row: any }
+  | { status: "AMBIGUOUS"; kind: "ambiguous"; rows: any[] }
+  | { status: "NOT_FOUND"; kind: "none" }
+  | { status: "ERROR"; kind: "error"; error: string };
 
 /** Campos incluídos no resumo de candidatos (não vaza JSON técnico ao usuário). */
 const SUMMARY_HINT_FIELDS = [
@@ -146,12 +161,19 @@ function ambiguousResult(cfg: Level1EntityConfig, rows: any[], action: string) {
   };
 }
 
+
 /**
- * Fluxo Universal de Resolução de Alvo.
+ * Fluxo Universal de Resolução de Alvo (Target Resolution).
+ *
  * ÚNICA forma permitida de resolver um registro dentro das operações
- * Nível 1 de qualquer Especialista.
+ * Nível 1 de qualquer Especialista. Nenhum Especialista pode implementar
+ * lógica própria de pesquisa/desambiguação/escolha.
+ *
+ * Retorna sempre um dos estados universais: FOUND | NOT_FOUND | AMBIGUOUS | ERROR.
+ * (CONFIRMATION_REQUIRED e CANCELLED são estados operacionais posteriores,
+ * emitidos pelas operações que dependem de confirmação — ex.: excluir.)
  */
-export async function resolveTarget(
+export async function resolveEntityTarget(
   cfg: Level1EntityConfig,
   supabase: any,
   locator: Record<string, unknown>,
@@ -166,10 +188,10 @@ export async function resolveTarget(
       const { data, error } = await q.maybeSingle();
       if (error) {
         console.error("[TargetResolution] erro por id", { entity: cfg.entity, error });
-        return { kind: "error", error: error.message };
+        return { status: "ERROR", kind: "error", error: error.message };
       }
-      if (!data) return { kind: "none" };
-      return { kind: "found", targetId: data.id, row: data };
+      if (!data) return { status: "NOT_FOUND", kind: "none" };
+      return { status: "FOUND", kind: "found", targetId: data.id, row: data };
     }
 
     let query = supabase.from(cfg.table).select(selectCols).limit(10);
@@ -183,37 +205,40 @@ export async function resolveTarget(
       applied = true;
       break;
     }
-    if (!applied) return { kind: "none" };
+    if (!applied) return { status: "NOT_FOUND", kind: "none" };
 
     const { data, error } = await query;
     if (error) {
       console.error("[TargetResolution] erro na busca", { entity: cfg.entity, error });
-      return { kind: "error", error: error.message };
+      return { status: "ERROR", kind: "error", error: error.message };
     }
     const rows = data ?? [];
-    if (rows.length === 0) return { kind: "none" };
-    if (rows.length === 1) return { kind: "found", targetId: rows[0].id, row: rows[0] };
+    if (rows.length === 0) return { status: "NOT_FOUND", kind: "none" };
+    if (rows.length === 1) return { status: "FOUND", kind: "found", targetId: rows[0].id, row: rows[0] };
     console.info("[TargetResolution] ambiguidade", { entity: cfg.entity, count: rows.length });
-    return { kind: "ambiguous", rows };
+    return { status: "AMBIGUOUS", kind: "ambiguous", rows };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error("[TargetResolution] exceção", { entity: cfg.entity, msg });
-    return { kind: "error", error: msg };
+    return { status: "ERROR", kind: "error", error: msg };
   }
 }
 
+/** Alias legado — mantém compatibilidade com chamadas antigas. */
+export const resolveTarget = resolveEntityTarget;
+
 /**
  * Traduz o resultado do Target Resolution para a resposta padrão do Base.
- * Devolve `null` apenas quando o alvo foi único e o chamador deve prosseguir.
+ * Devolve `null` apenas quando o alvo foi único (FOUND) e o chamador deve prosseguir.
  */
 function targetToResult(
   res: TargetResolution,
   cfg: Level1EntityConfig,
   action: string,
 ): Partial<import("../executors/base.ts").BaseExecutionResult> | null {
-  if (res.kind === "error")     return { status: "error", ok: false, error: `Falha: ${res.error}` };
-  if (res.kind === "none")      return { status: "not_found", ok: false, error: `${cfg.entity} não encontrado(a) para ${action}.` };
-  if (res.kind === "ambiguous") return ambiguousResult(cfg, res.rows, action);
+  if (res.status === "ERROR")     return { status: "error", ok: false, error: `Falha: ${res.error}` };
+  if (res.status === "NOT_FOUND") return { status: "not_found", ok: false, error: `${cfg.entity} não encontrado(a) para ${action}.` };
+  if (res.status === "AMBIGUOUS") return ambiguousResult(cfg, res.rows, action);
   return null;
 }
 
@@ -460,11 +485,25 @@ export function buildLevel1Operations(
               details: error,
             };
           }
+          // Validação real no banco — o registro deve estar arquivado.
+          const { data: check, error: chkErr } = await ctx.supabase
+            .from(cfg.table)
+            .select(`id, ${cfg.activeField}`)
+            .eq("id", found.targetId)
+            .maybeSingle();
+          if (chkErr || !check || check[cfg.activeField] !== false) {
+            return {
+              status: "error",
+              ok: false,
+              error: `Não foi possível confirmar o arquivamento de ${cfg.entity} no banco.`,
+              details: chkErr ?? check,
+            };
+          }
           return {
             ok: true,
             message: `${cfg.entity} "${found.row[cfg.primaryField]}" arquivado(a) com sucesso.`,
             entity_id: found.targetId,
-            data: { id: found.targetId, archived: true },
+            data: { id: found.targetId, archived: true, verified: true },
           };
         }
 
@@ -481,11 +520,32 @@ export function buildLevel1Operations(
             details: delErr,
           };
         }
+        // Validação real no banco — o registro NÃO pode mais existir.
+        const { data: still, error: verErr } = await ctx.supabase
+          .from(cfg.table)
+          .select("id")
+          .eq("id", found.targetId)
+          .maybeSingle();
+        if (verErr) {
+          return {
+            status: "error",
+            ok: false,
+            error: `Não foi possível verificar a exclusão de ${cfg.entity} no banco: ${verErr.message}`,
+            details: verErr,
+          };
+        }
+        if (still) {
+          return {
+            status: "error",
+            ok: false,
+            error: `A exclusão de ${cfg.entity} não foi confirmada no banco (registro ainda presente).`,
+          };
+        }
         return {
           ok: true,
           message: `${cfg.entity} "${found.row[cfg.primaryField]}" excluído(a) com sucesso.`,
           entity_id: found.targetId,
-          data: { id: found.targetId, deleted: true },
+          data: { id: found.targetId, deleted: true, verified: true },
         };
       },
     },
