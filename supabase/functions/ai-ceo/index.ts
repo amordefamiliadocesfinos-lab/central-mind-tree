@@ -1030,7 +1030,18 @@ async function extractActionIntent(
     }
   | null
 > {
-  if (!userMessage || userMessage.trim().length < 3) return null;
+  if (!userMessage || userMessage.trim().length < 1) return null;
+
+  // ---------------------------------------------------------------------
+  // Short-circuit determinístico: se a última mensagem do assistente
+  // carrega um "<!-- pc-context:{...} -->" e o usuário respondeu uma
+  // seleção ("1", nome, trecho) ou confirmação ("sim/confirmar/cancelar"),
+  // reconstruímos a ação anterior sem passar pelo LLM.
+  // ---------------------------------------------------------------------
+  const pcResolved = resolveFromPcContext(userMessage, history);
+  if (pcResolved === "cancel") return null;
+  if (pcResolved) return pcResolved;
+
 
   const catalog = Array.isArray(CAPABILITIES_CATALOG)
     ? CAPABILITIES_CATALOG.map((m) => {
