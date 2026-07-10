@@ -1772,7 +1772,15 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
 
   // --- Sucesso genérico (criar / editar / consultar / excluir) ---------
   const record = data?.record ?? data;
-  const name = rowName(record, entityName);
+  const plannedParams: any = resp.planned_action?.params ?? {};
+  const plannedLocatorId = String(plannedParams?.locator?.id ?? "");
+  // Fallback: quando o Motor devolve payload genérico (ex.: {id, deleted:true}),
+  // recupera o nome que o usuário escolheu durante a desambiguação — metadado
+  // SÓ de apresentação (não trafega ao Motor, ao Especialista ou ao banco).
+  const rawName = rowName(record, entityName);
+  const cachedName = plannedLocatorId ? chosenNameByTargetId.get(plannedLocatorId) : undefined;
+  const name = rawName && rawName !== entityName ? rawName : (cachedName ?? rawName);
+  if (plannedLocatorId) chosenNameByTargetId.delete(plannedLocatorId);
 
   const successVerb: Record<string, string> = {
     criar: "criado",
@@ -1782,11 +1790,16 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
   };
   const verb = successVerb[operation] ?? "processado";
 
-  // Para excluir/editar/criar, foco no nome do alvo. Consultar mostra também contato.
+  const moduleIdOk = resp.suggested_specialist?.module_id;
+  const entityIdOk = resp.suggested_specialist?.entity_id ?? entityName;
+  const terminal = terminalPcContext("completed", {
+    module: moduleIdOk, entity: entityIdOk, operation,
+  });
+
   if (operation === "consultar") {
-    return `✅ ${entityName} ${verb}: ${describeRow(record, entityName)}\n`;
+    return `✅ ${entityName} ${verb}: ${describeRow(record, entityName)}${terminal}\n`;
   }
-  return `✅ ${entityName} ${verb} com sucesso: **${name}**\n`;
+  return `✅ ${entityName} ${verb} com sucesso: **${name}**${terminal}\n`;
 }
 
 /**
