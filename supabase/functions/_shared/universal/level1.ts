@@ -161,19 +161,6 @@ function ambiguousResult(cfg: Level1EntityConfig, rows: any[], action: string) {
   };
 }
 
-/**
- * Fluxo Universal de Resolução de Alvo.
- * ÚNICA forma permitida de resolver um registro dentro das operações
- * Nível 1 de qualquer Especialista.
- */
-export async function resolveTarget(
-  cfg: Level1EntityConfig,
-  supabase: any,
-  locator: Record<string, unknown>,
-): Promise<TargetResolution> {
-  try {
-    const id = locator?.id as string | undefined;
-    const selectCols = cfg.selectColumns ?? "*";
 
 /**
  * Fluxo Universal de Resolução de Alvo (Target Resolution).
