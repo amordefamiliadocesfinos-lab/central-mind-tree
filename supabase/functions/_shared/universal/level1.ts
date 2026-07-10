@@ -384,10 +384,11 @@ export function buildLevel1Operations(
           };
         }
 
-        const res = await locate(cfg, ctx.supabase, locator);
-        if ("error" in res) return { status: "error", ok: false, error: `Falha: ${res.error}` };
-        if ("none" in res) return { status: "not_found", ok: false, error: `${cfg.entity} não encontrado(a) para edição.` };
-        if ("ambiguous" in res) return ambiguousResult(res.rows, cfg.primaryField, "editar");
+        const res = await resolveTarget(cfg, ctx.supabase, locator);
+        const early = targetToResult(res, cfg, "editar");
+        if (early) return early;
+        const found = res as Extract<TargetResolution, { kind: "found" }>;
+
 
         const patch: Record<string, unknown> = { ...updates };
         // updated_at é comum, mas só aplica se a tabela tiver a coluna;
