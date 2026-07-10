@@ -1552,6 +1552,9 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
 
   const data: any = resp.execution.data ?? {};
 
+  const moduleId = resp.suggested_specialist?.module_id;
+  const entityId = resp.suggested_specialist?.entity_id ?? entityName;
+
   // --- Ambiguidade: múltiplos registros → lista numerada ---------------
   if (data && data.ambiguous === true && Array.isArray(data.options)) {
     const opts: any[] = data.options;
@@ -1562,17 +1565,19 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
         .join("\n");
       return block;
     });
-    const refMap = opts
-      .map((row, i) => (row?.id ? `${i + 1}=${row.id}` : null))
-      .filter(Boolean)
-      .join(" · ");
+    const options = opts
+      .map((row, i) => (row?.id ? { index: i + 1, id: String(row.id), name: rowName(row, entityName) } : null))
+      .filter(Boolean);
+    const ctxComment = options.length
+      ? pcContext({ type: "ambiguous", module: moduleId, entity: entityId, operation, options })
+      : "";
     return [
       `🔎 Encontrei mais de um ${entityName}:`,
       "",
       lines.join("\n\n"),
       "",
       `Digite o número ou o nome do ${entityName}.`,
-      refMap ? hiddenRef(refMap) : "",
+      ctxComment,
       "",
     ].join("\n");
   }
@@ -1583,13 +1588,16 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
     const verbo = operation === "excluir" ? "excluir"
       : operation === "editar" ? "alterar"
       : operation;
+    const ctxComment = t?.id
+      ? pcContext({ type: "confirmation", module: moduleId, entity: entityId, operation, target_id: String(t.id) })
+      : "";
     return [
       `🔒 Confirma ${verbo} este ${entityName}?`,
       "",
       describeRowBlock(t, entityName),
       "",
       `Digite **confirmar** para prosseguir ou **cancelar** para interromper.`,
-      t?.id ? hiddenRef(String(t.id)) : "",
+      ctxComment,
       "",
     ].join("\n");
   }
