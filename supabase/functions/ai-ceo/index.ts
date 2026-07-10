@@ -1349,22 +1349,57 @@ function shortId(id?: string | null): string {
   return String(id).slice(0, 8);
 }
 
-function describeRow(row: any, entityName: string): string {
-  const name = pickField(row, ["name", "nome", "title", "descricao", "description"]) ?? entityName;
-  const phone = formatPhone(pickField(row, ["whatsapp", "phone", "telefone", "mobile"]));
-  const city = pickField(row, ["city", "cidade"]);
-  const company = pickField(row, ["company", "empresa", "organization"]);
-  const email = pickField(row, ["email"]);
+function isMeaningful(v: string | null): v is string {
+  if (!v) return false;
+  const t = v.trim().toLowerCase();
+  return t !== "" && t !== "não" && t !== "nao" && t !== "n/a" && t !== "-" && t !== "null";
+}
 
+function rowName(row: any, entityName: string): string {
+  return pickField(row, ["name", "nome", "title", "descricao", "description"]) ?? entityName;
+}
+
+function rowPhone(row: any): string | null {
+  return formatPhone(pickField(row, ["whatsapp", "phone", "telefone", "mobile"]));
+}
+
+function rowEmail(row: any): string | null {
+  const v = pickField(row, ["email"]);
+  return isMeaningful(v) ? v : null;
+}
+
+/**
+ * Descrição inline (uma linha) — usada em sucesso/consulta.
+ * Nunca mostra ID, UUID, ref ou campos técnicos.
+ */
+function describeRow(row: any, entityName: string): string {
+  const name = rowName(row, entityName);
+  const phone = rowPhone(row);
+  const email = rowEmail(row);
   const extras: string[] = [];
   if (phone) extras.push(`📱 ${phone}`);
-  if (city) extras.push(`📍 ${city}`);
-  if (company) extras.push(`🏢 ${company}`);
-  if (!phone && !city && !company && email) extras.push(`✉️ ${email}`);
-
+  else if (email) extras.push(`✉️ ${email}`);
   const suffix = extras.length ? ` — ${extras.join(" · ")}` : "";
-  const idTag = row?.id ? ` \`#${shortId(row.id)}\`` : "";
-  return `**${name}**${suffix}${idTag}`;
+  return `**${name}**${suffix}`;
+}
+
+/**
+ * Descrição em bloco multi-linha para listas ambíguas e confirmações.
+ * Uma informação por linha; sem ID, ref, cidade "NÃO" ou dados técnicos.
+ */
+function describeRowBlock(row: any, entityName: string): string {
+  const name = rowName(row, entityName);
+  const phone = rowPhone(row);
+  const email = rowEmail(row);
+  const lines: string[] = [`**${name}**`];
+  if (phone) lines.push(`   📱 ${phone}`);
+  else if (email) lines.push(`   ✉️ ${email}`);
+  return lines.join("\n");
+}
+
+/** Rodapé técnico invisível — mantém rastreio determinístico sem vazar ao usuário. */
+function hiddenRef(content: string): string {
+  return `\n<sub style="display:none" aria-hidden="true">ref: ${content}</sub>`;
 }
 
 function formatMotorBlock(resp: CoordinationResponse | null): string {
@@ -1394,7 +1429,18 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
 
   // --- Execução com erro ------------------------------------------------
   if (!resp.execution.ok) {
-    return `🔴 Não consegui executar. ${resp.execution.error ?? "Erro desconhecido."}\n`;
+    const err = String(resp.execution.error ?? "");
+    // Não encontrado — padroniza mensagem universal.
+    if (/n[ãa]o\s+encontrad/i.test(err)) {
+      const p: any = resp.planned_action?.params ?? {};
+      const loc: any = p.locator ?? p;
+      const term =
+        loc?.name ?? loc?.nome ?? loc?.title ?? loc?.search ?? loc?.query ??
+        p?.search ?? p?.query ?? null;
+      const termTxt = term ? ` para "${String(term).trim()}"` : "";
+      return `📭 Nenhum ${entityName} encontrado${termTxt}.\nVerifique o nome ou tente outra busca.\n`;
+    }
+    return `🔴 Não consegui executar. ${err || "Erro desconhecido."}\n`;
   }
 
   const data: any = resp.execution.data ?? {};
@@ -1402,22 +1448,24 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
   // --- Ambiguidade: múltiplos registros → lista numerada ---------------
   if (data && data.ambiguous === true && Array.isArray(data.options)) {
     const opts: any[] = data.options;
-    const lines = opts.map((row, i) => `${i + 1}. ${describeRow(row, entityName)}`);
-    const verbo = operation === "excluir" ? "excluir"
-      : operation === "editar" ? "editar"
-      : operation === "consultar" ? "consultar"
-      : "usar";
+    const lines = opts.map((row, i) => {
+      const block = describeRowBlock(row, entityName)
+        .split("\n")
+        .map((ln, idx) => (idx === 0 ? `${i + 1}. ${ln}` : ln))
+        .join("\n");
+      return block;
+    });
     const refMap = opts
       .map((row, i) => (row?.id ? `${i + 1}=${row.id}` : null))
       .filter(Boolean)
       .join(" · ");
     return [
-      `🔎 Encontrei **${opts.length}** ${entityName}s que combinam com a busca. Qual você quer ${verbo}?`,
+      `🔎 Encontrei mais de um ${entityName}:`,
       "",
-      ...lines,
+      lines.join("\n\n"),
       "",
-      `Responda com o número da opção (ex.: **1**) ou informe o nome/WhatsApp.`,
-      refMap ? `\n<sub style="opacity:.35">ref: ${refMap}</sub>` : "",
+      `Digite o número ou o nome do ${entityName}.`,
+      refMap ? hiddenRef(refMap) : "",
       "",
     ].join("\n");
   }
@@ -1425,13 +1473,16 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
   // --- Confirmação após alvo definido (excluir sem confirm) ------------
   if (data && data.confirmation_required === true && data.target) {
     const t = data.target;
+    const verbo = operation === "excluir" ? "excluir"
+      : operation === "editar" ? "alterar"
+      : operation;
     return [
-      `🔒 Confirma **excluir** o ${entityName} abaixo?`,
+      `🔒 Confirma ${verbo} este ${entityName}?`,
       "",
-      `- ${describeRow(t, entityName)}`,
+      describeRowBlock(t, entityName),
       "",
-      `Responda **sim** ou **confirmar** para executar, ou **cancelar** para abortar.`,
-      t?.id ? `\n<sub style="opacity:.35">ref: ${t.id}</sub>` : "",
+      `Digite **confirmar** para prosseguir ou **cancelar** para interromper.`,
+      t?.id ? hiddenRef(String(t.id)) : "",
       "",
     ].join("\n");
   }
@@ -1457,7 +1508,7 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
 
   // --- Sucesso genérico (criar / editar / consultar / excluir) ---------
   const record = data?.record ?? data;
-  const descricao = describeRow(record, entityName);
+  const name = rowName(record, entityName);
 
   const successVerb: Record<string, string> = {
     criar: "criado",
@@ -1467,7 +1518,11 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
   };
   const verb = successVerb[operation] ?? "processado";
 
-  return `✅ ${entityName} ${verb} com sucesso: ${descricao}\n`;
+  // Para excluir/editar/criar, foco no nome do alvo. Consultar mostra também contato.
+  if (operation === "consultar") {
+    return `✅ ${entityName} ${verb}: ${describeRow(record, entityName)}\n`;
+  }
+  return `✅ ${entityName} ${verb} com sucesso: **${name}**\n`;
 }
 
 /**
