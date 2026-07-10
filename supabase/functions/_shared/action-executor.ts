@@ -152,24 +152,10 @@ export async function executeAction(request: ActionRequest): Promise<ActionResul
   const { module: mod, entity: ent, operation, inferred_scope } = resolved;
   const scope = request.scope ?? inferred_scope;
 
-  // 2. Confirmação para operações destrutivas
-  if (resolved.requires_confirmation) {
-    const confirm = Boolean(request.payload?.confirm);
-    if (!confirm) {
-      return {
-        status: "confirmation_required",
-        message:
-          `A operação "${operation}" em ${ent.name} (${mod.name}) é destrutiva. ` +
-          `Confirme com o usuário e reenvie a ActionRequest com payload.confirm = true.`,
-        module: mod.id,
-        entity: ent.id,
-        operation,
-        scope,
-        correlation_id,
-        executed_at,
-      };
-    }
-  }
+  // 2. Confirmação NÃO é mais tratada aqui. A Camada Universal Nível 1
+  //    (resolveEntityTarget) decide quando pedir confirmação, após resolver
+  //    o alvo. Manter esse bloco criaria dois pipelines distintos.
+
 
   // 3. Verifica handler real registrado
   const handler = HANDLERS.get(handlerKey(mod.id, ent.id, operation));
