@@ -561,6 +561,10 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
         });
       }
 
+      const supersedeMarker = continuity.kind === "passthrough" && continuity.supersede
+        ? continuity.supersede
+        : "";
+
       const coordination = await runCoordinationMotor(
         lastUserMsg,
         messages,
@@ -573,7 +577,7 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
       // resposta duplicada e faz o Motor assumir oficialmente o fluxo operacional.
       if (coordination) {
         const motorOnly = formatMotorBlock(coordination);
-        const stream = prependSSEText(motorOnly, emptyStream());
+        const stream = prependSSEText(supersedeMarker + motorOnly, emptyStream());
         return new Response(stream, {
           headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
         });
@@ -1453,6 +1457,10 @@ function readPcContext(text: string): Record<string, unknown> | null {
 const STRICT_AFFIRMATIVE_RE = /^(sim|s|ok|okay|confirmar|confirmo|confirma|confirmado|pode|prossiga|prossegue|prossegue\s+por\s+favor|isso|isso\s+mesmo|executar|executa)[.!]*$/i;
 const STRICT_CANCEL_RE = /^(n[aã]o|n|cancelar|cancela|cancele|abortar|aborta|desistir|desisto|parar|para|deixa|deixe\s+pra\s+la)[.!]*$/i;
 
+/** Verbos operacionais que, quando iniciam a mensagem, DEVEM ser interpretados
+ *  como um novo comando e substituir qualquer contexto pendente. */
+const OPERATIONAL_VERB_RE = /^(criar|crie|cadastrar|cadastre|listar|liste|mostrar|mostre|pesquisar|pesquise|buscar|busque|consultar|consulte|editar|edite|alterar|altere|excluir|exclua|apagar|apague|deletar|delete|remover|remova|abrir|abra)\b/;
+
 function normalizeText(s: unknown): string {
   return String(s ?? "")
     .normalize("NFD")
@@ -1463,8 +1471,8 @@ function normalizeText(s: unknown): string {
 }
 
 /** Emite um pc-context terminal — sinaliza que a pendência anterior foi encerrada
- *  (cancelada ou completada) e NÃO deve ser reativada em turnos futuros. */
-function terminalPcContext(state: "cancelled" | "completed", extra: Record<string, unknown> = {}): string {
+ *  (cancelada / completada / superseded) e NÃO deve ser reativada em turnos futuros. */
+function terminalPcContext(state: "cancelled" | "completed" | "superseded", extra: Record<string, unknown> = {}): string {
   return pcContext({ type: "terminal", state, ...extra });
 }
 
@@ -1484,9 +1492,10 @@ type IntentPayload = {
 };
 
 type Continuity =
-  | { kind: "passthrough" }
+  | { kind: "passthrough"; supersede?: string }
   | { kind: "intent"; intent: IntentPayload }
   | { kind: "local"; text: string };
+
 
 function intentFromOption(
   opt: { index?: number; id?: string; name?: string },
@@ -1522,7 +1531,7 @@ function reducedAmbiguity(
     .filter((m) => m && m.id)
     .map((m, i) => ({ index: i + 1, id: String(m.id), name: m.name != null ? String(m.name) : "" }));
   if (options.length === 0) return { kind: "passthrough" };
-  const lines = options.map((o) => `${o.index}. **${o.name || entityName}**`);
+  const lines = options.map((o) => `[${o.index}] **${o.name || entityName}**`);
   const ctxComment = pcContext({ type: "ambiguous", module, entity, operation, options });
   return {
     kind: "local",
@@ -1548,6 +1557,7 @@ function resolveConversationContinuity(
   const userNorm = normalizeText(userRaw);
   const isAffirmative = STRICT_AFFIRMATIVE_RE.test(userRaw);
   const isCancel = STRICT_CANCEL_RE.test(userRaw);
+  const isNewCommand = OPERATIONAL_VERB_RE.test(userNorm);
 
   // readPcContext já respeita o ÚLTIMO pc-context como definitivo. Se ele for
   // terminal, tratamos como "nenhuma pendência" — não reativa a anterior.
@@ -1557,10 +1567,17 @@ function resolveConversationContinuity(
 
   if (!pending) {
     // "sim" curto e isolado sem contexto pendente — nunca invoca operação.
-    if (isAffirmative) {
+    if (isAffirmative && !isNewCommand) {
       return {
         kind: "local",
-        text: `ℹ️ Não há nenhuma operação aguardando confirmação.${terminalPcContext("cancelled")}\n`,
+        text: `Não há nenhuma operação aguardando confirmação.${terminalPcContext("cancelled")}\n`,
+      };
+    }
+    // "cancelar" isolado sem contexto pendente — resposta local definitiva.
+    if (isCancel && !isNewCommand) {
+      return {
+        kind: "local",
+        text: `Não há nenhuma operação pendente para cancelar.${terminalPcContext("cancelled")}\n`,
       };
     }
     return { kind: "passthrough" };
@@ -1572,11 +1589,21 @@ function resolveConversationContinuity(
   const operation = String(pending.operation ?? "");
   if (!entity || !operation) return { kind: "passthrough" };
 
+  // FASE 03.1.8: novo comando operacional SUBSTITUI o contexto pendente.
+  // Emitimos um marcador terminal "superseded" (silencioso) e deixamos o
+  // fluxo normal processar o novo comando (Motor/LLM).
+  if (isNewCommand) {
+    return {
+      kind: "passthrough",
+      supersede: `${terminalPcContext("superseded", { module, entity, operation })}\n`,
+    };
+  }
+
   // Cancelamento com pendência: local, terminal, sem executor/Motor/LLM.
   if (isCancel) {
     return {
       kind: "local",
-      text: `🚫 Operação cancelada.${terminalPcContext("cancelled", { module, entity, operation })}\n`,
+      text: `Operação cancelada.${terminalPcContext("cancelled", { module, entity, operation })}\n`,
     };
   }
 
@@ -1584,6 +1611,10 @@ function resolveConversationContinuity(
     if (!isAffirmative) return { kind: "passthrough" };
     const target_id = String(pending.target_id ?? "");
     if (!target_id) return { kind: "passthrough" };
+    // Preserva o nome do alvo (metadado de apresentação local) para uso
+    // na mensagem de sucesso — nunca vai ao Motor/Especialista.
+    const target_label = String(pending.target_label ?? "").trim();
+    if (target_label) chosenNameByTargetId.set(target_id, target_label);
     return {
       kind: "intent",
       intent: {
@@ -1644,6 +1675,7 @@ function resolveConversationContinuity(
 
   return { kind: "passthrough" };
 }
+
 
 /** Wrapper legado: só devolve intent (usado dentro de extractActionIntent
  *  como defesa em profundidade). Local/cancel são tratados no handler. */
@@ -1710,7 +1742,7 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
     const lines = opts.map((row, i) => {
       const block = describeRowBlock(row, entityName)
         .split("\n")
-        .map((ln, idx) => (idx === 0 ? `${i + 1}. ${ln}` : ln))
+        .map((ln, idx) => (idx === 0 ? `[${i + 1}] ${ln}` : ln))
         .join("\n");
       return block;
     });
@@ -1737,8 +1769,18 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
     const verbo = operation === "excluir" ? "excluir"
       : operation === "editar" ? "alterar"
       : operation;
+    const targetLabel = rowName(t, entityName);
+    // Cache local do nome — usado só na resposta de sucesso posterior.
+    if (t?.id && targetLabel) chosenNameByTargetId.set(String(t.id), targetLabel);
     const ctxComment = t?.id
-      ? pcContext({ type: "confirmation", module: moduleId, entity: entityId, operation, target_id: String(t.id) })
+      ? pcContext({
+          type: "confirmation",
+          module: moduleId,
+          entity: entityId,
+          operation,
+          target_id: String(t.id),
+          target_label: targetLabel,
+        })
       : "";
     return [
       `🔒 Confirma ${verbo} este ${entityName}?`,
@@ -1750,6 +1792,7 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
       "",
     ].join("\n");
   }
+
 
   // --- Listar / Pesquisar: resumo com top itens ------------------------
   if ((operation === "listar" || operation === "pesquisar") && data && Array.isArray(data.items)) {
