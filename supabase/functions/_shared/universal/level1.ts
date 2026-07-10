@@ -80,69 +80,141 @@ function pick(
   return out;
 }
 
-function ambiguousResult(rows: any[], primaryField: string, action: string) {
+// ============================================================================
+// FLUXO UNIVERSAL DE RESOLUÇÃO DE ALVO (Target Resolution)
+// ----------------------------------------------------------------------------
+// Primitiva única e obrigatória para toda operação Nível 1 que precise
+// localizar UM registro antes de agir (consultar, editar, excluir e futuras
+// operações semelhantes).
+//
+// Regras invioláveis:
+//   1. Se NÃO encontrar → responde "none".
+//   2. Se encontrar EXATAMENTE UM → define o alvo e devolve o registro.
+//   3. Se encontrar MAIS DE UM → devolve lista resumida numerada.
+//      - Nenhuma operação é executada.
+//      - Nenhuma confirmação é solicitada.
+//      - Somente após o usuário escolher (nova chamada com id) o fluxo segue.
+//   4. Ambiguidade NUNCA é resolvida via confirmação.
+//   5. Especialistas NÃO podem implementar sua própria lógica de resolução.
+//
+// Logs técnicos ficam apenas no console; a resposta ao usuário é formatada
+// pela camada de apresentação a partir do payload padronizado retornado.
+// ============================================================================
+
+export type TargetResolution =
+  | { kind: "found"; targetId: string; row: any }
+  | { kind: "ambiguous"; rows: any[] }
+  | { kind: "none" }
+  | { kind: "error"; error: string };
+
+/** Campos incluídos no resumo de candidatos (não vaza JSON técnico ao usuário). */
+const SUMMARY_HINT_FIELDS = [
+  "name", "nome", "title",
+  "phone", "telefone", "mobile", "whatsapp",
+  "email",
+  "city", "cidade", "state", "uf",
+  "company", "empresa", "organization",
+];
+
+function summarizeRow(row: any, cfg: Level1EntityConfig): Record<string, unknown> {
+  const summary: Record<string, unknown> = { id: row?.id };
+  if (row && cfg.primaryField && row[cfg.primaryField] !== undefined) {
+    summary[cfg.primaryField] = row[cfg.primaryField];
+  }
+  for (const f of SUMMARY_HINT_FIELDS) {
+    if (row && row[f] !== undefined && row[f] !== null && row[f] !== "") {
+      summary[f] = row[f];
+    }
+  }
+  return summary;
+}
+
+/** Payload padronizado quando há ambiguidade — apenas dados de apresentação. */
+function ambiguousResult(cfg: Level1EntityConfig, rows: any[], action: string) {
+  const options = rows.map((r) => summarizeRow(r, cfg));
   return {
     ok: true as const,
     status: "ok" as const,
-    message: `Encontrados ${rows.length} registros parecidos. Escolha um antes de ${action}.`,
+    message: `Encontrados ${rows.length} ${cfg.entity}s parecidos. Escolha um antes de ${action}.`,
     data: {
       ambiguous: true,
+      specialist: cfg.specialist,
+      entity: cfg.entity,
       match_count: rows.length,
-      options: rows.map((r) => ({
-        id: r.id,
-        [primaryField]: r[primaryField] ?? null,
-        ...r,
-      })),
+      options,
     },
   };
 }
 
 /**
- * Localiza registros por id ou por qualquer campo pesquisável.
- * Retorna: { targetId } (único), { ambiguous, rows } (múltiplos) ou { none: true }.
+ * Fluxo Universal de Resolução de Alvo.
+ * ÚNICA forma permitida de resolver um registro dentro das operações
+ * Nível 1 de qualquer Especialista.
  */
-async function locate(
+export async function resolveTarget(
   cfg: Level1EntityConfig,
   supabase: any,
   locator: Record<string, unknown>,
-): Promise<
-  | { targetId: string; row: any }
-  | { ambiguous: true; rows: any[] }
-  | { none: true }
-  | { error: string }
-> {
-  const id = locator.id as string | undefined;
-  const selectCols = cfg.selectColumns ?? "*";
+): Promise<TargetResolution> {
+  try {
+    const id = locator?.id as string | undefined;
+    const selectCols = cfg.selectColumns ?? "*";
 
-  if (id) {
-    let q = supabase.from(cfg.table).select(selectCols).eq("id", id);
-    if (cfg.activeField) q = q.eq(cfg.activeField, true);
-    const { data, error } = await q.maybeSingle();
-    if (error) return { error: error.message };
-    if (!data) return { none: true };
-    return { targetId: data.id, row: data };
+    if (id) {
+      let q = supabase.from(cfg.table).select(selectCols).eq("id", id);
+      if (cfg.activeField) q = q.eq(cfg.activeField, true);
+      const { data, error } = await q.maybeSingle();
+      if (error) {
+        console.error("[TargetResolution] erro por id", { entity: cfg.entity, error });
+        return { kind: "error", error: error.message };
+      }
+      if (!data) return { kind: "none" };
+      return { kind: "found", targetId: data.id, row: data };
+    }
+
+    let query = supabase.from(cfg.table).select(selectCols).limit(10);
+    if (cfg.activeField) query = query.eq(cfg.activeField, true);
+
+    let applied = false;
+    for (const field of cfg.searchableFields) {
+      const v = locator?.[field];
+      if (v === undefined || v === null || v === "") continue;
+      query = query.ilike(field, `%${String(v)}%`);
+      applied = true;
+      break;
+    }
+    if (!applied) return { kind: "none" };
+
+    const { data, error } = await query;
+    if (error) {
+      console.error("[TargetResolution] erro na busca", { entity: cfg.entity, error });
+      return { kind: "error", error: error.message };
+    }
+    const rows = data ?? [];
+    if (rows.length === 0) return { kind: "none" };
+    if (rows.length === 1) return { kind: "found", targetId: rows[0].id, row: rows[0] };
+    console.info("[TargetResolution] ambiguidade", { entity: cfg.entity, count: rows.length });
+    return { kind: "ambiguous", rows };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[TargetResolution] exceção", { entity: cfg.entity, msg });
+    return { kind: "error", error: msg };
   }
+}
 
-  // Localização por campos pesquisáveis (primeiro campo informado tem precedência)
-  let query = supabase.from(cfg.table).select(selectCols).limit(10);
-  if (cfg.activeField) query = query.eq(cfg.activeField, true);
-
-  let applied = false;
-  for (const field of cfg.searchableFields) {
-    const v = locator[field];
-    if (v === undefined || v === null || v === "") continue;
-    query = query.ilike(field, `%${String(v)}%`);
-    applied = true;
-    break;
-  }
-  if (!applied) return { none: true };
-
-  const { data, error } = await query;
-  if (error) return { error: error.message };
-  const rows = data ?? [];
-  if (rows.length === 0) return { none: true };
-  if (rows.length === 1) return { targetId: rows[0].id, row: rows[0] };
-  return { ambiguous: true, rows };
+/**
+ * Traduz o resultado do Target Resolution para a resposta padrão do Base.
+ * Devolve `null` apenas quando o alvo foi único e o chamador deve prosseguir.
+ */
+function targetToResult(
+  res: TargetResolution,
+  cfg: Level1EntityConfig,
+  action: string,
+): Partial<import("../executors/base.ts").BaseExecutionResult> | null {
+  if (res.kind === "error")     return { status: "error", ok: false, error: `Falha: ${res.error}` };
+  if (res.kind === "none")      return { status: "not_found", ok: false, error: `${cfg.entity} não encontrado(a) para ${action}.` };
+  if (res.kind === "ambiguous") return ambiguousResult(cfg, res.rows, action);
+  return null;
 }
 
 // ---------- Fábrica das operações -----------------------------------------
@@ -229,13 +301,14 @@ export function buildLevel1Operations(
     consultar: {
       handler: async (params, ctx) => {
         const locator = (params.locator ?? params) as Record<string, unknown>;
-        const res = await locate(cfg, ctx.supabase, locator);
-        if ("error" in res) return { status: "error", ok: false, error: `Falha: ${res.error}` };
-        if ("none" in res) return { status: "not_found", ok: false, error: `${cfg.entity} não encontrado(a).` };
-        if ("ambiguous" in res) return ambiguousResult(res.rows, cfg.primaryField, "consultar");
-        return { ok: true, entity_id: res.targetId, data: res.row };
+        const res = await resolveTarget(cfg, ctx.supabase, locator);
+        const early = targetToResult(res, cfg, "consultar");
+        if (early) return early;
+        const found = res as Extract<TargetResolution, { kind: "found" }>;
+        return { ok: true, entity_id: found.targetId, data: found.row };
       },
     },
+
 
     // ---------------- PESQUISAR (filtrada, distinta de listar) ----------
     pesquisar: {
@@ -311,10 +384,11 @@ export function buildLevel1Operations(
           };
         }
 
-        const res = await locate(cfg, ctx.supabase, locator);
-        if ("error" in res) return { status: "error", ok: false, error: `Falha: ${res.error}` };
-        if ("none" in res) return { status: "not_found", ok: false, error: `${cfg.entity} não encontrado(a) para edição.` };
-        if ("ambiguous" in res) return ambiguousResult(res.rows, cfg.primaryField, "editar");
+        const res = await resolveTarget(cfg, ctx.supabase, locator);
+        const early = targetToResult(res, cfg, "editar");
+        if (early) return early;
+        const found = res as Extract<TargetResolution, { kind: "found" }>;
+
 
         const patch: Record<string, unknown> = { ...updates };
         // updated_at é comum, mas só aplica se a tabela tiver a coluna;
@@ -324,7 +398,7 @@ export function buildLevel1Operations(
         const { data: updated, error: upErr } = await ctx.supabase
           .from(cfg.table)
           .update(patch)
-          .eq("id", res.targetId)
+          .eq("id", found.targetId)
           .select(selectCols)
           .maybeSingle();
 
@@ -338,32 +412,36 @@ export function buildLevel1Operations(
         }
         return {
           ok: true,
-          message: `${cfg.entity} "${updated?.[cfg.primaryField] ?? res.targetId}" atualizado(a) com sucesso.`,
-          entity_id: res.targetId,
+          message: `${cfg.entity} "${updated?.[cfg.primaryField] ?? found.targetId}" atualizado(a) com sucesso.`,
+          entity_id: found.targetId,
           data: { updated_fields: Object.keys(updates), record: updated },
         };
       },
     },
 
     // ---------------- EXCLUIR (com confirmação obrigatória) -------------
+    // Regra invariante: ambiguidade NUNCA gera confirmação — o Target
+    // Resolution devolve a lista de candidatos e a operação é abortada.
     excluir: {
       handler: async (params, ctx) => {
         const locator = (params.locator ?? params) as Record<string, unknown>;
         const confirm = params.confirm === true || params.confirmar === true;
 
-        const res = await locate(cfg, ctx.supabase, locator);
-        if ("error" in res) return { status: "error", ok: false, error: `Falha: ${res.error}` };
-        if ("none" in res) return { status: "not_found", ok: false, error: `${cfg.entity} não encontrado(a) para exclusão.` };
-        if ("ambiguous" in res) return ambiguousResult(res.rows, cfg.primaryField, "excluir");
+        const res = await resolveTarget(cfg, ctx.supabase, locator);
+        const early = targetToResult(res, cfg, "excluir");
+        if (early) return early; // none | ambiguous | error → nada a confirmar
+        const found = res as Extract<TargetResolution, { kind: "found" }>;
 
         if (!confirm) {
           return {
             ok: true,
             status: "ok",
-            message: `Confirmação necessária: excluir ${cfg.entity} "${res.row[cfg.primaryField]}"? Reenvie com "confirm: true".`,
+            message: `Confirmação necessária: excluir ${cfg.entity} "${found.row[cfg.primaryField]}"? Reenvie com "confirm: true".`,
             data: {
               confirmation_required: true,
-              target: { id: res.targetId, [cfg.primaryField]: res.row[cfg.primaryField] },
+              specialist: cfg.specialist,
+              entity: cfg.entity,
+              target: summarizeRow(found.row, cfg),
             },
           };
         }
@@ -373,7 +451,7 @@ export function buildLevel1Operations(
           const { error } = await ctx.supabase
             .from(cfg.table)
             .update({ [cfg.activeField]: false })
-            .eq("id", res.targetId);
+            .eq("id", found.targetId);
           if (error) {
             return {
               status: "error",
@@ -384,9 +462,9 @@ export function buildLevel1Operations(
           }
           return {
             ok: true,
-            message: `${cfg.entity} "${res.row[cfg.primaryField]}" arquivado(a) com sucesso.`,
-            entity_id: res.targetId,
-            data: { id: res.targetId, archived: true },
+            message: `${cfg.entity} "${found.row[cfg.primaryField]}" arquivado(a) com sucesso.`,
+            entity_id: found.targetId,
+            data: { id: found.targetId, archived: true },
           };
         }
 
@@ -394,7 +472,7 @@ export function buildLevel1Operations(
         const { error: delErr } = await ctx.supabase
           .from(cfg.table)
           .delete()
-          .eq("id", res.targetId);
+          .eq("id", found.targetId);
         if (delErr) {
           return {
             status: "error",
@@ -405,14 +483,15 @@ export function buildLevel1Operations(
         }
         return {
           ok: true,
-          message: `${cfg.entity} "${res.row[cfg.primaryField]}" excluído(a) com sucesso.`,
-          entity_id: res.targetId,
-          data: { id: res.targetId, deleted: true },
+          message: `${cfg.entity} "${found.row[cfg.primaryField]}" excluído(a) com sucesso.`,
+          entity_id: found.targetId,
+          data: { id: found.targetId, deleted: true },
         };
       },
     },
   };
 }
+
 
 // ---------- Registro automático no SpecialistRegistry ---------------------
 
