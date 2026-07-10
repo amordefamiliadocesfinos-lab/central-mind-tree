@@ -1030,7 +1030,18 @@ async function extractActionIntent(
     }
   | null
 > {
-  if (!userMessage || userMessage.trim().length < 3) return null;
+  if (!userMessage || userMessage.trim().length < 1) return null;
+
+  // ---------------------------------------------------------------------
+  // Short-circuit determinístico: se a última mensagem do assistente
+  // carrega um "<!-- pc-context:{...} -->" e o usuário respondeu uma
+  // seleção ("1", nome, trecho) ou confirmação ("sim/confirmar/cancelar"),
+  // reconstruímos a ação anterior sem passar pelo LLM.
+  // ---------------------------------------------------------------------
+  const pcResolved = resolveFromPcContext(userMessage, history);
+  if (pcResolved === "cancel") return null;
+  if (pcResolved) return pcResolved;
+
 
   const catalog = Array.isArray(CAPABILITIES_CATALOG)
     ? CAPABILITIES_CATALOG.map((m) => {
@@ -1076,10 +1087,13 @@ Use o catálogo abaixo como referência (mas pode sugerir module/entity mesmo se
 ${JSON.stringify(catalog)}
 
 REGRA DE CONTEXTO — RESPOSTAS CURTAS DE SELEÇÃO/CONFIRMAÇÃO:
-- SELEÇÃO DE ALVO (lista ambígua): se a última mensagem do assistente apresentou uma LISTA NUMERADA com rodapé "ref: 1=UUID · 2=UUID · ..." e o usuário respondeu um número, nome, trecho ou posição ("1", "o primeiro", "Fulano", "Z João"), reconstrua a MESMA ação anterior (mesmo module/entity/operation) e coloque em "params.locator.id" o UUID COMPLETO do item escolhido. NESTE CASO "params.confirm" DEVE ser SEMPRE false — escolher alvo NUNCA confirma a operação.
-- CONFIRMAÇÃO EXPLÍCITA: só use "params.confirm": true quando TODAS estas condições forem verdadeiras: (a) a última mensagem do assistente foi um pedido explícito de confirmação ("🔒 Confirma excluir …?") com rodapé "ref: UUID" (um único UUID), (b) o usuário respondeu "sim", "confirmar", "confirmo", "pode", "executar", "ok" ou equivalente, (c) o UUID do alvo está definido nesse rodapé. Reconstrua a ação **excluir** com "params.locator.id" = UUID e "params.confirm": true.
+- A continuidade é reconstruída deterministicamente a partir de um comentário oculto "<!-- pc-context:{...} -->" que o assistente insere ao final de listas ambíguas e pedidos de confirmação. Você NÃO precisa se preocupar com ele — o servidor o processa antes de invocar você. Se a última mensagem do assistente contiver esse comentário e o usuário responder com um número, nome, "sim", "confirmar" ou "cancelar", ainda assim reconstrua a MESMA ação anterior (mesmo module/entity/operation) com o alvo apropriado; NUNCA use params.confirm=true a menos que o usuário responda claramente "sim/confirmar/pode/ok" a um pedido explícito de confirmação.
 - Se responder "não", "cancelar", "aborta", devolva {"is_action": false}.
-- Nunca retorne is_action=false para seleção ou confirmação válida; mantenha a continuidade da ação anterior.`;
+
+REGRA DE LISTAGEM COM TERMO:
+- "liste contatos", "mostre os contatos", "listar contatos" (sem termo) → operation="listar", sem params.search.
+- "liste João Teste", "liste os contatos João", "mostre contatos com João", "listar João" → operation="listar" e params.search="João Teste" (preserve o termo exato informado após o verbo).
+- Nunca invente filtros — apenas preserve o termo escrito pelo usuário.`;
 
   const contextMessages = history
     .filter((m) => m && (m.role === "user" || m.role === "assistant"))
@@ -1120,40 +1134,27 @@ REGRA DE CONTEXTO — RESPOSTAS CURTAS DE SELEÇÃO/CONFIRMAÇÃO:
     if (!parsed.entity || !parsed.operation) return null;
 
     // ------------------------------------------------------------------
-    // PROTEÇÃO DETERMINÍSTICA — separa SELEÇÃO DE ALVO de CONFIRMAÇÃO.
-    // A escolha de um item em uma lista ambígua NUNCA pode confirmar
-    // uma operação sensível. Somente uma resposta afirmativa a um pedido
-    // explícito de confirmação (rodapé "ref: <UUID único>") pode fazê-lo.
+    // PROTEÇÃO DETERMINÍSTICA — sem contexto explícito de confirmação,
+    // nunca permita params.confirm=true vindo do LLM. Confirmação legítima
+    // já foi tratada no short-circuit acima via pc-context.
     // ------------------------------------------------------------------
     const params: Record<string, unknown> = { ...(parsed.params ?? {}) };
-    const lastAssistant = [...history].reverse().find((m) => m?.role === "assistant");
-    const lastText = String(lastAssistant?.content ?? "");
-    const refLine = lastText.match(/ref:\s*(.+)$/im)?.[1] ?? "";
-    const isAmbiguousList = /\d+\s*=\s*[0-9a-f-]{36}/i.test(refLine); // "1=UUID · 2=UUID"
-    const isSingleConfirm =
-      !isAmbiguousList &&
-      /^[\s0-9a-f-]{36}\s*$/i.test(refLine) &&
-      /confirma|confirmação|confirmar/i.test(lastText);
-
-    const userTrim = String(userMessage ?? "").trim().toLowerCase();
-    const isAffirmative = /^(sim|s|confirmar|confirmo|confirma|pode|pode\s+excluir|executar|ok|okay|prossiga|prossegue)\b/.test(userTrim);
-
-    if (isAmbiguousList) {
-      // Escolha de alvo — NUNCA confirma.
+    if (params.confirm === true) {
+      console.warn("[ai-ceo] confirm=true removido: sem pc-context de confirmação", {
+        operation: parsed.operation,
+      });
       params.confirm = false;
-      if (params.locator && typeof params.locator === "object") {
-        (params.locator as Record<string, unknown>).confirm = undefined;
-      }
-    } else if (isSingleConfirm && isAffirmative) {
-      // Confirmação legítima sobre alvo único já resolvido.
-      params.confirm = true;
-    } else {
-      // Sem contexto de confirmação explícita — força false por segurança.
-      if (params.confirm === true) {
-        console.warn("[ai-ceo] confirm=true removido: sem contexto de confirmação explícita", {
-          operation: parsed.operation,
-        });
-        params.confirm = false;
+    }
+
+    // Reforça "listar com termo" → preserva search a partir da mensagem.
+    if (String(parsed.operation ?? "").toLowerCase() === "listar" && !params.search) {
+      const m = String(userMessage).trim().match(
+        /^\s*(?:list[ae]r?|liste|mostre?|exiba|exibir|ver|veja)\s+(?:os?\s+|as\s+|um\s+|uma\s+)?(?:contatos?|clientes?|leads?|registros?|itens?)?\s*(.+?)\s*$/i,
+      );
+      const term = m?.[1]?.trim();
+      const generic = !term || /^(contatos?|clientes?|leads?|todos|tudo|registros?|itens?)$/i.test(term);
+      if (term && !generic) {
+        params.search = term;
       }
     }
 
@@ -1397,10 +1398,116 @@ function describeRowBlock(row: any, entityName: string): string {
   return lines.join("\n");
 }
 
-/** Rodapé técnico invisível — mantém rastreio determinístico sem vazar ao usuário. */
-function hiddenRef(content: string): string {
-  return `\n<sub style="display:none" aria-hidden="true">ref: ${content}</sub>`;
+/** Contexto oculto (comentário HTML) — nunca renderizado ao usuário,
+ * mas preservado no histórico para reconstrução determinística. */
+function pcContext(payload: Record<string, unknown>): string {
+  const json = JSON.stringify(payload).replace(/--/g, "-\\u002d");
+  return `\n<!-- pc-context:${json} -->`;
 }
+
+/** Extrai o último bloco pc-context da mensagem do assistente. */
+function readPcContext(text: string): Record<string, unknown> | null {
+  if (!text) return null;
+  const matches = [...text.matchAll(/<!--\s*pc-context:(.*?)-->/g)];
+  if (matches.length === 0) return null;
+  try {
+    const raw = matches[matches.length - 1][1].trim().replace(/-\\u002d/g, "--");
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+const AFFIRMATIVE_RE = /^(sim|s|confirmar|confirmo|confirma|pode|pode\s+excluir|executar|ok|okay|prossiga|prossegue|isso|isso\s+mesmo)\b/i;
+const CANCEL_RE = /^(n[aã]o|nao|cancelar|cancela|aborta|abortar|desistir)\b/i;
+
+/** Reconstrói a intenção a partir do pc-context, sem chamar o LLM.
+ *  Retorna a intenção reconstruída, "cancel" para abortar, ou null se não aplica. */
+function resolveFromPcContext(
+  userMessage: string,
+  history: Array<{ role?: string; content?: string }>,
+): {
+  objective: string;
+  module?: string;
+  entity: string;
+  operation: string;
+  scope?: string;
+  params: Record<string, unknown>;
+} | "cancel" | null {
+  const lastAssistant = [...history].reverse().find((m) => m?.role === "assistant");
+  const ctx = readPcContext(String(lastAssistant?.content ?? ""));
+  if (!ctx) return null;
+
+  const userTrim = String(userMessage ?? "").trim();
+  if (!userTrim) return null;
+
+  const type = String(ctx.type ?? "");
+  const module = ctx.module as string | undefined;
+  const entity = String(ctx.entity ?? "");
+  const operation = String(ctx.operation ?? "");
+  if (!entity || !operation) return null;
+
+  if (type === "confirmation") {
+    if (CANCEL_RE.test(userTrim)) return "cancel";
+    if (!AFFIRMATIVE_RE.test(userTrim)) return null;
+    const target_id = String(ctx.target_id ?? "");
+    if (!target_id) return null;
+    return {
+      objective: `${operation} ${entity}`,
+      module,
+      entity,
+      operation,
+      params: { locator: { id: target_id }, confirm: true },
+    };
+  }
+
+  if (type === "ambiguous") {
+    if (CANCEL_RE.test(userTrim)) return "cancel";
+    const options = Array.isArray(ctx.options) ? (ctx.options as Array<Record<string, unknown>>) : [];
+    if (options.length === 0) return null;
+
+    // Escolha por número
+    let chosen: Record<string, unknown> | null = null;
+    const numMatch = userTrim.match(/^\s*#?\s*(\d{1,3})\b/);
+    if (numMatch) {
+      const idx = parseInt(numMatch[1], 10);
+      chosen = options.find((o) => Number(o.index) === idx) ?? null;
+    }
+    // "o primeiro", "primeira", "segundo"
+    if (!chosen) {
+      const ordinals: Record<string, number> = {
+        primeiro: 1, primeira: 1, "1o": 1, "1a": 1,
+        segundo: 2, segunda: 2, "2o": 2, "2a": 2,
+        terceiro: 3, terceira: 3, quarto: 4, quarta: 4, quinto: 5, quinta: 5,
+      };
+      const key = userTrim.toLowerCase().replace(/[°º]/g, "");
+      for (const [k, v] of Object.entries(ordinals)) {
+        if (key.includes(k)) { chosen = options.find((o) => Number(o.index) === v) ?? null; break; }
+      }
+    }
+    // Escolha por nome (match parcial case-insensitive)
+    if (!chosen) {
+      const needle = userTrim.toLowerCase();
+      chosen = options.find((o) => {
+        const nm = String(o.name ?? "").toLowerCase();
+        return nm && (nm.includes(needle) || needle.includes(nm));
+      }) ?? null;
+    }
+    if (!chosen) return null;
+    const id = String(chosen.id ?? "");
+    if (!id) return null;
+    return {
+      objective: `${operation} ${entity}`,
+      module,
+      entity,
+      operation,
+      params: { locator: { id }, confirm: false },
+    };
+  }
+
+  return null;
+}
+
 
 function formatMotorBlock(resp: CoordinationResponse | null): string {
   if (!resp) return "";
@@ -1445,6 +1552,9 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
 
   const data: any = resp.execution.data ?? {};
 
+  const moduleId = resp.suggested_specialist?.module_id;
+  const entityId = resp.suggested_specialist?.entity_id ?? entityName;
+
   // --- Ambiguidade: múltiplos registros → lista numerada ---------------
   if (data && data.ambiguous === true && Array.isArray(data.options)) {
     const opts: any[] = data.options;
@@ -1455,17 +1565,19 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
         .join("\n");
       return block;
     });
-    const refMap = opts
-      .map((row, i) => (row?.id ? `${i + 1}=${row.id}` : null))
-      .filter(Boolean)
-      .join(" · ");
+    const options = opts
+      .map((row, i) => (row?.id ? { index: i + 1, id: String(row.id), name: rowName(row, entityName) } : null))
+      .filter(Boolean);
+    const ctxComment = options.length
+      ? pcContext({ type: "ambiguous", module: moduleId, entity: entityId, operation, options })
+      : "";
     return [
       `🔎 Encontrei mais de um ${entityName}:`,
       "",
       lines.join("\n\n"),
       "",
       `Digite o número ou o nome do ${entityName}.`,
-      refMap ? hiddenRef(refMap) : "",
+      ctxComment,
       "",
     ].join("\n");
   }
@@ -1476,13 +1588,16 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
     const verbo = operation === "excluir" ? "excluir"
       : operation === "editar" ? "alterar"
       : operation;
+    const ctxComment = t?.id
+      ? pcContext({ type: "confirmation", module: moduleId, entity: entityId, operation, target_id: String(t.id) })
+      : "";
     return [
       `🔒 Confirma ${verbo} este ${entityName}?`,
       "",
       describeRowBlock(t, entityName),
       "",
       `Digite **confirmar** para prosseguir ou **cancelar** para interromper.`,
-      t?.id ? hiddenRef(String(t.id)) : "",
+      ctxComment,
       "",
     ].join("\n");
   }
