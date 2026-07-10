@@ -1076,9 +1076,10 @@ Use o catálogo abaixo como referência (mas pode sugerir module/entity mesmo se
 ${JSON.stringify(catalog)}
 
 REGRA DE CONTEXTO — RESPOSTAS CURTAS DE SELEÇÃO/CONFIRMAÇÃO:
-- Se a última mensagem do assistente apresentou uma LISTA NUMERADA com um rodapé "ref: 1=UUID · 2=UUID · ..." e o usuário responder apenas um número, um nome ou um trecho ("1", "o primeiro", "Fulano"), você DEVE reconstruir a MESMA ação anterior (mesmo module/entity/operation) e colocar em "params.locator.id" o UUID COMPLETO correspondente ao índice escolhido (extraído do rodapé "ref:"). Se o usuário respondeu por nome, escolha pelo nome visível na lista e use o UUID daquele item.
-- Se a última mensagem do assistente pediu CONFIRMAÇÃO de exclusão ("Confirma excluir ...?") com um rodapé "ref: UUID" e o usuário responder "sim", "confirmar", "confirmo", "pode", "executar", "ok" ou similar, gere a ação **excluir** com "params.locator.id" igual ao UUID do rodapé e "params.confirm": true. Se responder "não", "cancelar", "aborta", devolva {"is_action": false}.
-- Nesses casos NUNCA retorne is_action=false; mantenha a continuidade da ação anterior.`;
+- SELEÇÃO DE ALVO (lista ambígua): se a última mensagem do assistente apresentou uma LISTA NUMERADA com rodapé "ref: 1=UUID · 2=UUID · ..." e o usuário respondeu um número, nome, trecho ou posição ("1", "o primeiro", "Fulano", "Z João"), reconstrua a MESMA ação anterior (mesmo module/entity/operation) e coloque em "params.locator.id" o UUID COMPLETO do item escolhido. NESTE CASO "params.confirm" DEVE ser SEMPRE false — escolher alvo NUNCA confirma a operação.
+- CONFIRMAÇÃO EXPLÍCITA: só use "params.confirm": true quando TODAS estas condições forem verdadeiras: (a) a última mensagem do assistente foi um pedido explícito de confirmação ("🔒 Confirma excluir …?") com rodapé "ref: UUID" (um único UUID), (b) o usuário respondeu "sim", "confirmar", "confirmo", "pode", "executar", "ok" ou equivalente, (c) o UUID do alvo está definido nesse rodapé. Reconstrua a ação **excluir** com "params.locator.id" = UUID e "params.confirm": true.
+- Se responder "não", "cancelar", "aborta", devolva {"is_action": false}.
+- Nunca retorne is_action=false para seleção ou confirmação válida; mantenha a continuidade da ação anterior.`;
 
   const contextMessages = history
     .filter((m) => m && (m.role === "user" || m.role === "assistant"))
@@ -1117,13 +1118,52 @@ REGRA DE CONTEXTO — RESPOSTAS CURTAS DE SELEÇÃO/CONFIRMAÇÃO:
     const parsed = JSON.parse(content);
     if (!parsed?.is_action) return null;
     if (!parsed.entity || !parsed.operation) return null;
+
+    // ------------------------------------------------------------------
+    // PROTEÇÃO DETERMINÍSTICA — separa SELEÇÃO DE ALVO de CONFIRMAÇÃO.
+    // A escolha de um item em uma lista ambígua NUNCA pode confirmar
+    // uma operação sensível. Somente uma resposta afirmativa a um pedido
+    // explícito de confirmação (rodapé "ref: <UUID único>") pode fazê-lo.
+    // ------------------------------------------------------------------
+    const params: Record<string, unknown> = { ...(parsed.params ?? {}) };
+    const lastAssistant = [...history].reverse().find((m) => m?.role === "assistant");
+    const lastText = String(lastAssistant?.content ?? "");
+    const refLine = lastText.match(/ref:\s*(.+)$/im)?.[1] ?? "";
+    const isAmbiguousList = /\d+\s*=\s*[0-9a-f-]{36}/i.test(refLine); // "1=UUID · 2=UUID"
+    const isSingleConfirm =
+      !isAmbiguousList &&
+      /^[\s0-9a-f-]{36}\s*$/i.test(refLine) &&
+      /confirma|confirmação|confirmar/i.test(lastText);
+
+    const userTrim = String(userMessage ?? "").trim().toLowerCase();
+    const isAffirmative = /^(sim|s|confirmar|confirmo|confirma|pode|pode\s+excluir|executar|ok|okay|prossiga|prossegue)\b/.test(userTrim);
+
+    if (isAmbiguousList) {
+      // Escolha de alvo — NUNCA confirma.
+      params.confirm = false;
+      if (params.locator && typeof params.locator === "object") {
+        (params.locator as Record<string, unknown>).confirm = undefined;
+      }
+    } else if (isSingleConfirm && isAffirmative) {
+      // Confirmação legítima sobre alvo único já resolvido.
+      params.confirm = true;
+    } else {
+      // Sem contexto de confirmação explícita — força false por segurança.
+      if (params.confirm === true) {
+        console.warn("[ai-ceo] confirm=true removido: sem contexto de confirmação explícita", {
+          operation: parsed.operation,
+        });
+        params.confirm = false;
+      }
+    }
+
     return {
       objective: parsed.objective ?? userMessage.slice(0, 120),
       module: parsed.module,
       entity: parsed.entity,
       operation: parsed.operation,
       scope: parsed.scope,
-      params: parsed.params ?? {},
+      params,
     };
   } catch (err) {
     console.error("extractActionIntent error", err);
