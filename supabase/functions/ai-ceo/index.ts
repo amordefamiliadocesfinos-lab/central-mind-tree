@@ -1076,9 +1076,10 @@ Use o catálogo abaixo como referência (mas pode sugerir module/entity mesmo se
 ${JSON.stringify(catalog)}
 
 REGRA DE CONTEXTO — RESPOSTAS CURTAS DE SELEÇÃO/CONFIRMAÇÃO:
-- Se a última mensagem do assistente apresentou uma LISTA NUMERADA com um rodapé "ref: 1=UUID · 2=UUID · ..." e o usuário responder apenas um número, um nome ou um trecho ("1", "o primeiro", "Fulano"), você DEVE reconstruir a MESMA ação anterior (mesmo module/entity/operation) e colocar em "params.locator.id" o UUID COMPLETO correspondente ao índice escolhido (extraído do rodapé "ref:"). Se o usuário respondeu por nome, escolha pelo nome visível na lista e use o UUID daquele item.
-- Se a última mensagem do assistente pediu CONFIRMAÇÃO de exclusão ("Confirma excluir ...?") com um rodapé "ref: UUID" e o usuário responder "sim", "confirmar", "confirmo", "pode", "executar", "ok" ou similar, gere a ação **excluir** com "params.locator.id" igual ao UUID do rodapé e "params.confirm": true. Se responder "não", "cancelar", "aborta", devolva {"is_action": false}.
-- Nesses casos NUNCA retorne is_action=false; mantenha a continuidade da ação anterior.`;
+- SELEÇÃO DE ALVO (lista ambígua): se a última mensagem do assistente apresentou uma LISTA NUMERADA com rodapé "ref: 1=UUID · 2=UUID · ..." e o usuário respondeu um número, nome, trecho ou posição ("1", "o primeiro", "Fulano", "Z João"), reconstrua a MESMA ação anterior (mesmo module/entity/operation) e coloque em "params.locator.id" o UUID COMPLETO do item escolhido. NESTE CASO "params.confirm" DEVE ser SEMPRE false — escolher alvo NUNCA confirma a operação.
+- CONFIRMAÇÃO EXPLÍCITA: só use "params.confirm": true quando TODAS estas condições forem verdadeiras: (a) a última mensagem do assistente foi um pedido explícito de confirmação ("🔒 Confirma excluir …?") com rodapé "ref: UUID" (um único UUID), (b) o usuário respondeu "sim", "confirmar", "confirmo", "pode", "executar", "ok" ou equivalente, (c) o UUID do alvo está definido nesse rodapé. Reconstrua a ação **excluir** com "params.locator.id" = UUID e "params.confirm": true.
+- Se responder "não", "cancelar", "aborta", devolva {"is_action": false}.
+- Nunca retorne is_action=false para seleção ou confirmação válida; mantenha a continuidade da ação anterior.`;
 
   const contextMessages = history
     .filter((m) => m && (m.role === "user" || m.role === "assistant"))
