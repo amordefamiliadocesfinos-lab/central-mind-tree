@@ -561,6 +561,10 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
         });
       }
 
+      const supersedeMarker = continuity.kind === "passthrough" && continuity.supersede
+        ? continuity.supersede
+        : "";
+
       const coordination = await runCoordinationMotor(
         lastUserMsg,
         messages,
@@ -573,7 +577,7 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
       // resposta duplicada e faz o Motor assumir oficialmente o fluxo operacional.
       if (coordination) {
         const motorOnly = formatMotorBlock(coordination);
-        const stream = prependSSEText(motorOnly, emptyStream());
+        const stream = prependSSEText(supersedeMarker + motorOnly, emptyStream());
         return new Response(stream, {
           headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
         });
