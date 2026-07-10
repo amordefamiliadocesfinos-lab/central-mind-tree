@@ -1453,6 +1453,10 @@ function readPcContext(text: string): Record<string, unknown> | null {
 const STRICT_AFFIRMATIVE_RE = /^(sim|s|ok|okay|confirmar|confirmo|confirma|confirmado|pode|prossiga|prossegue|prossegue\s+por\s+favor|isso|isso\s+mesmo|executar|executa)[.!]*$/i;
 const STRICT_CANCEL_RE = /^(n[aã]o|n|cancelar|cancela|cancele|abortar|aborta|desistir|desisto|parar|para|deixa|deixe\s+pra\s+la)[.!]*$/i;
 
+/** Verbos operacionais que, quando iniciam a mensagem, DEVEM ser interpretados
+ *  como um novo comando e substituir qualquer contexto pendente. */
+const OPERATIONAL_VERB_RE = /^(criar|crie|cadastrar|cadastre|listar|liste|mostrar|mostre|pesquisar|pesquise|buscar|busque|consultar|consulte|editar|edite|alterar|altere|excluir|exclua|apagar|apague|deletar|delete|remover|remova|abrir|abra)\b/;
+
 function normalizeText(s: unknown): string {
   return String(s ?? "")
     .normalize("NFD")
@@ -1463,8 +1467,8 @@ function normalizeText(s: unknown): string {
 }
 
 /** Emite um pc-context terminal — sinaliza que a pendência anterior foi encerrada
- *  (cancelada ou completada) e NÃO deve ser reativada em turnos futuros. */
-function terminalPcContext(state: "cancelled" | "completed", extra: Record<string, unknown> = {}): string {
+ *  (cancelada / completada / superseded) e NÃO deve ser reativada em turnos futuros. */
+function terminalPcContext(state: "cancelled" | "completed" | "superseded", extra: Record<string, unknown> = {}): string {
   return pcContext({ type: "terminal", state, ...extra });
 }
 
@@ -1484,9 +1488,10 @@ type IntentPayload = {
 };
 
 type Continuity =
-  | { kind: "passthrough" }
+  | { kind: "passthrough"; supersede?: string }
   | { kind: "intent"; intent: IntentPayload }
   | { kind: "local"; text: string };
+
 
 function intentFromOption(
   opt: { index?: number; id?: string; name?: string },
