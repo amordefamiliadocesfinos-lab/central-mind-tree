@@ -101,11 +101,26 @@ function pick(
 // pela camada de apresentação a partir do payload padronizado retornado.
 // ============================================================================
 
+/**
+ * Estados universais e ÚNICOS de qualquer operação Nível 1 que dependa
+ * de localizar/confirmar um registro. Nenhum Especialista pode inventar
+ * status próprios — toda a semântica passa por este enum.
+ */
+export const TargetStatus = {
+  FOUND: "FOUND",
+  NOT_FOUND: "NOT_FOUND",
+  AMBIGUOUS: "AMBIGUOUS",
+  CONFIRMATION_REQUIRED: "CONFIRMATION_REQUIRED",
+  CANCELLED: "CANCELLED",
+  ERROR: "ERROR",
+} as const;
+export type TargetStatus = (typeof TargetStatus)[keyof typeof TargetStatus];
+
 export type TargetResolution =
-  | { kind: "found"; targetId: string; row: any }
-  | { kind: "ambiguous"; rows: any[] }
-  | { kind: "none" }
-  | { kind: "error"; error: string };
+  | { status: "FOUND"; kind: "found"; targetId: string; row: any }
+  | { status: "AMBIGUOUS"; kind: "ambiguous"; rows: any[] }
+  | { status: "NOT_FOUND"; kind: "none" }
+  | { status: "ERROR"; kind: "error"; error: string };
 
 /** Campos incluídos no resumo de candidatos (não vaza JSON técnico ao usuário). */
 const SUMMARY_HINT_FIELDS = [
