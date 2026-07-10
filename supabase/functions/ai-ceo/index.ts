@@ -1553,6 +1553,7 @@ function resolveConversationContinuity(
   const userNorm = normalizeText(userRaw);
   const isAffirmative = STRICT_AFFIRMATIVE_RE.test(userRaw);
   const isCancel = STRICT_CANCEL_RE.test(userRaw);
+  const isNewCommand = OPERATIONAL_VERB_RE.test(userNorm);
 
   // readPcContext já respeita o ÚLTIMO pc-context como definitivo. Se ele for
   // terminal, tratamos como "nenhuma pendência" — não reativa a anterior.
@@ -1562,10 +1563,17 @@ function resolveConversationContinuity(
 
   if (!pending) {
     // "sim" curto e isolado sem contexto pendente — nunca invoca operação.
-    if (isAffirmative) {
+    if (isAffirmative && !isNewCommand) {
       return {
         kind: "local",
-        text: `ℹ️ Não há nenhuma operação aguardando confirmação.${terminalPcContext("cancelled")}\n`,
+        text: `Não há nenhuma operação aguardando confirmação.${terminalPcContext("cancelled")}\n`,
+      };
+    }
+    // "cancelar" isolado sem contexto pendente — resposta local definitiva.
+    if (isCancel && !isNewCommand) {
+      return {
+        kind: "local",
+        text: `Não há nenhuma operação pendente para cancelar.${terminalPcContext("cancelled")}\n`,
       };
     }
     return { kind: "passthrough" };
@@ -1577,11 +1585,21 @@ function resolveConversationContinuity(
   const operation = String(pending.operation ?? "");
   if (!entity || !operation) return { kind: "passthrough" };
 
+  // FASE 03.1.8: novo comando operacional SUBSTITUI o contexto pendente.
+  // Emitimos um marcador terminal "superseded" (silencioso) e deixamos o
+  // fluxo normal processar o novo comando (Motor/LLM).
+  if (isNewCommand) {
+    return {
+      kind: "passthrough",
+      supersede: `${terminalPcContext("superseded", { module, entity, operation })}\n`,
+    };
+  }
+
   // Cancelamento com pendência: local, terminal, sem executor/Motor/LLM.
   if (isCancel) {
     return {
       kind: "local",
-      text: `🚫 Operação cancelada.${terminalPcContext("cancelled", { module, entity, operation })}\n`,
+      text: `Operação cancelada.${terminalPcContext("cancelled", { module, entity, operation })}\n`,
     };
   }
 
@@ -1589,6 +1607,10 @@ function resolveConversationContinuity(
     if (!isAffirmative) return { kind: "passthrough" };
     const target_id = String(pending.target_id ?? "");
     if (!target_id) return { kind: "passthrough" };
+    // Preserva o nome do alvo (metadado de apresentação local) para uso
+    // na mensagem de sucesso — nunca vai ao Motor/Especialista.
+    const target_label = String(pending.target_label ?? "").trim();
+    if (target_label) chosenNameByTargetId.set(target_id, target_label);
     return {
       kind: "intent",
       intent: {
@@ -1649,6 +1671,7 @@ function resolveConversationContinuity(
 
   return { kind: "passthrough" };
 }
+
 
 /** Wrapper legado: só devolve intent (usado dentro de extractActionIntent
  *  como defesa em profundidade). Local/cancel são tratados no handler. */
