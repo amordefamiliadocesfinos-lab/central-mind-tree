@@ -145,31 +145,10 @@ export async function coordinateRequest(
   const needsConfirm = Boolean(requires_confirmation || request.requires_confirmation);
   const confirmed = Boolean(request.params?.confirm);
 
-  // 3. Confirmação para operações destrutivas
-  if (needsConfirm && !confirmed) {
-    const resp: CoordinationResponse = {
-      status: "confirmation_required",
-      message:
-        `A operação "${operation}" em ${ent.name} (${mod.name}) exige confirmação explícita do usuário antes de ser encaminhada.`,
-      suggested_specialist: {
-        module_id: mod.id,
-        module_name: mod.name,
-        entity_id: ent.id,
-        entity_name: ent.name,
-      },
-      planned_action: {
-        operation,
-        scope,
-        params: request.params,
-        destructive: true,
-        requires_confirmation: true,
-      },
-      correlation_id,
-      received_at,
-    };
-    record(request, resp);
-    return resp;
-  }
+  // 3. Confirmação NÃO é mais tratada aqui. A Camada Universal Nível 1
+  //    (resolveEntityTarget + handlers universais em level1.ts) é a única
+  //    responsável por decidir quando pedir confirmação, após resolver o alvo.
+
 
   // 4. Localiza Especialista no Registro Universal (única fonte de descoberta)
   const executor = SpecialistRegistry.find(mod.id, ent.id, operation);
