@@ -485,11 +485,25 @@ export function buildLevel1Operations(
               details: error,
             };
           }
+          // Validação real no banco — o registro deve estar arquivado.
+          const { data: check, error: chkErr } = await ctx.supabase
+            .from(cfg.table)
+            .select(`id, ${cfg.activeField}`)
+            .eq("id", found.targetId)
+            .maybeSingle();
+          if (chkErr || !check || check[cfg.activeField] !== false) {
+            return {
+              status: "error",
+              ok: false,
+              error: `Não foi possível confirmar o arquivamento de ${cfg.entity} no banco.`,
+              details: chkErr ?? check,
+            };
+          }
           return {
             ok: true,
             message: `${cfg.entity} "${found.row[cfg.primaryField]}" arquivado(a) com sucesso.`,
             entity_id: found.targetId,
-            data: { id: found.targetId, archived: true },
+            data: { id: found.targetId, archived: true, verified: true },
           };
         }
 
@@ -506,11 +520,32 @@ export function buildLevel1Operations(
             details: delErr,
           };
         }
+        // Validação real no banco — o registro NÃO pode mais existir.
+        const { data: still, error: verErr } = await ctx.supabase
+          .from(cfg.table)
+          .select("id")
+          .eq("id", found.targetId)
+          .maybeSingle();
+        if (verErr) {
+          return {
+            status: "error",
+            ok: false,
+            error: `Não foi possível verificar a exclusão de ${cfg.entity} no banco: ${verErr.message}`,
+            details: verErr,
+          };
+        }
+        if (still) {
+          return {
+            status: "error",
+            ok: false,
+            error: `A exclusão de ${cfg.entity} não foi confirmada no banco (registro ainda presente).`,
+          };
+        }
         return {
           ok: true,
           message: `${cfg.entity} "${found.row[cfg.primaryField]}" excluído(a) com sucesso.`,
           entity_id: found.targetId,
-          data: { id: found.targetId, deleted: true },
+          data: { id: found.targetId, deleted: true, verified: true },
         };
       },
     },
