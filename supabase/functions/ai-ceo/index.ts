@@ -1742,7 +1742,7 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
     const lines = opts.map((row, i) => {
       const block = describeRowBlock(row, entityName)
         .split("\n")
-        .map((ln, idx) => (idx === 0 ? `${i + 1}. ${ln}` : ln))
+        .map((ln, idx) => (idx === 0 ? `[${i + 1}] ${ln}` : ln))
         .join("\n");
       return block;
     });
@@ -1769,8 +1769,18 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
     const verbo = operation === "excluir" ? "excluir"
       : operation === "editar" ? "alterar"
       : operation;
+    const targetLabel = rowName(t, entityName);
+    // Cache local do nome — usado só na resposta de sucesso posterior.
+    if (t?.id && targetLabel) chosenNameByTargetId.set(String(t.id), targetLabel);
     const ctxComment = t?.id
-      ? pcContext({ type: "confirmation", module: moduleId, entity: entityId, operation, target_id: String(t.id) })
+      ? pcContext({
+          type: "confirmation",
+          module: moduleId,
+          entity: entityId,
+          operation,
+          target_id: String(t.id),
+          target_label: targetLabel,
+        })
       : "";
     return [
       `🔒 Confirma ${verbo} este ${entityName}?`,
@@ -1782,6 +1792,7 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
       "",
     ].join("\n");
   }
+
 
   // --- Listar / Pesquisar: resumo com top itens ------------------------
   if ((operation === "listar" || operation === "pesquisar") && data && Array.isArray(data.items)) {
