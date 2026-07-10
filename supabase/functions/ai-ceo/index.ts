@@ -548,7 +548,24 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
       // que é emitida ANTES do stream da IA.
       // ==========================================================
       const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user")?.content ?? "";
-      const coordination = await runCoordinationMotor(lastUserMsg, messages);
+
+      // FASE 03.1.7 — Continuidade determinística ANTES do Motor/LLM.
+      // • local  → devolve resposta pronta (cancel / sem-confirmação / ambiguidade reduzida)
+      // • intent → alimenta o Motor direto, sem re-extração via LLM
+      // • passthrough → fluxo normal (LLM extractActionIntent + Motor)
+      const continuity = resolveConversationContinuity(lastUserMsg, messages);
+      if (continuity.kind === "local") {
+        const stream = prependSSEText(continuity.text, emptyStream());
+        return new Response(stream, {
+          headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+        });
+      }
+
+      const coordination = await runCoordinationMotor(
+        lastUserMsg,
+        messages,
+        continuity.kind === "intent" ? continuity.intent : null,
+      );
 
       // FLUXO OPERACIONAL: se o Motor de Coordenação identificou uma solicitação
       // operacional, a resposta oficial da IA é APENAS o retorno estruturado do Motor.
@@ -1275,8 +1292,9 @@ function normalizeParamsForSpecialist(
 async function runCoordinationMotor(
   userMessage: string,
   history: Array<{ role: string; content: string }> = [],
+  preIntent: IntentPayload | null = null,
 ): Promise<CoordinationResponse | null> {
-  const intent = await extractActionIntent(userMessage, history);
+  const intent = preIntent ?? (await extractActionIntent(userMessage, history));
   if (!intent) return null;
 
   const normalizedParams = normalizeParamsForSpecialist(
@@ -1418,93 +1436,224 @@ function readPcContext(text: string): Record<string, unknown> | null {
   }
 }
 
-const AFFIRMATIVE_RE = /^(sim|s|confirmar|confirmo|confirma|pode|pode\s+excluir|executar|ok|okay|prossiga|prossegue|isso|isso\s+mesmo)\b/i;
-const CANCEL_RE = /^(n[aã]o|nao|cancelar|cancela|aborta|abortar|desistir)\b/i;
+// ---------------------------------------------------------------------------
+// Continuidade conversacional determinística (FASE 03.1.7)
+// ---------------------------------------------------------------------------
+// Toda a lógica de reconstrução de contexto (escolha, confirmação, cancelamento)
+// vive aqui e é chamada ANTES do LLM/Motor/Especialista. Isso garante:
+//   • ambiguidade nunca é resolvida silenciosamente pelo `find` (primeiro match);
+//   • cancelamento é local — não chega ao Motor;
+//   • "sim" isolado fora de contexto de confirmação é resposta local;
+//   • terminal states não reativam pendências anteriores;
+//   • o nome escolhido é preservado só como metadado de apresentação.
+// ---------------------------------------------------------------------------
 
-/** Reconstrói a intenção a partir do pc-context, sem chamar o LLM.
- *  Retorna a intenção reconstruída, "cancel" para abortar, ou null se não aplica. */
-function resolveFromPcContext(
-  userMessage: string,
-  history: Array<{ role?: string; content?: string }>,
-): {
+/** Regex ESTRITAS: exigem que a mensagem inteira seja o token de resposta
+ *  (opcionalmente com pontuação). Frases como "sim, quero listar" NÃO batem. */
+const STRICT_AFFIRMATIVE_RE = /^(sim|s|ok|okay|confirmar|confirmo|confirma|confirmado|pode|prossiga|prossegue|prossegue\s+por\s+favor|isso|isso\s+mesmo|executar|executa)[.!]*$/i;
+const STRICT_CANCEL_RE = /^(n[aã]o|n|cancelar|cancela|cancele|abortar|aborta|desistir|desisto|parar|para|deixa|deixe\s+pra\s+la)[.!]*$/i;
+
+function normalizeText(s: unknown): string {
+  return String(s ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Emite um pc-context terminal — sinaliza que a pendência anterior foi encerrada
+ *  (cancelada ou completada) e NÃO deve ser reativada em turnos futuros. */
+function terminalPcContext(state: "cancelled" | "completed", extra: Record<string, unknown> = {}): string {
+  return pcContext({ type: "terminal", state, ...extra });
+}
+
+/** Nome escolhido pelo usuário durante desambiguação — cache curto e local,
+ *  usado APENAS na formatação da resposta de sucesso quando o Motor devolve
+ *  um payload genérico (ex.: `{id, deleted:true}` na exclusão). Nunca é enviado
+ *  ao Motor nem ao Especialista. */
+const chosenNameByTargetId = new Map<string, string>();
+
+type IntentPayload = {
   objective: string;
   module?: string;
   entity: string;
   operation: string;
   scope?: string;
   params: Record<string, unknown>;
-} | "cancel" | null {
-  const lastAssistant = [...history].reverse().find((m) => m?.role === "assistant");
-  const ctx = readPcContext(String(lastAssistant?.content ?? ""));
-  if (!ctx) return null;
+};
 
-  const userTrim = String(userMessage ?? "").trim();
-  if (!userTrim) return null;
+type Continuity =
+  | { kind: "passthrough" }
+  | { kind: "intent"; intent: IntentPayload }
+  | { kind: "local"; text: string };
 
-  const type = String(ctx.type ?? "");
-  const module = ctx.module as string | undefined;
-  const entity = String(ctx.entity ?? "");
-  const operation = String(ctx.operation ?? "");
-  if (!entity || !operation) return null;
-
-  if (type === "confirmation") {
-    if (CANCEL_RE.test(userTrim)) return "cancel";
-    if (!AFFIRMATIVE_RE.test(userTrim)) return null;
-    const target_id = String(ctx.target_id ?? "");
-    if (!target_id) return null;
-    return {
-      objective: `${operation} ${entity}`,
-      module,
-      entity,
-      operation,
-      params: { locator: { id: target_id }, confirm: true },
-    };
-  }
-
-  if (type === "ambiguous") {
-    if (CANCEL_RE.test(userTrim)) return "cancel";
-    const options = Array.isArray(ctx.options) ? (ctx.options as Array<Record<string, unknown>>) : [];
-    if (options.length === 0) return null;
-
-    // Escolha por número
-    let chosen: Record<string, unknown> | null = null;
-    const numMatch = userTrim.match(/^\s*#?\s*(\d{1,3})\b/);
-    if (numMatch) {
-      const idx = parseInt(numMatch[1], 10);
-      chosen = options.find((o) => Number(o.index) === idx) ?? null;
-    }
-    // "o primeiro", "primeira", "segundo"
-    if (!chosen) {
-      const ordinals: Record<string, number> = {
-        primeiro: 1, primeira: 1, "1o": 1, "1a": 1,
-        segundo: 2, segunda: 2, "2o": 2, "2a": 2,
-        terceiro: 3, terceira: 3, quarto: 4, quarta: 4, quinto: 5, quinta: 5,
-      };
-      const key = userTrim.toLowerCase().replace(/[°º]/g, "");
-      for (const [k, v] of Object.entries(ordinals)) {
-        if (key.includes(k)) { chosen = options.find((o) => Number(o.index) === v) ?? null; break; }
-      }
-    }
-    // Escolha por nome (match parcial case-insensitive)
-    if (!chosen) {
-      const needle = userTrim.toLowerCase();
-      chosen = options.find((o) => {
-        const nm = String(o.name ?? "").toLowerCase();
-        return nm && (nm.includes(needle) || needle.includes(nm));
-      }) ?? null;
-    }
-    if (!chosen) return null;
-    const id = String(chosen.id ?? "");
-    if (!id) return null;
-    return {
+function intentFromOption(
+  opt: { index?: number; id?: string; name?: string },
+  module: string | undefined,
+  entity: string,
+  operation: string,
+): Continuity {
+  const id = String(opt?.id ?? "");
+  if (!id) return { kind: "passthrough" };
+  const nm = String(opt?.name ?? "").trim();
+  if (nm) chosenNameByTargetId.set(id, nm);
+  return {
+    kind: "intent",
+    intent: {
       objective: `${operation} ${entity}`,
       module,
       entity,
       operation,
       params: { locator: { id }, confirm: false },
+    },
+  };
+}
+
+function reducedAmbiguity(
+  matches: Array<{ id?: unknown; name?: unknown }>,
+  module: string | undefined,
+  entity: string,
+  operation: string,
+  entityName: string,
+): Continuity {
+  // Reindexa as opções (1..N) e mantém os MESMOS índices no pc-context.
+  const options = matches
+    .filter((m) => m && m.id)
+    .map((m, i) => ({ index: i + 1, id: String(m.id), name: m.name != null ? String(m.name) : "" }));
+  if (options.length === 0) return { kind: "passthrough" };
+  const lines = options.map((o) => `${o.index}. **${o.name || entityName}**`);
+  const ctxComment = pcContext({ type: "ambiguous", module, entity, operation, options });
+  return {
+    kind: "local",
+    text: [
+      `🔎 Ainda há mais de um ${entityName} correspondendo à sua escolha:`,
+      "",
+      ...lines,
+      "",
+      `Digite o número ou o nome exato do ${entityName}.`,
+      ctxComment,
+      "",
+    ].join("\n"),
+  };
+}
+
+/** Ponto único de reconstrução conversacional. Nunca chama LLM/Motor. */
+function resolveConversationContinuity(
+  userMessage: string,
+  history: Array<{ role?: string; content?: string }>,
+): Continuity {
+  const userRaw = String(userMessage ?? "").trim();
+  if (!userRaw) return { kind: "passthrough" };
+  const userNorm = normalizeText(userRaw);
+  const isAffirmative = STRICT_AFFIRMATIVE_RE.test(userRaw);
+  const isCancel = STRICT_CANCEL_RE.test(userRaw);
+
+  // readPcContext já respeita o ÚLTIMO pc-context como definitivo. Se ele for
+  // terminal, tratamos como "nenhuma pendência" — não reativa a anterior.
+  const lastAssistant = [...history].reverse().find((m) => m?.role === "assistant");
+  const ctxRaw = readPcContext(String(lastAssistant?.content ?? ""));
+  const pending = ctxRaw && ctxRaw.type !== "terminal" ? ctxRaw : null;
+
+  if (!pending) {
+    // "sim" curto e isolado sem contexto pendente — nunca invoca operação.
+    if (isAffirmative) {
+      return {
+        kind: "local",
+        text: `ℹ️ Não há nenhuma operação aguardando confirmação.${terminalPcContext("cancelled")}\n`,
+      };
+    }
+    return { kind: "passthrough" };
+  }
+
+  const type = String(pending.type ?? "");
+  const module = pending.module as string | undefined;
+  const entity = String(pending.entity ?? "");
+  const operation = String(pending.operation ?? "");
+  if (!entity || !operation) return { kind: "passthrough" };
+
+  // Cancelamento com pendência: local, terminal, sem executor/Motor/LLM.
+  if (isCancel) {
+    return {
+      kind: "local",
+      text: `🚫 Operação cancelada.${terminalPcContext("cancelled", { module, entity, operation })}\n`,
     };
   }
 
+  if (type === "confirmation") {
+    if (!isAffirmative) return { kind: "passthrough" };
+    const target_id = String(pending.target_id ?? "");
+    if (!target_id) return { kind: "passthrough" };
+    return {
+      kind: "intent",
+      intent: {
+        objective: `${operation} ${entity}`,
+        module,
+        entity,
+        operation,
+        params: { locator: { id: target_id }, confirm: true },
+      },
+    };
+  }
+
+  if (type === "ambiguous") {
+    const options = (Array.isArray(pending.options) ? pending.options : []) as Array<{
+      index?: number; id?: string; name?: string;
+    }>;
+    if (options.length === 0) return { kind: "passthrough" };
+
+    // (1) Número — prioridade máxima.
+    const numMatch = userRaw.match(/^\s*#?\s*(\d{1,3})\s*[.!]?\s*$/);
+    if (numMatch) {
+      const idx = parseInt(numMatch[1], 10);
+      const chosen = options.find((o) => Number(o.index) === idx);
+      if (chosen?.id) return intentFromOption(chosen, module, entity, operation);
+      return { kind: "passthrough" };
+    }
+
+    // (2) Ordinais isolados.
+    const ordinals: Record<string, number> = {
+      "primeiro": 1, "primeira": 1, "1o": 1, "1a": 1,
+      "segundo": 2, "segunda": 2, "2o": 2, "2a": 2,
+      "terceiro": 3, "terceira": 3,
+      "quarto": 4, "quarta": 4,
+      "quinto": 5, "quinta": 5,
+    };
+    const ordKey = userNorm.replace(/^(o|a)\s+/, "");
+    if (ordinals[ordKey]) {
+      const chosen = options.find((o) => Number(o.index) === ordinals[ordKey]);
+      if (chosen?.id) return intentFromOption(chosen, module, entity, operation);
+    }
+
+    // (3) Igualdade exata por nome normalizado.
+    const exact = options.filter((o) => normalizeText(o.name) === userNorm && normalizeText(o.name).length > 0);
+    if (exact.length === 1) return intentFromOption(exact[0], module, entity, operation);
+    if (exact.length > 1) return reducedAmbiguity(exact, module, entity, operation, entity);
+
+    // (4) Match parcial (contains) — SEM `find` silencioso: se >1, retorna
+    // ambiguidade reduzida; se 0, cai fora para o fluxo normal.
+    const partial = options.filter((o) => {
+      const nm = normalizeText(o.name);
+      return nm.length > 0 && (nm.includes(userNorm) || userNorm.includes(nm));
+    });
+    if (partial.length === 1) return intentFromOption(partial[0], module, entity, operation);
+    if (partial.length > 1) return reducedAmbiguity(partial, module, entity, operation, entity);
+
+    return { kind: "passthrough" };
+  }
+
+  return { kind: "passthrough" };
+}
+
+/** Wrapper legado: só devolve intent (usado dentro de extractActionIntent
+ *  como defesa em profundidade). Local/cancel são tratados no handler. */
+function resolveFromPcContext(
+  userMessage: string,
+  history: Array<{ role?: string; content?: string }>,
+): IntentPayload | "cancel" | null {
+  const r = resolveConversationContinuity(userMessage, history);
+  if (r.kind === "intent") return r.intent;
+  if (r.kind === "local") return "cancel"; // impede fallback ao LLM
   return null;
 }
 
@@ -1623,7 +1772,15 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
 
   // --- Sucesso genérico (criar / editar / consultar / excluir) ---------
   const record = data?.record ?? data;
-  const name = rowName(record, entityName);
+  const plannedParams: any = resp.planned_action?.params ?? {};
+  const plannedLocatorId = String(plannedParams?.locator?.id ?? "");
+  // Fallback: quando o Motor devolve payload genérico (ex.: {id, deleted:true}),
+  // recupera o nome que o usuário escolheu durante a desambiguação — metadado
+  // SÓ de apresentação (não trafega ao Motor, ao Especialista ou ao banco).
+  const rawName = rowName(record, entityName);
+  const cachedName = plannedLocatorId ? chosenNameByTargetId.get(plannedLocatorId) : undefined;
+  const name = rawName && rawName !== entityName ? rawName : (cachedName ?? rawName);
+  if (plannedLocatorId) chosenNameByTargetId.delete(plannedLocatorId);
 
   const successVerb: Record<string, string> = {
     criar: "criado",
@@ -1633,11 +1790,16 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
   };
   const verb = successVerb[operation] ?? "processado";
 
-  // Para excluir/editar/criar, foco no nome do alvo. Consultar mostra também contato.
+  const moduleIdOk = resp.suggested_specialist?.module_id;
+  const entityIdOk = resp.suggested_specialist?.entity_id ?? entityName;
+  const terminal = terminalPcContext("completed", {
+    module: moduleIdOk, entity: entityIdOk, operation,
+  });
+
   if (operation === "consultar") {
-    return `✅ ${entityName} ${verb}: ${describeRow(record, entityName)}\n`;
+    return `✅ ${entityName} ${verb}: ${describeRow(record, entityName)}${terminal}\n`;
   }
-  return `✅ ${entityName} ${verb} com sucesso: **${name}**\n`;
+  return `✅ ${entityName} ${verb} com sucesso: **${name}**${terminal}\n`;
 }
 
 /**
