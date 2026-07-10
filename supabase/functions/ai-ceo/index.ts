@@ -548,7 +548,24 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
       // que é emitida ANTES do stream da IA.
       // ==========================================================
       const lastUserMsg = [...messages].reverse().find((m: any) => m.role === "user")?.content ?? "";
-      const coordination = await runCoordinationMotor(lastUserMsg, messages);
+
+      // FASE 03.1.7 — Continuidade determinística ANTES do Motor/LLM.
+      // • local  → devolve resposta pronta (cancel / sem-confirmação / ambiguidade reduzida)
+      // • intent → alimenta o Motor direto, sem re-extração via LLM
+      // • passthrough → fluxo normal (LLM extractActionIntent + Motor)
+      const continuity = resolveConversationContinuity(lastUserMsg, messages);
+      if (continuity.kind === "local") {
+        const stream = prependSSEText(continuity.text, emptyStream());
+        return new Response(stream, {
+          headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
+        });
+      }
+
+      const coordination = await runCoordinationMotor(
+        lastUserMsg,
+        messages,
+        continuity.kind === "intent" ? continuity.intent : null,
+      );
 
       // FLUXO OPERACIONAL: se o Motor de Coordenação identificou uma solicitação
       // operacional, a resposta oficial da IA é APENAS o retorno estruturado do Motor.
