@@ -1,17 +1,17 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
-import ReactMarkdown from 'react-markdown';
-import rehypeRaw from 'rehype-raw';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Card } from '@/components/ui/card';
-import { Send, Loader2, Bot, User, Sparkles, Trash2, ShieldCheck } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { useState, useRef, useEffect, useCallback } from "react";
+import ReactMarkdown from "react-markdown";
+import rehypeRaw from "rehype-raw";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Card } from "@/components/ui/card";
+import { Send, Loader2, Bot, User, Sparkles, Trash2, ShieldCheck } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface Message {
-  role: 'user' | 'assistant';
+  role: "user" | "assistant";
   content: string;
   requiresGovernanceNotice?: boolean;
 }
@@ -19,9 +19,9 @@ interface Message {
 const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-ceo/chat`;
 
 const WELCOME_MESSAGE: Message = {
-  role: 'assistant',
+  role: "assistant",
   content:
-    '👋 Olá! Sou a IA Orquestradora do Painel Central. Antes de qualquer ação, identifico seu objetivo, conecto os especialistas relevantes e apresento um plano seguro. Nesta fase, eu não executo automações, criações, edições ou exclusões diretamente pelo chat.',
+    "👋 Olá! Sou a IA Orquestradora do Painel Central. Antes de qualquer ação, identifico seu objetivo, conecto os especialistas relevantes e apresento um plano seguro. Nesta fase, eu não executo automações, criações, edições ou exclusões diretamente pelo chat.",
 };
 
 const ACTION_INTENT_PATTERN =
@@ -29,26 +29,28 @@ const ACTION_INTENT_PATTERN =
 
 // Mensagens geradas pelo Motor de Coordenação começam com estes marcadores
 // e representam execução/estado real — não devem exibir o aviso de "planejamento".
-const MOTOR_RESPONSE_PREFIXES = ['✅', '🟢', '🔴', '🔎', '🔒', '📋', '📭', '⚠️'];
+const MOTOR_RESPONSE_PREFIXES = ["✅", "🟢", "🔴", "🔎", "🔒", "📋", "📭", "⚠️"];
 
 function detectActionIntent(content: string) {
   const trimmed = content.trimStart();
+  if (MOTOR_RESPONSE_PREFIXES.some((p) => trimmed.startsWith(p)) || trimmed.startsWith("Operação cancelada."))
+    return false;
   if (MOTOR_RESPONSE_PREFIXES.some((p) => trimmed.startsWith(p))) return false;
   return ACTION_INTENT_PATTERN.test(content);
 }
 
 function normalizeHistoryMessage(message: { role: string; content: string }): Message {
-  const role = message.role === 'user' ? 'user' : 'assistant';
+  const role = message.role === "user" ? "user" : "assistant";
   return {
     role,
     content: message.content,
-    requiresGovernanceNotice: role === 'assistant' && detectActionIntent(message.content),
+    requiresGovernanceNotice: role === "assistant" && detectActionIntent(message.content),
   };
 }
 
 export function CEOChat() {
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -58,9 +60,9 @@ export function CEOChat() {
     const loadHistory = async () => {
       try {
         const { data, error } = await supabase
-          .from('ai_chat_messages')
-          .select('role, content, created_at')
-          .order('created_at', { ascending: true });
+          .from("ai_chat_messages")
+          .select("role, content, created_at")
+          .order("created_at", { ascending: true });
 
         if (error) throw error;
 
@@ -68,7 +70,7 @@ export function CEOChat() {
           setMessages(data.map(normalizeHistoryMessage));
         }
       } catch (err) {
-        console.error('Error loading chat history:', err);
+        console.error("Error loading chat history:", err);
       } finally {
         setIsLoadingHistory(false);
         setTimeout(() => inputRef.current?.focus(), 0);
@@ -78,23 +80,23 @@ export function CEOChat() {
     loadHistory();
   }, []);
 
-  const saveMessage = async (role: 'user' | 'assistant', content: string) => {
+  const saveMessage = async (role: "user" | "assistant", content: string) => {
     try {
-      await supabase.from('ai_chat_messages').insert({ role, content });
+      await supabase.from("ai_chat_messages").insert({ role, content });
     } catch (err) {
-      console.error('Error saving message:', err);
+      console.error("Error saving message:", err);
     }
   };
 
   const clearHistory = async () => {
     try {
-      await supabase.from('ai_chat_messages').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+      await supabase.from("ai_chat_messages").delete().neq("id", "00000000-0000-0000-0000-000000000000");
       setMessages([WELCOME_MESSAGE]);
       inputRef.current?.focus();
-      toast.success('Histórico limpo');
+      toast.success("Histórico limpo");
     } catch (err) {
-      console.error('Error clearing history:', err);
-      toast.error('Erro ao limpar histórico');
+      console.error("Error clearing history:", err);
+      toast.error("Erro ao limpar histórico");
     }
   };
 
@@ -106,37 +108,37 @@ export function CEOChat() {
 
   const streamChat = useCallback(async (userMessages: Message[]) => {
     const resp = await fetch(CHAT_URL, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
       },
       body: JSON.stringify({ messages: userMessages.map((m) => ({ role: m.role, content: m.content })) }),
     });
 
     if (!resp.ok) {
-      if (resp.status === 429) throw new Error('Limite de requisições atingido. Tente novamente.');
-      if (resp.status === 402) throw new Error('Créditos insuficientes.');
-      throw new Error('Erro ao conectar com a IA Orquestradora');
+      if (resp.status === 429) throw new Error("Limite de requisições atingido. Tente novamente.");
+      if (resp.status === 402) throw new Error("Créditos insuficientes.");
+      throw new Error("Erro ao conectar com a IA Orquestradora");
     }
 
-    if (!resp.body) throw new Error('Sem resposta do servidor');
+    if (!resp.body) throw new Error("Sem resposta do servidor");
 
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
-    let textBuffer = '';
-    let assistantContent = '';
+    let textBuffer = "";
+    let assistantContent = "";
 
     const updateAssistant = (content: string) => {
       setMessages((prev) => {
         const nextMessage: Message = {
-          role: 'assistant',
+          role: "assistant",
           content,
           requiresGovernanceNotice: detectActionIntent(content),
         };
         const last = prev[prev.length - 1];
 
-        if (last?.role === 'assistant' && prev.length > 1) {
+        if (last?.role === "assistant" && prev.length > 1) {
           return prev.map((m, i) => (i === prev.length - 1 ? nextMessage : m));
         }
 
@@ -145,7 +147,7 @@ export function CEOChat() {
     };
 
     const consumeDataLine = (jsonStr: string) => {
-      if (jsonStr === '[DONE]') return;
+      if (jsonStr === "[DONE]") return;
 
       const parsed = JSON.parse(jsonStr);
       const content = parsed.choices?.[0]?.delta?.content as string | undefined;
@@ -163,26 +165,26 @@ export function CEOChat() {
       textBuffer += decoder.decode(value, { stream: true });
 
       let newlineIndex: number;
-      while ((newlineIndex = textBuffer.indexOf('\n')) !== -1) {
+      while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
         let line = textBuffer.slice(0, newlineIndex);
         textBuffer = textBuffer.slice(newlineIndex + 1);
 
-        if (line.endsWith('\r')) line = line.slice(0, -1);
-        if (line.startsWith(':') || line.trim() === '') continue;
-        if (!line.startsWith('data: ')) continue;
+        if (line.endsWith("\r")) line = line.slice(0, -1);
+        if (line.startsWith(":") || line.trim() === "") continue;
+        if (!line.startsWith("data: ")) continue;
 
         try {
           consumeDataLine(line.slice(6).trim());
         } catch {
-          textBuffer = line + '\n' + textBuffer;
+          textBuffer = line + "\n" + textBuffer;
           break;
         }
       }
     }
 
     if (textBuffer.trim()) {
-      for (const raw of textBuffer.split('\n')) {
-        if (!raw || raw.startsWith(':') || !raw.startsWith('data: ')) continue;
+      for (const raw of textBuffer.split("\n")) {
+        if (!raw || raw.startsWith(":") || !raw.startsWith("data: ")) continue;
 
         try {
           consumeDataLine(raw.slice(6).trim());
@@ -199,28 +201,25 @@ export function CEOChat() {
     e.preventDefault();
     if (!input.trim() || isLoading) return;
 
-    const userMessage: Message = { role: 'user', content: input.trim() };
+    const userMessage: Message = { role: "user", content: input.trim() };
     const newMessages = [...messages, userMessage];
     setMessages(newMessages);
-    setInput('');
+    setInput("");
     setIsLoading(true);
 
-    await saveMessage('user', userMessage.content);
+    await saveMessage("user", userMessage.content);
 
     try {
       const assistantContent = await streamChat(newMessages);
 
       if (assistantContent) {
-        await saveMessage('assistant', assistantContent);
+        await saveMessage("assistant", assistantContent);
       }
     } catch (error) {
-      console.error('Chat error:', error);
-      const errorContent = `❌ ${error instanceof Error ? error.message : 'Erro ao processar sua mensagem'}`;
-      setMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: errorContent },
-      ]);
-      await saveMessage('assistant', errorContent);
+      console.error("Chat error:", error);
+      const errorContent = `❌ ${error instanceof Error ? error.message : "Erro ao processar sua mensagem"}`;
+      setMessages((prev) => [...prev, { role: "assistant", content: errorContent }]);
+      await saveMessage("assistant", errorContent);
     } finally {
       setIsLoading(false);
       inputRef.current?.focus();
@@ -228,10 +227,10 @@ export function CEOChat() {
   };
 
   const quickActions = [
-    { label: '📊 Resumo geral', prompt: 'Me dê um resumo geral do estado atual: tarefas, finanças e pendências.' },
-    { label: '⚠️ Prioridades', prompt: 'Quais são as prioridades mais urgentes agora?' },
-    { label: '💰 Fluxo de caixa', prompt: 'Como está o fluxo de caixa? Há contas atrasadas?' },
-    { label: '📋 Tarefas críticas', prompt: 'Quais tarefas estão atrasadas ou precisam de atenção?' },
+    { label: "📊 Resumo geral", prompt: "Me dê um resumo geral do estado atual: tarefas, finanças e pendências." },
+    { label: "⚠️ Prioridades", prompt: "Quais são as prioridades mais urgentes agora?" },
+    { label: "💰 Fluxo de caixa", prompt: "Como está o fluxo de caixa? Há contas atrasadas?" },
+    { label: "📋 Tarefas críticas", prompt: "Quais tarefas estão atrasadas ou precisam de atenção?" },
   ];
 
   const handleQuickAction = (prompt: string) => {
@@ -264,13 +263,8 @@ export function CEOChat() {
           <div className="space-y-4">
             {messages.map((msg, i) => (
               <div key={i}>
-                <div
-                  className={cn(
-                    'flex gap-3',
-                    msg.role === 'user' ? 'justify-end' : 'justify-start'
-                  )}
-                >
-                  {msg.role === 'assistant' && (
+                <div className={cn("flex gap-3", msg.role === "user" ? "justify-end" : "justify-start")}>
+                  {msg.role === "assistant" && (
                     <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                       <Bot className="h-4 w-4 text-primary" />
                     </div>
@@ -278,27 +272,25 @@ export function CEOChat() {
 
                   <div
                     className={cn(
-                      'max-w-[80%] rounded-2xl px-4 py-2 text-sm',
-                      msg.role === 'user'
-                        ? 'bg-primary text-primary-foreground rounded-br-md'
-                        : 'bg-muted rounded-bl-md'
+                      "max-w-[80%] rounded-2xl px-4 py-2 text-sm",
+                      msg.role === "user"
+                        ? "bg-primary text-primary-foreground rounded-br-md"
+                        : "bg-muted rounded-bl-md",
                     )}
                   >
                     <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-ol:my-1 prose-ul:my-1 [&_sub]:opacity-30 [&_sub]:text-[10px]">
-                      <ReactMarkdown rehypePlugins={[rehypeRaw]}>
-                        {msg.content}
-                      </ReactMarkdown>
+                      <ReactMarkdown rehypePlugins={[rehypeRaw]}>{msg.content}</ReactMarkdown>
                     </div>
                   </div>
 
-                  {msg.role === 'user' && (
+                  {msg.role === "user" && (
                     <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center">
                       <User className="h-4 w-4 text-primary-foreground" />
                     </div>
                   )}
                 </div>
 
-                {msg.role === 'assistant' && msg.requiresGovernanceNotice && (
+                {msg.role === "assistant" && msg.requiresGovernanceNotice && (
                   <div className="ml-11 mt-2">
                     <div className="inline-flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
                       <ShieldCheck className="h-4 w-4" />
@@ -309,7 +301,7 @@ export function CEOChat() {
               </div>
             ))}
 
-            {isLoading && messages[messages.length - 1]?.role === 'user' && (
+            {isLoading && messages[messages.length - 1]?.role === "user" && (
               <div className="flex gap-3 justify-start">
                 <div className="flex-shrink-0 w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                   <Sparkles className="h-4 w-4 text-primary animate-pulse" />
@@ -349,11 +341,7 @@ export function CEOChat() {
           className="flex-1"
         />
         <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
-          {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Send className="h-4 w-4" />
-          )}
+          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
         </Button>
       </form>
     </Card>
