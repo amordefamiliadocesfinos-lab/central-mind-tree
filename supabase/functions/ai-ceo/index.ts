@@ -582,9 +582,10 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
 
       const supersedeMarker = continuity.kind === "passthrough" && continuity.supersede ? continuity.supersede : "";
 
+      const historyForMotor = supersedeMarker ? [{ role: "user", content: lastUserMsg }] : messages;
       const coordination = await runCoordinationMotor(
         lastUserMsg,
-        messages,
+        historyForMotor,
         continuity.kind === "intent" ? continuity.intent : null,
       );
 
