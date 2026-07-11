@@ -289,15 +289,6 @@ export function CEOChat() {
                     </div>
                   )}
                 </div>
-
-                {msg.role === "assistant" && msg.requiresGovernanceNotice && (
-                  <div className="ml-11 mt-2">
-                    <div className="inline-flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
-                      <ShieldCheck className="h-4 w-4" />
-                      Modo planejamento: nenhuma ação foi executada pelo chat.
-                    </div>
-                  </div>
-                )}
               </div>
             ))}
 
