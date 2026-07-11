@@ -3,7 +3,6 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.86.0";
 import { renderCatalogForPrompt, listModules, CAPABILITIES_CATALOG } from "../_shared/capabilities-catalog.ts";
 import { coordinateRequest, type CoordinationResponse } from "../_shared/coordination-motor.ts";
 
-
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -14,15 +13,32 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY")!;
 
 // Tipos de ação expandidos para CRUD completo
-type ActionType = 
-  | "task_create" | "task_update" | "task_delete"
-  | "node_create" | "node_update" | "node_delete"
-  | "order_create" | "order_update" | "order_delete"
-  | "financial_create" | "financial_update" | "financial_delete" | "financial_pay"
-  | "contact_create" | "contact_update" | "contact_delete"
-  | "product_create" | "product_update" | "product_delete"
-  | "routine_create" | "routine_update" | "routine_delete"
-  | "post_create" | "post_update" | "post_delete"
+type ActionType =
+  | "task_create"
+  | "task_update"
+  | "task_delete"
+  | "node_create"
+  | "node_update"
+  | "node_delete"
+  | "order_create"
+  | "order_update"
+  | "order_delete"
+  | "financial_create"
+  | "financial_update"
+  | "financial_delete"
+  | "financial_pay"
+  | "contact_create"
+  | "contact_update"
+  | "contact_delete"
+  | "product_create"
+  | "product_update"
+  | "product_delete"
+  | "routine_create"
+  | "routine_update"
+  | "routine_delete"
+  | "post_create"
+  | "post_update"
+  | "post_delete"
   | "notification";
 
 interface Decision {
@@ -60,10 +76,7 @@ serve(async (req) => {
       const status = url.searchParams.get("status");
       const area = url.searchParams.get("area");
 
-      let query = supabase
-        .from("ai_insights")
-        .select("*")
-        .order("created_at", { ascending: false });
+      let query = supabase.from("ai_insights").select("*").order("created_at", { ascending: false });
 
       if (status) query = query.eq("status", status);
       if (area) query = query.eq("area", area);
@@ -78,10 +91,7 @@ serve(async (req) => {
 
     // GET /policies - List policies
     if (req.method === "GET" && path === "/policies") {
-      const { data, error } = await supabase
-        .from("ai_policies")
-        .select("*")
-        .order("area");
+      const { data, error } = await supabase.from("ai_policies").select("*").order("area");
 
       if (error) throw error;
 
@@ -112,7 +122,7 @@ serve(async (req) => {
       ]);
 
       const today = new Date().toISOString().split("T")[0];
-      
+
       // Build context for AI
       const context = {
         tasks: tasks || [],
@@ -247,7 +257,7 @@ EXEMPLOS DE PAYLOAD PARA PROPOSTA:
       if (!aiResponse.ok) {
         const errorText = await aiResponse.text();
         console.error("AI Gateway error:", aiResponse.status, errorText);
-        
+
         if (aiResponse.status === 429) {
           return new Response(JSON.stringify({ error: "Rate limit exceeded. Try again later." }), {
             status: 429,
@@ -265,7 +275,7 @@ EXEMPLOS DE PAYLOAD PARA PROPOSTA:
 
       const aiData = await aiResponse.json();
       const content = aiData.choices?.[0]?.message?.content;
-      
+
       if (!content) {
         throw new Error("No content from AI");
       }
@@ -311,20 +321,15 @@ EXEMPLOS DE PAYLOAD PARA PROPOSTA:
         // CEO IA SEMPRE requer aprovação - nunca auto-executa
         // O autopilot só permite auto-execução de ações de baixo risco como notificações
         const policy = policiesMap.get(insight.area) as Policy | undefined;
-        const isLowRiskNotification = 
-          insight.action.type === "notification" &&
-          policy?.autopilot &&
-          insight.risk <= (policy?.max_risk || 0.4);
+        const isLowRiskNotification =
+          insight.action.type === "notification" && policy?.autopilot && insight.risk <= (policy?.max_risk || 0.4);
 
         if (isLowRiskNotification && insightRecord) {
           // Apenas notificações de baixo risco podem auto-executar
           const actionResult = await executeAction(supabase, insight.action, insightRecord.id);
           executedActions.push(actionResult);
 
-          await supabase
-            .from("ai_insights")
-            .update({ status: "executado" })
-            .eq("id", insightRecord.id);
+          await supabase.from("ai_insights").update({ status: "executado" }).eq("id", insightRecord.id);
         }
         // Todas as outras ações (CRUD) ficam como "proposto" aguardando aprovação
       }
@@ -336,7 +341,7 @@ EXEMPLOS DE PAYLOAD PARA PROPOSTA:
           actions_executed: executedActions.length,
           insights: createdInsights,
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
@@ -375,10 +380,7 @@ EXEMPLOS DE PAYLOAD PARA PROPOSTA:
     if (req.method === "POST" && path.startsWith("/reject/")) {
       const insightId = path.replace("/reject/", "");
 
-      const { error } = await supabase
-        .from("ai_insights")
-        .update({ status: "rejeitado" })
-        .eq("id", insightId);
+      const { error } = await supabase.from("ai_insights").update({ status: "rejeitado" }).eq("id", insightId);
 
       if (error) throw error;
 
@@ -434,12 +436,28 @@ EXEMPLOS DE PAYLOAD PARA PROPOSTA:
         { data: orders },
         { data: recentInsights },
       ] = await Promise.all([
-        supabase.from("tasks").select("id, title, status, progress, due_date, node_id").is("deleted_at", null).limit(200),
+        supabase
+          .from("tasks")
+          .select("id, title, status, progress, due_date, node_id")
+          .is("deleted_at", null)
+          .limit(200),
         supabase.from("nodes").select("id, title, color, parent_id"),
-        supabase.from("financial_entries").select("id, description, value, type, due_date, payment_date").order("due_date").limit(100),
+        supabase
+          .from("financial_entries")
+          .select("id, description, value, type, due_date, payment_date")
+          .order("due_date")
+          .limit(100),
         supabase.from("financial_accounts").select("id, name, current_balance"),
-        supabase.from("orders").select("id, customer_name, status, due_date, total_value").is("deleted_at", null).limit(50),
-        supabase.from("ai_insights").select("id, title, area, status, created_at").order("created_at", { ascending: false }).limit(20),
+        supabase
+          .from("orders")
+          .select("id, customer_name, status, due_date, total_value")
+          .is("deleted_at", null)
+          .limit(50),
+        supabase
+          .from("ai_insights")
+          .select("id, title, area, status, created_at")
+          .order("created_at", { ascending: false })
+          .limit(20),
       ]);
 
       const today = new Date().toISOString().split("T")[0];
@@ -458,7 +476,9 @@ PROIBIDO usar frases como (exemplos, não exaustivo):
 
 CATÁLOGO UNIVERSAL DE CAPACIDADES (fonte oficial e única de verdade — dinâmico, cresce conforme novos módulos/capacidades são registrados no sistema):
 
-Módulos registrados: ${listModules().map(m => m.name).join(" | ")}
+Módulos registrados: ${listModules()
+        .map((m) => m.name)
+        .join(" | ")}
 
 Cada capacidade tem status: "disponivel" (executor real conectado) ou "planejada" (funcionalidade existe/existirá no sistema, mas a IA ainda não possui executor conectado). Hoje, TODAS estão "planejada".
 ${renderCatalogForPrompt()}
@@ -526,7 +546,7 @@ REGRAS DESTA FASE:
 
 
 CONTEXTO ATUAL (${today}):
-- Tarefas: ${tasks?.length || 0} (${tasks?.filter((t: any) => t.status === 'andamento').length || 0} em andamento)
+- Tarefas: ${tasks?.length || 0} (${tasks?.filter((t: any) => t.status === "andamento").length || 0} em andamento)
 - Projetos/Nós: ${nodes?.length || 0}
 - Lançamentos financeiros: ${financialEntries?.length || 0}
 - Saldo em contas: R$ ${accounts?.reduce((sum: number, a: any) => sum + (a.current_balance || 0), 0).toFixed(2)}
@@ -539,7 +559,6 @@ Nós/Projetos (TODOS): ${JSON.stringify(nodes || [])}
 Financeiro: ${JSON.stringify(financialEntries?.slice(0, 20) || [])}
 Contas: ${JSON.stringify(accounts || [])}
 Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
-
 
       // ==========================================================
       // PASSO OBRIGATÓRIO: MOTOR DE COORDENAÇÃO
@@ -561,9 +580,7 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
         });
       }
 
-      const supersedeMarker = continuity.kind === "passthrough" && continuity.supersede
-        ? continuity.supersede
-        : "";
+      const supersedeMarker = continuity.kind === "passthrough" && continuity.supersede ? continuity.supersede : "";
 
       const coordination = await runCoordinationMotor(
         lastUserMsg,
@@ -593,10 +610,7 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
         },
         body: JSON.stringify({
           model: "google/gemini-2.5-flash",
-          messages: [
-            { role: "system", content: systemPrompt },
-            ...messages,
-          ],
+          messages: [{ role: "system", content: systemPrompt }, ...messages],
           stream: true,
         }),
       });
@@ -620,19 +634,22 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
       return new Response(response.body, {
         headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
       });
-
     }
 
     // POST /execute - Direct chat execution is intentionally disabled.
     // The IA Orquestradora must not claim or perform CRUD actions from chat without a validated execution layer.
     if (req.method === "POST" && path === "/execute") {
-      return new Response(JSON.stringify({
-        success: false,
-        error: "Execução direta pelo chat desativada. A IA Orquestradora deve apenas identificar o objetivo, coordenar especialistas e apresentar um plano para confirmação.",
-      }), {
-        status: 409,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error:
+            "Execução direta pelo chat desativada. A IA Orquestradora deve apenas identificar o objetivo, coordenar especialistas e apresentar um plano para confirmação.",
+        }),
+        {
+          status: 409,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        },
+      );
     }
 
     return new Response(JSON.stringify({ error: "Not found" }), {
@@ -641,22 +658,23 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
     });
   } catch (error) {
     console.error("AI CEO Error:", error);
-    const msg = error instanceof Error
-      ? error.message
-      : (error && typeof error === "object")
-        ? ((error as any).message || (error as any).details || (error as any).hint || JSON.stringify(error))
-        : "Unknown error";
-    return new Response(
-      JSON.stringify({ error: msg }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    const msg =
+      error instanceof Error
+        ? error.message
+        : error && typeof error === "object"
+          ? (error as any).message || (error as any).details || (error as any).hint || JSON.stringify(error)
+          : "Unknown error";
+    return new Response(JSON.stringify({ error: msg }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
 
 async function executeAction(
   supabase: any,
   action: Decision["action"],
-  insightId: string
+  insightId: string,
 ): Promise<{ status: string; result: string }> {
   const actionRecord = {
     insight_id: insightId,
@@ -691,10 +709,7 @@ async function executeAction(
         break;
       }
       case "task_update": {
-        const { error } = await supabase
-          .from("tasks")
-          .update(payload)
-          .eq("id", payload.id);
+        const { error } = await supabase.from("tasks").update(payload).eq("id", payload.id);
         if (error) throw error;
         actionRecord.status = "ok";
         actionRecord.result = `Tarefa atualizada: ${payload.id}`;
@@ -728,20 +743,14 @@ async function executeAction(
         break;
       }
       case "node_update": {
-        const { error } = await supabase
-          .from("nodes")
-          .update(payload)
-          .eq("id", payload.id);
+        const { error } = await supabase.from("nodes").update(payload).eq("id", payload.id);
         if (error) throw error;
         actionRecord.status = "ok";
         actionRecord.result = `Nó atualizado: ${payload.id}`;
         break;
       }
       case "node_delete": {
-        const { error } = await supabase
-          .from("nodes")
-          .delete()
-          .eq("id", payload.id);
+        const { error } = await supabase.from("nodes").delete().eq("id", payload.id);
         if (error) throw error;
         actionRecord.status = "ok";
         actionRecord.result = `Nó excluído: ${payload.id}`;
@@ -771,10 +780,7 @@ async function executeAction(
         break;
       }
       case "order_update": {
-        const { error } = await supabase
-          .from("orders")
-          .update(payload)
-          .eq("id", payload.id);
+        const { error } = await supabase.from("orders").update(payload).eq("id", payload.id);
         if (error) throw error;
         actionRecord.status = "ok";
         actionRecord.result = `Pedido atualizado: ${payload.id}`;
@@ -811,20 +817,14 @@ async function executeAction(
         break;
       }
       case "financial_update": {
-        const { error } = await supabase
-          .from("financial_entries")
-          .update(payload)
-          .eq("id", payload.id);
+        const { error } = await supabase.from("financial_entries").update(payload).eq("id", payload.id);
         if (error) throw error;
         actionRecord.status = "ok";
         actionRecord.result = `Lançamento atualizado: ${payload.id}`;
         break;
       }
       case "financial_delete": {
-        const { error } = await supabase
-          .from("financial_entries")
-          .delete()
-          .eq("id", payload.id);
+        const { error } = await supabase.from("financial_entries").delete().eq("id", payload.id);
         if (error) throw error;
         actionRecord.status = "ok";
         actionRecord.result = `Lançamento excluído: ${payload.id}`;
@@ -832,14 +832,12 @@ async function executeAction(
       }
       case "financial_pay": {
         // Dar baixa - criar movimento financeiro
-        const { error } = await supabase
-          .from("financial_movements")
-          .insert({
-            entry_id: payload.id,
-            account_id: payload.account_id,
-            value: payload.value,
-            movement_date: new Date().toISOString(),
-          });
+        const { error } = await supabase.from("financial_movements").insert({
+          entry_id: payload.id,
+          account_id: payload.account_id,
+          value: payload.value,
+          movement_date: new Date().toISOString(),
+        });
         if (error) throw error;
         actionRecord.status = "ok";
         actionRecord.result = `Baixa realizada: R$ ${payload.value}`;
@@ -864,20 +862,14 @@ async function executeAction(
         break;
       }
       case "contact_update": {
-        const { error } = await supabase
-          .from("contacts")
-          .update(payload)
-          .eq("id", payload.id);
+        const { error } = await supabase.from("contacts").update(payload).eq("id", payload.id);
         if (error) throw error;
         actionRecord.status = "ok";
         actionRecord.result = `Contato atualizado: ${payload.id}`;
         break;
       }
       case "contact_delete": {
-        const { error } = await supabase
-          .from("contacts")
-          .update({ is_active: false })
-          .eq("id", payload.id);
+        const { error } = await supabase.from("contacts").update({ is_active: false }).eq("id", payload.id);
         if (error) throw error;
         actionRecord.status = "ok";
         actionRecord.result = `Contato desativado: ${payload.id}`;
@@ -903,10 +895,7 @@ async function executeAction(
         break;
       }
       case "product_update": {
-        const { error } = await supabase
-          .from("products")
-          .update(payload)
-          .eq("id", payload.id);
+        const { error } = await supabase.from("products").update(payload).eq("id", payload.id);
         if (error) throw error;
         actionRecord.status = "ok";
         actionRecord.result = `Produto atualizado: ${payload.id}`;
@@ -944,20 +933,14 @@ async function executeAction(
         break;
       }
       case "routine_update": {
-        const { error } = await supabase
-          .from("routine_blocks")
-          .update(payload)
-          .eq("id", payload.id);
+        const { error } = await supabase.from("routine_blocks").update(payload).eq("id", payload.id);
         if (error) throw error;
         actionRecord.status = "ok";
         actionRecord.result = `Bloco de rotina atualizado: ${payload.id}`;
         break;
       }
       case "routine_delete": {
-        const { error } = await supabase
-          .from("routine_blocks")
-          .delete()
-          .eq("id", payload.id);
+        const { error } = await supabase.from("routine_blocks").delete().eq("id", payload.id);
         if (error) throw error;
         actionRecord.status = "ok";
         actionRecord.result = `Bloco de rotina excluído: ${payload.id}`;
@@ -983,20 +966,14 @@ async function executeAction(
         break;
       }
       case "post_update": {
-        const { error } = await supabase
-          .from("posts")
-          .update(payload)
-          .eq("id", payload.id);
+        const { error } = await supabase.from("posts").update(payload).eq("id", payload.id);
         if (error) throw error;
         actionRecord.status = "ok";
         actionRecord.result = `Post atualizado: ${payload.id}`;
         break;
       }
       case "post_delete": {
-        const { error } = await supabase
-          .from("posts")
-          .delete()
-          .eq("id", payload.id);
+        const { error } = await supabase.from("posts").delete().eq("id", payload.id);
         if (error) throw error;
         actionRecord.status = "ok";
         actionRecord.result = `Post excluído: ${payload.id}`;
@@ -1040,17 +1017,14 @@ async function executeAction(
 async function extractActionIntent(
   userMessage: string,
   history: Array<{ role: string; content: string }> = [],
-): Promise<
-  | {
-      objective: string;
-      module?: string;
-      entity: string;
-      operation: string;
-      scope?: string;
-      params?: Record<string, unknown>;
-    }
-  | null
-> {
+): Promise<{
+  objective: string;
+  module?: string;
+  entity: string;
+  operation: string;
+  scope?: string;
+  params?: Record<string, unknown>;
+} | null> {
   if (!userMessage || userMessage.trim().length < 1) return null;
 
   // ---------------------------------------------------------------------
@@ -1062,7 +1036,6 @@ async function extractActionIntent(
   const pcResolved = resolveFromPcContext(userMessage, history);
   if (pcResolved === "cancel") return null;
   if (pcResolved) return pcResolved;
-
 
   const catalog = Array.isArray(CAPABILITIES_CATALOG)
     ? CAPABILITIES_CATALOG.map((m) => {
@@ -1139,10 +1112,7 @@ REGRA DE LISTAGEM COM TERMO:
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash-lite",
-        messages: [
-          { role: "system", content: sys },
-          ...contextMessages,
-        ],
+        messages: [{ role: "system", content: sys }, ...contextMessages],
         response_format: { type: "json_object" },
       }),
     });
@@ -1169,9 +1139,11 @@ REGRA DE LISTAGEM COM TERMO:
 
     // Reforça "listar com termo" → preserva search a partir da mensagem.
     if (String(parsed.operation ?? "").toLowerCase() === "listar" && !params.search) {
-      const m = String(userMessage).trim().match(
-        /^\s*(?:list[ae]r?|liste|mostre?|exiba|exibir|ver|veja)\s+(?:os?\s+|as\s+|um\s+|uma\s+)?(?:contatos?|clientes?|leads?|registros?|itens?)?\s*(.+?)\s*$/i,
-      );
+      const m = String(userMessage)
+        .trim()
+        .match(
+          /^\s*(?:list[ae]r?|liste|mostre?|exiba|exibir|ver|veja)\s+(?:os?\s+|as\s+|um\s+|uma\s+)?(?:contatos?|clientes?|leads?|registros?|itens?)?\s*(.+?)\s*$/i,
+        );
       const term = m?.[1]?.trim();
       const generic = !term || /^(contatos?|clientes?|leads?|todos|tudo|registros?|itens?)$/i.test(term);
       if (term && !generic) {
@@ -1213,12 +1185,14 @@ function normalizeParamsForSpecialist(
       return undefined;
     };
 
-    const rawLocator = (params.locator && typeof params.locator === "object"
-      ? params.locator
-      : {}) as Record<string, unknown>;
-    const rawUpdates = (params.updates && typeof params.updates === "object"
-      ? params.updates
-      : {}) as Record<string, unknown>;
+    const rawLocator = (params.locator && typeof params.locator === "object" ? params.locator : {}) as Record<
+      string,
+      unknown
+    >;
+    const rawUpdates = (params.updates && typeof params.updates === "object" ? params.updates : {}) as Record<
+      string,
+      unknown
+    >;
 
     const locator: Record<string, unknown> = { ...rawLocator };
     const updates: Record<string, unknown> = { ...rawUpdates };
@@ -1227,21 +1201,27 @@ function normalizeParamsForSpecialist(
     const locId = pick(params, "id", "contact_id", "contato_id");
     const locName = pick(
       params,
-      "nome_original", "nome_antigo", "nome_atual",
-      "name_original", "name_old", "name_current",
-      "contato", "contact", "target_name", "target",
+      "nome_original",
+      "nome_antigo",
+      "nome_atual",
+      "name_original",
+      "name_old",
+      "name_current",
+      "contato",
+      "contact",
+      "target_name",
+      "target",
     );
-    const locWhats = pick(
-      params, "whatsapp_original", "whatsapp_antigo", "whatsapp_atual",
-    );
+    const locWhats = pick(params, "whatsapp_original", "whatsapp_antigo", "whatsapp_atual");
     const locPhone = pick(
-      params, "telefone_original", "telefone_antigo", "telefone_atual",
-      "phone_original", "phone_old",
+      params,
+      "telefone_original",
+      "telefone_antigo",
+      "telefone_atual",
+      "phone_original",
+      "phone_old",
     );
-    const locEmail = pick(
-      params, "email_original", "email_antigo", "email_atual",
-      "email_old", "email_current",
-    );
+    const locEmail = pick(params, "email_original", "email_antigo", "email_atual", "email_old", "email_current");
 
     if (locId !== undefined && locator.id === undefined) locator.id = locId;
     if (locName !== undefined && locator.name === undefined) locator.name = locName;
@@ -1254,10 +1234,7 @@ function normalizeParamsForSpecialist(
     const newWhats = pick(params, "novo_whatsapp", "whatsapp_novo", "new_whatsapp");
     const newPhone = pick(params, "novo_telefone", "telefone_novo", "new_phone");
     const newEmail = pick(params, "novo_email", "email_novo", "new_email");
-    const newNotes = pick(
-      params, "novas_observacoes", "observacoes_novas",
-      "novas_notas", "notes_new", "new_notes",
-    );
+    const newNotes = pick(params, "novas_observacoes", "observacoes_novas", "novas_notas", "notes_new", "new_notes");
 
     if (newName !== undefined && updates.name === undefined) updates.name = newName;
     if (newWhats !== undefined && updates.whatsapp === undefined) updates.whatsapp = newWhats;
@@ -1272,10 +1249,7 @@ function normalizeParamsForSpecialist(
     const flatPhone = pick(params, "telefone", "phone");
     const flatEmail = pick(params, "email");
 
-    const assignFlat = (
-      value: unknown,
-      key: "name" | "whatsapp" | "phone" | "email",
-    ) => {
+    const assignFlat = (value: unknown, key: "name" | "whatsapp" | "phone" | "email") => {
       if (value === undefined) return;
       // Se já foi capturado como update explícito ou já está no locator, ignora.
       if (updates[key] !== undefined || locator[key] !== undefined) return;
@@ -1301,11 +1275,7 @@ async function runCoordinationMotor(
   const intent = preIntent ?? (await extractActionIntent(userMessage, history));
   if (!intent) return null;
 
-  const normalizedParams = normalizeParamsForSpecialist(
-    intent.entity,
-    intent.operation,
-    intent.params,
-  );
+  const normalizedParams = normalizeParamsForSpecialist(intent.entity, intent.operation, intent.params);
 
   // Validação semântica: editar contato exige locator e updates preenchidos.
   const entId = String(intent.entity ?? "").toLowerCase();
@@ -1313,12 +1283,8 @@ async function runCoordinationMotor(
   if ((entId === "contato" || entId === "contatos") && op === "editar") {
     const locator = (normalizedParams.locator ?? {}) as Record<string, unknown>;
     const updates = (normalizedParams.updates ?? {}) as Record<string, unknown>;
-    const locatorFilled = Object.values(locator).some(
-      (v) => v !== undefined && v !== null && String(v).trim() !== "",
-    );
-    const updatesFilled = Object.values(updates).some(
-      (v) => v !== undefined && v !== null && String(v).trim() !== "",
-    );
+    const locatorFilled = Object.values(locator).some((v) => v !== undefined && v !== null && String(v).trim() !== "");
+    const updatesFilled = Object.values(updates).some((v) => v !== undefined && v !== null && String(v).trim() !== "");
     if (!locatorFilled || !updatesFilled) {
       return {
         status: "invalid_request",
@@ -1454,12 +1420,15 @@ function readPcContext(text: string): Record<string, unknown> | null {
 
 /** Regex ESTRITAS: exigem que a mensagem inteira seja o token de resposta
  *  (opcionalmente com pontuação). Frases como "sim, quero listar" NÃO batem. */
-const STRICT_AFFIRMATIVE_RE = /^(sim|s|ok|okay|confirmar|confirmo|confirma|confirmado|pode|prossiga|prossegue|prossegue\s+por\s+favor|isso|isso\s+mesmo|executar|executa)[.!]*$/i;
-const STRICT_CANCEL_RE = /^(n[aã]o|n|cancelar|cancela|cancele|abortar|aborta|desistir|desisto|parar|para|deixa|deixe\s+pra\s+la)[.!]*$/i;
+const STRICT_AFFIRMATIVE_RE =
+  /^(sim|s|ok|okay|confirmar|confirmo|confirma|confirmado|pode|prossiga|prossegue|prossegue\s+por\s+favor|isso|isso\s+mesmo|executar|executa)[.!]*$/i;
+const STRICT_CANCEL_RE =
+  /^(n[aã]o|n|cancelar|cancela|cancele|abortar|aborta|desistir|desisto|parar|para|deixa|deixe\s+pra\s+la)[.!]*$/i;
 
 /** Verbos operacionais que, quando iniciam a mensagem, DEVEM ser interpretados
  *  como um novo comando e substituir qualquer contexto pendente. */
-const OPERATIONAL_VERB_RE = /^(criar|crie|cadastrar|cadastre|listar|liste|mostrar|mostre|pesquisar|pesquise|buscar|busque|consultar|consulte|editar|edite|alterar|altere|excluir|exclua|apagar|apague|deletar|delete|remover|remova|abrir|abra)\b/;
+const OPERATIONAL_VERB_RE =
+  /^(criar|crie|cadastrar|cadastre|listar|liste|mostrar|mostre|pesquisar|pesquise|buscar|busque|consultar|consulte|editar|edite|alterar|altere|excluir|exclua|apagar|apague|deletar|delete|remover|remova|abrir|abra)\b/;
 
 function normalizeText(s: unknown): string {
   return String(s ?? "")
@@ -1472,7 +1441,10 @@ function normalizeText(s: unknown): string {
 
 /** Emite um pc-context terminal — sinaliza que a pendência anterior foi encerrada
  *  (cancelada / completada / superseded) e NÃO deve ser reativada em turnos futuros. */
-function terminalPcContext(state: "cancelled" | "completed" | "superseded", extra: Record<string, unknown> = {}): string {
+function terminalPcContext(
+  state: "cancelled" | "completed" | "superseded",
+  extra: Record<string, unknown> = {},
+): string {
   return pcContext({ type: "terminal", state, ...extra });
 }
 
@@ -1495,7 +1467,6 @@ type Continuity =
   | { kind: "passthrough"; supersede?: string }
   | { kind: "intent"; intent: IntentPayload }
   | { kind: "local"; text: string };
-
 
 function intentFromOption(
   opt: { index?: number; id?: string; name?: string },
@@ -1538,7 +1509,7 @@ function reducedAmbiguity(
     text: [
       `🔎 Ainda há mais de um ${entityName} correspondendo à sua escolha:`,
       "",
-      ...lines,
+      lines.join("\n\n"),
       "",
       `Digite o número ou o nome exato do ${entityName}.`,
       ctxComment,
@@ -1629,7 +1600,9 @@ function resolveConversationContinuity(
 
   if (type === "ambiguous") {
     const options = (Array.isArray(pending.options) ? pending.options : []) as Array<{
-      index?: number; id?: string; name?: string;
+      index?: number;
+      id?: string;
+      name?: string;
     }>;
     if (options.length === 0) return { kind: "passthrough" };
 
@@ -1644,11 +1617,20 @@ function resolveConversationContinuity(
 
     // (2) Ordinais isolados.
     const ordinals: Record<string, number> = {
-      "primeiro": 1, "primeira": 1, "1o": 1, "1a": 1,
-      "segundo": 2, "segunda": 2, "2o": 2, "2a": 2,
-      "terceiro": 3, "terceira": 3,
-      "quarto": 4, "quarta": 4,
-      "quinto": 5, "quinta": 5,
+      primeiro: 1,
+      primeira: 1,
+      "1o": 1,
+      "1a": 1,
+      segundo: 2,
+      segunda: 2,
+      "2o": 2,
+      "2a": 2,
+      terceiro: 3,
+      terceira: 3,
+      quarto: 4,
+      quarta: 4,
+      quinto: 5,
+      quinta: 5,
     };
     const ordKey = userNorm.replace(/^(o|a)\s+/, "");
     if (ordinals[ordKey]) {
@@ -1676,7 +1658,6 @@ function resolveConversationContinuity(
   return { kind: "passthrough" };
 }
 
-
 /** Wrapper legado: só devolve intent (usado dentro de extractActionIntent
  *  como defesa em profundidade). Local/cancel são tratados no handler. */
 function resolveFromPcContext(
@@ -1688,7 +1669,6 @@ function resolveFromPcContext(
   if (r.kind === "local") return "cancel"; // impede fallback ao LLM
   return null;
 }
-
 
 function formatMotorBlock(resp: CoordinationResponse | null): string {
   if (!resp) return "";
@@ -1722,9 +1702,7 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
     if (/n[ãa]o\s+encontrad/i.test(err)) {
       const p: any = resp.planned_action?.params ?? {};
       const loc: any = p.locator ?? p;
-      const term =
-        loc?.name ?? loc?.nome ?? loc?.title ?? loc?.search ?? loc?.query ??
-        p?.search ?? p?.query ?? null;
+      const term = loc?.name ?? loc?.nome ?? loc?.title ?? loc?.search ?? loc?.query ?? p?.search ?? p?.query ?? null;
       const termTxt = term ? ` para "${String(term).trim()}"` : "";
       return `📭 Nenhum ${entityName} encontrado${termTxt}.\nVerifique o nome ou tente outra busca.\n`;
     }
@@ -1766,9 +1744,7 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
   // --- Confirmação após alvo definido (excluir sem confirm) ------------
   if (data && data.confirmation_required === true && data.target) {
     const t = data.target;
-    const verbo = operation === "excluir" ? "excluir"
-      : operation === "editar" ? "alterar"
-      : operation;
+    const verbo = operation === "excluir" ? "excluir" : operation === "editar" ? "alterar" : operation;
     const targetLabel = rowName(t, entityName);
     // Cache local do nome — usado só na resposta de sucesso posterior.
     if (t?.id && targetLabel) chosenNameByTargetId.set(String(t.id), targetLabel);
@@ -1793,7 +1769,6 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
     ].join("\n");
   }
 
-
   // --- Listar / Pesquisar: resumo com top itens ------------------------
   if ((operation === "listar" || operation === "pesquisar") && data && Array.isArray(data.items)) {
     const items: any[] = data.items;
@@ -1804,13 +1779,7 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
     const shown = items.slice(0, 10);
     const lines = shown.map((row, i) => `${i + 1}. ${describeRow(row, entityName)}`);
     const more = total > shown.length ? `\n… e mais ${total - shown.length} registro(s).` : "";
-    return [
-      `📋 **${total}** ${entityName}(s) encontrado(s):`,
-      "",
-      ...lines,
-      more,
-      "",
-    ].join("\n");
+    return [`📋 **${total}** ${entityName}(s) encontrado(s):`, "", ...lines, more, ""].join("\n");
   }
 
   // --- Sucesso genérico (criar / editar / consultar / excluir) ---------
@@ -1836,7 +1805,9 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
   const moduleIdOk = resp.suggested_specialist?.module_id;
   const entityIdOk = resp.suggested_specialist?.entity_id ?? entityName;
   const terminal = terminalPcContext("completed", {
-    module: moduleIdOk, entity: entityIdOk, operation,
+    module: moduleIdOk,
+    entity: entityIdOk,
+    operation,
   });
 
   if (operation === "consultar") {
@@ -1885,4 +1856,3 @@ function prependSSEText(text: string, upstream: ReadableStream<Uint8Array>): Rea
     },
   });
 }
-
