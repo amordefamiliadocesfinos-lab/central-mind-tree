@@ -100,6 +100,7 @@ export function RoutineAlertOverlay() {
       .select('*')
       .eq('date', today)
       .eq('status', 'pendente')
+      .eq('is_active', true)
       .order('planned_start', { ascending: true });
     if (error || !data) return;
 

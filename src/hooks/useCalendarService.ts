@@ -44,6 +44,7 @@ export function useCalendarService() {
       supabase
         .from('routine_blocks')
         .select('id, title, date, status')
+        .eq('is_active', true)
         .gte('date', startDate)
         .lte('date', endDate),
       
@@ -165,6 +166,7 @@ export function useCalendarService() {
       supabase
         .from('routine_blocks')
         .select('id, title, date, status')
+        .eq('is_active', true)
         .eq('date', date),
       
       supabase

@@ -164,10 +164,10 @@ export function MTManagerDialog({ open, onOpenChange, onChanged }: Props) {
   };
 
   const remove = async (id: string) => {
-    if (!confirm('Excluir esta MT?')) return;
-    const { error } = await supabase.from('routine_mts' as any).delete().eq('id', id);
-    if (error) { toast.error('Erro ao excluir'); return; }
-    toast.success('MT excluída');
+    if (!confirm('Arquivar esta MT?')) return;
+    const { error } = await supabase.from('routine_mts' as any).update({ is_active: false }).eq('id', id);
+    if (error) { toast.error('Erro ao arquivar'); return; }
+    toast.success('MT arquivada');
     onChanged?.();
     load();
   };
@@ -295,7 +295,7 @@ export function MTManagerDialog({ open, onOpenChange, onChanged }: Props) {
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => duplicate(mt)} title="Duplicar">
                           <Copy className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => remove(mt.id)} title="Excluir">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => remove(mt.id)} title="Arquivar">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </CardContent>
