@@ -106,6 +106,7 @@ function AnimatedRoutes() {
           <Route path="/metas" element={<Metas />} />
           <Route path="/oportunidades" element={<Oportunidades />} />
           <Route path="/nucleo" element={<Nucleo />} />
+          <Route path="/captura" element={<CapturaCentral />} />
           <Route path="/task/:id" element={<TaskEdit />} />
           <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
           <Route path="*" element={<NotFound />} />
