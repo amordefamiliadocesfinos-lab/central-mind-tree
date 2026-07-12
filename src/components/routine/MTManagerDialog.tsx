@@ -164,10 +164,10 @@ export function MTManagerDialog({ open, onOpenChange, onChanged }: Props) {
   };
 
   const remove = async (id: string) => {
-    if (!confirm('Excluir esta MT?')) return;
-    const { error } = await supabase.from('routine_mts' as any).delete().eq('id', id);
-    if (error) { toast.error('Erro ao excluir'); return; }
-    toast.success('MT excluída');
+    if (!confirm('Arquivar esta MT?')) return;
+    const { error } = await supabase.from('routine_mts' as any).update({ is_active: false }).eq('id', id);
+    if (error) { toast.error('Erro ao arquivar'); return; }
+    toast.success('MT arquivada');
     onChanged?.();
     load();
   };
