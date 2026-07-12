@@ -1,24 +1,33 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useNotifications } from './useNotifications';
-import { useActiveUser } from './useActiveUser';
-import { toast } from 'sonner';
-import { format, addDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth, eachDayOfInterval, parseISO, isToday } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useNotifications } from "./useNotifications";
+import { useActiveUser } from "./useActiveUser";
+import { toast } from "sonner";
+import {
+  format,
+  addDays,
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  parseISO,
+  isToday,
+} from "date-fns";
+import { ptBR } from "date-fns/locale";
 
+export type RecurrenceType = "1h" | "2h" | "4h" | "6h" | "12h" | "daily" | "weekly" | "monthly";
 
-export type RecurrenceType = '1h' | '2h' | '4h' | '6h' | '12h' | 'daily' | 'weekly' | 'monthly';
-
-export const RECURRENCE_OPTIONS: { value: RecurrenceType | ''; label: string }[] = [
-  { value: '', label: 'Sem recorrência' },
-  { value: '1h', label: 'A cada 1 hora' },
-  { value: '2h', label: 'A cada 2 horas' },
-  { value: '4h', label: 'A cada 4 horas' },
-  { value: '6h', label: 'A cada 6 horas' },
-  { value: '12h', label: 'A cada 12 horas' },
-  { value: 'daily', label: 'Diário' },
-  { value: 'weekly', label: 'Semanal' },
-  { value: 'monthly', label: 'Mensal' },
+export const RECURRENCE_OPTIONS: { value: RecurrenceType | ""; label: string }[] = [
+  { value: "", label: "Sem recorrência" },
+  { value: "1h", label: "A cada 1 hora" },
+  { value: "2h", label: "A cada 2 horas" },
+  { value: "4h", label: "A cada 4 horas" },
+  { value: "6h", label: "A cada 6 horas" },
+  { value: "12h", label: "A cada 12 horas" },
+  { value: "daily", label: "Diário" },
+  { value: "weekly", label: "Semanal" },
+  { value: "monthly", label: "Mensal" },
 ];
 
 export interface RoutineBlock {
@@ -29,7 +38,7 @@ export interface RoutineBlock {
   planned_end: string | null;
   actual_start: string | null;
   actual_end: string | null;
-  status: 'pendente' | 'andamento' | 'concluido' | 'pulado';
+  status: "pendente" | "andamento" | "concluido" | "pulado";
   block_type: string;
   focus: string;
   title: string;
@@ -43,30 +52,48 @@ export interface RoutineBlock {
   created_at: string;
 }
 
-
-export function getNextRecurrence(date: string, time: string | null, recurrence: RecurrenceType): { date: string; time: string } {
-  const t = time || '08:00';
+export function getNextRecurrence(
+  date: string,
+  time: string | null,
+  recurrence: RecurrenceType,
+): { date: string; time: string } {
+  const t = time || "08:00";
   const base = parseISO(`${date}T${t}:00`);
   let next: Date;
   switch (recurrence) {
-    case '1h': next = new Date(base.getTime() + 1 * 3600 * 1000); break;
-    case '2h': next = new Date(base.getTime() + 2 * 3600 * 1000); break;
-    case '4h': next = new Date(base.getTime() + 4 * 3600 * 1000); break;
-    case '6h': next = new Date(base.getTime() + 6 * 3600 * 1000); break;
-    case '12h': next = new Date(base.getTime() + 12 * 3600 * 1000); break;
-    case 'daily': next = addDays(base, 1); break;
-    case 'weekly': next = addDays(base, 7); break;
-    case 'monthly': {
+    case "1h":
+      next = new Date(base.getTime() + 1 * 3600 * 1000);
+      break;
+    case "2h":
+      next = new Date(base.getTime() + 2 * 3600 * 1000);
+      break;
+    case "4h":
+      next = new Date(base.getTime() + 4 * 3600 * 1000);
+      break;
+    case "6h":
+      next = new Date(base.getTime() + 6 * 3600 * 1000);
+      break;
+    case "12h":
+      next = new Date(base.getTime() + 12 * 3600 * 1000);
+      break;
+    case "daily":
+      next = addDays(base, 1);
+      break;
+    case "weekly":
+      next = addDays(base, 7);
+      break;
+    case "monthly": {
       const d = new Date(base);
       d.setMonth(d.getMonth() + 1);
       next = d;
       break;
     }
-    default: next = base;
+    default:
+      next = base;
   }
   return {
-    date: format(next, 'yyyy-MM-dd'),
-    time: format(next, 'HH:mm'),
+    date: format(next, "yyyy-MM-dd"),
+    time: format(next, "HH:mm"),
   };
 }
 
@@ -106,18 +133,18 @@ export interface RoutineStats {
 }
 
 export const FOCUS_TYPES = {
-  planejamento: { label: 'Planejamento', color: 'bg-slate-500', icon: '📋' },
-  trabalho_profundo: { label: 'Trabalho Profundo', color: 'bg-red-600', icon: '🔥' },
-  atendimento: { label: 'Atendimento', color: 'bg-blue-500', icon: '📞' },
-  criativo: { label: 'Criativo/Estudo', color: 'bg-purple-500', icon: '🎨' },
-  pessoal: { label: 'Pessoal/Logística', color: 'bg-green-500', icon: '🏠' },
-  buffer: { label: 'Buffer/Imprevistos', color: 'bg-amber-500', icon: '⏳' },
-  pausa: { label: 'Pausa', color: 'bg-emerald-400', icon: '☕' },
-  reuniao: { label: 'Reunião', color: 'bg-cyan-500', icon: '👥' },
+  planejamento: { label: "Planejamento", color: "bg-slate-500", icon: "📋" },
+  trabalho_profundo: { label: "Trabalho Profundo", color: "bg-red-600", icon: "🔥" },
+  atendimento: { label: "Atendimento", color: "bg-blue-500", icon: "📞" },
+  criativo: { label: "Criativo/Estudo", color: "bg-purple-500", icon: "🎨" },
+  pessoal: { label: "Pessoal/Logística", color: "bg-green-500", icon: "🏠" },
+  buffer: { label: "Buffer/Imprevistos", color: "bg-amber-500", icon: "⏳" },
+  pausa: { label: "Pausa", color: "bg-emerald-400", icon: "☕" },
+  reuniao: { label: "Reunião", color: "bg-cyan-500", icon: "👥" },
 } as const;
 
 export type FocusType = keyof typeof FOCUS_TYPES;
-export type ViewMode = 'day' | 'week' | 'month';
+export type ViewMode = "day" | "week" | "month";
 
 interface UseRoutineOptions {
   initialDate?: Date;
@@ -125,8 +152,8 @@ interface UseRoutineOptions {
 }
 
 export function useRoutine(options: UseRoutineOptions = {}) {
-  const { initialDate = new Date(), initialView = 'day' } = options;
-  
+  const { initialDate = new Date(), initialView = "day" } = options;
+
   const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
   const [viewMode, setViewMode] = useState<ViewMode>(initialView);
   const [blocks, setBlocks] = useState<RoutineBlock[]>([]);
@@ -139,12 +166,11 @@ export function useRoutine(options: UseRoutineOptions = {}) {
   const { activeUserId } = useActiveUser();
   const { scheduleNotification, requestPermission, notify } = useNotifications();
 
-
   // Date range based on view mode
   const dateRange = useMemo(() => {
-    if (viewMode === 'day') {
+    if (viewMode === "day") {
       return { start: selectedDate, end: selectedDate };
-    } else if (viewMode === 'week') {
+    } else if (viewMode === "week") {
       return {
         start: startOfWeek(selectedDate, { weekStartsOn: 1 }),
         end: endOfWeek(selectedDate, { weekStartsOn: 1 }),
@@ -163,17 +189,17 @@ export function useRoutine(options: UseRoutineOptions = {}) {
 
   // Fetch blocks for current range
   const fetchBlocks = useCallback(async () => {
-    const startStr = format(dateRange.start, 'yyyy-MM-dd');
-    const endStr = format(dateRange.end, 'yyyy-MM-dd');
+    const startStr = format(dateRange.start, "yyyy-MM-dd");
+    const endStr = format(dateRange.end, "yyyy-MM-dd");
 
     let q = supabase
-      .from('routine_blocks')
-      .select('*')
-      .eq('is_active', true)
-      .gte('date', startStr)
-      .lte('date', endStr)
-      .order('date', { ascending: true })
-      .order('planned_start', { ascending: true });
+      .from("routine_blocks")
+      .select("*")
+      .eq("is_active", true)
+      .gte("date", startStr)
+      .lte("date", endStr)
+      .order("date", { ascending: true })
+      .order("planned_start", { ascending: true });
 
     if (activeUserId) {
       q = q.or(`assigned_user_id.eq.${activeUserId},assigned_user_id.is.null`);
@@ -182,7 +208,7 @@ export function useRoutine(options: UseRoutineOptions = {}) {
     const { data, error } = await q;
 
     if (error) {
-      console.error('Error fetching blocks:', error);
+      console.error("Error fetching blocks:", error);
       return;
     }
 
@@ -190,21 +216,20 @@ export function useRoutine(options: UseRoutineOptions = {}) {
     setBlocks(list);
 
     // Mantém activeBlock somente se ainda existir e estiver "andamento"
-    const active = list.find((b) => b.status === 'andamento');
+    const active = list.find((b) => b.status === "andamento");
     setActiveBlock(active || null);
   }, [dateRange, activeUserId]);
-
 
   // Fetch templates
   const fetchTemplates = useCallback(async () => {
     const { data, error } = await supabase
-      .from('routine_templates')
-      .select('*')
-      .eq('is_active', true)
-      .order('order_index', { ascending: true });
+      .from("routine_templates")
+      .select("*")
+      .eq("is_active", true)
+      .order("order_index", { ascending: true });
 
     if (error) {
-      console.error('Error fetching templates:', error);
+      console.error("Error fetching templates:", error);
       return;
     }
 
@@ -213,14 +238,10 @@ export function useRoutine(options: UseRoutineOptions = {}) {
 
   // Fetch preferences
   const fetchPrefs = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('routine_prefs')
-      .select('*')
-      .limit(1)
-      .maybeSingle();
+    const { data, error } = await supabase.from("routine_prefs").select("*").limit(1).maybeSingle();
 
     if (error) {
-      console.error('Error fetching prefs:', error);
+      console.error("Error fetching prefs:", error);
       return;
     }
 
@@ -235,17 +256,13 @@ export function useRoutine(options: UseRoutineOptions = {}) {
 
   // Fetch stats for range
   const fetchStats = useCallback(async () => {
-    const startStr = format(dateRange.start, 'yyyy-MM-dd');
-    const endStr = format(dateRange.end, 'yyyy-MM-dd');
-    
-    const { data, error } = await supabase
-      .from('routine_stats')
-      .select('*')
-      .gte('date', startStr)
-      .lte('date', endStr);
+    const startStr = format(dateRange.start, "yyyy-MM-dd");
+    const endStr = format(dateRange.end, "yyyy-MM-dd");
+
+    const { data, error } = await supabase.from("routine_stats").select("*").gte("date", startStr).lte("date", endStr);
 
     if (error) {
-      console.error('Error fetching stats:', error);
+      console.error("Error fetching stats:", error);
       return;
     }
 
@@ -253,471 +270,494 @@ export function useRoutine(options: UseRoutineOptions = {}) {
   }, [dateRange]);
 
   // Block actions
-  const startBlock = useCallback(async (blockId: string) => {
-    await requestPermission();
-    
-    const block = blocks.find(b => b.id === blockId);
-    if (!block) {
-      toast.error('Bloco não encontrado');
-      return;
-    }
+  const startBlock = useCallback(
+    async (blockId: string) => {
+      await requestPermission();
 
-    const { error } = await supabase
-      .from('routine_blocks')
-      .update({ 
-        status: 'andamento', 
-        actual_start: new Date().toISOString() 
-      })
-      .eq('id', blockId);
+      const block = blocks.find((b) => b.id === blockId);
+      if (!block) {
+        toast.error("Bloco não encontrado");
+        return;
+      }
 
-    if (error) {
-      toast.error('Erro ao iniciar bloco');
-      return;
-    }
-
-    // Update timer
-    const durationSeconds = block.duration_minutes * 60;
-    const { data: timerData } = await supabase
-      .from('timer_state')
-      .select('id')
-      .limit(1)
-      .maybeSingle();
-
-    if (timerData) {
-      await supabase
-        .from('timer_state')
+      const { error } = await supabase
+        .from("routine_blocks")
         .update({
-          remaining_seconds: durationSeconds,
-          status: 'running',
-          last_update: new Date().toISOString(),
+          status: "andamento",
+          actual_start: new Date().toISOString(),
         })
-        .eq('id', timerData.id);
-    }
+        .eq("id", blockId);
 
-    // Schedule notification
-    scheduleNotification(
-      `⏰ Bloco "${block.title}" finalizado!`,
-      durationSeconds * 1000,
-      { body: 'Hora do próximo bloco!' }
-    );
+      if (error) {
+        toast.error("Erro ao iniciar bloco");
+        return;
+      }
 
-    const startTime = format(new Date(), 'HH:mm');
-    toast.success(`▶️ "${block.title}" em andamento`, {
-      description: `Status: Pendente → Em andamento · Iniciado às ${startTime} · Duração prevista: ${block.duration_minutes} min`,
-      duration: 4000,
-    });
-    fetchBlocks();
-  }, [blocks, fetchBlocks, requestPermission, scheduleNotification]);
+      // Update timer
+      const durationSeconds = block.duration_minutes * 60;
+      const { data: timerData } = await supabase.from("timer_state").select("id").limit(1).maybeSingle();
 
-  const completeBlock = useCallback(async (blockId: string) => {
-    const block = blocks.find(b => b.id === blockId);
-    
-    const { error } = await supabase
-      .from('routine_blocks')
-      .update({ 
-        status: 'concluido', 
-        actual_end: new Date().toISOString() 
-      })
-      .eq('id', blockId);
-
-    if (error) {
-      toast.error('Erro ao concluir bloco');
-      return;
-    }
-
-    // Update stats
-    if (block) {
-      const dateStr = block.date;
-      const { data: existingStats } = await supabase
-        .from('routine_stats')
-        .select('*')
-        .eq('date', dateStr)
-        .maybeSingle();
-
-      const focusMinutes = {
-        deep_work_min: block.focus === 'trabalho_profundo' ? block.duration_minutes : 0,
-        atendimento_min: block.focus === 'atendimento' ? block.duration_minutes : 0,
-      };
-
-      if (existingStats) {
+      if (timerData) {
         await supabase
-          .from('routine_stats')
+          .from("timer_state")
           .update({
-            done_min: existingStats.done_min + block.duration_minutes,
-            deep_work_min: existingStats.deep_work_min + focusMinutes.deep_work_min,
-            atendimento_min: existingStats.atendimento_min + focusMinutes.atendimento_min,
+            remaining_seconds: durationSeconds,
+            status: "running",
+            last_update: new Date().toISOString(),
           })
-          .eq('id', existingStats.id);
-      } else {
-        await supabase
-          .from('routine_stats')
-          .insert({
+          .eq("id", timerData.id);
+      }
+
+      // Schedule notification
+      scheduleNotification(`⏰ Bloco "${block.title}" finalizado!`, durationSeconds * 1000, {
+        body: "Hora do próximo bloco!",
+      });
+
+      const startTime = format(new Date(), "HH:mm");
+      toast.success(`▶️ "${block.title}" em andamento`, {
+        description: `Status: Pendente → Em andamento · Iniciado às ${startTime} · Duração prevista: ${block.duration_minutes} min`,
+        duration: 4000,
+      });
+      fetchBlocks();
+    },
+    [blocks, fetchBlocks, requestPermission, scheduleNotification],
+  );
+
+  const completeBlock = useCallback(
+    async (blockId: string) => {
+      const block = blocks.find((b) => b.id === blockId);
+
+      const { error } = await supabase
+        .from("routine_blocks")
+        .update({
+          status: "concluido",
+          actual_end: new Date().toISOString(),
+        })
+        .eq("id", blockId);
+
+      if (error) {
+        toast.error("Erro ao concluir bloco");
+        return;
+      }
+
+      // Update stats
+      if (block) {
+        const dateStr = block.date;
+        const { data: existingStats } = await supabase
+          .from("routine_stats")
+          .select("*")
+          .eq("date", dateStr)
+          .maybeSingle();
+
+        const focusMinutes = {
+          deep_work_min: block.focus === "trabalho_profundo" ? block.duration_minutes : 0,
+          atendimento_min: block.focus === "atendimento" ? block.duration_minutes : 0,
+        };
+
+        if (existingStats) {
+          await supabase
+            .from("routine_stats")
+            .update({
+              done_min: existingStats.done_min + block.duration_minutes,
+              deep_work_min: existingStats.deep_work_min + focusMinutes.deep_work_min,
+              atendimento_min: existingStats.atendimento_min + focusMinutes.atendimento_min,
+            })
+            .eq("id", existingStats.id);
+        } else {
+          await supabase.from("routine_stats").insert({
             date: dateStr,
-            planned_min: blocks.filter(b => b.date === dateStr).reduce((sum, b) => sum + b.duration_minutes, 0),
+            planned_min: blocks.filter((b) => b.date === dateStr).reduce((sum, b) => sum + b.duration_minutes, 0),
             done_min: block.duration_minutes,
             ...focusMinutes,
           });
+        }
       }
-    }
 
-    setActiveBlock(null);
+      setActiveBlock(null);
 
-    // Auto-schedule next recurrence
-    if (block?.recurrence) {
-      const next = getNextRecurrence(block.date, block.planned_start, block.recurrence);
-      const { error: recErr } = await supabase.from('routine_blocks').insert({
-        date: next.date,
-        title: block.title,
-        block_type: block.block_type,
-        focus: block.focus,
-        duration_minutes: block.duration_minutes,
-        planned_start: next.time,
-        node_id: block.node_id,
-        task_id: block.task_id,
-        template_id: block.template_id,
-        notes: block.notes,
-        recurrence: block.recurrence,
-        assigned_user_id: block.assigned_user_id ?? null,
-        recurrence_parent_id: block.recurrence_parent_id || block.id,
-        status: 'pendente',
+      // Auto-schedule next recurrence
+      if (block?.recurrence) {
+        const next = getNextRecurrence(block.date, block.planned_start, block.recurrence);
+        const { error: recErr } = await supabase.from("routine_blocks").insert({
+          date: next.date,
+          title: block.title,
+          block_type: block.block_type,
+          focus: block.focus,
+          duration_minutes: block.duration_minutes,
+          planned_start: next.time,
+          node_id: block.node_id,
+          task_id: block.task_id,
+          template_id: block.template_id,
+          notes: block.notes,
+          recurrence: block.recurrence,
+          assigned_user_id: block.assigned_user_id ?? null,
+          recurrence_parent_id: block.recurrence_parent_id || block.id,
+          status: "pendente",
+        });
+        if (!recErr) {
+          toast.info(
+            `🔁 Próxima ocorrência agendada para ${next.date === block.date ? "" : next.date + " "}${next.time}`,
+          );
+        }
+      }
+
+      const endTime = format(new Date(), "HH:mm");
+      let actualMinutes = block?.duration_minutes ?? 0;
+      if (block?.actual_start) {
+        actualMinutes = Math.max(1, Math.round((Date.now() - new Date(block.actual_start).getTime()) / 60000));
+      }
+      const diff = block ? actualMinutes - block.duration_minutes : 0;
+      const diffLabel =
+        diff === 0
+          ? "no tempo previsto"
+          : diff > 0
+            ? `+${diff} min além do previsto`
+            : `${Math.abs(diff)} min antes do previsto`;
+      toast.success(`✅ "${block?.title ?? "Bloco"}" concluído`, {
+        description: `Status: Em andamento → Concluído · Finalizado às ${endTime} · ${actualMinutes} min trabalhados (${diffLabel})`,
+        duration: 5000,
       });
-      if (!recErr) {
-        toast.info(`🔁 Próxima ocorrência agendada para ${next.date === block.date ? '' : next.date + ' '}${next.time}`);
+      fetchBlocks();
+      fetchStats();
+    },
+    [blocks, fetchBlocks, fetchStats],
+  );
+
+  const skipBlock = useCallback(
+    async (blockId: string) => {
+      const block = blocks.find((b) => b.id === blockId);
+      const previousStatus = block?.status === "andamento" ? "Em andamento" : "Pendente";
+
+      const { error } = await supabase.from("routine_blocks").update({ status: "pulado" }).eq("id", blockId);
+
+      if (error) {
+        toast.error("Erro ao pular bloco");
+        return;
       }
-    }
 
-    const endTime = format(new Date(), 'HH:mm');
-    let actualMinutes = block?.duration_minutes ?? 0;
-    if (block?.actual_start) {
-      actualMinutes = Math.max(1, Math.round((Date.now() - new Date(block.actual_start).getTime()) / 60000));
-    }
-    const diff = block ? actualMinutes - block.duration_minutes : 0;
-    const diffLabel = diff === 0 ? 'no tempo previsto' : diff > 0 ? `+${diff} min além do previsto` : `${Math.abs(diff)} min antes do previsto`;
-    toast.success(`✅ "${block?.title ?? 'Bloco'}" concluído`, {
-      description: `Status: Em andamento → Concluído · Finalizado às ${endTime} · ${actualMinutes} min trabalhados (${diffLabel})`,
-      duration: 5000,
-    });
-    fetchBlocks();
-    fetchStats();
-  }, [blocks, fetchBlocks, fetchStats]);
+      toast.info(`⏭️ "${block?.title ?? "Bloco"}" pulado`, {
+        description: `Status: ${previousStatus} → Pulado · Não contabilizado nas estatísticas do dia`,
+        duration: 4000,
+      });
+      fetchBlocks();
+    },
+    [blocks, fetchBlocks],
+  );
 
-  const skipBlock = useCallback(async (blockId: string) => {
-    const block = blocks.find(b => b.id === blockId);
-    const previousStatus = block?.status === 'andamento' ? 'Em andamento' : 'Pendente';
+  const addBlock = useCallback(
+    async (
+      block: Partial<RoutineBlock> & { checklist?: any[]; assigned_user_id?: string | null },
+    ): Promise<boolean> => {
+      const dateStr = block.date || format(selectedDate, "yyyy-MM-dd");
 
-    const { error } = await supabase
-      .from('routine_blocks')
-      .update({ status: 'pulado' })
-      .eq('id', blockId);
+      const { data: createdBlock, error } = await supabase
+        .from("routine_blocks")
+        .insert({
+          date: dateStr,
+          title: block.title || "Novo Bloco",
+          block_type: block.block_type || "foco",
+          focus: block.focus || "trabalho_profundo",
+          duration_minutes: block.duration_minutes || 25,
+          planned_start: block.planned_start,
+          planned_end: block.planned_end,
+          node_id: block.node_id,
+          task_id: block.task_id,
+          template_id: block.template_id,
+          notes: block.notes,
+          checklist: (block.checklist as any) || [],
+          recurrence: block.recurrence || null,
+          recurrence_parent_id: block.recurrence_parent_id || null,
+          status: "pendente",
+          assigned_user_id: block.assigned_user_id !== undefined ? block.assigned_user_id : activeUserId,
+        } as any)
+        .select("id")
+        .single();
 
-    if (error) {
-      toast.error('Erro ao pular bloco');
-      return;
-    }
+      if (error || !createdBlock?.id) {
+        console.error("Erro ao adicionar bloco:", error);
+        toast.error(`Erro ao adicionar bloco${error?.message ? `: ${error.message}` : ""}`);
+        return false;
+      }
 
-    toast.info(`⏭️ "${block?.title ?? 'Bloco'}" pulado`, {
-      description: `Status: ${previousStatus} → Pulado · Não contabilizado nas estatísticas do dia`,
-      duration: 4000,
-    });
-    fetchBlocks();
-  }, [blocks, fetchBlocks]);
+      await fetchBlocks();
+      toast.success("Bloco adicionado!");
+      return true;
+    },
+    [selectedDate, fetchBlocks, activeUserId],
+  );
 
-  const addBlock = useCallback(async (block: Partial<RoutineBlock> & { checklist?: any[]; assigned_user_id?: string | null }) => {
-    const dateStr = block.date || format(selectedDate, 'yyyy-MM-dd');
-
-    const { error } = await supabase
-      .from('routine_blocks')
-      .insert({
-        date: dateStr,
-        title: block.title || 'Novo Bloco',
-        block_type: block.block_type || 'foco',
-        focus: block.focus || 'trabalho_profundo',
-        duration_minutes: block.duration_minutes || 25,
-        planned_start: block.planned_start,
-        planned_end: block.planned_end,
-        node_id: block.node_id,
-        task_id: block.task_id,
-        template_id: block.template_id,
-        notes: block.notes,
-        checklist: (block.checklist as any) || [],
-        recurrence: block.recurrence || null,
-        recurrence_parent_id: block.recurrence_parent_id || null,
-        status: 'pendente',
-        assigned_user_id: block.assigned_user_id !== undefined ? block.assigned_user_id : activeUserId,
-      } as any);
-
-    if (error) {
-      toast.error('Erro ao adicionar bloco');
-      return;
-    }
-
-    toast.success('Bloco adicionado!');
-    fetchBlocks();
-  }, [selectedDate, fetchBlocks, activeUserId]);
-
-
-  const pauseBlock = useCallback(async (blockId: string) => {
-    const { error } = await supabase
-      .from('routine_blocks')
-      .update({ status: 'pendente', actual_start: null })
-      .eq('id', blockId);
-    if (error) { toast.error('Erro ao pausar'); return; }
-    setActiveBlock(null);
-    toast.info('⏸️ Bloco pausado');
-    fetchBlocks();
-  }, [fetchBlocks]);
-
-
-  const updateBlock = useCallback(async (blockId: string, updates: Partial<RoutineBlock>) => {
-    const { error } = await supabase
-      .from('routine_blocks')
-      .update(updates)
-      .eq('id', blockId);
-
-    if (error) {
-      toast.error('Erro ao atualizar bloco');
-      return;
-    }
-
-    toast.success('Bloco atualizado');
-    fetchBlocks();
-  }, [fetchBlocks]);
-
-  const deleteBlock = useCallback(async (blockId: string) => {
-    const block = blocks.find(b => b.id === blockId);
-    const wasRunning = block?.status === 'andamento';
-
-    const { error } = await supabase
-      .from('routine_blocks')
-      .update({ is_active: false })
-      .eq('id', blockId);
-
-    if (error) {
-      toast.error('Erro ao arquivar bloco');
-      return;
-    }
-
-    if (wasRunning) {
-      const { data: timerData } = await supabase
-        .from('timer_state')
-        .select('id')
-        .limit(1)
-        .maybeSingle();
-      if (timerData) {
-        await supabase
-          .from('timer_state')
-          .update({
-            status: 'idle',
-            remaining_seconds: 0,
-            last_update: new Date().toISOString(),
-          })
-          .eq('id', timerData.id);
+  const pauseBlock = useCallback(
+    async (blockId: string) => {
+      const { error } = await supabase
+        .from("routine_blocks")
+        .update({ status: "pendente", actual_start: null })
+        .eq("id", blockId);
+      if (error) {
+        toast.error("Erro ao pausar");
+        return;
       }
       setActiveBlock(null);
-    }
+      toast.info("⏸️ Bloco pausado");
+      fetchBlocks();
+    },
+    [fetchBlocks],
+  );
 
-    toast.success('Bloco arquivado');
-    fetchBlocks();
-  }, [blocks, fetchBlocks]);
+  const updateBlock = useCallback(
+    async (blockId: string, updates: Partial<RoutineBlock>) => {
+      const { error } = await supabase.from("routine_blocks").update(updates).eq("id", blockId);
 
-  const reorderBlocks = useCallback(async (reorderedBlocks: RoutineBlock[]) => {
-    // Update order based on new positions (paralelizado)
-    const updates = reorderedBlocks.map((block, index) => ({
-      id: block.id,
-      planned_start: calculateNewStartTime(index, reorderedBlocks),
-    }));
+      if (error) {
+        toast.error("Erro ao atualizar bloco");
+        return;
+      }
 
-    const results = await Promise.all(
-      updates.map((u) =>
-        supabase
-          .from('routine_blocks')
-          .update({ planned_start: u.planned_start })
-          .eq('id', u.id)
-      )
-    );
+      toast.success("Bloco atualizado");
+      fetchBlocks();
+    },
+    [fetchBlocks],
+  );
 
-    const failed = results.filter((r) => r.error).length;
-    if (failed > 0) {
-      toast.error(`Falha ao reordenar ${failed} bloco(s)`);
-    }
+  const deleteBlock = useCallback(
+    async (blockId: string) => {
+      const block = blocks.find((b) => b.id === blockId);
+      const wasRunning = block?.status === "andamento";
 
-    fetchBlocks();
-  }, [fetchBlocks]);
+      const { error } = await supabase.from("routine_blocks").update({ is_active: false }).eq("id", blockId);
+
+      if (error) {
+        toast.error("Erro ao arquivar bloco");
+        return;
+      }
+
+      if (wasRunning) {
+        const { data: timerData } = await supabase.from("timer_state").select("id").limit(1).maybeSingle();
+        if (timerData) {
+          await supabase
+            .from("timer_state")
+            .update({
+              status: "idle",
+              remaining_seconds: 0,
+              last_update: new Date().toISOString(),
+            })
+            .eq("id", timerData.id);
+        }
+        setActiveBlock(null);
+      }
+
+      toast.success("Bloco arquivado");
+      fetchBlocks();
+    },
+    [blocks, fetchBlocks],
+  );
+
+  const reorderBlocks = useCallback(
+    async (reorderedBlocks: RoutineBlock[]) => {
+      // Update order based on new positions (paralelizado)
+      const updates = reorderedBlocks.map((block, index) => ({
+        id: block.id,
+        planned_start: calculateNewStartTime(index, reorderedBlocks),
+      }));
+
+      const results = await Promise.all(
+        updates.map((u) => supabase.from("routine_blocks").update({ planned_start: u.planned_start }).eq("id", u.id)),
+      );
+
+      const failed = results.filter((r) => r.error).length;
+      if (failed > 0) {
+        toast.error(`Falha ao reordenar ${failed} bloco(s)`);
+      }
+
+      fetchBlocks();
+    },
+    [fetchBlocks],
+  );
 
   // Auto-plan day
-  const autoPlanDay = useCallback(async (dateStr?: string | Date) => {
-    const targetDate = (typeof dateStr === 'string')
-      ? dateStr
-      : (dateStr instanceof Date ? format(dateStr, 'yyyy-MM-dd') : format(selectedDate, 'yyyy-MM-dd'));
-    
-    // Clear existing auto-planned pending blocks for the day (técnico)
-    const { error: deleteError } = await supabase
-      .from('routine_blocks')
-      .delete()
-      .eq('date', targetDate)
-      .eq('status', 'pendente')
-      .eq('is_active', true)
-      .ilike('notes', '%planejamento:auto%');
+  const autoPlanDay = useCallback(
+    async (dateStr?: string | Date) => {
+      const targetDate =
+        typeof dateStr === "string"
+          ? dateStr
+          : dateStr instanceof Date
+            ? format(dateStr, "yyyy-MM-dd")
+            : format(selectedDate, "yyyy-MM-dd");
 
-    if (deleteError) {
-      console.error('Error clearing blocks:', deleteError);
-    }
+      // Clear existing auto-planned pending blocks for the day (técnico)
+      const { error: deleteError } = await supabase
+        .from("routine_blocks")
+        .delete()
+        .eq("date", targetDate)
+        .eq("status", "pendente")
+        .eq("is_active", true)
+        .ilike("notes", "%planejamento:auto%");
 
-    // Get templates or use default schedule
-    let schedule: Array<{ focus: FocusType; title: string; duration: number; start: string }>;
-    
-    if (templates.length > 0) {
-      schedule = templates.map(t => ({
-        focus: (t.focus as FocusType) || 'trabalho_profundo',
-        title: t.title,
-        duration: t.duration_minutes,
-        start: t.start_time || '08:00',
-      }));
-    } else {
-      // Default schedule based on heuristics
-      schedule = [
-        { focus: 'planejamento', title: 'Planejamento do Dia', duration: 30, start: '08:00' },
-        { focus: 'trabalho_profundo', title: 'Trabalho Profundo 1', duration: 90, start: '08:30' },
-        { focus: 'pausa', title: 'Pausa', duration: 15, start: '10:00' },
-        { focus: 'trabalho_profundo', title: 'Trabalho Profundo 2', duration: 90, start: '10:15' },
-        { focus: 'pausa', title: 'Almoço', duration: 60, start: '11:45' },
-        { focus: 'atendimento', title: 'Atendimento/Operacional', duration: 120, start: '12:45' },
-        { focus: 'pausa', title: 'Pausa', duration: 15, start: '14:45' },
-        { focus: 'criativo', title: 'Criativo/Estudo', duration: 90, start: '15:00' },
-        { focus: 'buffer', title: 'Buffer/Imprevistos', duration: 30, start: '16:30' },
-      ];
-    }
+      if (deleteError) {
+        console.error("Error clearing blocks:", deleteError);
+      }
 
-    const newBlocks = schedule.map(item => ({
-      date: targetDate,
-      title: item.title,
-      block_type: 'foco',
-      focus: item.focus,
-      duration_minutes: item.duration,
-      planned_start: item.start,
-      status: 'pendente',
-      notes: 'planejamento:auto',
-    }));
+      // Get templates or use default schedule
+      let schedule: Array<{ focus: FocusType; title: string; duration: number; start: string }>;
 
-    const { error } = await supabase
-      .from('routine_blocks')
-      .insert(newBlocks);
+      if (templates.length > 0) {
+        schedule = templates.map((t) => ({
+          focus: (t.focus as FocusType) || "trabalho_profundo",
+          title: t.title,
+          duration: t.duration_minutes,
+          start: t.start_time || "08:00",
+        }));
+      } else {
+        // Default schedule based on heuristics
+        schedule = [
+          { focus: "planejamento", title: "Planejamento do Dia", duration: 30, start: "08:00" },
+          { focus: "trabalho_profundo", title: "Trabalho Profundo 1", duration: 90, start: "08:30" },
+          { focus: "pausa", title: "Pausa", duration: 15, start: "10:00" },
+          { focus: "trabalho_profundo", title: "Trabalho Profundo 2", duration: 90, start: "10:15" },
+          { focus: "pausa", title: "Almoço", duration: 60, start: "11:45" },
+          { focus: "atendimento", title: "Atendimento/Operacional", duration: 120, start: "12:45" },
+          { focus: "pausa", title: "Pausa", duration: 15, start: "14:45" },
+          { focus: "criativo", title: "Criativo/Estudo", duration: 90, start: "15:00" },
+          { focus: "buffer", title: "Buffer/Imprevistos", duration: 30, start: "16:30" },
+        ];
+      }
 
-    if (error) {
-      toast.error('Erro ao gerar rotina');
-      return;
-    }
-
-    // Update stats
-    const totalPlanned = newBlocks.reduce((sum, b) => sum + b.duration_minutes, 0);
-    await supabase
-      .from('routine_stats')
-      .upsert({
+      const newBlocks = schedule.map((item) => ({
         date: targetDate,
-        planned_min: totalPlanned,
-        done_min: 0,
-        deep_work_min: 0,
-        atendimento_min: 0,
-        context_switches: 0,
-      }, { onConflict: 'date' });
+        title: item.title,
+        block_type: "foco",
+        focus: item.focus,
+        duration_minutes: item.duration,
+        planned_start: item.start,
+        status: "pendente",
+        notes: "planejamento:auto",
+      }));
 
-    toast.success('Dia planejado! 🎯');
-    fetchBlocks();
-    fetchStats();
-  }, [selectedDate, templates, fetchBlocks, fetchStats]);
+      const { error } = await supabase.from("routine_blocks").insert(newBlocks);
+
+      if (error) {
+        toast.error("Erro ao gerar rotina");
+        return;
+      }
+
+      // Update stats
+      const totalPlanned = newBlocks.reduce((sum, b) => sum + b.duration_minutes, 0);
+      await supabase.from("routine_stats").upsert(
+        {
+          date: targetDate,
+          planned_min: totalPlanned,
+          done_min: 0,
+          deep_work_min: 0,
+          atendimento_min: 0,
+          context_switches: 0,
+        },
+        { onConflict: "date" },
+      );
+
+      toast.success("Dia planejado! 🎯");
+      fetchBlocks();
+      fetchStats();
+    },
+    [selectedDate, templates, fetchBlocks, fetchStats],
+  );
 
   // Auto-plan week
   const autoPlanWeek = useCallback(async () => {
     const weekDays = eachDayOfInterval({
       start: startOfWeek(selectedDate, { weekStartsOn: 1 }),
       end: endOfWeek(selectedDate, { weekStartsOn: 1 }),
-    }).filter(d => d.getDay() !== 0 && d.getDay() !== 6); // Exclude weekends
+    }).filter((d) => d.getDay() !== 0 && d.getDay() !== 6); // Exclude weekends
 
     for (const day of weekDays) {
-      await autoPlanDay(format(day, 'yyyy-MM-dd'));
+      await autoPlanDay(format(day, "yyyy-MM-dd"));
     }
 
-    toast.success('Semana planejada! 📅');
+    toast.success("Semana planejada! 📅");
   }, [selectedDate, autoPlanDay]);
 
   // Push blocks forward
-  const pushBlocksForward = useCallback(async (minutes: number = 15) => {
-    const todayStr = format(selectedDate, 'yyyy-MM-dd');
-    const pendingBlocks = blocks
-      .filter(b => b.date === todayStr && b.status === 'pendente')
-      .sort((a, b) => (a.planned_start || '').localeCompare(b.planned_start || ''));
+  const pushBlocksForward = useCallback(
+    async (minutes: number = 15) => {
+      const todayStr = format(selectedDate, "yyyy-MM-dd");
+      const pendingBlocks = blocks
+        .filter((b) => b.date === todayStr && b.status === "pendente")
+        .sort((a, b) => (a.planned_start || "").localeCompare(b.planned_start || ""));
 
-    const updates = pendingBlocks
-      .filter(b => b.planned_start)
-      .map((block) => {
-        const [hours, mins] = block.planned_start!.split(':').map(Number);
-        const totalMins = Math.min(hours * 60 + mins + minutes, 23 * 60 + 59);
-        const newHours = Math.floor(totalMins / 60);
-        const finalMins = totalMins % 60;
-        const newTime = `${String(newHours).padStart(2, '0')}:${String(finalMins).padStart(2, '0')}`;
-        return supabase
-          .from('routine_blocks')
-          .update({ planned_start: newTime })
-          .eq('id', block.id);
-      });
+      const updates = pendingBlocks
+        .filter((b) => b.planned_start)
+        .map((block) => {
+          const [hours, mins] = block.planned_start!.split(":").map(Number);
+          const totalMins = Math.min(hours * 60 + mins + minutes, 23 * 60 + 59);
+          const newHours = Math.floor(totalMins / 60);
+          const finalMins = totalMins % 60;
+          const newTime = `${String(newHours).padStart(2, "0")}:${String(finalMins).padStart(2, "0")}`;
+          return supabase.from("routine_blocks").update({ planned_start: newTime }).eq("id", block.id);
+        });
 
-    await Promise.all(updates);
+      await Promise.all(updates);
 
-    toast.success(`Blocos empurrados +${minutes}min`);
-    fetchBlocks();
-  }, [selectedDate, blocks, fetchBlocks]);
+      toast.success(`Blocos empurrados +${minutes}min`);
+      fetchBlocks();
+    },
+    [selectedDate, blocks, fetchBlocks],
+  );
 
   // Get blocks by day
-  const getBlocksByDay = useCallback((date: Date) => {
-    const dateStr = format(date, 'yyyy-MM-dd');
-    return blocks.filter(b => b.date === dateStr);
-  }, [blocks]);
+  const getBlocksByDay = useCallback(
+    (date: Date) => {
+      const dateStr = format(date, "yyyy-MM-dd");
+      return blocks.filter((b) => b.date === dateStr);
+    },
+    [blocks],
+  );
 
   // Calculate KPIs for a day
-  const getDayKPIs = useCallback((date: Date) => {
-    const dayBlocks = getBlocksByDay(date);
-    const completed = dayBlocks.filter(b => b.status === 'concluido');
-    const skipped = dayBlocks.filter(b => b.status === 'pulado');
-    
-    const plannedMinutes = dayBlocks.reduce((acc, b) => acc + b.duration_minutes, 0);
-    const executedMinutes = completed.reduce((acc, b) => acc + b.duration_minutes, 0);
-    
-    const byFocus: Record<string, { planned: number; done: number }> = {};
-    dayBlocks.forEach(b => {
-      const focus = b.focus || 'trabalho_profundo';
-      if (!byFocus[focus]) byFocus[focus] = { planned: 0, done: 0 };
-      byFocus[focus].planned += b.duration_minutes;
-      if (b.status === 'concluido') byFocus[focus].done += b.duration_minutes;
-    });
+  const getDayKPIs = useCallback(
+    (date: Date) => {
+      const dayBlocks = getBlocksByDay(date);
+      const completed = dayBlocks.filter((b) => b.status === "concluido");
+      const skipped = dayBlocks.filter((b) => b.status === "pulado");
 
-    return {
-      totalBlocks: dayBlocks.length,
-      completed: completed.length,
-      skipped: skipped.length,
-      plannedMinutes,
-      executedMinutes,
-      adherence: plannedMinutes > 0 ? Math.round((executedMinutes / plannedMinutes) * 100) : 0,
-      byFocus,
-      deepWorkTarget: prefs?.capacity_targets?.deep_work_min || 180,
-      atendimentoTarget: prefs?.capacity_targets?.atendimento_min || 120,
-      deepWorkDone: byFocus.trabalho_profundo?.done || 0,
-      atendimentoDone: byFocus.atendimento?.done || 0,
-    };
-  }, [getBlocksByDay, prefs]);
+      const plannedMinutes = dayBlocks.reduce((acc, b) => acc + b.duration_minutes, 0);
+      const executedMinutes = completed.reduce((acc, b) => acc + b.duration_minutes, 0);
+
+      const byFocus: Record<string, { planned: number; done: number }> = {};
+      dayBlocks.forEach((b) => {
+        const focus = b.focus || "trabalho_profundo";
+        if (!byFocus[focus]) byFocus[focus] = { planned: 0, done: 0 };
+        byFocus[focus].planned += b.duration_minutes;
+        if (b.status === "concluido") byFocus[focus].done += b.duration_minutes;
+      });
+
+      return {
+        totalBlocks: dayBlocks.length,
+        completed: completed.length,
+        skipped: skipped.length,
+        plannedMinutes,
+        executedMinutes,
+        adherence: plannedMinutes > 0 ? Math.round((executedMinutes / plannedMinutes) * 100) : 0,
+        byFocus,
+        deepWorkTarget: prefs?.capacity_targets?.deep_work_min || 180,
+        atendimentoTarget: prefs?.capacity_targets?.atendimento_min || 120,
+        deepWorkDone: byFocus.trabalho_profundo?.done || 0,
+        atendimentoDone: byFocus.atendimento?.done || 0,
+      };
+    },
+    [getBlocksByDay, prefs],
+  );
 
   // Calculate week summary
   const weekSummary = useMemo(() => {
     const summary: Record<FocusType, { planned: number; done: number }> = {} as any;
-    
-    Object.keys(FOCUS_TYPES).forEach(focus => {
+
+    Object.keys(FOCUS_TYPES).forEach((focus) => {
       summary[focus as FocusType] = { planned: 0, done: 0 };
     });
 
-    blocks.forEach(block => {
-      const focus = (block.focus || 'trabalho_profundo') as FocusType;
+    blocks.forEach((block) => {
+      const focus = (block.focus || "trabalho_profundo") as FocusType;
       if (summary[focus]) {
         summary[focus].planned += block.duration_minutes;
-        if (block.status === 'concluido') {
+        if (block.status === "concluido") {
           summary[focus].done += block.duration_minutes;
         }
       }
@@ -725,9 +765,9 @@ export function useRoutine(options: UseRoutineOptions = {}) {
 
     const totalPlanned = Object.values(summary).reduce((sum, v) => sum + v.planned, 0);
     const totalDone = Object.values(summary).reduce((sum, v) => sum + v.done, 0);
-    const consistentDays = daysInRange.filter(d => {
+    const consistentDays = daysInRange.filter((d) => {
       const dayBlocks = getBlocksByDay(d);
-      const completed = dayBlocks.filter(b => b.status === 'concluido').length;
+      const completed = dayBlocks.filter((b) => b.status === "concluido").length;
       return completed >= dayBlocks.length * 0.7; // 70% completion
     }).length;
 
@@ -745,14 +785,13 @@ export function useRoutine(options: UseRoutineOptions = {}) {
   useEffect(() => {
     let mounted = true;
     setLoading(true);
-    Promise.all([fetchTemplates(), fetchPrefs()])
-      .finally(() => {
-        if (mounted) setLoading(false);
-      });
+    Promise.all([fetchTemplates(), fetchPrefs()]).finally(() => {
+      if (mounted) setLoading(false);
+    });
 
     const channel = supabase
-      .channel('routine-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'routine_blocks' }, () => {
+      .channel("routine-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "routine_blocks" }, () => {
         // Refetch usando a referência mais recente via state setter
         fetchBlocksRef.current?.();
       })
@@ -779,21 +818,24 @@ export function useRoutine(options: UseRoutineOptions = {}) {
 
   // Notification poller: alert when a pending block's planned_start arrives
   useEffect(() => {
-    const STORAGE_KEY = 'pc.routine.notified';
+    const STORAGE_KEY = "pc.routine.notified";
     const check = () => {
-      const today = format(new Date(), 'yyyy-MM-dd');
-      const nowHHMM = format(new Date(), 'HH:mm');
-      const notified: Record<string, string> = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+      const today = format(new Date(), "yyyy-MM-dd");
+      const nowHHMM = format(new Date(), "HH:mm");
+      const notified: Record<string, string> = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
       blocks.forEach((b) => {
         if (b.date !== today) return;
-        if (b.status !== 'pendente') return;
+        if (b.status !== "pendente") return;
         if (!b.planned_start) return;
         if (b.planned_start > nowHHMM) return;
         const key = `${b.id}:${b.date}:${b.planned_start}`;
         if (notified[key]) return;
         notify(`⏰ ${b.title}`, { body: `Rotina agendada para ${b.planned_start}` });
         try {
-          toast.warning(`⏰ Rotina pendente: ${b.title}`, { description: `Programada para ${b.planned_start}`, duration: 8000 });
+          toast.warning(`⏰ Rotina pendente: ${b.title}`, {
+            description: `Programada para ${b.planned_start}`,
+            duration: 8000,
+          });
         } catch {}
         notified[key] = new Date().toISOString();
         localStorage.setItem(STORAGE_KEY, JSON.stringify(notified));
@@ -803,7 +845,6 @@ export function useRoutine(options: UseRoutineOptions = {}) {
     const id = setInterval(check, 30000);
     return () => clearInterval(id);
   }, [blocks, notify]);
-
 
   return {
     // State
@@ -819,7 +860,7 @@ export function useRoutine(options: UseRoutineOptions = {}) {
     activeBlock,
     daysInRange,
     dateRange,
-    
+
     // Block actions
     startBlock,
     completeBlock,
@@ -829,12 +870,12 @@ export function useRoutine(options: UseRoutineOptions = {}) {
     deleteBlock,
     pauseBlock,
     reorderBlocks,
-    
+
     // Planning
     autoPlanDay,
     autoPlanWeek,
     pushBlocksForward,
-    
+
     // Helpers
     getBlocksByDay,
     getDayKPIs,
@@ -846,16 +887,16 @@ export function useRoutine(options: UseRoutineOptions = {}) {
 // Helper function to calculate new start time
 function calculateNewStartTime(index: number, blocks: RoutineBlock[]): string {
   if (index === 0) {
-    return blocks[0].planned_start || '08:00';
+    return blocks[0].planned_start || "08:00";
   }
-  
+
   const prevBlock = blocks[index - 1];
-  if (!prevBlock.planned_start) return '08:00';
-  
-  const [hours, mins] = prevBlock.planned_start.split(':').map(Number);
+  if (!prevBlock.planned_start) return "08:00";
+
+  const [hours, mins] = prevBlock.planned_start.split(":").map(Number);
   const totalMins = hours * 60 + mins + prevBlock.duration_minutes;
   const newHours = Math.floor(totalMins / 60);
   const newMins = totalMins % 60;
-  
-  return `${String(newHours).padStart(2, '0')}:${String(newMins).padStart(2, '0')}`;
+
+  return `${String(newHours).padStart(2, "0")}:${String(newMins).padStart(2, "0")}`;
 }
