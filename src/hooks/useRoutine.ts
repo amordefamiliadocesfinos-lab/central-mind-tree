@@ -169,6 +169,7 @@ export function useRoutine(options: UseRoutineOptions = {}) {
     let q = supabase
       .from('routine_blocks')
       .select('*')
+      .eq('is_active', true)
       .gte('date', startStr)
       .lte('date', endStr)
       .order('date', { ascending: true })
