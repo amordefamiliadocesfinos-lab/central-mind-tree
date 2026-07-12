@@ -2166,30 +2166,39 @@ export type Database = {
           color: string
           created_at: string
           id: string
+          is_active: boolean
           is_visible: boolean
           media_urls: Json | null
+          node_type: string | null
           order_index: number
           parent_id: string | null
+          responsible_user_id: string | null
           title: string
         }
         Insert: {
           color: string
           created_at?: string
           id?: string
+          is_active?: boolean
           is_visible?: boolean
           media_urls?: Json | null
+          node_type?: string | null
           order_index?: number
           parent_id?: string | null
+          responsible_user_id?: string | null
           title: string
         }
         Update: {
           color?: string
           created_at?: string
           id?: string
+          is_active?: boolean
           is_visible?: boolean
           media_urls?: Json | null
+          node_type?: string | null
           order_index?: number
           parent_id?: string | null
+          responsible_user_id?: string | null
           title?: string
         }
         Relationships: [
@@ -2198,6 +2207,13 @@ export type Database = {
             columns: ["parent_id"]
             isOneToOne: false
             referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nodes_responsible_user_id_fkey"
+            columns: ["responsible_user_id"]
+            isOneToOne: false
+            referencedRelation: "app_users"
             referencedColumns: ["id"]
           },
         ]

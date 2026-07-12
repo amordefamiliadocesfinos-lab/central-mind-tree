@@ -115,11 +115,26 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange, refr
   const colors = colorMap[node.color];
 
   const handleAddSubnode = async () => {
+    // Descobre o tipo do pai para inferir um tipo válido para o filho
+    const { data: parent } = await supabase
+      .from("nodes")
+      .select("node_type")
+      .eq("id", node.id)
+      .maybeSingle();
+
+    const parentType = (parent as any)?.node_type as string | null | undefined;
+    let childType: "area" | "team" | "function";
+    if (parentType === "root") childType = "area";
+    else if (parentType === "area") childType = "area";
+    else if (parentType === "team") childType = "team";
+    else childType = "area";
+
     const { error } = await supabase.from("nodes").insert({
       parent_id: node.id,
       title: "Novo Nó",
       color: "roxo",
-    });
+      node_type: childType,
+    } as any);
 
     if (error) {
       toast({
@@ -164,21 +179,25 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange, refr
     if (node.parent_id === null) {
       toast({
         variant: "destructive",
-        title: "Não é possível excluir o nó raiz",
+        title: "Não é possível arquivar o nó raiz",
       });
       return;
     }
 
-    const { error } = await supabase.from("nodes").delete().eq("id", node.id);
+    // Arquivamento lógico (sem restaurar) — substitui delete físico
+    const { error } = await supabase
+      .from("nodes")
+      .update({ is_active: false } as any)
+      .eq("id", node.id);
 
     if (error) {
       toast({
         variant: "destructive",
-        title: "Erro ao excluir nó",
+        title: "Erro ao arquivar nó",
         description: error.message,
       });
     } else {
-      toast({ title: "Nó excluído" });
+      toast({ title: "Nó arquivado" });
       onNodeChange();
     }
   };
@@ -366,6 +385,7 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange, refr
                       variant="ghost"
                       className="h-6 w-6 md:h-8 md:w-8 hover:bg-background/20"
                       onClick={handleDelete}
+                      title="Arquivar nó"
                     >
                       <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
                     </Button>

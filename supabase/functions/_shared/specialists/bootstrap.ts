@@ -7,6 +7,7 @@
 // ============================================================================
 
 import "./crm.register.ts";
+import "./organizacao.register.ts";
 
 // Futuros Especialistas — podem usar a Camada Universal Nível 1
 // (../universal/level1.ts) para receber criar/listar/consultar/pesquisar/

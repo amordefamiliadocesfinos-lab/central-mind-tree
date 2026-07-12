@@ -89,6 +89,7 @@ const Index = () => {
       .select("*")
       .is("parent_id", null)
       .eq("is_visible", true)
+      .eq("is_active", true)
       .maybeSingle();
 
     if (error) {

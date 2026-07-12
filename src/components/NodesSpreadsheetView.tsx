@@ -137,6 +137,7 @@ export function NodesSpreadsheetView({ onClose, onNodeClick }: Props) {
         .from("nodes")
         .select("id,parent_id,title,color,is_visible,order_index,created_at,media_urls")
         .eq("is_visible", true)
+        .eq("is_active", true)
         .order("created_at", { ascending: true });
       if (!cancelled) {
         setNodes((data as NodeRow[]) || []);
