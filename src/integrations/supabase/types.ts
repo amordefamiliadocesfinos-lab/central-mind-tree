@@ -3266,6 +3266,7 @@ export type Database = {
           duration_minutes: number
           focus: string | null
           id: string
+          is_active: boolean
           node_id: string | null
           notes: string | null
           planned_end: string | null
@@ -3289,6 +3290,7 @@ export type Database = {
           duration_minutes?: number
           focus?: string | null
           id?: string
+          is_active?: boolean
           node_id?: string | null
           notes?: string | null
           planned_end?: string | null
@@ -3312,6 +3314,7 @@ export type Database = {
           duration_minutes?: number
           focus?: string | null
           id?: string
+          is_active?: boolean
           node_id?: string | null
           notes?: string | null
           planned_end?: string | null
