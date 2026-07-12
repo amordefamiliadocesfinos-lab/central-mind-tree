@@ -19,7 +19,7 @@ import {
   ShoppingCart, FileText, Undo2, Redo2, Home, FileSpreadsheet,
   Users, User, UsersRound, DollarSign, Brain, LayoutDashboard,
   UserPlus, MoreHorizontal, Truck, Settings2, Eye, EyeOff, GraduationCap, Target,
-  Lightbulb,
+  Lightbulb, Inbox,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -52,6 +52,7 @@ const NAV_ITEMS = [
   { path: "/academia", label: "Academia", shortLabel: "Academia", icon: GraduationCap },
   { path: "/metas", label: "Metas", shortLabel: "Metas", icon: Target },
   { path: "/oportunidades", label: "Oportunidades", shortLabel: "Oportunidades", icon: Lightbulb },
+  { path: "/captura", label: "Captura Central", shortLabel: "Captura", icon: Inbox },
 ] as const;
 
 const MOBILE_PRIMARY_PATHS = ["/", "/dashboard", "/foco", "/operacoes", "/rotas"] as const;
