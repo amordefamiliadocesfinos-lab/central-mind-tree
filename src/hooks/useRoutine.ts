@@ -484,19 +484,41 @@ export function useRoutine(options: UseRoutineOptions = {}) {
   }, [fetchBlocks]);
 
   const deleteBlock = useCallback(async (blockId: string) => {
+    const block = blocks.find(b => b.id === blockId);
+    const wasRunning = block?.status === 'andamento';
+
     const { error } = await supabase
       .from('routine_blocks')
-      .delete()
+      .update({ is_active: false })
       .eq('id', blockId);
 
     if (error) {
-      toast.error('Erro ao excluir bloco');
+      toast.error('Erro ao arquivar bloco');
       return;
     }
 
-    toast.success('Bloco excluído');
+    if (wasRunning) {
+      const { data: timerData } = await supabase
+        .from('timer_state')
+        .select('id')
+        .limit(1)
+        .maybeSingle();
+      if (timerData) {
+        await supabase
+          .from('timer_state')
+          .update({
+            status: 'idle',
+            remaining_seconds: 0,
+            last_update: new Date().toISOString(),
+          })
+          .eq('id', timerData.id);
+      }
+      setActiveBlock(null);
+    }
+
+    toast.success('Bloco arquivado');
     fetchBlocks();
-  }, [fetchBlocks]);
+  }, [blocks, fetchBlocks]);
 
   const reorderBlocks = useCallback(async (reorderedBlocks: RoutineBlock[]) => {
     // Update order based on new positions (paralelizado)
