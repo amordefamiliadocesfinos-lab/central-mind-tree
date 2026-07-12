@@ -21,6 +21,9 @@ import { MediaUploader, MediaItem, uploadMedia, loadMediaFromUrls } from "@/comp
 import { SheetList } from "@/components/SheetList";
 import { Save } from "lucide-react";
 
+const ROOT_ID = "d7c76db8-b7e0-4ce1-87ca-21275c346326";
+const NONE = "__none__";
+
 interface Node {
   id: string;
   parent_id: string | null;
@@ -28,6 +31,14 @@ interface Node {
   color: "roxo" | "vermelho" | "amarelo" | "verde";
   is_visible: boolean;
   media_urls?: string[];
+}
+
+type NodeType = "root" | "area" | "team" | "function";
+
+interface AppUserLite {
+  id: string;
+  name: string;
+  is_active: boolean;
 }
 
 interface NodeEditDialogProps {
@@ -46,51 +57,80 @@ export function NodeEditDialog({
   const { toast } = useToast();
   const [title, setTitle] = useState(node.title);
   const [color, setColor] = useState<Node["color"]>(node.color);
+  const [nodeType, setNodeType] = useState<NodeType | "">("");
+  const [responsibleId, setResponsibleId] = useState<string>(NONE);
+  const [isActive, setIsActive] = useState<boolean>(true);
   const [description, setDescription] = useState("");
   const [media, setMedia] = useState<MediaItem[]>([]);
   const [saving, setSaving] = useState(false);
+  const [users, setUsers] = useState<AppUserLite[]>([]);
+
+  const isRoot = node.id === ROOT_ID || node.parent_id === null;
 
   useEffect(() => {
     if (open) {
       setTitle(node.title);
       setColor(node.color);
       setDescription("");
-      // Load existing media
-      fetchNodeMedia();
+      loadNode();
+      loadUsers();
     }
   }, [open, node.id]);
 
-  const fetchNodeMedia = async () => {
+  const loadNode = async () => {
     const { data } = await supabase
       .from("nodes")
-      .select("media_urls")
+      .select("media_urls, node_type, responsible_user_id, is_active")
       .eq("id", node.id)
       .maybeSingle();
 
-    if (data?.media_urls && Array.isArray(data.media_urls)) {
-      setMedia(loadMediaFromUrls(data.media_urls as string[]));
+    const row = data as any;
+    if (row?.media_urls && Array.isArray(row.media_urls)) {
+      setMedia(loadMediaFromUrls(row.media_urls as string[]));
     } else {
       setMedia([]);
     }
+    setNodeType((row?.node_type as NodeType) ?? "");
+    setResponsibleId(row?.responsible_user_id ?? NONE);
+    setIsActive(row?.is_active !== false);
   };
+
+  const loadUsers = async () => {
+    // Carrega ativos + o vinculado atual (mesmo que inativo) para exibição correta
+    const { data } = await supabase
+      .from("app_users")
+      .select("id, name, is_active")
+      .order("name");
+    setUsers((data as AppUserLite[]) || []);
+  };
+
+  const responsibleOptions = users.filter(
+    (u) => u.is_active || u.id === (responsibleId !== NONE ? responsibleId : ""),
+  );
 
   const handleSave = async () => {
     if (!title.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Título não pode estar vazio",
-      });
+      toast({ variant: "destructive", title: "Título não pode estar vazio" });
       return;
     }
 
     setSaving(true);
     try {
-      // Upload new media files
       const mediaUrls = await uploadMedia(media, "node", node.id);
+
+      const patch: Record<string, unknown> = {
+        title,
+        color,
+        media_urls: mediaUrls,
+      };
+      if (!isRoot) {
+        if (nodeType) patch.node_type = nodeType;
+        patch.responsible_user_id = responsibleId === NONE ? null : responsibleId;
+      }
 
       const { error } = await supabase
         .from("nodes")
-        .update({ title, color, media_urls: mediaUrls })
+        .update(patch as any)
         .eq("id", node.id);
 
       if (error) {
@@ -110,6 +150,8 @@ export function NodeEditDialog({
     }
   };
 
+  const situacaoLabel = isActive ? "Ativo" : "Arquivado";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -124,7 +166,62 @@ export function NodeEditDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="Título do nó"
+              disabled={isRoot}
             />
+            {isRoot && (
+              <p className="text-xs text-muted-foreground">
+                A raiz é protegida: título e tipo não podem ser alterados.
+              </p>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Tipo</label>
+              <Select
+                value={isRoot ? "root" : (nodeType || "")}
+                onValueChange={(v) => setNodeType(v as NodeType)}
+                disabled={isRoot}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {isRoot && <SelectItem value="root">Raiz</SelectItem>}
+                  <SelectItem value="area">Área</SelectItem>
+                  <SelectItem value="team">Equipe</SelectItem>
+                  <SelectItem value="function">Função</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Situação</label>
+              <div className="h-10 flex items-center px-3 rounded-md border bg-muted/40 text-sm">
+                {situacaoLabel}
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Responsável</label>
+            <Select
+              value={responsibleId}
+              onValueChange={(v) => setResponsibleId(v)}
+              disabled={isRoot}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Sem responsável" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NONE}>Sem responsável</SelectItem>
+                {responsibleOptions.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.is_active ? u.name : `${u.name} — Inativo`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
