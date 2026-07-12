@@ -586,7 +586,7 @@ function BlockCardContent({
                 variant="ghost"
                 onClick={onDelete}
                 className="h-9 w-9 p-0 text-destructive hover:text-destructive"
-                title="Excluir"
+                title="Arquivar"
               >
                 <Trash2 className="h-3 w-3" />
               </Button>
