@@ -295,7 +295,7 @@ export function MTManagerDialog({ open, onOpenChange, onChanged }: Props) {
                         <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => duplicate(mt)} title="Duplicar">
                           <Copy className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => remove(mt.id)} title="Excluir">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => remove(mt.id)} title="Arquivar">
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </CardContent>
