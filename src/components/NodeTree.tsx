@@ -29,6 +29,7 @@ export function NodeTree({ parentId, onNodeChange, onDialogOpenChange, refreshKe
       .select("*")
       .eq("parent_id", parentId)
       .eq("is_visible", true)
+      .eq("is_active", true)
       .order("created_at", { ascending: true });
 
     if (error) {
