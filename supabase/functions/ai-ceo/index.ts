@@ -1152,6 +1152,22 @@ REGRA DE LISTAGEM COM TERMO:
       }
     }
 
+    // Exclusão de Lead por nome: o resolvedor universal exige locator.name.
+    // Só completa o locator quando o extrator não forneceu um alvo utilizável.
+    if (
+      String(parsed.entity ?? "").toLowerCase() === "lead" &&
+      String(parsed.operation ?? "").toLowerCase() === "excluir" &&
+      !(params.locator && typeof params.locator === "object") &&
+      !params.name &&
+      !params.nome
+    ) {
+      const m = String(userMessage)
+        .trim()
+        .match(/^\s*(?:exclu[ai]|apague|remova|delet(?:e|ar))\s+(?:o\s+|a\s+)?(?:lead\s+)?(.+?)\s*[.!?]*\s*$/i);
+      const name = m?.[1]?.trim();
+      if (name) params.locator = { name };
+    }
+
     return {
       objective: parsed.objective ?? userMessage.slice(0, 120),
       module: parsed.module,
