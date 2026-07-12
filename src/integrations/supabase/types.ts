@@ -1737,6 +1737,53 @@ export type Database = {
           },
         ]
       }
+      inbox_entries: {
+        Row: {
+          content: string | null
+          created_at: string
+          entry_type: string
+          id: string
+          media_path: string | null
+          media_url: string | null
+          status: string
+          updated_at: string
+          user_id: string | null
+          user_name: string | null
+        }
+        Insert: {
+          content?: string | null
+          created_at?: string
+          entry_type: string
+          id?: string
+          media_path?: string | null
+          media_url?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Update: {
+          content?: string | null
+          created_at?: string
+          entry_type?: string
+          id?: string
+          media_path?: string | null
+          media_url?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+          user_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inbox_entries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory: {
         Row: {
           id: string
