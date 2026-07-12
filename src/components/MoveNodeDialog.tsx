@@ -17,12 +17,19 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+const ROOT_ID = "d7c76db8-b7e0-4ce1-87ca-21275c346326";
+
 interface Node {
   id: string;
   parent_id: string | null;
   title: string;
   color: "roxo" | "vermelho" | "amarelo" | "verde";
   is_visible: boolean;
+}
+
+interface NodeRow extends Node {
+  node_type: "root" | "area" | "team" | "function" | null;
+  is_active: boolean;
 }
 
 interface MoveNodeDialogProps {
@@ -38,22 +45,23 @@ export function MoveNodeDialog({
   node,
   onNodeMoved,
 }: MoveNodeDialogProps) {
-  const [allNodes, setAllNodes] = useState<Node[]>([]);
+  const [allNodes, setAllNodes] = useState<NodeRow[]>([]);
+  const [selfType, setSelfType] = useState<NodeRow["node_type"]>(null);
   const [selectedParentId, setSelectedParentId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
+  const isRoot = node.id === ROOT_ID || node.parent_id === null;
+
   useEffect(() => {
-    if (open) {
-      fetchAllNodes();
-    }
+    if (open) fetchAllNodes();
   }, [open]);
 
   const fetchAllNodes = async () => {
     const { data, error } = await supabase
       .from("nodes")
-      .select("*")
-      .eq("is_visible", true)
+      .select("id, parent_id, title, color, is_visible, node_type, is_active")
+      .eq("is_active", true)
       .order("title", { ascending: true });
 
     if (error) {
@@ -62,44 +70,64 @@ export function MoveNodeDialog({
         title: "Erro ao carregar nós",
         description: error.message,
       });
-    } else {
-      // Filtrar o próprio nó e seus descendentes para evitar loops
-      const descendants = await getDescendants(node.id);
-      const validNodes = (data || []).filter(
-        (n) => n.id !== node.id && !descendants.includes(n.id)
-      ) as Node[];
-      setAllNodes(validNodes);
-    }
-  };
-
-  const getDescendants = async (nodeId: string): Promise<string[]> => {
-    const { data, error } = await supabase
-      .from("nodes")
-      .select("id")
-      .eq("parent_id", nodeId)
-      .eq("is_visible", true);
-
-    if (error || !data) return [];
-
-    const childIds = data.map((n) => n.id);
-    const allDescendants = [...childIds];
-
-    for (const childId of childIds) {
-      const childDescendants = await getDescendants(childId);
-      allDescendants.push(...childDescendants);
+      return;
     }
 
-    return allDescendants;
+    const rows = (data as any as NodeRow[]) || [];
+    const self = rows.find((n) => n.id === node.id);
+    setSelfType(self?.node_type ?? null);
+
+    // Descendentes (evita ciclo) — em memória
+    const childrenMap = new Map<string, string[]>();
+    for (const n of rows) {
+      if (!n.parent_id) continue;
+      const arr = childrenMap.get(n.parent_id) || [];
+      arr.push(n.id);
+      childrenMap.set(n.parent_id, arr);
+    }
+    const descendants = new Set<string>();
+    const stack = [node.id];
+    while (stack.length) {
+      const cur = stack.pop()!;
+      const ch = childrenMap.get(cur) || [];
+      for (const c of ch) {
+        if (!descendants.has(c)) {
+          descendants.add(c);
+          stack.push(c);
+        }
+      }
+    }
+
+    const selfNodeType = self?.node_type ?? null;
+    const validNodes = rows.filter((n) => {
+      if (n.id === node.id) return false;
+      if (descendants.has(n.id)) return false;
+      if (!n.is_active) return false;
+      if (n.node_type === "function") return false;
+      // Compatibilidade tipada
+      if (selfNodeType === "area" && n.node_type && !["root", "area"].includes(n.node_type)) return false;
+      if (selfNodeType === "team" && n.node_type && !["area", "team"].includes(n.node_type)) return false;
+      if (selfNodeType === "function" && n.node_type && !["area", "team"].includes(n.node_type)) return false;
+      return true;
+    });
+    setAllNodes(validNodes);
   };
 
   const handleMove = async () => {
-    setIsLoading(true);
+    if (isRoot) {
+      toast({ variant: "destructive", title: "A raiz não pode ser movida." });
+      return;
+    }
+    if (!selectedParentId) {
+      toast({ variant: "destructive", title: "Selecione um pai." });
+      return;
+    }
 
+    setIsLoading(true);
     const { error } = await supabase
       .from("nodes")
-      .update({ parent_id: selectedParentId })
+      .update({ parent_id: selectedParentId } as any)
       .eq("id", node.id);
-
     setIsLoading(false);
 
     if (error) {
@@ -123,34 +151,52 @@ export function MoveNodeDialog({
         </DialogHeader>
 
         <div className="py-4">
-          <label className="text-sm font-medium mb-2 block">
-            Selecione o novo pai:
-          </label>
-          <Select
-            value={selectedParentId || "root"}
-            onValueChange={(value) =>
-              setSelectedParentId(value === "root" ? null : value)
-            }
-          >
-            <SelectTrigger className="bg-background">
-              <SelectValue placeholder="Escolha um nó" />
-            </SelectTrigger>
-            <SelectContent className="bg-popover max-h-[300px]">
-              <SelectItem value="root">Raiz (sem pai)</SelectItem>
-              {allNodes.map((n) => (
-                <SelectItem key={n.id} value={n.id}>
-                  {n.title}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {isRoot ? (
+            <p className="text-sm text-muted-foreground">
+              A raiz do organograma não pode ser movida.
+            </p>
+          ) : (
+            <>
+              <label className="text-sm font-medium mb-2 block">
+                Selecione o novo pai:
+              </label>
+              <Select
+                value={selectedParentId || ""}
+                onValueChange={(value) => setSelectedParentId(value || null)}
+              >
+                <SelectTrigger className="bg-background">
+                  <SelectValue placeholder="Escolha um nó pai válido" />
+                </SelectTrigger>
+                <SelectContent className="bg-popover max-h-[300px]">
+                  {allNodes.length === 0 ? (
+                    <div className="p-3 text-xs text-muted-foreground">
+                      Nenhum destino compatível.
+                    </div>
+                  ) : (
+                    allNodes.map((n) => (
+                      <SelectItem key={n.id} value={n.id}>
+                        {n.title}
+                        {n.node_type ? ` — ${n.node_type}` : ""}
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+              {selfType && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Tipo deste nó: {selfType}. Destinos incompatíveis, inativos, funções, o
+                  próprio nó e descendentes são ocultados automaticamente.
+                </p>
+              )}
+            </>
+          )}
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button onClick={handleMove} disabled={isLoading}>
+          <Button onClick={handleMove} disabled={isLoading || isRoot}>
             {isLoading ? "Movendo..." : "Mover"}
           </Button>
         </DialogFooter>
