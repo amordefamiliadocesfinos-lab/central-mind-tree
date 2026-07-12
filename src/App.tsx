@@ -40,6 +40,7 @@ import OAuthConsent from "./pages/OAuthConsent";
 import { NucleoLauncherButton } from "@/components/NucleoLauncherButton";
 import NotFound from "./pages/NotFound";
 import { QuickConversationFAB } from "@/components/crm/QuickConversationFAB";
+import { CapturaCentralFAB } from "@/components/CapturaCentralFAB";
 import { RoutineAlertOverlay } from "@/components/routine/RoutineAlertOverlay";
 import { RoutineAlertsToggleButton } from "@/components/routine/RoutineAlertsToggleButton";
 import { ActiveUserPicker } from "@/components/ActiveUserPicker";
