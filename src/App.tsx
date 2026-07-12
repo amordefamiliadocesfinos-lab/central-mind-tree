@@ -35,6 +35,7 @@ import Academia from "./pages/Academia";
 import Metas from "./pages/Metas";
 import Oportunidades from "./pages/Oportunidades";
 import Nucleo from "./pages/Nucleo";
+import CapturaCentral from "./pages/CapturaCentral";
 import OAuthConsent from "./pages/OAuthConsent";
 import { NucleoLauncherButton } from "@/components/NucleoLauncherButton";
 import NotFound from "./pages/NotFound";
