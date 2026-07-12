@@ -57,6 +57,7 @@ export function HorizontalOrgChart({ onClose, onNodeClick }: HorizontalOrgChartP
       .from("nodes")
       .select("*")
       .eq("is_visible", true)
+      .eq("is_active", true)
       .order("created_at", { ascending: true });
 
     if (error) {
