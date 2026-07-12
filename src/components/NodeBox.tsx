@@ -385,6 +385,7 @@ export function NodeBox({ node, children, onNodeChange, onDialogOpenChange, refr
                       variant="ghost"
                       className="h-6 w-6 md:h-8 md:w-8 hover:bg-background/20"
                       onClick={handleDelete}
+                      title="Arquivar nó"
                     >
                       <Trash2 className="h-3 w-3 md:h-4 md:w-4" />
                     </Button>
