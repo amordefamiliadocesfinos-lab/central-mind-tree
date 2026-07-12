@@ -195,6 +195,14 @@ export const CAPABILITIES_CATALOG: ModuleCapabilities[] = [
       { id: "log",      name: "Log",      operations: ["listar","consultar","limpar"], destructive: ["limpar"], synonyms: ["registro de execução"], status: "disponivel" },
     ],
   },
+  {
+    id: "organizacao",
+    name: "Organização",
+    purpose: "Gestão da estrutura hierárquica e dos responsáveis do Painel Central.",
+    entities: [
+      { id: "no_organizacional", name: "Nó Organizacional", operations: ["criar","listar","consultar","pesquisar","editar","excluir"], destructive: ["excluir"], synonyms: ["nó","area","área","setor","equipe","função","funcao"], status: "disponivel" },
+    ],
+  },
 ];
 
 // ---------------------------------------------------------------------------
