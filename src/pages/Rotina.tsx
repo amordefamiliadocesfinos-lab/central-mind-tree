@@ -1,22 +1,28 @@
-import { useState } from 'react';
-import { useRoutine, RoutineBlock, FOCUS_TYPES, FocusType } from '@/hooks/useRoutine';
-import { RoutineDayView } from '@/components/routine/RoutineDayView';
-import { RoutineWeekView } from '@/components/routine/RoutineWeekView';
-import { RoutineMonthView } from '@/components/routine/RoutineMonthView';
-import { CustomAlarmsPanel } from '@/components/routine/CustomAlarmsPanel';
-import { BlockEditDialog } from '@/components/routine/BlockEditDialog';
-import { MTPickerDialog } from '@/components/routine/MTPickerDialog';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  ArrowLeft, ChevronLeft, ChevronRight, Calendar, 
-  CalendarDays, CalendarRange, Clock, 
-  RotateCcw, Sparkles
-} from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { format, addDays, addWeeks, addMonths, subDays, subWeeks, subMonths, isToday } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
-import { cn } from '@/lib/utils';
+import { useState } from "react";
+import { useRoutine, RoutineBlock, FOCUS_TYPES, FocusType } from "@/hooks/useRoutine";
+import { RoutineDayView } from "@/components/routine/RoutineDayView";
+import { RoutineWeekView } from "@/components/routine/RoutineWeekView";
+import { RoutineMonthView } from "@/components/routine/RoutineMonthView";
+import { CustomAlarmsPanel } from "@/components/routine/CustomAlarmsPanel";
+import { BlockEditDialog } from "@/components/routine/BlockEditDialog";
+import { MTPickerDialog } from "@/components/routine/MTPickerDialog";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
+  Calendar,
+  CalendarDays,
+  CalendarRange,
+  Clock,
+  RotateCcw,
+  Sparkles,
+} from "lucide-react";
+import { Link } from "react-router-dom";
+import { format, addDays, addWeeks, addMonths, subDays, subWeeks, subMonths, isToday } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { cn } from "@/lib/utils";
 
 export default function Rotina() {
   const {
@@ -30,7 +36,7 @@ export default function Rotina() {
     loading,
     activeBlock,
     daysInRange,
-    
+
     startBlock,
     completeBlock,
     skipBlock,
@@ -39,11 +45,11 @@ export default function Rotina() {
     deleteBlock,
     pauseBlock,
     reorderBlocks,
-    
+
     autoPlanDay,
     autoPlanWeek,
     pushBlocksForward,
-    
+
     getBlocksByDay,
     getDayKPIs,
     weekSummary,
@@ -55,13 +61,13 @@ export default function Rotina() {
   const [mtPickerOpen, setMtPickerOpen] = useState(false);
 
   // Navigation
-  const navigateDate = (direction: 'prev' | 'next') => {
-    if (viewMode === 'day') {
-      setSelectedDate(direction === 'next' ? addDays(selectedDate, 1) : subDays(selectedDate, 1));
-    } else if (viewMode === 'week') {
-      setSelectedDate(direction === 'next' ? addWeeks(selectedDate, 1) : subWeeks(selectedDate, 1));
+  const navigateDate = (direction: "prev" | "next") => {
+    if (viewMode === "day") {
+      setSelectedDate(direction === "next" ? addDays(selectedDate, 1) : subDays(selectedDate, 1));
+    } else if (viewMode === "week") {
+      setSelectedDate(direction === "next" ? addWeeks(selectedDate, 1) : subWeeks(selectedDate, 1));
     } else {
-      setSelectedDate(direction === 'next' ? addMonths(selectedDate, 1) : subMonths(selectedDate, 1));
+      setSelectedDate(direction === "next" ? addMonths(selectedDate, 1) : subMonths(selectedDate, 1));
     }
   };
 
@@ -81,8 +87,8 @@ export default function Rotina() {
   };
 
   const handleQuickAdd = async (duration: number) => {
-    const isViewingToday = format(selectedDate, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
-    let startHHMM = '08:00';
+    const isViewingToday = format(selectedDate, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
+    let startHHMM = "08:00";
 
     if (isViewingToday) {
       const now = new Date();
@@ -91,28 +97,28 @@ export default function Rotina() {
       const clamped = Math.min(totalMins, 23 * 60 + 55);
       const h = Math.floor(clamped / 60);
       const m = clamped % 60;
-      startHHMM = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+      startHHMM = `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
     } else {
       // Para datas futuras: pega o último bloco existente do dia + sua duração, ou 08:00
       const dayBlocks = getBlocksByDay(selectedDate)
-        .filter(b => b.planned_start)
-        .sort((a, b) => (a.planned_start || '').localeCompare(b.planned_start || ''));
+        .filter((b) => b.planned_start)
+        .sort((a, b) => (a.planned_start || "").localeCompare(b.planned_start || ""));
       const last = dayBlocks[dayBlocks.length - 1];
       if (last?.planned_start) {
-        const [h, m] = last.planned_start.split(':').map(Number);
+        const [h, m] = last.planned_start.split(":").map(Number);
         const totalMins = Math.min(h * 60 + m + last.duration_minutes, 23 * 60 + 55);
         const newH = Math.floor(totalMins / 60);
         const newM = totalMins % 60;
-        startHHMM = `${String(newH).padStart(2, '0')}:${String(newM).padStart(2, '0')}`;
+        startHHMM = `${String(newH).padStart(2, "0")}:${String(newM).padStart(2, "0")}`;
       }
     }
 
     await addBlock({
       title: `Bloco ${duration}min`,
-      focus: 'trabalho_profundo',
+      focus: "trabalho_profundo",
       duration_minutes: duration,
       planned_start: startHHMM,
-      date: format(selectedDate, 'yyyy-MM-dd'),
+      date: format(selectedDate, "yyyy-MM-dd"),
     });
   };
 
@@ -120,7 +126,8 @@ export default function Rotina() {
     if (editingBlock) {
       await updateBlock(editingBlock.id, data);
     } else {
-      await addBlock(data);
+      const created = await addBlock(data);
+      if (!created) return;
     }
     setEditDialogOpen(false);
     setEditingBlock(null);
@@ -154,13 +161,13 @@ export default function Rotina() {
             <div>
               <h1 className="text-lg sm:text-xl font-bold">Rotina</h1>
               <p className="text-xs text-muted-foreground">
-                {viewMode === 'day' && format(selectedDate, "d 'de' MMMM", { locale: ptBR })}
-                {viewMode === 'week' && `Semana ${format(selectedDate, 'w')} de ${format(selectedDate, 'yyyy')}`}
-                {viewMode === 'month' && format(selectedDate, "MMMM 'de' yyyy", { locale: ptBR })}
+                {viewMode === "day" && format(selectedDate, "d 'de' MMMM", { locale: ptBR })}
+                {viewMode === "week" && `Semana ${format(selectedDate, "w")} de ${format(selectedDate, "yyyy")}`}
+                {viewMode === "month" && format(selectedDate, "MMMM 'de' yyyy", { locale: ptBR })}
               </p>
             </div>
           </div>
-          
+
           <div className="flex gap-1">
             <Button
               variant="default"
@@ -173,20 +180,14 @@ export default function Rotina() {
               <span className="hidden sm:inline">MT</span>
             </Button>
             {!isToday(selectedDate) && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={goToToday}
-                className="text-xs h-10"
-                title="Voltar para hoje"
-              >
+              <Button variant="outline" size="sm" onClick={goToToday} className="text-xs h-10" title="Voltar para hoje">
                 Hoje
               </Button>
             )}
-            {isToday(selectedDate) && currentDayBlocks.length > 0 && viewMode === 'day' && (
-              <Button 
-                variant="outline" 
-                size="icon" 
+            {isToday(selectedDate) && currentDayBlocks.length > 0 && viewMode === "day" && (
+              <Button
+                variant="outline"
+                size="icon"
                 onClick={() => pushBlocksForward(15)}
                 title="Empurrar +15min"
                 className="h-10 w-10"
@@ -200,20 +201,10 @@ export default function Rotina() {
         {/* View Mode Tabs & Navigation */}
         <div className="flex items-center justify-between px-4 pb-3">
           <div className="flex items-center gap-1">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => navigateDate('prev')}
-              className="h-8 w-8"
-            >
+            <Button variant="ghost" size="icon" onClick={() => navigateDate("prev")} className="h-8 w-8">
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => navigateDate('next')}
-              className="h-8 w-8"
-            >
+            <Button variant="ghost" size="icon" onClick={() => navigateDate("next")} className="h-8 w-8">
               <ChevronRight className="h-4 w-4" />
             </Button>
           </div>
@@ -241,7 +232,7 @@ export default function Rotina() {
       <div className="p-4 space-y-4">
         <CustomAlarmsPanel />
 
-        {viewMode === 'day' && (
+        {viewMode === "day" && (
           <RoutineDayView
             date={selectedDate}
             blocks={currentDayBlocks}
@@ -252,7 +243,7 @@ export default function Rotina() {
             onPauseBlock={pauseBlock}
             onEditBlock={handleEditBlock}
             onDeleteBlock={deleteBlock}
-            onReopenBlock={(id) => updateBlock(id, { status: 'pendente', actual_start: null, actual_end: null })}
+            onReopenBlock={(id) => updateBlock(id, { status: "pendente", actual_start: null, actual_end: null })}
             onReorderBlocks={reorderBlocks}
             onAddBlock={handleAddBlock}
             onQuickAdd={handleQuickAdd}
@@ -261,7 +252,7 @@ export default function Rotina() {
           />
         )}
 
-        {viewMode === 'week' && (
+        {viewMode === "week" && (
           <RoutineWeekView
             days={daysInRange}
             getBlocksByDay={getBlocksByDay}
@@ -270,14 +261,14 @@ export default function Rotina() {
             selectedDate={selectedDate}
             onSelectDate={(d) => {
               setSelectedDate(d);
-              setViewMode('day');
+              setViewMode("day");
             }}
             onAutoPlanWeek={autoPlanWeek}
             capacityTargets={prefs?.capacity_targets || { deep_work_min: 180, atendimento_min: 120 }}
           />
         )}
 
-        {viewMode === 'month' && (
+        {viewMode === "month" && (
           <RoutineMonthView
             selectedDate={selectedDate}
             getBlocksByDay={getBlocksByDay}
@@ -294,14 +285,10 @@ export default function Rotina() {
         onOpenChange={setEditDialogOpen}
         block={editingBlock}
         onSave={handleSaveBlock}
-        defaultDate={format(selectedDate, 'yyyy-MM-dd')}
+        defaultDate={format(selectedDate, "yyyy-MM-dd")}
       />
 
-      <MTPickerDialog
-        open={mtPickerOpen}
-        onOpenChange={setMtPickerOpen}
-        selectedDate={selectedDate}
-      />
+      <MTPickerDialog open={mtPickerOpen} onOpenChange={setMtPickerOpen} selectedDate={selectedDate} />
     </div>
   );
 }
