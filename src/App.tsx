@@ -136,6 +136,7 @@ function AppContent() {
       </SwipeNavigationWrapper>
       <GlobalFooterBar />
       <QuickConversationFAB />
+      <CapturaCentralFAB />
       <StockCheckAlert />
       <StockCheckWizard />
       <RoutineAlertOverlay />
