@@ -550,12 +550,14 @@ export function useRoutine(options: UseRoutineOptions = {}) {
       ? dateStr
       : (dateStr instanceof Date ? format(dateStr, 'yyyy-MM-dd') : format(selectedDate, 'yyyy-MM-dd'));
     
-    // Clear existing blocks for the day
+    // Clear existing auto-planned pending blocks for the day (técnico)
     const { error: deleteError } = await supabase
       .from('routine_blocks')
       .delete()
       .eq('date', targetDate)
-      .eq('status', 'pendente');
+      .eq('status', 'pendente')
+      .eq('is_active', true)
+      .ilike('notes', '%planejamento:auto%');
 
     if (deleteError) {
       console.error('Error clearing blocks:', deleteError);
@@ -594,6 +596,7 @@ export function useRoutine(options: UseRoutineOptions = {}) {
       duration_minutes: item.duration,
       planned_start: item.start,
       status: 'pendente',
+      notes: 'planejamento:auto',
     }));
 
     const { error } = await supabase
