@@ -1,106 +1,99 @@
-import { useState, useEffect } from 'react';
-import { RoutineBlock, FOCUS_TYPES, FocusType, RECURRENCE_OPTIONS, RecurrenceType } from '@/hooks/useRoutine';
-import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
-import { Plus, Trash2, GripVertical } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { RoutineBlock, FOCUS_TYPES, FocusType, RECURRENCE_OPTIONS, RecurrenceType } from "@/hooks/useRoutine";
+import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import { Plus, Trash2, GripVertical } from "lucide-react";
 
-interface ChecklistItem { id: string; text: string; done: boolean }
+interface ChecklistItem {
+  id: string;
+  text: string;
+  done: boolean;
+}
 
 interface BlockEditDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   block?: RoutineBlock | null;
-  onSave: (data: Partial<RoutineBlock>) => void;
+  onSave: (data: Partial<RoutineBlock>) => void | Promise<void>;
   defaultDate?: string;
 }
 
-export function BlockEditDialog({
-  open,
-  onOpenChange,
-  block,
-  onSave,
-  defaultDate,
-}: BlockEditDialogProps) {
+export function BlockEditDialog({ open, onOpenChange, block, onSave, defaultDate }: BlockEditDialogProps) {
   const [formData, setFormData] = useState({
-    title: '',
-    focus: 'trabalho_profundo' as FocusType,
+    title: "",
+    focus: "trabalho_profundo" as FocusType,
     duration_minutes: 25,
-    planned_start: '',
-    notes: '',
-    recurrence: '' as RecurrenceType | '',
+    planned_start: "",
+    notes: "",
+    recurrence: "" as RecurrenceType | "",
     checklist: [] as ChecklistItem[],
   });
-  const [newItem, setNewItem] = useState('');
+  const [newItem, setNewItem] = useState("");
 
   useEffect(() => {
     if (block) {
       setFormData({
         title: block.title,
-        focus: (block.focus as FocusType) || 'trabalho_profundo',
+        focus: (block.focus as FocusType) || "trabalho_profundo",
         duration_minutes: block.duration_minutes,
-        planned_start: block.planned_start || '',
-        notes: block.notes || '',
-        recurrence: (block.recurrence as RecurrenceType | null) || '',
+        planned_start: block.planned_start || "",
+        notes: block.notes || "",
+        recurrence: (block.recurrence as RecurrenceType | null) || "",
         checklist: Array.isArray((block as any).checklist) ? (block as any).checklist : [],
       });
     } else {
       const now = new Date();
-      const hours = now.getHours().toString().padStart(2, '0');
+      const hours = now.getHours().toString().padStart(2, "0");
       const mins = Math.ceil(now.getMinutes() / 5) * 5;
-      const adjustedMins = mins >= 60 ? '00' : mins.toString().padStart(2, '0');
-      const adjustedHours = mins >= 60 ? (now.getHours() + 1).toString().padStart(2, '0') : hours;
-      
+      const adjustedMins = mins >= 60 ? "00" : mins.toString().padStart(2, "0");
+      const adjustedHours = mins >= 60 ? (now.getHours() + 1).toString().padStart(2, "0") : hours;
+
       setFormData({
-        title: '',
-        focus: 'trabalho_profundo',
+        title: "",
+        focus: "trabalho_profundo",
         duration_minutes: 25,
         planned_start: `${adjustedHours}:${adjustedMins}`,
-        notes: '',
-        recurrence: '',
+        notes: "",
+        recurrence: "",
         checklist: [],
       });
     }
-    setNewItem('');
+    setNewItem("");
   }, [block, open]);
 
   const addChecklistItem = () => {
     const t = newItem.trim();
     if (!t) return;
-    setFormData(f => ({
+    setFormData((f) => ({
       ...f,
       checklist: [...f.checklist, { id: crypto.randomUUID(), text: t, done: false }],
     }));
-    setNewItem('');
+    setNewItem("");
   };
 
   const removeChecklistItem = (id: string) => {
-    setFormData(f => ({ ...f, checklist: f.checklist.filter(i => i.id !== id) }));
+    setFormData((f) => ({ ...f, checklist: f.checklist.filter((i) => i.id !== id) }));
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const { recurrence, ...rest } = formData;
-    onSave({
+    await onSave({
       ...rest,
-      recurrence: (recurrence === '' ? null : recurrence) as RecurrenceType | null,
+      recurrence: (recurrence === "" ? null : recurrence) as RecurrenceType | null,
       date: block?.date || defaultDate,
     } as any);
-    onOpenChange(false);
   };
 
   const quickDurations = [25, 50, 90, 120];
 
   return (
-    <ResponsiveDialog
-      open={open}
-      onOpenChange={onOpenChange}
-      title={block ? 'Editar Bloco' : 'Novo Bloco'}
-    >
+    <ResponsiveDialog open={open} onOpenChange={onOpenChange} title={block ? "Editar Bloco" : "Novo Bloco"}>
       <div className="space-y-4 p-4 sm:p-0">
         {/* Title */}
         <div>
@@ -116,10 +109,7 @@ export function BlockEditDialog({
         {/* Focus Type */}
         <div>
           <Label>Tipo de Foco</Label>
-          <Select
-            value={formData.focus}
-            onValueChange={(v) => setFormData({ ...formData, focus: v as FocusType })}
-          >
+          <Select value={formData.focus} onValueChange={(v) => setFormData({ ...formData, focus: v as FocusType })}>
             <SelectTrigger className="h-12">
               <SelectValue />
             </SelectTrigger>
@@ -127,8 +117,10 @@ export function BlockEditDialog({
               {Object.entries(FOCUS_TYPES).map(([key, { label, icon, color }]) => (
                 <SelectItem key={key} value={key}>
                   <div className="flex items-center gap-2">
-                    <div className={cn('w-3 h-3 rounded-full', color)} />
-                    <span>{icon} {label}</span>
+                    <div className={cn("w-3 h-3 rounded-full", color)} />
+                    <span>
+                      {icon} {label}
+                    </span>
                   </div>
                 </SelectItem>
               ))}
@@ -144,7 +136,7 @@ export function BlockEditDialog({
               <Button
                 key={d}
                 type="button"
-                variant={formData.duration_minutes === d ? 'default' : 'outline'}
+                variant={formData.duration_minutes === d ? "default" : "outline"}
                 size="sm"
                 onClick={() => setFormData({ ...formData, duration_minutes: d })}
                 className="flex-1"
@@ -178,15 +170,17 @@ export function BlockEditDialog({
         <div>
           <Label>Recorrência</Label>
           <Select
-            value={formData.recurrence || 'none'}
-            onValueChange={(v) => setFormData({ ...formData, recurrence: (v === 'none' ? '' : v) as RecurrenceType | '' })}
+            value={formData.recurrence || "none"}
+            onValueChange={(v) =>
+              setFormData({ ...formData, recurrence: (v === "none" ? "" : v) as RecurrenceType | "" })
+            }
           >
             <SelectTrigger className="h-12">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {RECURRENCE_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value || 'none'} value={opt.value || 'none'}>
+                <SelectItem key={opt.value || "none"} value={opt.value || "none"}>
                   {opt.label}
                 </SelectItem>
               ))}
@@ -208,21 +202,30 @@ export function BlockEditDialog({
                 <GripVertical className="h-4 w-4 text-muted-foreground shrink-0" />
                 <Checkbox
                   checked={item.done}
-                  onCheckedChange={(v) => setFormData(f => ({
-                    ...f,
-                    checklist: f.checklist.map(i => i.id === item.id ? { ...i, done: !!v } : i),
-                  }))}
+                  onCheckedChange={(v) =>
+                    setFormData((f) => ({
+                      ...f,
+                      checklist: f.checklist.map((i) => (i.id === item.id ? { ...i, done: !!v } : i)),
+                    }))
+                  }
                 />
                 <Input
                   className="h-8 flex-1 bg-transparent border-0 focus-visible:ring-0 px-1"
                   value={item.text}
-                  onChange={(e) => setFormData(f => ({
-                    ...f,
-                    checklist: f.checklist.map(i => i.id === item.id ? { ...i, text: e.target.value } : i),
-                  }))}
+                  onChange={(e) =>
+                    setFormData((f) => ({
+                      ...f,
+                      checklist: f.checklist.map((i) => (i.id === item.id ? { ...i, text: e.target.value } : i)),
+                    }))
+                  }
                 />
-                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 shrink-0"
-                  onClick={() => removeChecklistItem(item.id)}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0"
+                  onClick={() => removeChecklistItem(item.id)}
+                >
                   <Trash2 className="h-4 w-4 text-destructive" />
                 </Button>
               </div>
@@ -233,7 +236,12 @@ export function BlockEditDialog({
                 placeholder="Adicionar item..."
                 value={newItem}
                 onChange={(e) => setNewItem(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addChecklistItem(); } }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addChecklistItem();
+                  }
+                }}
               />
               <Button type="button" variant="outline" className="h-10" onClick={addChecklistItem}>
                 <Plus className="h-4 w-4" />
@@ -255,19 +263,11 @@ export function BlockEditDialog({
 
         {/* Actions */}
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            className="flex-1 h-12"
-            onClick={() => onOpenChange(false)}
-          >
+          <Button variant="outline" className="flex-1 h-12" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button 
-            className="flex-1 h-12"
-            onClick={handleSubmit}
-            disabled={!formData.title.trim()}
-          >
-            {block ? 'Salvar' : 'Adicionar'}
+          <Button className="flex-1 h-12" onClick={handleSubmit} disabled={!formData.title.trim()}>
+            {block ? "Salvar" : "Adicionar"}
           </Button>
         </div>
       </div>
