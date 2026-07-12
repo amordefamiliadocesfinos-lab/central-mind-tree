@@ -82,12 +82,17 @@ export function MTPickerDialog({ open, onOpenChange, selectedDate, onApplied }: 
   const applyToDate = async (mt: MT, date: Date, replace = true) => {
     const dateStr = format(date, 'yyyy-MM-dd');
     if (replace) {
-      // Preserva blocos vindos de outros módulos (marcados com "origem:" nas notes)
+      // Limpeza técnica: só remove blocos pendentes ativos originados de MT
+      // (notes contém "MT:" e NÃO contém "origem:"). Preserva concluídos,
+      // arquivados, externos (origem:) e manuais.
       let del = supabase
         .from('routine_blocks')
         .delete()
         .eq('date', dateStr)
-        .or('notes.is.null,notes.not.ilike.%origem:%');
+        .eq('status', 'pendente')
+        .eq('is_active', true)
+        .ilike('notes', '%MT:%')
+        .not('notes', 'ilike', '%origem:%');
       if (activeUserId) del = del.eq('assigned_user_id', activeUserId);
       else del = del.is('assigned_user_id', null);
       await del;
