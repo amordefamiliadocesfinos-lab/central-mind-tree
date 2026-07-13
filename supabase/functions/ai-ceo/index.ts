@@ -1190,6 +1190,35 @@ function normalizeParamsForSpecialist(
   const params = { ...(raw ?? {}) };
   const entId = String(entity ?? "").toLowerCase();
   const op = String(operation ?? "").toLowerCase();
+  
+  // Rotinas: normaliza nomes em português sem criar execução paralela.
+  if (entId === "bloco_rotina" && op === "criar") {
+    const pick = (...keys: string[]) => {
+      for (const key of keys) {
+        const value = params[key];
+        if (value !== undefined && value !== null && String(value).trim() !== "") return value;
+      }
+      return undefined;
+    };
+    const aliases: Array<[string, string[]]> = [
+      ["title", ["titulo", "título", "nome"]],
+      ["date", ["data"]],
+      ["planned_start", ["horario_inicial", "horário_inicial", "horario", "horário", "inicio", "início", "start_time"]],
+      ["duration_minutes", ["duracao", "duração", "duracao_minutos", "duração_minutos", "minutos"]],
+      ["focus", ["foco"]],
+    ];
+    for (const [canonical, aliasList] of aliases) {
+      if (params[canonical] === undefined || params[canonical] === null || params[canonical] === "") {
+        const value = pick(...aliasList);
+        if (value !== undefined) params[canonical] = value;
+      }
+    }
+    if (params.duration_minutes !== undefined) {
+      const minutes = Number(params.duration_minutes);
+      if (Number.isFinite(minutes)) params.duration_minutes = minutes;
+    }
+  }
+
 
   if ((entId === "contato" || entId === "contatos") && op === "editar") {
     const pick = (src: Record<string, unknown>, ...keys: string[]) => {
