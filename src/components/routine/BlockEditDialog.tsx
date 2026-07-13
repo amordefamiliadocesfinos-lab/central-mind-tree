@@ -82,6 +82,7 @@ export function BlockEditDialog({ open, onOpenChange, block, onSave, defaultDate
   };
 
   const handleSubmit = async () => {
+    console.info("[routine] BlockEditDialog submit", { title: formData.title, hasOnSave: Boolean(onSave) });
     const { recurrence, ...rest } = formData;
     await onSave({
       ...rest,
