@@ -1739,6 +1739,7 @@ export type Database = {
       }
       inbox_entries: {
         Row: {
+          attachments: Json
           content: string | null
           created_at: string
           entry_type: string
@@ -1751,6 +1752,7 @@ export type Database = {
           user_name: string | null
         }
         Insert: {
+          attachments?: Json
           content?: string | null
           created_at?: string
           entry_type: string
@@ -1763,6 +1765,7 @@ export type Database = {
           user_name?: string | null
         }
         Update: {
+          attachments?: Json
           content?: string | null
           created_at?: string
           entry_type?: string
