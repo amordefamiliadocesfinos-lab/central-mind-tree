@@ -156,7 +156,7 @@ export default function CapturaCentral() {
       .eq("status", "aguardando_selecao")
       .order("created_at", { ascending: false })
       .limit(200);
-    if (!error && data) setEntries(data as InboxEntry[]);
+    if (!error && data) setEntries(data as unknown as InboxEntry[]);
     setLoadingList(false);
   }
 
