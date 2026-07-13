@@ -1739,6 +1739,7 @@ export type Database = {
       }
       inbox_entries: {
         Row: {
+          attachments: Json
           content: string | null
           created_at: string
           entry_type: string
@@ -1751,6 +1752,7 @@ export type Database = {
           user_name: string | null
         }
         Insert: {
+          attachments?: Json
           content?: string | null
           created_at?: string
           entry_type: string
@@ -1763,6 +1765,7 @@ export type Database = {
           user_name?: string | null
         }
         Update: {
+          attachments?: Json
           content?: string | null
           created_at?: string
           entry_type?: string
@@ -3265,6 +3268,9 @@ export type Database = {
           date: string
           duration_minutes: number
           focus: string | null
+          generated_by_id: string | null
+          generated_by_type: string | null
+          generated_instance_id: string | null
           id: string
           is_active: boolean
           node_id: string | null
@@ -3289,6 +3295,9 @@ export type Database = {
           date?: string
           duration_minutes?: number
           focus?: string | null
+          generated_by_id?: string | null
+          generated_by_type?: string | null
+          generated_instance_id?: string | null
           id?: string
           is_active?: boolean
           node_id?: string | null
@@ -3313,6 +3322,9 @@ export type Database = {
           date?: string
           duration_minutes?: number
           focus?: string | null
+          generated_by_id?: string | null
+          generated_by_type?: string | null
+          generated_instance_id?: string | null
           id?: string
           is_active?: boolean
           node_id?: string | null
