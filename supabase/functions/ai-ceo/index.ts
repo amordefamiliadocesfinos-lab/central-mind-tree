@@ -1186,10 +1186,10 @@ REGRA DE LISTAGEM COM TERMO:
         const value = text.slice(start, end).replace(/[.\n]+$/g, "").trim();
         return value || undefined;
       };
-      const title = readField(["t\\u00edtulo:", "titulo:"], ["data:", "hor\\u00e1rio inicial:", "horario inicial:", "dura\\u00e7\\u00e3o:", "duracao:", "foco:"]);
-      const date = readField(["data:"], ["hor\\u00e1rio inicial:", "horario inicial:", "dura\\u00e7\\u00e3o:", "duracao:", "foco:"]);
-      const plannedStart = readField(["hor\\u00e1rio inicial:", "horario inicial:"], ["dura\\u00e7\\u00e3o:", "duracao:", "foco:"]);
-      const duration = readField(["dura\\u00e7\\u00e3o:", "duracao:"], ["foco:"]);
+      const title = readField(["t\u00edtulo:", "titulo:"], ["data:", "hor\u00e1rio inicial:", "horario inicial:", "dura\u00e7\u00e3o:", "duracao:", "foco:"]);
+      const date = readField(["data:"], ["hor\u00e1rio inicial:", "horario inicial:", "dura\u00e7\u00e3o:", "duracao:", "foco:"]);
+      const plannedStart = readField(["hor\u00e1rio inicial:", "horario inicial:"], ["dura\u00e7\u00e3o:", "duracao:", "foco:"]);
+      const duration = readField(["dura\u00e7\u00e3o:", "duracao:"], ["foco:"]);
       const focus = readField(["foco:"], []);
       if (title && !params.title) params.title = title;
       if (date && !params.date) params.date = date;
