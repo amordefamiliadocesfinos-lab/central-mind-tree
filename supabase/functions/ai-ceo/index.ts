@@ -1185,7 +1185,26 @@ REGRA DE LISTAGEM COM TERMO:
       if (focus && !params.focus) params.focus = focus;
     }
 
+          const lower = text.toLowerCase();
+      const read = (label: string, next: string) => {
+        const start = lower.indexOf(label);
+        if (start < 0) return undefined;
+        const end = lower.indexOf(next, start + label.length);
+        return text.slice(start + label.length, end < 0 ? text.length : end).replaceAll(".", "").trim();
+      };
+      const cleanTitle = read("título:", "data:") ?? read("titulo:", "data:");
+      const cleanDate = read("data:", "horário") ?? read("data:", "horario");
+      const cleanStart = read("horário inicial:", "duração:") ?? read("horario inicial:", "duracao:");
+      const cleanDuration = read("duração:", "foco:") ?? read("duracao:", "foco:");
+      const cleanFocus = read("foco:", "fim");
+      if (cleanTitle) params.title = cleanTitle;
+      if (cleanDate) params.date = cleanDate;
+      if (cleanStart) params.planned_start = cleanStart;
+      if (cleanDuration) params.duration_minutes = Number(cleanDuration);
+      if (cleanFocus) params.focus = cleanFocus;
+
     return {
+      
       objective: parsed.objective ?? userMessage.slice(0, 120),
       module: parsed.module,
       entity: parsed.entity,
