@@ -145,7 +145,9 @@ export const CAPABILITIES_CATALOG: ModuleCapabilities[] = [
     name: "Rotina",
     purpose: "Blocos de rotina, alertas, métodos de trabalho e execução diária.",
     entities: [
-      { id: "bloco_rotina", name: "Bloco de Rotina", operations: ["criar","listar","consultar","editar","excluir"], destructive: ["excluir"], status: "planejada" },
+      { id: "bloco_rotina",    name: "Bloco de Rotina",     operations: ["criar","listar","consultar","pesquisar","editar","excluir"], destructive: ["excluir"], synonyms: ["bloco","rotina","compromisso","agenda","atividade da rotina"], status: "disponivel" },
+      { id: "metodo_trabalho", name: "Método de Trabalho",  operations: ["criar","listar","consultar","pesquisar","editar","excluir"], destructive: ["excluir"], synonyms: ["mt","método de trabalho","metodo de trabalho"], status: "disponivel" },
+      { id: "template_rotina", name: "Template de Rotina",  operations: ["criar","listar","consultar","pesquisar","editar","excluir"], destructive: ["excluir"], synonyms: ["template","modelo de rotina","modelo"], status: "disponivel" },
     ],
   },
   {
