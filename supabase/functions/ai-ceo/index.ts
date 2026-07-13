@@ -1166,6 +1166,41 @@ REGRA DE LISTAGEM COM TERMO:
       }
     }
 
+    // Rotinas: o LLM pode identificar a acao, mas omitir params. Para o formato
+    // estruturado do chat, preserva os campos informados pelo usuario antes do
+    // despacho ao Especialista, sem criar um caminho de execucao paralelo.
+    if (
+      String(parsed.entity ?? "").toLowerCase() === "bloco_rotina" &&
+      String(parsed.operation ?? "").toLowerCase() === "criar"
+    ) {
+      const text = String(userMessage ?? "");
+      const lower = text.toLowerCase();
+      const readField = (labels: string[], nextLabels: string[]) => {
+        const label = labels.map((item) => item.toLowerCase()).find((item) => lower.includes(item));
+        if (!label) return undefined;
+        const start = lower.indexOf(label) + label.length;
+        const ends = nextLabels
+          .map((item) => lower.indexOf(item.toLowerCase(), start))
+          .filter((index) => index >= 0);
+        const end = ends.length > 0 ? Math.min(...ends) : text.length;
+        const value = text.slice(start, end).replace(/[.\n]+$/g, "").trim();
+        return value || undefined;
+      };
+      const title = readField(["t\\u00edtulo:", "titulo:"], ["data:", "hor\\u00e1rio inicial:", "horario inicial:", "dura\\u00e7\\u00e3o:", "duracao:", "foco:"]);
+      const date = readField(["data:"], ["hor\\u00e1rio inicial:", "horario inicial:", "dura\\u00e7\\u00e3o:", "duracao:", "foco:"]);
+      const plannedStart = readField(["hor\\u00e1rio inicial:", "horario inicial:"], ["dura\\u00e7\\u00e3o:", "duracao:", "foco:"]);
+      const duration = readField(["dura\\u00e7\\u00e3o:", "duracao:"], ["foco:"]);
+      const focus = readField(["foco:"], []);
+      if (title && !params.title) params.title = title;
+      if (date && !params.date) params.date = date;
+      if (plannedStart && !params.planned_start) params.planned_start = plannedStart;
+      if (duration && !params.duration_minutes) {
+        const minutes = Number(duration);
+        if (Number.isFinite(minutes)) params.duration_minutes = minutes;
+      }
+      if (focus && !params.focus) params.focus = focus;
+    }
+
     return {
       objective: parsed.objective ?? userMessage.slice(0, 120),
       module: parsed.module,
