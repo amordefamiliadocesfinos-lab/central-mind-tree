@@ -16,7 +16,7 @@
 export type Operation =
   | "criar"
   | "listar"
-  | "consultar"
+  | "consultar"{ id: "bloco_rotina", name: "Bloco de Rotina", operations: ["criar","listar","consultar","editar","excluir"], destructive: ["excluir"], status: "planejada" },
   | "pesquisar"
   | "editar"
   | "excluir"
