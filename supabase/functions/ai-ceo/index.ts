@@ -1169,6 +1169,17 @@ REGRA DE LISTAGEM COM TERMO:
     // Rotinas: o LLM pode identificar a acao, mas omitir params. Para o formato
     // estruturado do chat, preserva os campos informados pelo usuario antes do
     // despacho ao Especialista, sem criar um caminho de execucao paralelo.
+    {
+      const rawMsg = String(userMessage ?? "");
+      const lowerMsg = rawMsg.toLowerCase();
+      const hasCreateVerb = /\b(crie|criar|adicione|adicionar)\b/.test(lowerMsg);
+      const hasBlocoRotina = lowerMsg.includes("bloco de rotina");
+      const hasTitulo = /(^|\s)t[íi]tulo:/i.test(rawMsg);
+      if (hasCreateVerb && hasBlocoRotina && hasTitulo) {
+        parsed.entity = "bloco_rotina";
+        parsed.operation = "criar";
+      }
+    }
     if (
       String(parsed.entity ?? "").toLowerCase() === "bloco_rotina" &&
       String(parsed.operation ?? "").toLowerCase() === "criar"
