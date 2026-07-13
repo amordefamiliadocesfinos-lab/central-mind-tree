@@ -263,10 +263,10 @@ export function BlockEditDialog({ open, onOpenChange, block, onSave, defaultDate
 
         {/* Actions */}
         <div className="flex gap-2">
-          <Button type="button" variant="outline" className="flex-1 h-12" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" className="flex-1 h-12" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
-          <Button type="button" className="flex-1 h-12" onClick={handleSubmit} disabled={!formData.title.trim()}>
+          <Button className="flex-1 h-12" onClick={handleSubmit} disabled={!formData.title.trim()}>
             {block ? "Salvar" : "Adicionar"}
           </Button>
         </div>
