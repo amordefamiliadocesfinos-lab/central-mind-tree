@@ -1166,6 +1166,25 @@ REGRA DE LISTAGEM COM TERMO:
       }
     }
 
+    
+    // Rotinas: a mensagem estruturada prevalece quando o LLM omite params.
+    if (String(parsed.entity ?? "").toLowerCase() === "bloco_rotina" && String(parsed.operation ?? "").toLowerCase() === "criar") {
+      const text = String(userMessage ?? "");
+      const capture = (re: RegExp) => text.match(re)?.[1]?.trim();
+      const title = capture(/(?:t[íi]tulo|nome)s*:s*([^
+.]+?)(?=s*(?:data|hor[áa]rio(?:s+inicial)?|dura[çc][aã]o|foco)s*:|[.
+]|$)/i);
+      const date = capture(/datas*:s*(d{4}-d{2}-d{2})/i);
+      const plannedStart = capture(/hor[áa]rio(?:s+inicial)?s*:s*(d{1,2}:d{2})/i);
+      const duration = capture(/dura[çc][aã]os*:s*(d+)/i);
+      const focus = capture(/focos*:s*([w-]+)/i);
+      if (title && !params.title) params.title = title;
+      if (date && !params.date) params.date = date;
+      if (plannedStart && !params.planned_start) params.planned_start = plannedStart;
+      if (duration && !params.duration_minutes) params.duration_minutes = Number(duration);
+      if (focus && !params.focus) params.focus = focus;
+    }
+
     return {
       objective: parsed.objective ?? userMessage.slice(0, 120),
       module: parsed.module,
