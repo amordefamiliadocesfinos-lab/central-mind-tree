@@ -12,10 +12,11 @@ import {
   ContactsManager,
   PricingManagerV2,
   InvoicesManager,
+  StatementImporter,
 } from '@/components/financial';
 import { MobileFinancialView } from '@/components/financial/MobileFinancialView';
 import { useFinancial, EntryStatus } from '@/hooks/useFinancial';
-import { Users, DollarSign, FileText } from 'lucide-react';
+import { Users, DollarSign, FileText, Upload } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, LayoutDashboard, TrendingDown, TrendingUp, Wallet, Tag } from 'lucide-react';
@@ -24,6 +25,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 export default function Financeiro() {
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [importerOpen, setImporterOpen] = useState(false);
   const [pagarStatus, setPagarStatus] = useState<EntryStatus | 'all'>('all');
   const [receberStatus, setReceberStatus] = useState<EntryStatus | 'all'>('all');
   const [pagarSearch, setPagarSearch] = useState('');
