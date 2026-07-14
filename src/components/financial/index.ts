@@ -11,3 +11,4 @@ export { ContactOrderHistory } from './ContactOrderHistory';
 export { PricingManager } from './PricingManager';
 export { PricingManagerV2 } from './PricingManagerV2';
 export { InvoicesManager } from './InvoicesManager';
+export { StatementImporter } from './StatementImporter';

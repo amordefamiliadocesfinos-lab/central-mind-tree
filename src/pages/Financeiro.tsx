@@ -12,10 +12,11 @@ import {
   ContactsManager,
   PricingManagerV2,
   InvoicesManager,
+  StatementImporter,
 } from '@/components/financial';
 import { MobileFinancialView } from '@/components/financial/MobileFinancialView';
 import { useFinancial, EntryStatus } from '@/hooks/useFinancial';
-import { Users, DollarSign, FileText } from 'lucide-react';
+import { Users, DollarSign, FileText, Upload } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, LayoutDashboard, TrendingDown, TrendingUp, Wallet, Tag } from 'lucide-react';
@@ -24,6 +25,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 export default function Financeiro() {
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState('dashboard');
+  const [importerOpen, setImporterOpen] = useState(false);
   const [pagarStatus, setPagarStatus] = useState<EntryStatus | 'all'>('all');
   const [receberStatus, setReceberStatus] = useState<EntryStatus | 'all'>('all');
   const [pagarSearch, setPagarSearch] = useState('');
@@ -123,7 +125,19 @@ export default function Financeiro() {
           >
             Este mês
           </Button>
+
+          <Button variant="outline" size="sm" onClick={() => setImporterOpen(true)} className="ml-auto gap-2">
+            <Upload className="h-4 w-4" /> Importar Extrato
+          </Button>
         </div>
+
+        <StatementImporter
+          open={importerOpen}
+          onOpenChange={setImporterOpen}
+          accounts={accounts}
+          categories={categories}
+          onImported={() => fetchEntries()}
+        />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className={cn("grid w-full", isMobile ? "grid-cols-3" : "grid-cols-8")}>
