@@ -125,7 +125,19 @@ export default function Financeiro() {
           >
             Este mês
           </Button>
+
+          <Button variant="outline" size="sm" onClick={() => setImporterOpen(true)} className="ml-auto gap-2">
+            <Upload className="h-4 w-4" /> Importar Extrato
+          </Button>
         </div>
+
+        <StatementImporter
+          open={importerOpen}
+          onOpenChange={setImporterOpen}
+          accounts={accounts}
+          categories={categories}
+          onImported={() => fetchEntries()}
+        />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className={cn("grid w-full", isMobile ? "grid-cols-3" : "grid-cols-8")}>
