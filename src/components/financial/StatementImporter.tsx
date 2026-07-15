@@ -6,12 +6,15 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { FinancialAccount, FinancialCategory } from '@/hooks/useFinancial';
 import { supabase } from '@/integrations/supabase/client';
-import { Upload, FileText, Trash2, Loader2 } from 'lucide-react';
+import { Upload, FileText, Trash2, Loader2, AlertTriangle, CheckCircle2, XCircle, Sparkles } from 'lucide-react';
 import { format, parse as parseDate, isValid } from 'date-fns';
 import * as XLSX from 'xlsx';
+
+export type RowStatus = 'nova' | 'duplicada' | 'ja_importada' | 'erro';
 
 export interface ParsedRow {
   id: string;
@@ -21,7 +24,9 @@ export interface ParsedRow {
   type: 'entrada' | 'saida';
   value: number;
   categoryId?: string;
-  status: string;
+  status: RowStatus;
+  statusMessage?: string;
+  hash: string;
 }
 
 interface StatementImporterProps {
@@ -34,8 +39,33 @@ interface StatementImporterProps {
 
 const ACCEPTED = '.csv,.xls,.xlsx,.txt,.ofx,.pdf';
 
+// Keyword → category-name rules for simple auto-categorization
+const KEYWORD_RULES: { pattern: RegExp; category: string; type?: 'entrada' | 'saida' }[] = [
+  { pattern: /pix\s+recebid/i, category: 'Receita', type: 'entrada' },
+  { pattern: /shopee/i, category: 'Marketplace' },
+  { pattern: /mercado\s*livre|mercadolivre|mercadopago|mercado\s*pago/i, category: 'Marketplace' },
+  { pattern: /uber|99\s*app|cabify/i, category: 'Transporte' },
+  { pattern: /posto|combust[íi]vel|shell|ipiranga|petrobras/i, category: 'Combustível' },
+  { pattern: /energia|cemig|light|enel|coelba|copel|celesc/i, category: 'Energia' },
+  { pattern: /fornecedor/i, category: 'Fornecedor' },
+];
+
 function uid() {
   return Math.random().toString(36).slice(2, 10);
+}
+
+function normalizeDescription(raw: string): string {
+  return (raw || '')
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+async function sha256(str: string): Promise<string> {
+  const enc = new TextEncoder().encode(str);
+  const buf = await crypto.subtle.digest('SHA-256', enc);
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 function normalizeNumber(raw: string): number {
@@ -44,7 +74,6 @@ function normalizeNumber(raw: string): number {
   const isNeg = /^\(.*\)$/.test(s) || s.startsWith('-');
   s = s.replace(/[()-]/g, '');
   if (s.includes(',') && s.includes('.')) {
-    // Assume BR: 1.234,56
     s = s.replace(/\./g, '').replace(',', '.');
   } else if (s.includes(',')) {
     s = s.replace(',', '.');
@@ -67,7 +96,7 @@ function tryParseDate(raw: string): string {
   return format(new Date(), 'yyyy-MM-dd');
 }
 
-function toRow(date: string, description: string, value: number): ParsedRow {
+function makeRow(date: string, description: string, value: number): Omit<ParsedRow, 'hash' | 'status'> {
   return {
     id: uid(),
     selected: true,
@@ -75,16 +104,14 @@ function toRow(date: string, description: string, value: number): ParsedRow {
     description: description.trim(),
     type: value >= 0 ? 'entrada' : 'saida',
     value: Math.abs(value),
-    status: 'Pendente',
   };
 }
 
-function parseCSVLike(text: string, delimiter?: string): ParsedRow[] {
+function parseCSVLike(text: string, delimiter?: string): Omit<ParsedRow, 'hash' | 'status'>[] {
   const lines = text.split(/\r?\n/).filter(l => l.trim());
   if (!lines.length) return [];
   const delim = delimiter || (lines[0].includes(';') ? ';' : lines[0].includes('\t') ? '\t' : ',');
-  const rows: ParsedRow[] = [];
-  // Detect header
+  const rows: Omit<ParsedRow, 'hash' | 'status'>[] = [];
   const first = lines[0].toLowerCase();
   const hasHeader = /data|date|descri|hist|valor|amount/.test(first);
   const start = hasHeader ? 1 : 0;
@@ -104,25 +131,25 @@ function parseCSVLike(text: string, delimiter?: string): ParsedRow[] {
     const desc = (cols[descIdx] || '').replace(/^"|"$/g, '');
     const value = normalizeNumber(cols[valueIdx] || '0');
     if (!value && !desc) continue;
-    rows.push(toRow(date, desc, value));
+    rows.push(makeRow(date, desc, value));
   }
   return rows;
 }
 
-function parseOFX(text: string): ParsedRow[] {
-  const rows: ParsedRow[] = [];
+function parseOFX(text: string): Omit<ParsedRow, 'hash' | 'status'>[] {
+  const rows: Omit<ParsedRow, 'hash' | 'status'>[] = [];
   const stmts = text.match(/<STMTTRN>[\s\S]*?<\/STMTTRN>/gi) || [];
   for (const s of stmts) {
     const amt = normalizeNumber((s.match(/<TRNAMT>([^<\r\n]+)/i)?.[1] || '0'));
     const dt = (s.match(/<DTPOSTED>([^<\r\n]+)/i)?.[1] || '').slice(0, 8);
     const memo = (s.match(/<MEMO>([^<\r\n]+)/i)?.[1] || '') || (s.match(/<NAME>([^<\r\n]+)/i)?.[1] || '');
     const date = dt.length === 8 ? `${dt.slice(0, 4)}-${dt.slice(4, 6)}-${dt.slice(6, 8)}` : tryParseDate(dt);
-    rows.push(toRow(date, memo, amt));
+    rows.push(makeRow(date, memo, amt));
   }
   return rows;
 }
 
-async function parseXLSX(file: File): Promise<ParsedRow[]> {
+async function parseXLSX(file: File): Promise<Omit<ParsedRow, 'hash' | 'status'>[]> {
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: 'array', cellDates: true });
   const sheet = wb.Sheets[wb.SheetNames[0]];
@@ -131,7 +158,7 @@ async function parseXLSX(file: File): Promise<ParsedRow[]> {
   return parseCSVLike(csv, ';');
 }
 
-async function parsePDF(file: File): Promise<ParsedRow[]> {
+async function parsePDF(file: File): Promise<Omit<ParsedRow, 'hash' | 'status'>[]> {
   const pdfjs: any = await import('pdfjs-dist/build/pdf.mjs');
   try {
     const workerSrc = (await import('pdfjs-dist/build/pdf.worker.mjs?url')).default;
@@ -145,7 +172,6 @@ async function parsePDF(file: File): Promise<ParsedRow[]> {
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
     const content = await page.getTextContent();
-    // Group by y coordinate to form lines
     const items = content.items as any[];
     const linesMap = new Map<number, string[]>();
     for (const it of items) {
@@ -156,23 +182,32 @@ async function parsePDF(file: File): Promise<ParsedRow[]> {
     const ys = Array.from(linesMap.keys()).sort((a, b) => b - a);
     for (const y of ys) text += linesMap.get(y)!.join(' ') + '\n';
   }
-  const rows: ParsedRow[] = [];
+  const rows: Omit<ParsedRow, 'hash' | 'status'>[] = [];
   const re = /(\d{2}\/\d{2}\/\d{2,4})\s+(.+?)\s+(-?\(?R?\$?\s?[\d\.,]+\)?)\s*$/;
   for (const line of text.split(/\n/)) {
     const m = line.trim().match(re);
     if (!m) continue;
-    rows.push(toRow(tryParseDate(m[1]), m[2], normalizeNumber(m[3])));
+    rows.push(makeRow(tryParseDate(m[1]), m[2], normalizeNumber(m[3])));
   }
   return rows;
 }
 
-async function parseFile(file: File): Promise<ParsedRow[]> {
+async function parseFile(file: File): Promise<Omit<ParsedRow, 'hash' | 'status'>[]> {
   const name = file.name.toLowerCase();
   if (name.endsWith('.xls') || name.endsWith('.xlsx')) return parseXLSX(file);
   const text = await file.text();
   if (name.endsWith('.ofx')) return parseOFX(text);
   if (name.endsWith('.pdf')) return parsePDF(file);
   return parseCSVLike(text);
+}
+
+function fileExtension(name: string): string {
+  const dot = name.lastIndexOf('.');
+  return dot >= 0 ? name.slice(dot + 1).toLowerCase() : '';
+}
+
+function computeHashKey(accountId: string, r: { date: string; value: number; type: 'entrada' | 'saida'; description: string }): string {
+  return [accountId, r.date, r.value.toFixed(2), r.type, normalizeDescription(r.description)].join('|');
 }
 
 export function StatementImporter({ open, onOpenChange, accounts, categories, onImported }: StatementImporterProps) {
@@ -186,6 +221,21 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
 
   const activeCategories = useMemo(() => categories.filter(c => c.is_active), [categories]);
 
+  const findCategoryByKeyword = (description: string, type: 'entrada' | 'saida'): string | undefined => {
+    for (const rule of KEYWORD_RULES) {
+      if (rule.pattern.test(description)) {
+        const wanted = rule.category.toLowerCase();
+        const wantedType = type === 'entrada' ? 'receber' : 'pagar';
+        const match = activeCategories.find(c =>
+          c.name.toLowerCase() === wanted &&
+          (c.type === 'ambos' || c.type === wantedType)
+        );
+        if (match) return match.id;
+      }
+    }
+    return undefined;
+  };
+
   const reset = () => {
     setAccountId('');
     setFile(null);
@@ -195,6 +245,79 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
   const handleClose = () => {
     reset();
     onOpenChange(false);
+  };
+
+  const classifyRows = async (raw: Omit<ParsedRow, 'hash' | 'status'>[]): Promise<ParsedRow[]> => {
+    // Compute hashes and load existing entries for the account within range
+    const dates = raw.map(r => r.date).filter(Boolean);
+    const minDate = dates.length ? dates.reduce((a, b) => (a < b ? a : b)) : null;
+    const maxDate = dates.length ? dates.reduce((a, b) => (a > b ? a : b)) : null;
+
+    const hashes: string[] = [];
+    const rowsWithHash = await Promise.all(raw.map(async r => {
+      const h = await sha256(computeHashKey(accountId, r));
+      hashes.push(h);
+      return { ...r, hash: h };
+    }));
+
+    // Fetch existing entries: (a) same account in date range OR (b) same import_hash
+    const [existingByRange, existingByHash] = await Promise.all([
+      minDate && maxDate
+        ? supabase
+            .from('financial_entries')
+            .select('id, type, value, due_date, description, import_hash')
+            .eq('account_id', accountId)
+            .gte('due_date', minDate)
+            .lte('due_date', maxDate)
+        : Promise.resolve({ data: [] as any[], error: null }),
+      supabase
+        .from('financial_entries')
+        .select('id, import_hash')
+        .in('import_hash', hashes.length ? hashes : ['__none__']),
+    ]);
+
+    const importedHashSet = new Set(
+      (existingByHash.data || []).map((e: any) => e.import_hash).filter(Boolean)
+    );
+
+    const existingList = (existingByRange.data || []) as any[];
+
+    return rowsWithHash.map(r => {
+      let status: RowStatus = 'nova';
+      let statusMessage: string | undefined;
+
+      if (!r.date || !r.value || r.value <= 0) {
+        status = 'erro';
+        statusMessage = !r.value ? 'Valor inválido' : 'Data inválida';
+      } else if (importedHashSet.has(r.hash)) {
+        status = 'ja_importada';
+        statusMessage = 'Já importada anteriormente';
+      } else {
+        const dbType = r.type === 'entrada' ? 'receber' : 'pagar';
+        const normDesc = normalizeDescription(r.description);
+        const possible = existingList.find(e =>
+          e.type === dbType &&
+          e.due_date === r.date &&
+          Math.abs(Number(e.value) - r.value) < 0.005 &&
+          normalizeDescription(e.description || '') === normDesc
+        );
+        if (possible) {
+          status = 'duplicada';
+          statusMessage = 'Movimentação semelhante já existe';
+        }
+      }
+
+      const categoryId = findCategoryByKeyword(r.description, r.type);
+
+      return {
+        ...r,
+        status,
+        statusMessage,
+        categoryId,
+        selected: status === 'nova' || status === 'duplicada', // 'duplicada' selected but with warning; user decides
+        ...(status === 'ja_importada' || status === 'erro' ? { selected: false } : {}),
+      };
+    });
   };
 
   const handleRead = async () => {
@@ -211,8 +334,15 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
       const parsed = await parseFile(file);
       if (!parsed.length) {
         toast({ title: 'Nenhum lançamento encontrado', description: 'Verifique o formato do arquivo.', variant: 'destructive' });
+        setReading(false);
+        return;
       }
-      setRows(parsed);
+      const classified = await classifyRows(parsed);
+      // Ja importadas ficam desmarcadas por padrão; duplicadas com aviso mas selecionadas para decisão do usuário
+      classified.forEach(r => {
+        if (r.status === 'duplicada') r.selected = false; // deixa o usuário decidir
+      });
+      setRows(classified);
     } catch (e: any) {
       console.error(e);
       toast({ title: 'Erro ao ler arquivo', description: e?.message || String(e), variant: 'destructive' });
@@ -227,18 +357,44 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
 
   const removeRow = (id: string) => setRows(prev => prev.filter(r => r.id !== id));
 
-  const allSelected = rows.length > 0 && rows.every(r => r.selected);
-  const toggleAll = (checked: boolean) => setRows(prev => prev.map(r => ({ ...r, selected: checked })));
+  const selectableRows = rows.filter(r => r.status !== 'erro');
+  const allSelected = selectableRows.length > 0 && selectableRows.every(r => r.selected);
+  const toggleAll = (checked: boolean) =>
+    setRows(prev => prev.map(r => (r.status === 'erro' ? r : { ...r, selected: checked })));
+
+  const counters = useMemo(() => {
+    return rows.reduce(
+      (acc, r) => {
+        acc[r.status]++;
+        return acc;
+      },
+      { nova: 0, duplicada: 0, ja_importada: 0, erro: 0 } as Record<RowStatus, number>
+    );
+  }, [rows]);
 
   const handleImport = async () => {
+    const errors = rows.filter(r => r.selected && r.status === 'erro');
+    if (errors.length) {
+      toast({ title: 'Corrija as linhas com erro antes de importar', variant: 'destructive' });
+      return;
+    }
     const selected = rows.filter(r => r.selected);
     if (!selected.length) {
       toast({ title: 'Selecione ao menos um lançamento', variant: 'destructive' });
       return;
     }
     setImporting(true);
+    const now = new Date().toISOString();
+    const fileName = file?.name || '';
+    const fileType = fileExtension(fileName);
     try {
-      const payload = selected.map(r => ({
+      // Recompute hash from current row values (user may have edited)
+      const enriched = await Promise.all(selected.map(async r => {
+        const hash = await sha256(computeHashKey(accountId, r));
+        return { r, hash };
+      }));
+
+      const payload = enriched.map(({ r, hash }) => ({
         type: r.type === 'entrada' ? 'receber' : 'pagar',
         description: r.description || 'Importado do extrato',
         value: r.value,
@@ -248,10 +404,20 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
         account_id: accountId,
         category_id: r.categoryId || null,
         notes: 'Importado via extrato',
+        import_source: 'extrato_arquivo',
+        import_file_name: fileName,
+        import_file_type: fileType,
+        imported_at: now,
+        imported_by: 'usuario',
+        import_hash: hash,
       }));
-      const { data: inserted, error } = await supabase.from('financial_entries').insert(payload).select('id, value, account_id');
+
+      const { data: inserted, error } = await supabase
+        .from('financial_entries')
+        .insert(payload)
+        .select('id, value, account_id');
       if (error) throw error;
-      // Register movements (payments) to mark as paid
+
       if (inserted?.length) {
         const movements = inserted.map(e => ({
           entry_id: e.id,
@@ -273,6 +439,19 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
     }
   };
 
+  const statusBadge = (r: ParsedRow) => {
+    switch (r.status) {
+      case 'nova':
+        return <Badge variant="secondary" className="gap-1"><CheckCircle2 className="h-3 w-3" /> Nova</Badge>;
+      case 'duplicada':
+        return <Badge variant="outline" className="gap-1 border-amber-500 text-amber-600" title={r.statusMessage}><AlertTriangle className="h-3 w-3" /> Possível duplicada</Badge>;
+      case 'ja_importada':
+        return <Badge variant="outline" className="gap-1 text-muted-foreground" title={r.statusMessage}><CheckCircle2 className="h-3 w-3" /> Já importada</Badge>;
+      case 'erro':
+        return <Badge variant="destructive" className="gap-1" title={r.statusMessage}><XCircle className="h-3 w-3" /> Erro</Badge>;
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={(v) => (v ? onOpenChange(v) : handleClose())}>
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
@@ -281,7 +460,7 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
             <Upload className="h-5 w-5" /> Importar Extrato
           </DialogTitle>
           <DialogDescription>
-            Aceita CSV, XLS, XLSX, TXT, OFX e PDF com texto pesquisável.
+            Aceita CSV, XLS, XLSX, TXT, OFX e PDF com texto pesquisável. Duplicidades são detectadas por conta, data, valor, tipo e descrição.
           </DialogDescription>
         </DialogHeader>
 
@@ -326,8 +505,17 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
 
         {rows.length > 0 && (
           <div className="space-y-4">
-            <div className="text-sm text-muted-foreground">
-              {rows.length} lançamento(s) encontrado(s). Revise antes de importar.
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="text-muted-foreground">{rows.length} lançamento(s):</span>
+              <Badge variant="secondary" className="gap-1"><CheckCircle2 className="h-3 w-3" /> {counters.nova} novas</Badge>
+              <Badge variant="outline" className="gap-1 border-amber-500 text-amber-600"><AlertTriangle className="h-3 w-3" /> {counters.duplicada} possíveis duplicadas</Badge>
+              <Badge variant="outline" className="gap-1 text-muted-foreground"><CheckCircle2 className="h-3 w-3" /> {counters.ja_importada} já importadas</Badge>
+              {counters.erro > 0 && (
+                <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" /> {counters.erro} com erro</Badge>
+              )}
+              <span className="ml-auto text-xs text-muted-foreground flex items-center gap-1">
+                <Sparkles className="h-3 w-3" /> Categorias sugeridas por palavras-chave
+              </span>
             </div>
             <div className="border rounded-md overflow-x-auto">
               <Table>
@@ -347,9 +535,13 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
                 </TableHeader>
                 <TableBody>
                   {rows.map(r => (
-                    <TableRow key={r.id}>
+                    <TableRow key={r.id} className={r.status === 'erro' ? 'bg-destructive/5' : r.status === 'duplicada' ? 'bg-amber-50 dark:bg-amber-950/20' : r.status === 'ja_importada' ? 'opacity-70' : ''}>
                       <TableCell>
-                        <Checkbox checked={r.selected} onCheckedChange={(v) => updateRow(r.id, { selected: !!v })} />
+                        <Checkbox
+                          checked={r.selected}
+                          disabled={r.status === 'erro'}
+                          onCheckedChange={(v) => updateRow(r.id, { selected: !!v })}
+                        />
                       </TableCell>
                       <TableCell>
                         <Input type="date" value={r.date} onChange={(e) => updateRow(r.id, { date: e.target.value })} className="w-36" />
@@ -377,7 +569,9 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
                       </TableCell>
                       <TableCell>
                         <Select value={r.categoryId || ''} onValueChange={(v) => updateRow(r.id, { categoryId: v })}>
-                          <SelectTrigger className="w-40"><SelectValue placeholder="—" /></SelectTrigger>
+                          <SelectTrigger className="w-44">
+                            <SelectValue placeholder="Não definida" />
+                          </SelectTrigger>
                           <SelectContent>
                             {activeCategories
                               .filter(c => c.type === 'ambos' || (r.type === 'entrada' ? c.type === 'receber' : c.type === 'pagar'))
@@ -387,9 +581,7 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
                           </SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell>
-                        <Input value={r.status} onChange={(e) => updateRow(r.id, { status: e.target.value })} className="w-28" />
-                      </TableCell>
+                      <TableCell>{statusBadge(r)}</TableCell>
                       <TableCell>
                         <Button variant="ghost" size="icon" onClick={() => removeRow(r.id)}>
                           <Trash2 className="h-4 w-4" />
