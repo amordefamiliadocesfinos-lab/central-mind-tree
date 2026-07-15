@@ -1581,6 +1581,12 @@ export type Database = {
           document_number: string | null
           due_date: string
           id: string
+          import_file_name: string | null
+          import_file_type: string | null
+          import_hash: string | null
+          import_source: string | null
+          imported_at: string | null
+          imported_by: string | null
           is_conciliated: boolean
           issue_date: string | null
           notes: string | null
@@ -1608,6 +1614,12 @@ export type Database = {
           document_number?: string | null
           due_date: string
           id?: string
+          import_file_name?: string | null
+          import_file_type?: string | null
+          import_hash?: string | null
+          import_source?: string | null
+          imported_at?: string | null
+          imported_by?: string | null
           is_conciliated?: boolean
           issue_date?: string | null
           notes?: string | null
@@ -1635,6 +1647,12 @@ export type Database = {
           document_number?: string | null
           due_date?: string
           id?: string
+          import_file_name?: string | null
+          import_file_type?: string | null
+          import_hash?: string | null
+          import_source?: string | null
+          imported_at?: string | null
+          imported_by?: string | null
           is_conciliated?: boolean
           issue_date?: string | null
           notes?: string | null
