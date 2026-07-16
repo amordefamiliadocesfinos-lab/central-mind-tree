@@ -26,6 +26,10 @@ export interface ParsedRow {
   type: 'entrada' | 'saida';
   value: number;
   categoryId?: string;
+  contactId?: string;
+  contactName?: string;
+  orderId?: string;
+  orderNumber?: string;
   status: RowStatus;
   statusMessage?: string;
   hash: string;
