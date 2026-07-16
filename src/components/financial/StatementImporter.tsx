@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,10 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList, CommandInput } from '@/components/ui/command';
 import { useToast } from '@/hooks/use-toast';
 import { FinancialAccount, FinancialCategory } from '@/hooks/useFinancial';
 import { supabase } from '@/integrations/supabase/client';
-import { Upload, FileText, Trash2, Loader2, AlertTriangle, CheckCircle2, XCircle, Sparkles } from 'lucide-react';
+import { Upload, FileText, Trash2, Loader2, AlertTriangle, CheckCircle2, XCircle, Sparkles, User, Package, X } from 'lucide-react';
 import { format, parse as parseDate, isValid } from 'date-fns';
 import * as XLSX from 'xlsx';
 
