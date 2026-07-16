@@ -609,6 +609,8 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
         payment_date: r.date,
         account_id: accountId,
         category_id: r.categoryId || null,
+        contact_id: r.contactId || null,
+        order_id: r.orderId || null,
         notes: 'Importado via extrato',
         import_source: 'extrato_arquivo',
         import_file_name: fileName,
