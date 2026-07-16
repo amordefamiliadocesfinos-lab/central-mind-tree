@@ -216,6 +216,206 @@ function computeHashKey(accountId: string, r: { date: string; value: number; typ
   return [accountId, r.date, r.value.toFixed(2), r.type, normalizeDescription(r.description)].join('|');
 }
 
+function ContactCell({
+  value,
+  onChange,
+}: {
+  value?: { id: string; name: string };
+  onChange: (v?: { id: string; name: string }) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [results, setResults] = useState<{ id: string; name: string; type: string }[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(async () => {
+      setLoading(true);
+      let q = supabase
+        .from('contacts')
+        .select('id, name, type')
+        .eq('is_active', true)
+        .order('name')
+        .limit(20);
+      if (search.trim().length >= 2) {
+        q = q.or(`name.ilike.%${search}%,fantasy_name.ilike.%${search}%,document.ilike.%${search}%`);
+      }
+      const { data } = await q;
+      setResults((data as any) || []);
+      setLoading(false);
+    }, 200);
+    return () => clearTimeout(t);
+  }, [search, open]);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="w-full justify-start h-9 font-normal">
+          {value ? (
+            <span className="flex items-center gap-1 min-w-0">
+              <User className="h-3 w-3 shrink-0" />
+              <span className="truncate">{value.name}</span>
+            </span>
+          ) : (
+            <span className="text-muted-foreground flex items-center gap-1">
+              <User className="h-3 w-3" /> Cliente/Fornecedor
+            </span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="p-0 w-72" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput placeholder="Buscar contato..." value={search} onValueChange={setSearch} />
+          <CommandList>
+            {loading ? (
+              <div className="p-3 text-sm text-muted-foreground text-center">Buscando...</div>
+            ) : (
+              <>
+                {value && (
+                  <CommandGroup>
+                    <CommandItem
+                      value="__clear__"
+                      onSelect={() => {
+                        onChange(undefined);
+                        setOpen(false);
+                      }}
+                    >
+                      <X className="h-3 w-3 mr-2" /> Remover vínculo
+                    </CommandItem>
+                  </CommandGroup>
+                )}
+                <CommandGroup>
+                  {results.length === 0 ? (
+                    <CommandEmpty>Nenhum contato</CommandEmpty>
+                  ) : (
+                    results.map((c) => (
+                      <CommandItem
+                        key={c.id}
+                        value={c.id}
+                        onSelect={() => {
+                          onChange({ id: c.id, name: c.name });
+                          setOpen(false);
+                        }}
+                      >
+                        <User className="h-3 w-3 mr-2" />
+                        <span className="truncate">{c.name}</span>
+                        <span className="ml-auto text-[10px] text-muted-foreground">{c.type}</span>
+                      </CommandItem>
+                    ))
+                  )}
+                </CommandGroup>
+              </>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function OrderCell({
+  value,
+  contactId,
+  onChange,
+}: {
+  value?: { id: string; number: string };
+  contactId?: string;
+  onChange: (v?: { id: string; number: string }) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [results, setResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(async () => {
+      setLoading(true);
+      let q = supabase
+        .from('orders')
+        .select('id, order_number, total_amount, order_date, contact:contacts(name)')
+        .order('order_date', { ascending: false })
+        .limit(20);
+      if (contactId) q = q.eq('contact_id', contactId);
+      if (search.trim().length >= 1) q = q.ilike('order_number', `%${search}%`);
+      const { data } = await q;
+      setResults((data as any) || []);
+      setLoading(false);
+    }, 200);
+    return () => clearTimeout(t);
+  }, [search, open, contactId]);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="w-full justify-start h-9 font-normal">
+          {value ? (
+            <span className="flex items-center gap-1 min-w-0">
+              <Package className="h-3 w-3 shrink-0" />
+              <span className="truncate">#{value.number}</span>
+            </span>
+          ) : (
+            <span className="text-muted-foreground flex items-center gap-1">
+              <Package className="h-3 w-3" /> Pedido
+            </span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="p-0 w-80" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput placeholder="Buscar por nº do pedido..." value={search} onValueChange={setSearch} />
+          <CommandList>
+            {loading ? (
+              <div className="p-3 text-sm text-muted-foreground text-center">Buscando...</div>
+            ) : (
+              <>
+                {value && (
+                  <CommandGroup>
+                    <CommandItem
+                      value="__clear__"
+                      onSelect={() => {
+                        onChange(undefined);
+                        setOpen(false);
+                      }}
+                    >
+                      <X className="h-3 w-3 mr-2" /> Remover vínculo
+                    </CommandItem>
+                  </CommandGroup>
+                )}
+                <CommandGroup>
+                  {results.length === 0 ? (
+                    <CommandEmpty>Nenhum pedido</CommandEmpty>
+                  ) : (
+                    results.map((o: any) => (
+                      <CommandItem
+                        key={o.id}
+                        value={o.id}
+                        onSelect={() => {
+                          onChange({ id: o.id, number: o.order_number || o.id.slice(0, 6) });
+                          setOpen(false);
+                        }}
+                      >
+                        <Package className="h-3 w-3 mr-2" />
+                        <div className="flex flex-col min-w-0">
+                          <span className="truncate">#{o.order_number} — {o.contact?.name || 'sem contato'}</span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {o.order_date} · R$ {Number(o.total_amount || 0).toFixed(2)}
+                          </span>
+                        </div>
+                      </CommandItem>
+                    ))
+                  )}
+                </CommandGroup>
+              </>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 export function StatementImporter({ open, onOpenChange, accounts, categories, onImported }: StatementImporterProps) {
   const { toast } = useToast();
   const [accountId, setAccountId] = useState<string>('');
