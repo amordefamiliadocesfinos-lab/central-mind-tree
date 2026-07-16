@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,10 +7,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList, CommandInput } from '@/components/ui/command';
 import { useToast } from '@/hooks/use-toast';
 import { FinancialAccount, FinancialCategory } from '@/hooks/useFinancial';
 import { supabase } from '@/integrations/supabase/client';
-import { Upload, FileText, Trash2, Loader2, AlertTriangle, CheckCircle2, XCircle, Sparkles } from 'lucide-react';
+import { Upload, FileText, Trash2, Loader2, AlertTriangle, CheckCircle2, XCircle, Sparkles, User, Package, X } from 'lucide-react';
 import { format, parse as parseDate, isValid } from 'date-fns';
 import * as XLSX from 'xlsx';
 
@@ -24,6 +26,10 @@ export interface ParsedRow {
   type: 'entrada' | 'saida';
   value: number;
   categoryId?: string;
+  contactId?: string;
+  contactName?: string;
+  orderId?: string;
+  orderNumber?: string;
   status: RowStatus;
   statusMessage?: string;
   hash: string;
@@ -208,6 +214,206 @@ function fileExtension(name: string): string {
 
 function computeHashKey(accountId: string, r: { date: string; value: number; type: 'entrada' | 'saida'; description: string }): string {
   return [accountId, r.date, r.value.toFixed(2), r.type, normalizeDescription(r.description)].join('|');
+}
+
+function ContactCell({
+  value,
+  onChange,
+}: {
+  value?: { id: string; name: string };
+  onChange: (v?: { id: string; name: string }) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [results, setResults] = useState<{ id: string; name: string; type: string }[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(async () => {
+      setLoading(true);
+      let q = supabase
+        .from('contacts')
+        .select('id, name, type')
+        .eq('is_active', true)
+        .order('name')
+        .limit(20);
+      if (search.trim().length >= 2) {
+        q = q.or(`name.ilike.%${search}%,fantasy_name.ilike.%${search}%,document.ilike.%${search}%`);
+      }
+      const { data } = await q;
+      setResults((data as any) || []);
+      setLoading(false);
+    }, 200);
+    return () => clearTimeout(t);
+  }, [search, open]);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="w-full justify-start h-9 font-normal">
+          {value ? (
+            <span className="flex items-center gap-1 min-w-0">
+              <User className="h-3 w-3 shrink-0" />
+              <span className="truncate">{value.name}</span>
+            </span>
+          ) : (
+            <span className="text-muted-foreground flex items-center gap-1">
+              <User className="h-3 w-3" /> Cliente/Fornecedor
+            </span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="p-0 w-72" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput placeholder="Buscar contato..." value={search} onValueChange={setSearch} />
+          <CommandList>
+            {loading ? (
+              <div className="p-3 text-sm text-muted-foreground text-center">Buscando...</div>
+            ) : (
+              <>
+                {value && (
+                  <CommandGroup>
+                    <CommandItem
+                      value="__clear__"
+                      onSelect={() => {
+                        onChange(undefined);
+                        setOpen(false);
+                      }}
+                    >
+                      <X className="h-3 w-3 mr-2" /> Remover vínculo
+                    </CommandItem>
+                  </CommandGroup>
+                )}
+                <CommandGroup>
+                  {results.length === 0 ? (
+                    <CommandEmpty>Nenhum contato</CommandEmpty>
+                  ) : (
+                    results.map((c) => (
+                      <CommandItem
+                        key={c.id}
+                        value={c.id}
+                        onSelect={() => {
+                          onChange({ id: c.id, name: c.name });
+                          setOpen(false);
+                        }}
+                      >
+                        <User className="h-3 w-3 mr-2" />
+                        <span className="truncate">{c.name}</span>
+                        <span className="ml-auto text-[10px] text-muted-foreground">{c.type}</span>
+                      </CommandItem>
+                    ))
+                  )}
+                </CommandGroup>
+              </>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function OrderCell({
+  value,
+  contactId,
+  onChange,
+}: {
+  value?: { id: string; number: string };
+  contactId?: string;
+  onChange: (v?: { id: string; number: string }) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [results, setResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(async () => {
+      setLoading(true);
+      let q = supabase
+        .from('orders')
+        .select('id, order_number, total_amount, order_date, contact:contacts(name)')
+        .order('order_date', { ascending: false })
+        .limit(20);
+      if (contactId) q = q.eq('contact_id', contactId);
+      if (search.trim().length >= 1) q = q.ilike('order_number', `%${search}%`);
+      const { data } = await q;
+      setResults((data as any) || []);
+      setLoading(false);
+    }, 200);
+    return () => clearTimeout(t);
+  }, [search, open, contactId]);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="w-full justify-start h-9 font-normal">
+          {value ? (
+            <span className="flex items-center gap-1 min-w-0">
+              <Package className="h-3 w-3 shrink-0" />
+              <span className="truncate">#{value.number}</span>
+            </span>
+          ) : (
+            <span className="text-muted-foreground flex items-center gap-1">
+              <Package className="h-3 w-3" /> Pedido
+            </span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="p-0 w-80" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput placeholder="Buscar por nº do pedido..." value={search} onValueChange={setSearch} />
+          <CommandList>
+            {loading ? (
+              <div className="p-3 text-sm text-muted-foreground text-center">Buscando...</div>
+            ) : (
+              <>
+                {value && (
+                  <CommandGroup>
+                    <CommandItem
+                      value="__clear__"
+                      onSelect={() => {
+                        onChange(undefined);
+                        setOpen(false);
+                      }}
+                    >
+                      <X className="h-3 w-3 mr-2" /> Remover vínculo
+                    </CommandItem>
+                  </CommandGroup>
+                )}
+                <CommandGroup>
+                  {results.length === 0 ? (
+                    <CommandEmpty>Nenhum pedido</CommandEmpty>
+                  ) : (
+                    results.map((o: any) => (
+                      <CommandItem
+                        key={o.id}
+                        value={o.id}
+                        onSelect={() => {
+                          onChange({ id: o.id, number: o.order_number || o.id.slice(0, 6) });
+                          setOpen(false);
+                        }}
+                      >
+                        <Package className="h-3 w-3 mr-2" />
+                        <div className="flex flex-col min-w-0">
+                          <span className="truncate">#{o.order_number} — {o.contact?.name || 'sem contato'}</span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {o.order_date} · R$ {Number(o.total_amount || 0).toFixed(2)}
+                          </span>
+                        </div>
+                      </CommandItem>
+                    ))
+                  )}
+                </CommandGroup>
+              </>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 export function StatementImporter({ open, onOpenChange, accounts, categories, onImported }: StatementImporterProps) {
@@ -403,6 +609,8 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
         payment_date: r.date,
         account_id: accountId,
         category_id: r.categoryId || null,
+        contact_id: r.contactId || null,
+        order_id: r.orderId || null,
         notes: 'Importado via extrato',
         import_source: 'extrato_arquivo',
         import_file_name: fileName,
@@ -454,7 +662,7 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
 
   return (
     <Dialog open={open} onOpenChange={(v) => (v ? onOpenChange(v) : handleClose())}>
-      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-[95vw] xl:max-w-[1400px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" /> Importar Extrato
@@ -524,11 +732,13 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
                     <TableHead className="w-10">
                       <Checkbox checked={allSelected} onCheckedChange={(v) => toggleAll(!!v)} />
                     </TableHead>
+                    <TableHead className="min-w-[380px] w-[40%]">Descrição</TableHead>
                     <TableHead>Data</TableHead>
-                    <TableHead>Descrição</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead>Valor</TableHead>
                     <TableHead>Categoria</TableHead>
+                    <TableHead className="min-w-[200px]">Cliente / Fornecedor</TableHead>
+                    <TableHead className="min-w-[180px]">Pedido</TableHead>
                     <TableHead>Situação</TableHead>
                     <TableHead className="w-10"></TableHead>
                   </TableRow>
@@ -544,10 +754,15 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
                         />
                       </TableCell>
                       <TableCell>
-                        <Input type="date" value={r.date} onChange={(e) => updateRow(r.id, { date: e.target.value })} className="w-36" />
+                        <Input
+                          value={r.description}
+                          onChange={(e) => updateRow(r.id, { description: e.target.value })}
+                          className="w-full min-w-[360px] font-medium"
+                          title={r.description}
+                        />
                       </TableCell>
                       <TableCell>
-                        <Input value={r.description} onChange={(e) => updateRow(r.id, { description: e.target.value })} className="min-w-[200px]" />
+                        <Input type="date" value={r.date} onChange={(e) => updateRow(r.id, { date: e.target.value })} className="w-36" />
                       </TableCell>
                       <TableCell>
                         <Select value={r.type} onValueChange={(v: any) => updateRow(r.id, { type: v })}>
@@ -580,6 +795,19 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
                               ))}
                           </SelectContent>
                         </Select>
+                      </TableCell>
+                      <TableCell>
+                        <ContactCell
+                          value={r.contactId ? { id: r.contactId, name: r.contactName || '' } : undefined}
+                          onChange={(c) => updateRow(r.id, { contactId: c?.id, contactName: c?.name, ...(c ? {} : { orderId: undefined, orderNumber: undefined }) })}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <OrderCell
+                          value={r.orderId ? { id: r.orderId, number: r.orderNumber || '' } : undefined}
+                          contactId={r.contactId}
+                          onChange={(o) => updateRow(r.id, { orderId: o?.id, orderNumber: o?.number })}
+                        />
                       </TableCell>
                       <TableCell>{statusBadge(r)}</TableCell>
                       <TableCell>
