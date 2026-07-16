@@ -732,11 +732,13 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
                     <TableHead className="w-10">
                       <Checkbox checked={allSelected} onCheckedChange={(v) => toggleAll(!!v)} />
                     </TableHead>
+                    <TableHead className="min-w-[380px] w-[40%]">Descrição</TableHead>
                     <TableHead>Data</TableHead>
-                    <TableHead>Descrição</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead>Valor</TableHead>
                     <TableHead>Categoria</TableHead>
+                    <TableHead className="min-w-[200px]">Cliente / Fornecedor</TableHead>
+                    <TableHead className="min-w-[180px]">Pedido</TableHead>
                     <TableHead>Situação</TableHead>
                     <TableHead className="w-10"></TableHead>
                   </TableRow>
@@ -752,10 +754,15 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
                         />
                       </TableCell>
                       <TableCell>
-                        <Input type="date" value={r.date} onChange={(e) => updateRow(r.id, { date: e.target.value })} className="w-36" />
+                        <Input
+                          value={r.description}
+                          onChange={(e) => updateRow(r.id, { description: e.target.value })}
+                          className="w-full min-w-[360px] font-medium"
+                          title={r.description}
+                        />
                       </TableCell>
                       <TableCell>
-                        <Input value={r.description} onChange={(e) => updateRow(r.id, { description: e.target.value })} className="min-w-[200px]" />
+                        <Input type="date" value={r.date} onChange={(e) => updateRow(r.id, { date: e.target.value })} className="w-36" />
                       </TableCell>
                       <TableCell>
                         <Select value={r.type} onValueChange={(v: any) => updateRow(r.id, { type: v })}>
@@ -788,6 +795,19 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
                               ))}
                           </SelectContent>
                         </Select>
+                      </TableCell>
+                      <TableCell>
+                        <ContactCell
+                          value={r.contactId ? { id: r.contactId, name: r.contactName || '' } : undefined}
+                          onChange={(c) => updateRow(r.id, { contactId: c?.id, contactName: c?.name, ...(c ? {} : { orderId: undefined, orderNumber: undefined }) })}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <OrderCell
+                          value={r.orderId ? { id: r.orderId, number: r.orderNumber || '' } : undefined}
+                          contactId={r.contactId}
+                          onChange={(o) => updateRow(r.id, { orderId: o?.id, orderNumber: o?.number })}
+                        />
                       </TableCell>
                       <TableCell>{statusBadge(r)}</TableCell>
                       <TableCell>
