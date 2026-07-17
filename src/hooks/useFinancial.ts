@@ -90,8 +90,9 @@ export interface FinancialFilters {
 
 export function getEntryStatus(entry: FinancialEntry): EntryStatus {
   const today = startOfDay(new Date());
-  const dueDate = startOfDay(new Date(entry.due_date));
-  
+  // Use parseISO to respect local timezone (avoids UTC shift for YYYY-MM-DD strings)
+  const dueDate = startOfDay(parseISO(entry.due_date));
+
   if (entry.value_paid >= entry.value) {
     return 'pago';
   }
