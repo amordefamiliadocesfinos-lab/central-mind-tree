@@ -370,7 +370,7 @@ export function useFinancial() {
       e.type === 'pagar' ? 'A Pagar' : 'A Receber',
       e.value.toFixed(2),
       e.value_paid.toFixed(2),
-      format(new Date(e.due_date), 'dd/MM/yyyy'),
+      format(parseISO(e.due_date), 'dd/MM/yyyy'),
       getEntryStatus(e),
       e.category?.name || '',
       e.account?.name || '',
