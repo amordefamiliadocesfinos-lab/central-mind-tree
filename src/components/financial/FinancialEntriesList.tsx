@@ -972,7 +972,7 @@ export function FinancialEntriesList({
                 <div className="grid grid-cols-5 gap-2 p-3 bg-muted/50 rounded-lg text-sm">
                   <div>
                     <p className="text-muted-foreground text-xs">Vencimento original</p>
-                    <p className="font-medium">{form.due_date ? format(new Date(form.due_date), 'dd/MM/yyyy') : '-'}</p>
+                    <p className="font-medium">{form.due_date ? format(parseISO(form.due_date), 'dd/MM/yyyy') : '-'}</p>
                   </div>
                   <div>
                     <p className="text-muted-foreground text-xs">Valor original</p>
