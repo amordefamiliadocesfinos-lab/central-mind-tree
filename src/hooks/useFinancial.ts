@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { startOfMonth, endOfMonth, format, isBefore, startOfDay } from 'date-fns';
+import { startOfMonth, endOfMonth, format, isBefore, startOfDay, parseISO } from 'date-fns';
 
 export interface FinancialCategory {
   id: string;
