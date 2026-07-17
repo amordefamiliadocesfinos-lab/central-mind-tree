@@ -54,6 +54,8 @@ export interface Level1EntityConfig {
   editableFields: string[];
   /** Campo de status/arquivamento (ex.: "is_active"). Opcional. */
   activeField?: string;
+  /** Campo de proprietário que exige isolamento pelo usuário autenticado. */
+  ownerField?: string;
   /** Se true e activeField existir, `excluir` faz update do activeField=false. */
   softDelete?: boolean;
   /** Colunas retornadas em `consultar`. Default: "*". */
@@ -177,14 +179,17 @@ export async function resolveEntityTarget(
   cfg: Level1EntityConfig,
   supabase: any,
   locator: Record<string, unknown>,
+  requestedBy?: string,
 ): Promise<TargetResolution> {
   try {
+    if (cfg.ownerField && !requestedBy) return { status: "ERROR", kind: "error", error: "Contexto autenticado indisponível para esta operação." };
     const id = locator?.id as string | undefined;
     const selectCols = cfg.selectColumns ?? "*";
 
     if (id) {
       let q = supabase.from(cfg.table).select(selectCols).eq("id", id);
       if (cfg.activeField) q = q.eq(cfg.activeField, true);
+      if (cfg.ownerField) q = q.eq(cfg.ownerField, requestedBy);
       const { data, error } = await q.maybeSingle();
       if (error) {
         console.error("[TargetResolution] erro por id", { entity: cfg.entity, error });
@@ -196,6 +201,7 @@ export async function resolveEntityTarget(
 
     let query = supabase.from(cfg.table).select(selectCols).limit(10);
     if (cfg.activeField) query = query.eq(cfg.activeField, true);
+    if (cfg.ownerField) query = query.eq(cfg.ownerField, requestedBy);
 
     let applied = false;
     for (const field of cfg.searchableFields) {
