@@ -492,7 +492,7 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
   const exportCSV = () => {
     const headers = ['Data', 'Categoria', 'Histórico', 'Cliente/Fornecedor', 'Conta', 'Valor', 'Conciliado'];
     const rows = filteredMovements.map(m => [
-      format(new Date(m.movement_date), 'dd/MM/yyyy'),
+      format(parseISO(m.movement_date), 'dd/MM/yyyy'),
       m.entry?.category?.name || '',
       m.entry?.description || '',
       m.entry?.contact?.name || '',

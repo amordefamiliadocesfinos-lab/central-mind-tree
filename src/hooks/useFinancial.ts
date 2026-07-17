@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { startOfMonth, endOfMonth, format, isBefore, startOfDay } from 'date-fns';
+import { startOfMonth, endOfMonth, format, isBefore, startOfDay, parseISO } from 'date-fns';
 
 export interface FinancialCategory {
   id: string;
@@ -90,8 +90,9 @@ export interface FinancialFilters {
 
 export function getEntryStatus(entry: FinancialEntry): EntryStatus {
   const today = startOfDay(new Date());
-  const dueDate = startOfDay(new Date(entry.due_date));
-  
+  // Use parseISO to respect local timezone (avoids UTC shift for YYYY-MM-DD strings)
+  const dueDate = startOfDay(parseISO(entry.due_date));
+
   if (entry.value_paid >= entry.value) {
     return 'pago';
   }
@@ -237,20 +238,24 @@ export function useFinancial() {
   };
 
   const updateEntry = async (id: string, updates: Partial<FinancialEntry>) => {
+    // Whitelist all editable fields so form edits are not silently dropped
+    const payload: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    };
+    const editable: (keyof FinancialEntry)[] = [
+      'type', 'description', 'value', 'due_date', 'payment_date',
+      'category_id', 'account_id', 'contact_id', 'order_id',
+      'document_number', 'notes',
+      'recurrence_type', 'recurrence_day', 'recurrence_end_date', 'recurrence_use_business_days',
+      'issue_date', 'competence_date',
+    ];
+    for (const key of editable) {
+      if (key in updates) payload[key] = updates[key] as unknown;
+    }
+
     const { error } = await supabase
       .from('financial_entries')
-      .update({
-        description: updates.description,
-        value: updates.value,
-        due_date: updates.due_date,
-        payment_date: updates.payment_date,
-        category_id: updates.category_id,
-        account_id: updates.account_id,
-        contact_id: updates.contact_id,
-        document_number: updates.document_number,
-        notes: updates.notes,
-        updated_at: new Date().toISOString(),
-      })
+      .update(payload)
       .eq('id', id);
 
     if (error) {
@@ -365,7 +370,7 @@ export function useFinancial() {
       e.type === 'pagar' ? 'A Pagar' : 'A Receber',
       e.value.toFixed(2),
       e.value_paid.toFixed(2),
-      format(new Date(e.due_date), 'dd/MM/yyyy'),
+      format(parseISO(e.due_date), 'dd/MM/yyyy'),
       getEntryStatus(e),
       e.category?.name || '',
       e.account?.name || '',
