@@ -27,6 +27,15 @@ export type Operation =
   | "aprovar"
   | "enviar"
   | "concluir"
+  | "iniciar"
+  | "pausar"
+  | "pular"
+  | "aplicar"
+  | "usar"
+  | "orientar"
+  | "resumir"
+  | "diagnosticar"
+  | "planejar"
   | "agendar"
   | "importar"
   | "exportar";
@@ -145,9 +154,9 @@ export const CAPABILITIES_CATALOG: ModuleCapabilities[] = [
     name: "Rotina",
     purpose: "Blocos de rotina, alertas, métodos de trabalho e execução diária.",
     entities: [
-      { id: "bloco_rotina",    name: "Bloco de Rotina",     operations: ["criar","listar","consultar","pesquisar","editar","excluir"], destructive: ["excluir"], synonyms: ["bloco","rotina","compromisso","agenda","atividade da rotina"], status: "disponivel" },
-      { id: "metodo_trabalho", name: "Método de Trabalho",  operations: ["criar","listar","consultar","pesquisar","editar","excluir"], destructive: ["excluir"], synonyms: ["mt","método de trabalho","metodo de trabalho"], status: "disponivel" },
-      { id: "template_rotina", name: "Template de Rotina",  operations: ["criar","listar","consultar","pesquisar","editar","excluir"], destructive: ["excluir"], synonyms: ["template","modelo de rotina","modelo"], status: "disponivel" },
+      { id: "bloco_rotina", name: "Bloco de Rotina", operations: ["criar","listar","consultar","pesquisar","editar","excluir","iniciar","pausar","concluir","pular","orientar","resumir","diagnosticar","planejar"], destructive: ["excluir"], synonyms: ["bloco","rotina","compromisso","agenda","atividade da rotina"], status: "disponivel" },
+      { id: "metodo_trabalho", name: "Método de Trabalho", operations: ["criar","listar","consultar","pesquisar","editar","excluir","aplicar"], destructive: ["excluir","aplicar"], synonyms: ["mt","método de trabalho","metodo de trabalho"], status: "disponivel" },
+      { id: "template_rotina", name: "Template de Rotina", operations: ["criar","listar","consultar","pesquisar","editar","excluir","usar"], destructive: ["excluir"], synonyms: ["template","modelo de rotina","modelo"], status: "disponivel" },
     ],
   },
   {
@@ -227,7 +236,7 @@ function normalizeOperation(op: string): Operation | null {
   const finalOp = (aliased ?? lower) as Operation;
   const valid: Operation[] = [
     "criar","listar","consultar","pesquisar","editar","excluir","limpar","mover","gerar",
-    "publicar","aprovar","enviar","concluir","agendar","importar","exportar",
+    "publicar","aprovar","enviar","concluir","iniciar","pausar","pular","aplicar","usar","orientar","resumir","diagnosticar","planejar","agendar","importar","exportar",
   ];
   return valid.includes(finalOp) ? finalOp : null;
 }

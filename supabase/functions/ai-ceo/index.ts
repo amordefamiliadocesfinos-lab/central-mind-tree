@@ -67,6 +67,9 @@ serve(async (req) => {
   }
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+  const bearer = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "").trim();
+  const { data: authData } = bearer ? await supabase.auth.getUser(bearer) : { data: { user: null } };
+  const requestedBy = authData.user?.id;
   const url = new URL(req.url);
   const path = url.pathname.replace("/ai-ceo", "");
 
@@ -572,7 +575,7 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
       // • local  → devolve resposta pronta (cancel / sem-confirmação / ambiguidade reduzida)
       // • intent → alimenta o Motor direto, sem re-extração via LLM
       // • passthrough → fluxo normal (LLM extractActionIntent + Motor)
-      const continuity = resolveConversationContinuity(lastUserMsg, messages);
+      const continuity = resolveConversationContinuity(lastUserMsg, messages, requestedBy);
       if (continuity.kind === "local") {
         const stream = prependSSEText(continuity.text, emptyStream());
         return new Response(stream, {
@@ -587,6 +590,7 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
         lastUserMsg,
         historyForMotor,
         continuity.kind === "intent" ? continuity.intent : null,
+        requestedBy,
       );
 
       // FLUXO OPERACIONAL: se o Motor de Coordenação identificou uma solicitação
@@ -594,7 +598,7 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
       // Não chamamos o LLM nem geramos plano/objetivo/especialistas — isso evita
       // resposta duplicada e faz o Motor assumir oficialmente o fluxo operacional.
       if (coordination) {
-        const motorOnly = formatMotorBlock(coordination);
+        const motorOnly = formatMotorBlock(coordination, requestedBy);
         const stream = prependSSEText(supersedeMarker + motorOnly, emptyStream());
         return new Response(stream, {
           headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
@@ -1061,7 +1065,7 @@ Se FOR pedido de ação, responda estritamente JSON:
   "objective": "frase curta",
   "module": "id_modulo_do_catalogo_ou_melhor_palpite",
   "entity": "id_entidade",
-  "operation": "criar|listar|consultar|editar|excluir|limpar|mover|gerar|publicar|aprovar|enviar|concluir|agendar|importar|exportar",
+  "operation": "criar|listar|consultar|editar|excluir|limpar|mover|gerar|publicar|aprovar|enviar|iniciar|pausar|concluir|pular|aplicar|usar|orientar|resumir|diagnosticar|planejar|agendar|importar|exportar",
   "scope": "all|one|opcional",
   "params": { ...campos_extraidos_da_mensagem }
 }
@@ -1088,7 +1092,13 @@ REGRA DE CONTEXTO — RESPOSTAS CURTAS DE SELEÇÃO/CONFIRMAÇÃO:
 REGRA DE LISTAGEM COM TERMO:
 - "liste contatos", "mostre os contatos", "listar contatos" (sem termo) → operation="listar", sem params.search.
 - "liste João Teste", "liste os contatos João", "mostre contatos com João", "listar João" → operation="listar" e params.search="João Teste" (preserve o termo exato informado após o verbo).
-- Nunca invente filtros — apenas preserve o termo escrito pelo usuário.`;
+- Nunca invente filtros — apenas preserve o termo escrito pelo usuário.
+
+ROTINAS — intenção de leitura:
+- Perguntas de situação, quantidade ou resumo das rotinas (por exemplo, "como estão minhas rotinas?", "tenho atrasadas?", "quantos concluí hoje?") → operation="resumir", entity="bloco_rotina", module="rotina".
+- Perguntas sobre o próximo passo ou recomendação (por exemplo, "o que devo fazer agora?") → operation="orientar", entity="bloco_rotina", module="rotina".
+- Perguntas sobre problemas ou diagnóstico das rotinas (por exemplo, "existe algum problema nas minhas rotinas?") → operation="diagnosticar", entity="bloco_rotina", module="rotina".
+- Pedidos de plano ou organização das rotinas do dia (por exemplo, "monte meu plano de hoje") → operation="planejar", entity="bloco_rotina", module="rotina".`;
 
   const contextMessages = history
     .filter((m) => m && (m.role === "user" || m.role === "assistant"))
@@ -1197,10 +1207,10 @@ REGRA DE LISTAGEM COM TERMO:
         const value = text.slice(start, end).replace(/[.\n]+$/g, "").trim();
         return value || undefined;
       };
-      const title = readField(["t\u00edtulo:", "titulo:"], ["data:", "hor\u00e1rio inicial:", "horario inicial:", "dura\u00e7\u00e3o:", "duracao:", "foco:"]);
-      const date = readField(["data:"], ["hor\u00e1rio inicial:", "horario inicial:", "dura\u00e7\u00e3o:", "duracao:", "foco:"]);
-      const plannedStart = readField(["hor\u00e1rio inicial:", "horario inicial:"], ["dura\u00e7\u00e3o:", "duracao:", "foco:"]);
-      const duration = readField(["dura\u00e7\u00e3o:", "duracao:"], ["foco:"]);
+      const title = readField(["título:", "titulo:"], ["data:", "horário inicial:", "horario inicial:", "duração:", "duracao:", "foco:"]);
+      const date = readField(["data:"], ["horário inicial:", "horario inicial:", "duração:", "duracao:", "foco:"]);
+      const plannedStart = readField(["horário inicial:", "horario inicial:"], ["duração:", "duracao:", "foco:"]);
+      const duration = readField(["duração:", "duracao:"], ["foco:"]);
       const focus = readField(["foco:"], []);
       if (title && !params.title) params.title = title;
       if (date && !params.date) params.date = date;
@@ -1360,6 +1370,7 @@ async function runCoordinationMotor(
   userMessage: string,
   history: Array<{ role: string; content: string }> = [],
   preIntent: IntentPayload | null = null,
+  requestedBy?: string,
 ): Promise<CoordinationResponse | null> {
   const intent = preIntent ?? (await extractActionIntent(userMessage, history));
   if (!intent) return null;
@@ -1400,6 +1411,7 @@ async function runCoordinationMotor(
     operation: intent.operation,
     scope: intent.scope,
     params: normalizedParams,
+    requested_by: requestedBy,
   });
 }
 
@@ -1517,7 +1529,7 @@ const STRICT_CANCEL_RE =
 /** Verbos operacionais que, quando iniciam a mensagem, DEVEM ser interpretados
  *  como um novo comando e substituir qualquer contexto pendente. */
 const OPERATIONAL_VERB_RE =
-  /^(criar|crie|cadastrar|cadastre|listar|liste|mostrar|mostre|pesquisar|pesquise|buscar|busque|consultar|consulte|editar|edite|alterar|altere|excluir|exclua|apagar|apague|deletar|delete|remover|remova|abrir|abra)\b/;
+  /^(criar|crie|cadastrar|cadastre|listar|liste|mostrar|mostre|pesquisar|pesquise|buscar|busque|consultar|consulte|editar|edite|alterar|altere|excluir|exclua|apagar|apague|deletar|delete|remover|remova|abrir|abra|execute|executar|faca|fazer|inicie|iniciar|pause|pausar|conclua|concluir|pule|pular)\b/;
 
 function normalizeText(s: unknown): string {
   return String(s ?? "")
@@ -1611,6 +1623,7 @@ function reducedAmbiguity(
 function resolveConversationContinuity(
   userMessage: string,
   history: Array<{ role?: string; content?: string }>,
+  requestedBy?: string,
 ): Continuity {
   const userRaw = String(userMessage ?? "").trim();
   if (!userRaw) return { kind: "passthrough" };
@@ -1644,6 +1657,27 @@ function resolveConversationContinuity(
   }
 
   const type = String(pending.type ?? "");
+  if (type === "routine_plan") {
+    if (!requestedBy || pending.owner_id !== requestedBy) {
+      return { kind: "local", text: "Este plano expirou ou não é compatível com o usuário atual. Gere um novo plano antes de executar um passo.\n" };
+    }
+    const steps = (Array.isArray(pending.steps) ? pending.steps : []) as Array<any>;
+    if (/^(cancelar|encerrar|abandonar)\s+(o\s+)?plano$/.test(userNorm)) {
+      return { kind: "local", text: `Plano cancelado.${terminalPcContext("cancelled", { type: "routine_plan" })}\n` };
+    }
+    if (isCancel) {
+      return { kind: "local", text: `Operação cancelada. Os passos do plano continuam disponíveis.${pcContext({ type: "routine_plan", owner_id: requestedBy, steps })}\n` };
+    }
+    const command = userNorm.match(/^(?:execute|executar|faca|pode executar)\s+(?:o\s+)?(?:(?:passo|item)\s*)?(\d+|primeiro|segundo|terceiro|quarto|quinto|ultimo)$/);
+    if (!command) return { kind: "passthrough" };
+    const words: Record<string, number> = { primeiro: 1, segundo: 2, terceiro: 3, quarto: 4, quinto: 5, ultimo: steps.length };
+    const index = /^\d+$/.test(command[1]) ? Number(command[1]) : words[command[1]];
+    const step = steps.find((item) => Number(item.index) === index);
+    if (!step) return { kind: "local", text: "Esse passo não existe no plano atual.\n" };
+    const allowed = ["iniciar", "pausar", "concluir", "pular"];
+    if (!step.id || !allowed.includes(step.operation)) return { kind: "local", text: "Este passo não é compatível com uma operação de rotina. Gere um novo plano.\n" };
+    return { kind: "intent", intent: { objective: `${step.operation} bloco_rotina`, module: "rotina", entity: "bloco_rotina", operation: step.operation, params: { locator: { id: String(step.id) }, confirm: false, __pc_plan: { owner_id: requestedBy, steps, executed_id: String(step.id) } } } };
+  }
   const module = pending.module as string | undefined;
   const entity = String(pending.entity ?? "");
   const operation = String(pending.operation ?? "");
@@ -1661,6 +1695,13 @@ function resolveConversationContinuity(
 
   // Cancelamento com pendência: local, terminal, sem executor/Motor/LLM.
   if (isCancel) {
+    const plan = pending.params && typeof pending.params === "object" ? (pending.params as any).__pc_plan : null;
+    if (type === "confirmation" && plan?.owner_id === requestedBy && Array.isArray(plan.steps)) {
+      return {
+        kind: "local",
+        text: `Operação cancelada. Os passos do plano continuam disponíveis.${pcContext({ type: "routine_plan", owner_id: requestedBy, steps: plan.steps })}\n`,
+      };
+    }
     return {
       kind: "local",
       text: `Operação cancelada.${terminalPcContext("cancelled", { module, entity, operation })}\n`,
@@ -1682,7 +1723,7 @@ function resolveConversationContinuity(
         module,
         entity,
         operation,
-        params: { locator: { id: target_id }, confirm: true },
+        params: { ...(pending.params && typeof pending.params === "object" ? pending.params : {}), locator: { id: target_id }, confirm: true },
       },
     };
   }
@@ -1759,7 +1800,7 @@ function resolveFromPcContext(
   return null;
 }
 
-function formatMotorBlock(resp: CoordinationResponse | null): string {
+function formatMotorBlock(resp: CoordinationResponse | null, requestedBy?: string): string {
   if (!resp) return "";
 
   // Log técnico completo apenas no console — nunca no chat.
@@ -1767,6 +1808,10 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
 
   const entityName = resp.suggested_specialist?.entity_name ?? "registro";
   const operation = resp.planned_action?.operation ?? "";
+  const planMeta: any = (resp.planned_action?.params as any)?.__pc_plan;
+  const preservedPlanContext = planMeta?.owner_id === requestedBy && Array.isArray(planMeta.steps)
+    ? pcContext({ type: "routine_plan", owner_id: requestedBy, steps: planMeta.steps })
+    : "";
 
   // --- Falhas / estados que não executaram ------------------------------
   if (resp.status === "invalid_request") {
@@ -1793,12 +1838,15 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
       const loc: any = p.locator ?? p;
       const term = loc?.name ?? loc?.nome ?? loc?.title ?? loc?.search ?? loc?.query ?? p?.search ?? p?.query ?? null;
       const termTxt = term ? ` para "${String(term).trim()}"` : "";
-      return `📭 Nenhum ${entityName} encontrado${termTxt}.\nVerifique o nome ou tente outra busca.\n`;
+      return `📭 Nenhum ${entityName} encontrado${termTxt}.\nVerifique o nome ou tente outra busca.${preservedPlanContext}\n`;
     }
-    return `🔴 Não consegui executar. ${err || "Erro desconhecido."}\n`;
+    return `🔴 Não consegui executar. ${err || "Erro desconhecido."}${preservedPlanContext}\n`;
   }
 
   const data: any = resp.execution.data ?? {};
+  const remainingPlanContext = planMeta?.owner_id === requestedBy && Array.isArray(planMeta.steps)
+    ? pcContext({ type: "routine_plan", owner_id: requestedBy, steps: planMeta.steps.filter((step: any) => String(step.id) !== String(planMeta.executed_id)).map((step: any, index: number) => ({ ...step, index: index + 1 })) })
+    : "";
 
   const moduleId = resp.suggested_specialist?.module_id;
   const entityId = resp.suggested_specialist?.entity_id ?? entityName;
@@ -1842,9 +1890,10 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
           type: "confirmation",
           module: moduleId,
           entity: entityId,
-          operation,
-          target_id: String(t.id),
-          target_label: targetLabel,
+        operation,
+        target_id: String(t.id),
+        target_label: targetLabel,
+        params: resp.planned_action?.params ?? {},
         })
       : "";
     return [
@@ -1873,6 +1922,39 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
 
   // --- Sucesso genérico (criar / editar / consultar / excluir) ---------
   const record = data?.record ?? data;
+  if (operation === "orientar" && data?.guidance) {
+    const g: any = data.guidance;
+    if (g.kind === "nenhum") return `📭 ${g.message}\n`;
+    const b = g.block;
+    return `📌 Agora: **${b.title}** (${b.planned_start ?? "sem horário"}). Sugestão: **${g.suggestion}**.\n`;
+  }
+  if (operation === "resumir" && data?.summary) {
+    const s: any = data.summary;
+    if (s.kind === "nenhum") return `📭 ${s.message}\n`;
+    const parts = [
+      `Hoje você tem ${s.ongoing_count} em andamento`,
+      `${s.paused_count} pausado${s.paused_count === 1 ? "" : "s"}`,
+      `${s.overdue_count} atrasado${s.overdue_count === 1 ? "" : "s"}`,
+      `e concluiu ${s.completed_count} bloco${s.completed_count === 1 ? "" : "s"}`,
+    ];
+    const next = s.next_pending
+      ? ` Próximo: **${s.next_pending.title}**, às ${s.next_pending.planned_start ?? "sem horário"}.`
+      : " Não há próximo bloco pendente.";
+    return `${parts.join(", ")}.${next}\n`;
+  }
+  if (operation === "diagnosticar" && data?.diagnosis) {
+    const d: any = data.diagnosis;
+    if (d.kind === "normal") return `✅ ${d.message}\n`;
+    return d.alerts.map((alert: any) => `• ${alert.message}`).join("\n") + "\n";
+  }
+  if (operation === "planejar" && data?.plan) {
+    const p: any = data.plan;
+    if (p.kind === "none") return `📭 ${p.message}\nNenhuma alteração foi realizada.\n`;
+    const steps = p.steps.map((step: any, index: number) => `${index + 1}. ${step.label} **${step.title}**, pois ${step.reason}.`);
+    const review = p.skipped_count ? `\n\nHá ${p.skipped_count} bloco${p.skipped_count === 1 ? "" : "s"} pulado${p.skipped_count === 1 ? "" : "s"} para revisão, fora do plano.` : "";
+    const planContext = requestedBy ? pcContext({ type: "routine_plan", owner_id: requestedBy, steps: p.steps.map((step: any, index: number) => ({ index: index + 1, id: step.id, operation: step.operation, label: step.title })) }) : "";
+    return `Plano sugerido para agora:\n\n${steps.join("\n")}${review}\n\nNenhuma alteração foi realizada.${planContext}\n`;
+  }
   const plannedParams: any = resp.planned_action?.params ?? {};
   const plannedLocatorId = String(plannedParams?.locator?.id ?? "");
   // Fallback: quando o Motor devolve payload genérico (ex.: {id, deleted:true}),
@@ -1902,7 +1984,7 @@ function formatMotorBlock(resp: CoordinationResponse | null): string {
   if (operation === "consultar") {
     return `✅ ${entityName} ${verb}: ${describeRow(record, entityName)}${terminal}\n`;
   }
-  return `✅ ${entityName} ${verb} com sucesso: **${name}**${terminal}\n`;
+  return `✅ ${entityName} ${verb} com sucesso: **${name}**${remainingPlanContext || terminal}\n`;
 }
 
 /**
