@@ -1696,7 +1696,7 @@ function resolveConversationContinuity(
   // Cancelamento com pendência: local, terminal, sem executor/Motor/LLM.
   if (isCancel) {
     const plan = pending.params && typeof pending.params === "object" ? (pending.params as any).__pc_plan : null;
-    if (type === "confirmation" && plan?.owner_id === requestedBy && Array.isArray(plan.steps)) {
+    if (type === "confirmation" && plan && requestedBy && plan.owner_id === requestedBy && Array.isArray(plan.steps)) {
       return {
         kind: "local",
         text: `Operação cancelada. Os passos do plano continuam disponíveis.${pcContext({ type: "routine_plan", owner_id: requestedBy, steps: plan.steps })}\n`,
