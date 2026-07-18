@@ -1696,7 +1696,7 @@ function resolveConversationContinuity(
   // Cancelamento com pendência: local, terminal, sem executor/Motor/LLM.
   if (isCancel) {
     const plan = pending.params && typeof pending.params === "object" ? (pending.params as any).__pc_plan : null;
-    if (type === "confirmation" && plan?.owner_id === requestedBy && Array.isArray(plan.steps)) {
+    if (type === "confirmation" && plan && requestedBy && plan.owner_id === requestedBy && Array.isArray(plan.steps)) {
       return {
         kind: "local",
         text: `Operação cancelada. Os passos do plano continuam disponíveis.${pcContext({ type: "routine_plan", owner_id: requestedBy, steps: plan.steps })}\n`,
@@ -1809,7 +1809,7 @@ function formatMotorBlock(resp: CoordinationResponse | null, requestedBy?: strin
   const entityName = resp.suggested_specialist?.entity_name ?? "registro";
   const operation = resp.planned_action?.operation ?? "";
   const planMeta: any = (resp.planned_action?.params as any)?.__pc_plan;
-  const preservedPlanContext = planMeta?.owner_id === requestedBy && Array.isArray(planMeta.steps)
+  const preservedPlanContext = planMeta && requestedBy && planMeta.owner_id === requestedBy && Array.isArray(planMeta.steps)
     ? pcContext({ type: "routine_plan", owner_id: requestedBy, steps: planMeta.steps })
     : "";
 
@@ -1844,7 +1844,7 @@ function formatMotorBlock(resp: CoordinationResponse | null, requestedBy?: strin
   }
 
   const data: any = resp.execution.data ?? {};
-  const remainingPlanContext = planMeta?.owner_id === requestedBy && Array.isArray(planMeta.steps)
+  const remainingPlanContext = planMeta && requestedBy && planMeta.owner_id === requestedBy && Array.isArray(planMeta.steps)
     ? pcContext({ type: "routine_plan", owner_id: requestedBy, steps: planMeta.steps.filter((step: any) => String(step.id) !== String(planMeta.executed_id)).map((step: any, index: number) => ({ ...step, index: index + 1 })) })
     : "";
 
