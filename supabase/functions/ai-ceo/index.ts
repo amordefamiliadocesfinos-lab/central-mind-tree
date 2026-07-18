@@ -1844,7 +1844,7 @@ function formatMotorBlock(resp: CoordinationResponse | null, requestedBy?: strin
   }
 
   const data: any = resp.execution.data ?? {};
-  const remainingPlanContext = planMeta?.owner_id === requestedBy && Array.isArray(planMeta.steps)
+  const remainingPlanContext = planMeta && requestedBy && planMeta.owner_id === requestedBy && Array.isArray(planMeta.steps)
     ? pcContext({ type: "routine_plan", owner_id: requestedBy, steps: planMeta.steps.filter((step: any) => String(step.id) !== String(planMeta.executed_id)).map((step: any, index: number) => ({ ...step, index: index + 1 })) })
     : "";
 
