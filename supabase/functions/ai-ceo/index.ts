@@ -1809,7 +1809,7 @@ function formatMotorBlock(resp: CoordinationResponse | null, requestedBy?: strin
   const entityName = resp.suggested_specialist?.entity_name ?? "registro";
   const operation = resp.planned_action?.operation ?? "";
   const planMeta: any = (resp.planned_action?.params as any)?.__pc_plan;
-  const preservedPlanContext = planMeta?.owner_id === requestedBy && Array.isArray(planMeta.steps)
+  const preservedPlanContext = planMeta && requestedBy && planMeta.owner_id === requestedBy && Array.isArray(planMeta.steps)
     ? pcContext({ type: "routine_plan", owner_id: requestedBy, steps: planMeta.steps })
     : "";
 
