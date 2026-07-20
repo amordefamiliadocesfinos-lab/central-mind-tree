@@ -1950,6 +1950,9 @@ function formatMotorBlock(resp: CoordinationResponse | null, requestedBy?: strin
   if (operation === "planejar" && data?.plan) {
     const p: any = data.plan;
     if (p.kind === "none") return `📭 ${p.message}\nNenhuma alteração foi realizada.\n`;
+    if (!Array.isArray(p.steps)) {
+      return `${resp.message ?? "Não foi possível gerar o plano agora."}\nNenhuma alteração foi realizada.\n`;
+    }
     const steps = p.steps.map((step: any, index: number) => `${index + 1}. ${step.label} **${step.title}**, pois ${step.reason}.`);
     const review = p.skipped_count ? `\n\nHá ${p.skipped_count} bloco${p.skipped_count === 1 ? "" : "s"} pulado${p.skipped_count === 1 ? "" : "s"} para revisão, fora do plano.` : "";
     const planContext = requestedBy ? pcContext({ type: "routine_plan", owner_id: requestedBy, steps: p.steps.map((step: any, index: number) => ({ index: index + 1, id: step.id, operation: step.operation, label: step.title })) }) : "";
