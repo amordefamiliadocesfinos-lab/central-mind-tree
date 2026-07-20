@@ -108,11 +108,15 @@ export function CEOChat() {
 
   const streamChat = useCallback(async (userMessages: Message[]) => {
     const { data: sessionData } = await supabase.auth.getSession();
-    const accessToken = sessionData.session?.access_token ?? import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) {
+      throw new Error("Sessão não autenticada. Faça login para conversar com a IA Orquestradora.");
+    }
     const resp = await fetch(CHAT_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
         Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify({ messages: userMessages.map((m) => ({ role: m.role, content: m.content })) }),
