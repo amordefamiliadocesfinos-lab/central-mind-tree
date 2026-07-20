@@ -28,6 +28,7 @@ import MinhaArea from "./pages/MinhaArea";
 import Financeiro from "./pages/Financeiro";
 import Assistente from "./pages/Assistente";
 import Contatos from "./pages/Contatos";
+import Auth from "./pages/Auth";
 import ContatosInbox from "./pages/ContatosInbox";
 import TarefasAgendadas from "./pages/TarefasAgendadas";
 import Rotas from "./pages/Rotas";
@@ -86,6 +87,7 @@ function AnimatedRoutes() {
       >
         <Routes location={location}>
           <Route path="/" element={<Index />} />
+          <Route path="/auth" element={<Auth />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/foco" element={<Foco />} />
           <Route path="/planejamento" element={<Planejamento />} />
