@@ -87,6 +87,7 @@ function AnimatedRoutes() {
       >
         <Routes location={location}>
           <Route path="/" element={<Index />} />
+          <Route path="/auth" element={<Auth />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/foco" element={<Foco />} />
           <Route path="/planejamento" element={<Planejamento />} />
