@@ -207,10 +207,13 @@ export function useRoutine(options: UseRoutineOptions = {}) {
 
     const { data, error } = await q;
 
+    console.info("[routine_blocks select]", { activeUserId, startStr, endStr, data, error });
+
     if (error) {
       console.error("Error fetching blocks:", error);
       return;
     }
+
 
     const list = (data as RoutineBlock[]) || [];
     setBlocks(list);
