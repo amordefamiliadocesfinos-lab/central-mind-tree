@@ -207,10 +207,13 @@ export function useRoutine(options: UseRoutineOptions = {}) {
 
     const { data, error } = await q;
 
+    console.info("[routine_blocks select]", { activeUserId, startStr, endStr, data, error });
+
     if (error) {
       console.error("Error fetching blocks:", error);
       return;
     }
+
 
     const list = (data as RoutineBlock[]) || [];
     setBlocks(list);
@@ -450,28 +453,32 @@ export function useRoutine(options: UseRoutineOptions = {}) {
     ): Promise<boolean> => {
       const dateStr = block.date || format(selectedDate, "yyyy-MM-dd");
 
+      const payload = {
+        date: dateStr,
+        title: block.title || "Novo Bloco",
+        block_type: block.block_type || "foco",
+        focus: block.focus || "trabalho_profundo",
+        duration_minutes: block.duration_minutes || 25,
+        planned_start: block.planned_start,
+        planned_end: block.planned_end,
+        node_id: block.node_id,
+        task_id: block.task_id,
+        template_id: block.template_id,
+        notes: block.notes,
+        checklist: (block.checklist as any) || [],
+        recurrence: block.recurrence || null,
+        recurrence_parent_id: block.recurrence_parent_id || null,
+        status: "pendente",
+        assigned_user_id: block.assigned_user_id !== undefined ? block.assigned_user_id : activeUserId,
+      };
+
       const { data: createdBlock, error } = await supabase
         .from("routine_blocks")
-        .insert({
-          date: dateStr,
-          title: block.title || "Novo Bloco",
-          block_type: block.block_type || "foco",
-          focus: block.focus || "trabalho_profundo",
-          duration_minutes: block.duration_minutes || 25,
-          planned_start: block.planned_start,
-          planned_end: block.planned_end,
-          node_id: block.node_id,
-          task_id: block.task_id,
-          template_id: block.template_id,
-          notes: block.notes,
-          checklist: (block.checklist as any) || [],
-          recurrence: block.recurrence || null,
-          recurrence_parent_id: block.recurrence_parent_id || null,
-          status: "pendente",
-          assigned_user_id: block.assigned_user_id !== undefined ? block.assigned_user_id : activeUserId,
-        } as any)
+        .insert(payload as any)
         .select("id")
         .single();
+
+      console.info("[routine_blocks insert]", { payload, data: createdBlock, error });
 
       if (error || !createdBlock?.id) {
         console.error("Erro ao adicionar bloco:", error);
@@ -482,6 +489,7 @@ export function useRoutine(options: UseRoutineOptions = {}) {
       await fetchBlocks();
       toast.success("Bloco adicionado!");
       return true;
+
     },
     [selectedDate, fetchBlocks, activeUserId],
   );
