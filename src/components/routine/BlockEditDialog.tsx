@@ -82,7 +82,6 @@ export function BlockEditDialog({ open, onOpenChange, block, onSave, defaultDate
   };
 
   const handleSubmit = async () => {
-    <Button type="button" className="flex-1 h-12" onClick={handleSubmit} disabled={!formData.title.trim()}>
     const { recurrence, ...rest } = formData;
     await onSave({
       ...rest,
