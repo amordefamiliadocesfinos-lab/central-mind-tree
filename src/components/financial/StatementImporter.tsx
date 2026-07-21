@@ -454,7 +454,6 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
   };
 
   const classifyRows = async (raw: Omit<ParsedRow, 'hash' | 'status'>[]): Promise<ParsedRow[]> => {
-    // Compute hashes and load existing entries for the account within range
     const dates = raw.map(r => r.date).filter(Boolean);
     const minDate = dates.length ? dates.reduce((a, b) => (a < b ? a : b)) : null;
     const maxDate = dates.length ? dates.reduce((a, b) => (a > b ? a : b)) : null;
@@ -466,8 +465,7 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
       return { ...r, hash: h };
     }));
 
-    // Fetch existing entries: (a) same account in date range OR (b) same import_hash
-    const [existingByRange, existingByHash] = await Promise.all([
+    const [existingByRange, existingByHash, historyRes] = await Promise.all([
       minDate && maxDate
         ? supabase
             .from('financial_entries')
@@ -480,12 +478,98 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
         .from('financial_entries')
         .select('id, import_hash')
         .in('import_hash', hashes.length ? hashes : ['__none__']),
+      supabase
+        .from('financial_entries')
+        .select('description, type, category_id, contact_id, contact:contacts(id, name)')
+        .not('description', 'is', null)
+        .order('updated_at', { ascending: false })
+        .limit(2000),
     ]);
+
+    // Build suggestion maps from history
+    const catFreq = new Map<string, Map<string, number>>();
+    const contactFreq = new Map<string, Map<string, { count: number; name: string }>>();
+    const tokenFreq = new Map<string, { cat: Map<string, number>; contact: Map<string, { count: number; name: string }> }>();
+
+    for (const h of ((historyRes as any).data || []) as any[]) {
+      const desc = normalizeDescription(h.description || '');
+      if (!desc) continue;
+      const typeKey = `${desc}|${h.type}`;
+      if (h.category_id) {
+        if (!catFreq.has(typeKey)) catFreq.set(typeKey, new Map());
+        const m = catFreq.get(typeKey)!;
+        m.set(h.category_id, (m.get(h.category_id) || 0) + 1);
+      }
+      if (h.contact_id) {
+        if (!contactFreq.has(typeKey)) contactFreq.set(typeKey, new Map());
+        const m = contactFreq.get(typeKey)!;
+        const prev = m.get(h.contact_id);
+        m.set(h.contact_id, { count: (prev?.count || 0) + 1, name: prev?.name || h.contact?.name || '' });
+      }
+      const tokens = desc.split(' ').filter(t => t.length >= 4);
+      for (const t of tokens) {
+        const key = `${t}|${h.type}`;
+        if (!tokenFreq.has(key)) tokenFreq.set(key, { cat: new Map(), contact: new Map() });
+        const entry = tokenFreq.get(key)!;
+        if (h.category_id) entry.cat.set(h.category_id, (entry.cat.get(h.category_id) || 0) + 1);
+        if (h.contact_id) {
+          const prev = entry.contact.get(h.contact_id);
+          entry.contact.set(h.contact_id, { count: (prev?.count || 0) + 1, name: prev?.name || h.contact?.name || '' });
+        }
+      }
+    }
+
+    const pickTopNum = (m: Map<string, number> | undefined): string | null => {
+      if (!m || m.size === 0) return null;
+      let bestK: string | null = null; let bestV = -1;
+      for (const [k, v] of m) if (v > bestV) { bestK = k; bestV = v; }
+      return bestK;
+    };
+    const pickTopContact = (m: Map<string, { count: number; name: string }> | undefined) => {
+      if (!m || m.size === 0) return null;
+      let best: [string, { count: number; name: string }] | null = null;
+      for (const [k, v] of m) if (!best || v.count > best[1].count) best = [k, v];
+      return best;
+    };
+
+    const suggestFor = (description: string, type: 'entrada' | 'saida') => {
+      const desc = normalizeDescription(description);
+      if (!desc) return {} as { categoryId?: string; contactId?: string; contactName?: string };
+      const typeKey = `${desc}|${type}`;
+      const out: { categoryId?: string; contactId?: string; contactName?: string } = {};
+      const exactCat = pickTopNum(catFreq.get(typeKey));
+      if (exactCat) out.categoryId = exactCat;
+      const exactContact = pickTopContact(contactFreq.get(typeKey));
+      if (exactContact) { out.contactId = exactContact[0]; out.contactName = exactContact[1].name; }
+
+      if (!out.categoryId || !out.contactId) {
+        const catAgg = new Map<string, number>();
+        const contactAgg = new Map<string, { count: number; name: string }>();
+        const tokens = desc.split(' ').filter(t => t.length >= 4);
+        for (const t of tokens) {
+          const entry = tokenFreq.get(`${t}|${type}`);
+          if (!entry) continue;
+          for (const [k, v] of entry.cat) catAgg.set(k, (catAgg.get(k) || 0) + v);
+          for (const [k, v] of entry.contact) {
+            const prev = contactAgg.get(k);
+            contactAgg.set(k, { count: (prev?.count || 0) + v.count, name: prev?.name || v.name });
+          }
+        }
+        if (!out.categoryId) {
+          const t = pickTopNum(catAgg);
+          if (t) out.categoryId = t;
+        }
+        if (!out.contactId) {
+          const t = pickTopContact(contactAgg);
+          if (t) { out.contactId = t[0]; out.contactName = t[1].name; }
+        }
+      }
+      return out;
+    };
 
     const importedHashSet = new Set(
       (existingByHash.data || []).map((e: any) => e.import_hash).filter(Boolean)
     );
-
     const existingList = (existingByRange.data || []) as any[];
 
     return rowsWithHash.map(r => {
@@ -513,14 +597,17 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
         }
       }
 
-      const categoryId = findCategoryByKeyword(r.description, r.type);
+      const historical = suggestFor(r.description, r.type);
+      const categoryId = historical.categoryId || findCategoryByKeyword(r.description, r.type);
 
       return {
         ...r,
         status,
         statusMessage,
         categoryId,
-        selected: status === 'nova' || status === 'duplicada', // 'duplicada' selected but with warning; user decides
+        contactId: historical.contactId,
+        contactName: historical.contactName,
+        selected: status === 'nova' || status === 'duplicada',
         ...(status === 'ja_importada' || status === 'erro' ? { selected: false } : {}),
       };
     });
