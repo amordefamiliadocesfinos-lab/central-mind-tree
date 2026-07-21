@@ -139,7 +139,7 @@ function AppContent() {
       <GlobalFooterBar />
       <QuickConversationFAB />
       <CapturaCentralFAB />
-      <StockCheckAlert />
+      {/* <StockCheckAlert /> desativado a pedido do usuário */}
       <StockCheckWizard />
       <RoutineAlertOverlay />
     </BrowserRouter>
