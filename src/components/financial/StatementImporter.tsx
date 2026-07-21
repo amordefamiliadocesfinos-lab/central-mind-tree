@@ -623,7 +623,7 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
       const { data: inserted, error } = await supabase
         .from('financial_entries')
         .insert(payload)
-        .select('id, value, account_id');
+        .select('id, value, account_id, payment_date, due_date');
       if (error) throw error;
 
       if (inserted?.length) {
@@ -631,7 +631,7 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
           entry_id: e.id,
           account_id: e.account_id,
           value: e.value,
-          movement_date: format(new Date(), 'yyyy-MM-dd'),
+          movement_date: e.payment_date || e.due_date,
           notes: 'Importado via extrato',
         }));
         await supabase.from('financial_movements').insert(movements);
