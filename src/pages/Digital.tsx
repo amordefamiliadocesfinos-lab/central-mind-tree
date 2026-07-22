@@ -969,8 +969,7 @@ export default function Digital() {
             <DigitalCalendar 
               variations={allVariationsWithTitle} 
               onSelectVariation={(v) => {
-                const idea = ideas.find(i => i.id === v.idea_id);
-                if (idea) setSelectedIdea(idea.id);
+                if (v.idea_id) openIdeaWithVariation(v.idea_id, v.id);
               }}
               platforms={activePlatforms}
               ideas={ideas.map(i => ({ id: i.id, title: i.title }))}

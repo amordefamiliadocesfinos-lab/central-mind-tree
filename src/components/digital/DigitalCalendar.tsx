@@ -166,37 +166,40 @@ export function DigitalCalendar({ variations, onSelectVariation, platforms, idea
             <div
               key={idx}
               className={cn(
-                'min-h-[70px] p-1 border rounded-md transition-colors',
+                'min-h-[120px] p-1.5 border rounded-md transition-colors flex flex-col',
                 isCurrentMonth ? 'bg-background' : 'bg-muted/30',
-                isToday && 'ring-2 ring-primary',
-                dayVariations.length > 0 && 'hover:bg-muted/50 cursor-pointer'
+                isToday && 'ring-2 ring-primary'
               )}
-              onClick={() => {
-                if (dayVariations.length === 1) {
-                  onSelectVariation(dayVariations[0]);
-                }
-              }}
             >
-              <div className={cn(
-                'text-xs font-medium mb-1',
-                !isCurrentMonth && 'text-muted-foreground'
-              )}>
-                {format(day, 'd')}
+              <div className="flex items-baseline justify-between mb-1">
+                <div className={cn(
+                  'text-xl sm:text-2xl font-bold leading-none',
+                  !isCurrentMonth && 'text-muted-foreground/60',
+                  isToday && 'text-primary'
+                )}>
+                  {format(day, 'd')}
+                </div>
+                {dayVariations.length > 0 && (
+                  <span className="text-[10px] font-medium text-muted-foreground tabular-nums">
+                    {dayVariations.length}
+                  </span>
+                )}
               </div>
-              <div className="space-y-0.5">
-                {dayVariations.slice(0, 3).map(v => {
+              <div className="space-y-0.5 overflow-y-auto flex-1 min-h-0 max-h-[140px]">
+                {dayVariations.map(v => {
                   const platform = getPlatformInfo(v.platform);
                   const status = DIGITAL_STATUS[v.status] || DIGITAL_STATUS.pendente;
                   const abbr = getPlatformAbbreviation(platform.name);
                   const time = (v as any)._displayTime || v.scheduled_time?.slice(0, 5) || '';
                   const ideaTitle = getIdeaTitle(v.idea_id);
                   const displayTitle = v.title || ideaTitle;
-                  
+
                   return (
-                    <div
-                      key={v.id}
+                    <button
+                      key={v.id + (time || '')}
+                      type="button"
                       className={cn(
-                        'text-[10px] px-1 py-0.5 rounded cursor-pointer',
+                        'w-full text-left text-[10px] px-1 py-0.5 rounded',
                         'hover:opacity-80 transition-opacity',
                         status.color,
                         'text-white'
@@ -209,24 +212,20 @@ export function DigitalCalendar({ variations, onSelectVariation, platforms, idea
                     >
                       <div className="flex items-center gap-1">
                         <span className="font-bold shrink-0">{abbr}</span>
-                        <span className="shrink-0">{time}</span>
+                        {time && <span className="shrink-0 tabular-nums">{time}</span>}
                       </div>
                       <div className="truncate text-[9px] opacity-90 hidden sm:block">
                         {displayTitle}
                       </div>
-                    </div>
+                    </button>
                   );
                 })}
-                {dayVariations.length > 3 && (
-                  <div className="text-[10px] text-muted-foreground text-center">
-                    +{dayVariations.length - 3}
-                  </div>
-                )}
               </div>
             </div>
           );
         })}
       </div>
+
 
       {/* Status Legend */}
       <div className="flex flex-wrap gap-2 justify-center">
