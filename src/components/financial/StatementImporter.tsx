@@ -418,12 +418,19 @@ function OrderCell({
 
 export function StatementImporter({ open, onOpenChange, accounts, categories, onImported }: StatementImporterProps) {
   const { toast } = useToast();
+  const [originType, setOriginType] = useState<'banco' | 'cartao'>('banco');
   const [accountId, setAccountId] = useState<string>('');
   const [file, setFile] = useState<File | null>(null);
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [reading, setReading] = useState(false);
   const [importing, setImporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const isCreditCard = originType === 'cartao';
+  const filteredAccounts = useMemo(
+    () => accounts.filter(a => a.is_active && (isCreditCard ? a.type === 'cartao' : a.type !== 'cartao')),
+    [accounts, isCreditCard]
+  );
 
   const activeCategories = useMemo(() => categories.filter(c => c.is_active), [categories]);
 
@@ -443,6 +450,7 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
   };
 
   const reset = () => {
+    setOriginType('banco');
     setAccountId('');
     setFile(null);
     setRows([]);
@@ -634,6 +642,7 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
       // Ja importadas ficam desmarcadas por padrão; duplicadas com aviso mas selecionadas para decisão do usuário
       classified.forEach(r => {
         if (r.status === 'duplicada') r.selected = false; // deixa o usuário decidir
+        if (isCreditCard) r.type = 'saida'; // toda linha do cartão é despesa
       });
       setRows(classified);
     } catch (e: any) {
@@ -688,18 +697,19 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
       }));
 
       const payload = enriched.map(({ r, hash }) => ({
-        type: r.type === 'entrada' ? 'receber' : 'pagar',
+        type: isCreditCard ? 'pagar' : (r.type === 'entrada' ? 'receber' : 'pagar'),
         description: r.description || 'Importado do extrato',
         value: r.value,
         due_date: r.date,
         original_due_date: r.date,
-        payment_date: r.date,
+        // Cartão de crédito: compra fica pendente até o pagamento da fatura
+        payment_date: isCreditCard ? null : r.date,
         account_id: accountId,
         category_id: r.categoryId || null,
         contact_id: r.contactId || null,
         order_id: r.orderId || null,
-        notes: 'Importado via extrato',
-        import_source: 'extrato_arquivo',
+        notes: isCreditCard ? 'Compra no cartão — importada via extrato' : 'Importado via extrato',
+        import_source: isCreditCard ? 'extrato_cartao' : 'extrato_arquivo',
         import_file_name: fileName,
         import_file_type: fileType,
         imported_at: now,
@@ -713,7 +723,9 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
         .select('id, value, account_id, payment_date, due_date');
       if (error) throw error;
 
-      if (inserted?.length) {
+      // Para conta bancária, gera movimentação imediata (mesma data). Para cartão,
+      // não gera movimento — as compras ficarão em aberto até o pagamento da fatura.
+      if (!isCreditCard && inserted?.length) {
         const movements = inserted.map(e => ({
           entry_id: e.id,
           account_id: e.account_id,
@@ -762,13 +774,43 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
         {rows.length === 0 && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Conta Financeira</Label>
-              <Select value={accountId} onValueChange={setAccountId}>
-                <SelectTrigger><SelectValue placeholder="Selecione a conta" /></SelectTrigger>
+              <Label>Tipo de origem</Label>
+              <Select
+                value={originType}
+                onValueChange={(v: 'banco' | 'cartao') => {
+                  setOriginType(v);
+                  setAccountId('');
+                }}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {accounts.filter(a => a.is_active).map(a => (
+                  <SelectItem value="banco">Conta Bancária / Caixa</SelectItem>
+                  <SelectItem value="cartao">Cartão de Crédito</SelectItem>
+                </SelectContent>
+              </Select>
+              {isCreditCard && (
+                <p className="text-xs text-muted-foreground">
+                  As compras serão registradas nas datas originais como <b>Saída</b> vinculadas ao cartão,
+                  ficando <b>pendentes</b> até o pagamento da fatura. Nenhum movimento é gerado agora.
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>{isCreditCard ? 'Cartão de Crédito' : 'Conta Financeira'}</Label>
+              <Select value={accountId} onValueChange={setAccountId}>
+                <SelectTrigger>
+                  <SelectValue placeholder={isCreditCard ? 'Selecione o cartão' : 'Selecione a conta'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredAccounts.map(a => (
                     <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
                   ))}
+                  {filteredAccounts.length === 0 && (
+                    <div className="p-3 text-sm text-muted-foreground">
+                      Nenhum {isCreditCard ? 'cartão de crédito cadastrado. Cadastre um em Caixas/Bancos com o tipo Cartão.' : 'conta disponível.'}
+                    </div>
+                  )}
                 </SelectContent>
               </Select>
             </div>

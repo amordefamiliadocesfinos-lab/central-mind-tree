@@ -73,6 +73,13 @@ const accountTypeLabels: Record<string, string> = {
 export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriodChange }: AccountsManagerProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [payInvoiceDialogOpen, setPayInvoiceDialogOpen] = useState(false);
+  const [payInvoiceCardId, setPayInvoiceCardId] = useState<string>('');
+  const [payInvoiceBankId, setPayInvoiceBankId] = useState<string>('');
+  const [payInvoiceDate, setPayInvoiceDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
+  const [payInvoiceEntries, setPayInvoiceEntries] = useState<Array<{ id: string; description: string; due_date: string; value: number; value_paid: number; selected: boolean }>>([]);
+  const [payInvoiceLoading, setPayInvoiceLoading] = useState(false);
+  const [payInvoiceSubmitting, setPayInvoiceSubmitting] = useState(false);
   const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
   const [entryDialogOpen, setEntryDialogOpen] = useState(false);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
@@ -442,6 +449,84 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
     setTransferDialogOpen(false);
     setTransferForm({ from_account: '', to_account: '', value: '', notes: '' });
     fetchMovements();
+  };
+
+  const openPayInvoiceDialog = () => {
+    setPayInvoiceCardId('');
+    setPayInvoiceBankId('');
+    setPayInvoiceDate(format(new Date(), 'yyyy-MM-dd'));
+    setPayInvoiceEntries([]);
+    setPayInvoiceDialogOpen(true);
+  };
+
+  const loadInvoiceEntries = async (cardId: string) => {
+    setPayInvoiceCardId(cardId);
+    setPayInvoiceEntries([]);
+    if (!cardId) return;
+    setPayInvoiceLoading(true);
+    const { data, error } = await supabase
+      .from('financial_entries')
+      .select('id, description, due_date, value, value_paid')
+      .eq('account_id', cardId)
+      .eq('type', 'pagar')
+      .order('due_date', { ascending: true });
+    setPayInvoiceLoading(false);
+    if (error) {
+      toast({ variant: 'destructive', title: 'Erro ao carregar compras do cartão' });
+      return;
+    }
+    const open = (data || [])
+      .filter((e: any) => Number(e.value_paid || 0) < Number(e.value || 0))
+      .map((e: any) => ({
+        id: e.id,
+        description: e.description,
+        due_date: e.due_date,
+        value: Number(e.value || 0),
+        value_paid: Number(e.value_paid || 0),
+        selected: true,
+      }));
+    setPayInvoiceEntries(open);
+  };
+
+  const handlePayInvoice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!payInvoiceCardId || !payInvoiceBankId) {
+      toast({ variant: 'destructive', title: 'Selecione o cartão e a conta bancária' });
+      return;
+    }
+    const selected = payInvoiceEntries.filter(x => x.selected && x.value - x.value_paid > 0);
+    if (!selected.length) {
+      toast({ variant: 'destructive', title: 'Selecione ao menos uma compra' });
+      return;
+    }
+    setPayInvoiceSubmitting(true);
+    try {
+      const cardName = accounts.find(a => a.id === payInvoiceCardId)?.name || 'cartão';
+      const movements = selected.map(s => ({
+        entry_id: s.id,
+        account_id: payInvoiceBankId,
+        value: Number((s.value - s.value_paid).toFixed(10)),
+        movement_date: payInvoiceDate,
+        notes: `Pagamento fatura ${cardName}`,
+      }));
+      const { error: movErr } = await supabase.from('financial_movements').insert(movements);
+      if (movErr) throw movErr;
+
+      // Marca payment_date nas entradas quitadas (o trigger atualiza value_paid)
+      await supabase
+        .from('financial_entries')
+        .update({ payment_date: payInvoiceDate })
+        .in('id', selected.map(s => s.id));
+
+      toast({ title: `Fatura paga: ${selected.length} compra(s) quitada(s)` });
+      setPayInvoiceDialogOpen(false);
+      fetchMovements();
+    } catch (err: any) {
+      console.error(err);
+      toast({ variant: 'destructive', title: 'Erro ao pagar fatura', description: err?.message || String(err) });
+    } finally {
+      setPayInvoiceSubmitting(false);
+    }
   };
 
   const handleAdjustBalance = async (e: React.FormEvent) => {
@@ -1145,6 +1230,15 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
                 <Settings2 className="h-4 w-4" />
                 Ajustar saldos
               </Button>
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-2"
+                onClick={openPayInvoiceDialog}
+                disabled={!accounts.some(a => a.type === 'cartao' && a.is_active)}
+              >
+                <CreditCard className="h-4 w-4" />
+                Pagar Fatura de Cartão
+              </Button>
             </Card>
 
             {/* Summary */}
@@ -1365,6 +1459,107 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
                 Cancelar
               </Button>
               <Button type="submit">Salvar</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Pay Invoice Dialog */}
+      <Dialog open={payInvoiceDialogOpen} onOpenChange={setPayInvoiceDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" /> Pagar Fatura de Cartão
+            </DialogTitle>
+            <DialogDescription>
+              Registra uma transferência da conta bancária para o cartão, quitando as compras pendentes selecionadas. As despesas continuam nas datas originais das compras — nenhuma nova despesa é criada.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handlePayInvoice} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Cartão de crédito *</Label>
+                <Select value={payInvoiceCardId} onValueChange={loadInvoiceEntries}>
+                  <SelectTrigger><SelectValue placeholder="Selecionar cartão" /></SelectTrigger>
+                  <SelectContent>
+                    {accounts.filter(a => a.is_active && a.type === 'cartao').map(a => (
+                      <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Conta bancária de origem *</Label>
+                <Select value={payInvoiceBankId} onValueChange={setPayInvoiceBankId}>
+                  <SelectTrigger><SelectValue placeholder="Selecionar conta" /></SelectTrigger>
+                  <SelectContent>
+                    {accounts.filter(a => a.is_active && a.type !== 'cartao').map(a => (
+                      <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Data do pagamento *</Label>
+              <Input type="date" value={payInvoiceDate} onChange={(e) => setPayInvoiceDate(e.target.value)} required />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Compras pendentes {payInvoiceLoading && '(carregando...)'}</Label>
+              {payInvoiceCardId && !payInvoiceLoading && payInvoiceEntries.length === 0 && (
+                <p className="text-sm text-muted-foreground">Nenhuma compra pendente neste cartão.</p>
+              )}
+              {payInvoiceEntries.length > 0 && (
+                <div className="border rounded-md max-h-[300px] overflow-y-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-10">
+                          <Checkbox
+                            checked={payInvoiceEntries.every(x => x.selected)}
+                            onCheckedChange={(v) => setPayInvoiceEntries(prev => prev.map(x => ({ ...x, selected: !!v })))}
+                          />
+                        </TableHead>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Descrição</TableHead>
+                        <TableHead className="text-right">A pagar</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {payInvoiceEntries.map(x => (
+                        <TableRow key={x.id}>
+                          <TableCell>
+                            <Checkbox
+                              checked={x.selected}
+                              onCheckedChange={(v) => setPayInvoiceEntries(prev => prev.map(p => p.id === x.id ? { ...p, selected: !!v } : p))}
+                            />
+                          </TableCell>
+                          <TableCell>{format(parseISO(x.due_date), 'dd/MM/yyyy')}</TableCell>
+                          <TableCell className="truncate max-w-[280px]" title={x.description}>{x.description}</TableCell>
+                          <TableCell className="text-right font-medium">{formatCurrency(x.value - x.value_paid)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+              {payInvoiceEntries.some(x => x.selected) && (
+                <p className="text-sm text-right">
+                  Total selecionado: <b>{formatCurrency(payInvoiceEntries.filter(x => x.selected).reduce((s, x) => s + (x.value - x.value_paid), 0))}</b>
+                </p>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setPayInvoiceDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={payInvoiceSubmitting || !payInvoiceEntries.some(x => x.selected)}>
+                {payInvoiceSubmitting ? 'Processando...' : 'Pagar Fatura'}
+              </Button>
             </div>
           </form>
         </DialogContent>
