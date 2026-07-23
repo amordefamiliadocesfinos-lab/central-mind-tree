@@ -47,7 +47,9 @@ export default function Financeiro() {
     exportToCSV,
     saveAccount,
     saveCategory,
+    getDashboardSummary,
   } = useFinancial();
+
 
   const handleDateRangeChange = (start: Date | undefined, end: Date | undefined) => {
     const newFilters = {
