@@ -73,6 +73,13 @@ const accountTypeLabels: Record<string, string> = {
 export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriodChange }: AccountsManagerProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [payInvoiceDialogOpen, setPayInvoiceDialogOpen] = useState(false);
+  const [payInvoiceCardId, setPayInvoiceCardId] = useState<string>('');
+  const [payInvoiceBankId, setPayInvoiceBankId] = useState<string>('');
+  const [payInvoiceDate, setPayInvoiceDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
+  const [payInvoiceEntries, setPayInvoiceEntries] = useState<Array<{ id: string; description: string; due_date: string; value: number; value_paid: number; selected: boolean }>>([]);
+  const [payInvoiceLoading, setPayInvoiceLoading] = useState(false);
+  const [payInvoiceSubmitting, setPayInvoiceSubmitting] = useState(false);
   const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
   const [entryDialogOpen, setEntryDialogOpen] = useState(false);
   const [contactDialogOpen, setContactDialogOpen] = useState(false);
