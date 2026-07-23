@@ -1229,6 +1229,14 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
               >
                 <Settings2 className="h-4 w-4" />
                 Ajustar saldos
+              <Button
+                variant="outline"
+                className="w-full justify-start gap-2"
+                onClick={openPayInvoiceDialog}
+                disabled={!accounts.some(a => a.type === 'cartao' && a.is_active)}
+              >
+                <CreditCard className="h-4 w-4" />
+                Pagar Fatura de Cartão
               </Button>
             </Card>
 
