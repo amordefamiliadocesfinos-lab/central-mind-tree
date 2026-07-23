@@ -642,6 +642,7 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
       // Ja importadas ficam desmarcadas por padrão; duplicadas com aviso mas selecionadas para decisão do usuário
       classified.forEach(r => {
         if (r.status === 'duplicada') r.selected = false; // deixa o usuário decidir
+        if (isCreditCard) r.type = 'saida'; // toda linha do cartão é despesa
       });
       setRows(classified);
     } catch (e: any) {
