@@ -1464,6 +1464,107 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
         </DialogContent>
       </Dialog>
 
+      {/* Pay Invoice Dialog */}
+      <Dialog open={payInvoiceDialogOpen} onOpenChange={setPayInvoiceDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="h-5 w-5" /> Pagar Fatura de Cartão
+            </DialogTitle>
+            <DialogDescription>
+              Registra uma transferência da conta bancária para o cartão, quitando as compras pendentes selecionadas. As despesas continuam nas datas originais das compras — nenhuma nova despesa é criada.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handlePayInvoice} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Cartão de crédito *</Label>
+                <Select value={payInvoiceCardId} onValueChange={loadInvoiceEntries}>
+                  <SelectTrigger><SelectValue placeholder="Selecionar cartão" /></SelectTrigger>
+                  <SelectContent>
+                    {accounts.filter(a => a.is_active && a.type === 'cartao').map(a => (
+                      <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Conta bancária de origem *</Label>
+                <Select value={payInvoiceBankId} onValueChange={setPayInvoiceBankId}>
+                  <SelectTrigger><SelectValue placeholder="Selecionar conta" /></SelectTrigger>
+                  <SelectContent>
+                    {accounts.filter(a => a.is_active && a.type !== 'cartao').map(a => (
+                      <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Data do pagamento *</Label>
+              <Input type="date" value={payInvoiceDate} onChange={(e) => setPayInvoiceDate(e.target.value)} required />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Compras pendentes {payInvoiceLoading && '(carregando...)'}</Label>
+              {payInvoiceCardId && !payInvoiceLoading && payInvoiceEntries.length === 0 && (
+                <p className="text-sm text-muted-foreground">Nenhuma compra pendente neste cartão.</p>
+              )}
+              {payInvoiceEntries.length > 0 && (
+                <div className="border rounded-md max-h-[300px] overflow-y-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-10">
+                          <Checkbox
+                            checked={payInvoiceEntries.every(x => x.selected)}
+                            onCheckedChange={(v) => setPayInvoiceEntries(prev => prev.map(x => ({ ...x, selected: !!v })))}
+                          />
+                        </TableHead>
+                        <TableHead>Data</TableHead>
+                        <TableHead>Descrição</TableHead>
+                        <TableHead className="text-right">A pagar</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {payInvoiceEntries.map(x => (
+                        <TableRow key={x.id}>
+                          <TableCell>
+                            <Checkbox
+                              checked={x.selected}
+                              onCheckedChange={(v) => setPayInvoiceEntries(prev => prev.map(p => p.id === x.id ? { ...p, selected: !!v } : p))}
+                            />
+                          </TableCell>
+                          <TableCell>{format(parseISO(x.due_date), 'dd/MM/yyyy')}</TableCell>
+                          <TableCell className="truncate max-w-[280px]" title={x.description}>{x.description}</TableCell>
+                          <TableCell className="text-right font-medium">{formatCurrency(x.value - x.value_paid)}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+              {payInvoiceEntries.some(x => x.selected) && (
+                <p className="text-sm text-right">
+                  Total selecionado: <b>{formatCurrency(payInvoiceEntries.filter(x => x.selected).reduce((s, x) => s + (x.value - x.value_paid), 0))}</b>
+                </p>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setPayInvoiceDialogOpen(false)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={payInvoiceSubmitting || !payInvoiceEntries.some(x => x.selected)}>
+                {payInvoiceSubmitting ? 'Processando...' : 'Pagar Fatura'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
       {/* Transfer Dialog */}
       <Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
         <DialogContent className="max-w-md">
