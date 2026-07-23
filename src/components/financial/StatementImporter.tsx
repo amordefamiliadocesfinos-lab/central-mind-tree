@@ -696,18 +696,19 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
       }));
 
       const payload = enriched.map(({ r, hash }) => ({
-        type: r.type === 'entrada' ? 'receber' : 'pagar',
+        type: isCreditCard ? 'pagar' : (r.type === 'entrada' ? 'receber' : 'pagar'),
         description: r.description || 'Importado do extrato',
         value: r.value,
         due_date: r.date,
         original_due_date: r.date,
-        payment_date: r.date,
+        // Cartão de crédito: compra fica pendente até o pagamento da fatura
+        payment_date: isCreditCard ? null : r.date,
         account_id: accountId,
         category_id: r.categoryId || null,
         contact_id: r.contactId || null,
         order_id: r.orderId || null,
-        notes: 'Importado via extrato',
-        import_source: 'extrato_arquivo',
+        notes: isCreditCard ? 'Compra no cartão — importada via extrato' : 'Importado via extrato',
+        import_source: isCreditCard ? 'extrato_cartao' : 'extrato_arquivo',
         import_file_name: fileName,
         import_file_type: fileType,
         imported_at: now,
@@ -721,7 +722,9 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
         .select('id, value, account_id, payment_date, due_date');
       if (error) throw error;
 
-      if (inserted?.length) {
+      // Para conta bancária, gera movimentação imediata (mesma data). Para cartão,
+      // não gera movimento — as compras ficarão em aberto até o pagamento da fatura.
+      if (!isCreditCard && inserted?.length) {
         const movements = inserted.map(e => ({
           entry_id: e.id,
           account_id: e.account_id,
