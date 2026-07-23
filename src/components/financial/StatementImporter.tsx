@@ -773,13 +773,43 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
         {rows.length === 0 && (
           <div className="space-y-4">
             <div className="space-y-2">
-              <Label>Conta Financeira</Label>
-              <Select value={accountId} onValueChange={setAccountId}>
-                <SelectTrigger><SelectValue placeholder="Selecione a conta" /></SelectTrigger>
+              <Label>Tipo de origem</Label>
+              <Select
+                value={originType}
+                onValueChange={(v: 'banco' | 'cartao') => {
+                  setOriginType(v);
+                  setAccountId('');
+                }}
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {accounts.filter(a => a.is_active).map(a => (
+                  <SelectItem value="banco">Conta Bancária / Caixa</SelectItem>
+                  <SelectItem value="cartao">Cartão de Crédito</SelectItem>
+                </SelectContent>
+              </Select>
+              {isCreditCard && (
+                <p className="text-xs text-muted-foreground">
+                  As compras serão registradas nas datas originais como <b>Saída</b> vinculadas ao cartão,
+                  ficando <b>pendentes</b> até o pagamento da fatura. Nenhum movimento é gerado agora.
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>{isCreditCard ? 'Cartão de Crédito' : 'Conta Financeira'}</Label>
+              <Select value={accountId} onValueChange={setAccountId}>
+                <SelectTrigger>
+                  <SelectValue placeholder={isCreditCard ? 'Selecione o cartão' : 'Selecione a conta'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredAccounts.map(a => (
                     <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
                   ))}
+                  {filteredAccounts.length === 0 && (
+                    <div className="p-3 text-sm text-muted-foreground">
+                      Nenhum {isCreditCard ? 'cartão de crédito cadastrado. Cadastre um em Caixas/Bancos com o tipo Cartão.' : 'conta disponível.'}
+                    </div>
+                  )}
                 </SelectContent>
               </Select>
             </div>
