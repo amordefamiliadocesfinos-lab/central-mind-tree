@@ -376,9 +376,18 @@ function InteractiveBreakdown({ entries }: { entries: FinancialEntry[] }) {
   );
 }
 
-export function FinancialDashboard() {
-  const { getDashboardSummary, accounts, entries } = useFinancial();
-  const summary = getDashboardSummary();
+interface FinancialDashboardProps {
+  entries?: FinancialEntry[];
+  accounts?: ReturnType<typeof useFinancial>['accounts'];
+  summary?: ReturnType<ReturnType<typeof useFinancial>['getDashboardSummary']>;
+}
+
+export function FinancialDashboard(props: FinancialDashboardProps = {}) {
+  const hook = useFinancial();
+  const entries = props.entries ?? hook.entries;
+  const accounts = props.accounts ?? hook.accounts;
+  const summary = props.summary ?? hook.getDashboardSummary();
+
 
   return (
     <div className="space-y-6">
