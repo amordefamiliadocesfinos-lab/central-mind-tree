@@ -47,7 +47,9 @@ export default function Financeiro() {
     exportToCSV,
     saveAccount,
     saveCategory,
+    getDashboardSummary,
   } = useFinancial();
+
 
   const handleDateRangeChange = (start: Date | undefined, end: Date | undefined) => {
     const newFilters = {
@@ -197,8 +199,9 @@ export default function Financeiro() {
           )}
 
           <TabsContent value="dashboard">
-            <FinancialDashboard />
+            <FinancialDashboard entries={entries} accounts={accounts} summary={getDashboardSummary()} />
           </TabsContent>
+
 
           <TabsContent value="receber">
             <FinancialEntriesList
