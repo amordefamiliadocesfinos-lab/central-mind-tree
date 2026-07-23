@@ -450,6 +450,7 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
   };
 
   const reset = () => {
+    setOriginType('banco');
     setAccountId('');
     setFile(null);
     setRows([]);
