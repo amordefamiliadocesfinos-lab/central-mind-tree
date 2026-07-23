@@ -418,12 +418,19 @@ function OrderCell({
 
 export function StatementImporter({ open, onOpenChange, accounts, categories, onImported }: StatementImporterProps) {
   const { toast } = useToast();
+  const [originType, setOriginType] = useState<'banco' | 'cartao'>('banco');
   const [accountId, setAccountId] = useState<string>('');
   const [file, setFile] = useState<File | null>(null);
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [reading, setReading] = useState(false);
   const [importing, setImporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const isCreditCard = originType === 'cartao';
+  const filteredAccounts = useMemo(
+    () => accounts.filter(a => a.is_active && (isCreditCard ? a.type === 'cartao' : a.type !== 'cartao')),
+    [accounts, isCreditCard]
+  );
 
   const activeCategories = useMemo(() => categories.filter(c => c.is_active), [categories]);
 
