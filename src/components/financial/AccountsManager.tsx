@@ -451,6 +451,84 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
     fetchMovements();
   };
 
+  const openPayInvoiceDialog = () => {
+    setPayInvoiceCardId('');
+    setPayInvoiceBankId('');
+    setPayInvoiceDate(format(new Date(), 'yyyy-MM-dd'));
+    setPayInvoiceEntries([]);
+    setPayInvoiceDialogOpen(true);
+  };
+
+  const loadInvoiceEntries = async (cardId: string) => {
+    setPayInvoiceCardId(cardId);
+    setPayInvoiceEntries([]);
+    if (!cardId) return;
+    setPayInvoiceLoading(true);
+    const { data, error } = await supabase
+      .from('financial_entries')
+      .select('id, description, due_date, value, value_paid')
+      .eq('account_id', cardId)
+      .eq('type', 'pagar')
+      .order('due_date', { ascending: true });
+    setPayInvoiceLoading(false);
+    if (error) {
+      toast({ variant: 'destructive', title: 'Erro ao carregar compras do cartão' });
+      return;
+    }
+    const open = (data || [])
+      .filter((e: any) => Number(e.value_paid || 0) < Number(e.value || 0))
+      .map((e: any) => ({
+        id: e.id,
+        description: e.description,
+        due_date: e.due_date,
+        value: Number(e.value || 0),
+        value_paid: Number(e.value_paid || 0),
+        selected: true,
+      }));
+    setPayInvoiceEntries(open);
+  };
+
+  const handlePayInvoice = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!payInvoiceCardId || !payInvoiceBankId) {
+      toast({ variant: 'destructive', title: 'Selecione o cartão e a conta bancária' });
+      return;
+    }
+    const selected = payInvoiceEntries.filter(x => x.selected && x.value - x.value_paid > 0);
+    if (!selected.length) {
+      toast({ variant: 'destructive', title: 'Selecione ao menos uma compra' });
+      return;
+    }
+    setPayInvoiceSubmitting(true);
+    try {
+      const cardName = accounts.find(a => a.id === payInvoiceCardId)?.name || 'cartão';
+      const movements = selected.map(s => ({
+        entry_id: s.id,
+        account_id: payInvoiceBankId,
+        value: Number((s.value - s.value_paid).toFixed(10)),
+        movement_date: payInvoiceDate,
+        notes: `Pagamento fatura ${cardName}`,
+      }));
+      const { error: movErr } = await supabase.from('financial_movements').insert(movements);
+      if (movErr) throw movErr;
+
+      // Marca payment_date nas entradas quitadas (o trigger atualiza value_paid)
+      await supabase
+        .from('financial_entries')
+        .update({ payment_date: payInvoiceDate })
+        .in('id', selected.map(s => s.id));
+
+      toast({ title: `Fatura paga: ${selected.length} compra(s) quitada(s)` });
+      setPayInvoiceDialogOpen(false);
+      fetchMovements();
+    } catch (err: any) {
+      console.error(err);
+      toast({ variant: 'destructive', title: 'Erro ao pagar fatura', description: err?.message || String(err) });
+    } finally {
+      setPayInvoiceSubmitting(false);
+    }
+  };
+
   const handleAdjustBalance = async (e: React.FormEvent) => {
     e.preventDefault();
     const account = accounts.find(a => a.id === adjustForm.account_id);
