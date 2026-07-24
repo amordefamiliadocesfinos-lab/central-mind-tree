@@ -503,6 +503,12 @@ export default function Operacoes() {
               </CardContent>
             </Card>
 
+            <StockOverviewViewer
+              products={rawProducts as Product[]}
+              getBalance={getProductBalance}
+              categories={productCategories}
+            />
+
             <LocationsManager />
           </div>
         );
