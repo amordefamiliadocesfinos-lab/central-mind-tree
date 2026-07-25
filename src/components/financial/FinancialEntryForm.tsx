@@ -83,6 +83,21 @@ export function FinancialEntryForm({
         recurrence_end_date: (entry as any).recurrence_end_date || '',
         recurrence_use_business_days: (entry as any).recurrence_use_business_days || false,
       });
+      // Preload linked contact — fetch by id when the embedded relation is missing
+      if (entry.contact && entry.contact.id) {
+        setContact({ id: entry.contact.id, name: entry.contact.name });
+      } else if (entry.contact_id) {
+        supabase
+          .from('contacts')
+          .select('id, name')
+          .eq('id', entry.contact_id)
+          .maybeSingle()
+          .then(({ data }) => {
+            if (data) setContact({ id: data.id, name: data.name });
+          });
+      } else {
+        setContact(undefined);
+      }
     } else {
       setForm({
         description: '',
@@ -99,6 +114,7 @@ export function FinancialEntryForm({
         recurrence_end_date: '',
         recurrence_use_business_days: false,
       });
+      setContact(undefined);
       setActiveTab('pagamento');
     }
   }, [entry, open]);
