@@ -9,12 +9,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandInput, CommandList, CommandGroup, CommandItem, CommandEmpty } from '@/components/ui/command';
 import { FinancialEntry, FinancialCategory, FinancialAccount } from '@/hooks/useFinancial';
 import { format, parseISO, addMonths, addWeeks, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Loader2, CalendarIcon, CreditCard, RefreshCw, Paperclip, Info } from 'lucide-react';
+import { Loader2, CalendarIcon, CreditCard, RefreshCw, Paperclip, Info, User, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { supabase } from '@/integrations/supabase/client';
 
 interface FinancialEntryFormProps {
   open: boolean;
@@ -46,6 +48,7 @@ export function FinancialEntryForm({
 }: FinancialEntryFormProps) {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('pagamento');
+  const [contact, setContact] = useState<{ id: string; name: string } | undefined>(undefined);
   const [form, setForm] = useState({
     description: '',
     value: '',
@@ -80,6 +83,21 @@ export function FinancialEntryForm({
         recurrence_end_date: (entry as any).recurrence_end_date || '',
         recurrence_use_business_days: (entry as any).recurrence_use_business_days || false,
       });
+      // Preload linked contact — fetch by id when the embedded relation is missing
+      if (entry.contact && entry.contact.id) {
+        setContact({ id: entry.contact.id, name: entry.contact.name });
+      } else if (entry.contact_id) {
+        supabase
+          .from('contacts')
+          .select('id, name')
+          .eq('id', entry.contact_id)
+          .maybeSingle()
+          .then(({ data }) => {
+            if (data) setContact({ id: data.id, name: data.name });
+          });
+      } else {
+        setContact(undefined);
+      }
     } else {
       setForm({
         description: '',
@@ -96,6 +114,7 @@ export function FinancialEntryForm({
         recurrence_end_date: '',
         recurrence_use_business_days: false,
       });
+      setContact(undefined);
       setActiveTab('pagamento');
     }
   }, [entry, open]);
@@ -123,6 +142,7 @@ export function FinancialEntryForm({
         competence_date: form.competence_date || null,
         category_id: form.category_id || null,
         account_id: form.account_id || null,
+        contact_id: contact?.id || null,
         document_number: form.document_number || null,
         notes: form.notes || null,
         recurrence_type: form.recurrence_type || null,
@@ -179,6 +199,12 @@ export function FinancialEntryForm({
                 required
               />
             </div>
+          </div>
+
+          {/* Contato (Cliente/Fornecedor) */}
+          <div className="space-y-2">
+            <Label>{type === 'pagar' ? 'Fornecedor' : 'Cliente'} vinculado</Label>
+            <ContactPicker value={contact} onChange={setContact} type={type} />
           </div>
 
           {/* Date fields */}
@@ -539,5 +565,121 @@ export function FinancialEntryForm({
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ContactPicker({
+  value,
+  onChange,
+  type,
+}: {
+  value?: { id: string; name: string };
+  onChange: (v?: { id: string; name: string }) => void;
+  type: 'pagar' | 'receber';
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const [results, setResults] = useState<{ id: string; name: string; type?: string }[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const t = setTimeout(async () => {
+      setLoading(true);
+      let q = supabase
+        .from('contacts')
+        .select('id, name, type')
+        .eq('is_active', true)
+        .order('name')
+        .limit(20);
+      if (search.trim().length >= 2) {
+        q = q.or(
+          `name.ilike.%${search}%,fantasy_name.ilike.%${search}%,document.ilike.%${search}%`
+        );
+      }
+      const { data } = await q;
+      setResults((data as any) || []);
+      setLoading(false);
+    }, 200);
+    return () => clearTimeout(t);
+  }, [search, open]);
+
+  const placeholder = type === 'pagar' ? 'Selecionar fornecedor...' : 'Selecionar cliente...';
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full justify-start font-normal"
+        >
+          {value ? (
+            <span className="flex items-center gap-2 min-w-0">
+              <User className="h-4 w-4 shrink-0" />
+              <span className="truncate">{value.name}</span>
+            </span>
+          ) : (
+            <span className="text-muted-foreground flex items-center gap-2">
+              <User className="h-4 w-4" /> {placeholder}
+            </span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="p-0 w-[--radix-popover-trigger-width]" align="start">
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder="Buscar por nome, fantasia ou documento..."
+            value={search}
+            onValueChange={setSearch}
+          />
+          <CommandList>
+            {loading ? (
+              <div className="p-3 text-sm text-muted-foreground text-center">Buscando...</div>
+            ) : (
+              <>
+                {value && (
+                  <CommandGroup>
+                    <CommandItem
+                      value="__clear__"
+                      onSelect={() => {
+                        onChange(undefined);
+                        setOpen(false);
+                      }}
+                    >
+                      <X className="h-3 w-3 mr-2" /> Remover vínculo
+                    </CommandItem>
+                  </CommandGroup>
+                )}
+                <CommandGroup>
+                  {results.length === 0 ? (
+                    <CommandEmpty>Nenhum contato encontrado</CommandEmpty>
+                  ) : (
+                    results.map((c) => (
+                      <CommandItem
+                        key={c.id}
+                        value={c.id}
+                        onSelect={() => {
+                          onChange({ id: c.id, name: c.name });
+                          setOpen(false);
+                        }}
+                      >
+                        <User className="h-3 w-3 mr-2" />
+                        <span className="truncate">{c.name}</span>
+                        {c.type && (
+                          <span className="ml-auto text-[10px] text-muted-foreground">
+                            {c.type}
+                          </span>
+                        )}
+                      </CommandItem>
+                    ))
+                  )}
+                </CommandGroup>
+              </>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
