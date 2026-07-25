@@ -9,12 +9,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Switch } from '@/components/ui/switch';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandInput, CommandList, CommandGroup, CommandItem, CommandEmpty } from '@/components/ui/command';
 import { FinancialEntry, FinancialCategory, FinancialAccount } from '@/hooks/useFinancial';
 import { format, parseISO, addMonths, addWeeks, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Loader2, CalendarIcon, CreditCard, RefreshCw, Paperclip, Info } from 'lucide-react';
+import { Loader2, CalendarIcon, CreditCard, RefreshCw, Paperclip, Info, User, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { supabase } from '@/integrations/supabase/client';
 
 interface FinancialEntryFormProps {
   open: boolean;
