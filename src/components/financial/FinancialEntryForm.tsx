@@ -142,6 +142,7 @@ export function FinancialEntryForm({
         competence_date: form.competence_date || null,
         category_id: form.category_id || null,
         account_id: form.account_id || null,
+        contact_id: contact?.id || null,
         document_number: form.document_number || null,
         notes: form.notes || null,
         recurrence_type: form.recurrence_type || null,
