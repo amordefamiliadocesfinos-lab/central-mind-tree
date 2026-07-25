@@ -201,6 +201,12 @@ export function FinancialEntryForm({
             </div>
           </div>
 
+          {/* Contato (Cliente/Fornecedor) */}
+          <div className="space-y-2">
+            <Label>{type === 'pagar' ? 'Fornecedor' : 'Cliente'} vinculado</Label>
+            <ContactPicker value={contact} onChange={setContact} type={type} />
+          </div>
+
           {/* Date fields */}
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-2">
