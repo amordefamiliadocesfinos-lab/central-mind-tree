@@ -48,6 +48,7 @@ export function FinancialEntryForm({
 }: FinancialEntryFormProps) {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('pagamento');
+  const [contact, setContact] = useState<{ id: string; name: string } | undefined>(undefined);
   const [form, setForm] = useState({
     description: '',
     value: '',
