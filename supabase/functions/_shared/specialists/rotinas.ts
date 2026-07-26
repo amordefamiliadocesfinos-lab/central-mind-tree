@@ -237,7 +237,9 @@ const locatorOf = (params: Params) => {
   const raw = (params.locator && typeof params.locator === "object" ? params.locator : params) as Record<string, unknown>;
   // Normaliza aliases universais → colunas reais das entidades de Rotinas.
   // O LLM frequentemente envia { name: "..." }; para bloco_rotina/template_rotina a coluna é "title".
-  if (raw && typeof raw === "object" && raw.name !== undefined && raw.title === undefined) {
+  const titleEmpty = raw?.title === undefined || raw?.title === null || raw?.title === "";
+  const hasName = raw?.name !== undefined && raw?.name !== null && raw?.name !== "";
+  if (raw && typeof raw === "object" && titleEmpty && hasName) {
     return { ...raw, title: raw.name } as Params;
   }
   return raw as Params;
