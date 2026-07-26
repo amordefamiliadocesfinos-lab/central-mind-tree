@@ -70,6 +70,17 @@ serve(async (req) => {
   const bearer = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "").trim();
   const { data: authData } = bearer ? await supabase.auth.getUser(bearer) : { data: { user: null } };
   const requestedBy = authData.user?.id;
+  // Vínculo seguro Rotinas: resolve app_users.id via auth_user_id.
+  // Usado EXCLUSIVAMENTE em operações do módulo Rotinas; demais módulos preservam auth.users.id.
+  let routineRequestedBy: string | undefined = requestedBy;
+  if (requestedBy) {
+    const { data: mappedAppUser } = await supabase
+      .from("app_users")
+      .select("id")
+      .eq("auth_user_id", requestedBy)
+      .maybeSingle();
+    if (mappedAppUser?.id) routineRequestedBy = mappedAppUser.id as string;
+  }
   const url = new URL(req.url);
   const path = url.pathname.replace("/ai-ceo", "");
 
