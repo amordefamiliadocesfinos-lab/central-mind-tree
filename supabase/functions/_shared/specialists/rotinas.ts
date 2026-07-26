@@ -233,7 +233,15 @@ const templateCfg: Level1EntityConfig = {
   requiredFields: [], searchableFields: ["title"], editableFields: [], activeField: "is_active", softDelete: true,
 };
 
-const locatorOf = (params: Params) => (params.locator && typeof params.locator === "object" ? params.locator : params) as Params;
+const locatorOf = (params: Params) => {
+  const raw = (params.locator && typeof params.locator === "object" ? params.locator : params) as Record<string, unknown>;
+  // Normaliza aliases universais → colunas reais das entidades de Rotinas.
+  // O LLM frequentemente envia { name: "..." }; para bloco_rotina/template_rotina a coluna é "title".
+  if (raw && typeof raw === "object" && raw.name !== undefined && raw.title === undefined) {
+    return { ...raw, title: raw.name } as Params;
+  }
+  return raw as Params;
+};
 
 function targetFailure(res: any, entity: string, action: string) {
   if (res.status === "AMBIGUOUS") return { ok: true, data: { ambiguous: true, options: res.rows.map((r: any) => ({ id: r.id, title: r.title, name: r.name })) } };
