@@ -70,6 +70,17 @@ serve(async (req) => {
   const bearer = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "").trim();
   const { data: authData } = bearer ? await supabase.auth.getUser(bearer) : { data: { user: null } };
   const requestedBy = authData.user?.id;
+  // Vínculo seguro Rotinas: resolve app_users.id via auth_user_id.
+  // Usado EXCLUSIVAMENTE em operações do módulo Rotinas; demais módulos preservam auth.users.id.
+  let routineRequestedBy: string | undefined = requestedBy;
+  if (requestedBy) {
+    const { data: mappedAppUser } = await supabase
+      .from("app_users")
+      .select("id")
+      .eq("auth_user_id", requestedBy)
+      .maybeSingle();
+    if (mappedAppUser?.id) routineRequestedBy = mappedAppUser.id as string;
+  }
   const url = new URL(req.url);
   const path = url.pathname.replace("/ai-ceo", "");
 
@@ -575,7 +586,7 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
       // • local  → devolve resposta pronta (cancel / sem-confirmação / ambiguidade reduzida)
       // • intent → alimenta o Motor direto, sem re-extração via LLM
       // • passthrough → fluxo normal (LLM extractActionIntent + Motor)
-      const continuity = resolveConversationContinuity(lastUserMsg, messages, requestedBy);
+      const continuity = resolveConversationContinuity(lastUserMsg, messages, routineRequestedBy);
       if (continuity.kind === "local") {
         const stream = prependSSEText(continuity.text, emptyStream());
         return new Response(stream, {
@@ -591,6 +602,7 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
         historyForMotor,
         continuity.kind === "intent" ? continuity.intent : null,
         requestedBy,
+        routineRequestedBy,
       );
 
       // FLUXO OPERACIONAL: se o Motor de Coordenação identificou uma solicitação
@@ -598,7 +610,7 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
       // Não chamamos o LLM nem geramos plano/objetivo/especialistas — isso evita
       // resposta duplicada e faz o Motor assumir oficialmente o fluxo operacional.
       if (coordination) {
-        const motorOnly = formatMotorBlock(coordination, requestedBy);
+        const motorOnly = formatMotorBlock(coordination, routineRequestedBy);
         const stream = prependSSEText(supersedeMarker + motorOnly, emptyStream());
         return new Response(stream, {
           headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
@@ -1371,6 +1383,7 @@ async function runCoordinationMotor(
   history: Array<{ role: string; content: string }> = [],
   preIntent: IntentPayload | null = null,
   requestedBy?: string,
+  routineRequestedBy?: string,
 ): Promise<CoordinationResponse | null> {
   const intent = preIntent ?? (await extractActionIntent(userMessage, history));
   if (!intent) return null;
@@ -1411,7 +1424,7 @@ async function runCoordinationMotor(
     operation: intent.operation,
     scope: intent.scope,
     params: normalizedParams,
-    requested_by: requestedBy,
+    requested_by: String(intent.module ?? "").toLowerCase() === "rotina" ? (routineRequestedBy ?? requestedBy) : requestedBy,
   });
 }
 
