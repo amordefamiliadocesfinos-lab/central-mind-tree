@@ -1424,7 +1424,7 @@ async function runCoordinationMotor(
     operation: intent.operation,
     scope: intent.scope,
     params: normalizedParams,
-    requested_by: requestedBy,
+    requested_by: String(intent.module ?? "").toLowerCase() === "rotina" ? (routineRequestedBy ?? requestedBy) : requestedBy,
   });
 }
 
