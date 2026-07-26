@@ -182,6 +182,7 @@ export type Database = {
       }
       app_users: {
         Row: {
+          auth_user_id: string | null
           created_at: string
           email: string | null
           id: string
@@ -190,6 +191,7 @@ export type Database = {
           role: string | null
         }
         Insert: {
+          auth_user_id?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -198,6 +200,7 @@ export type Database = {
           role?: string | null
         }
         Update: {
+          auth_user_id?: string | null
           created_at?: string
           email?: string | null
           id?: string
