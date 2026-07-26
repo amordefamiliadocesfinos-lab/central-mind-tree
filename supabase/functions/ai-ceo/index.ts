@@ -596,12 +596,15 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
 
       const supersedeMarker = continuity.kind === "passthrough" && continuity.supersede ? continuity.supersede : "";
 
+      const continuity = resolveConversationContinuity(lastUserMsg, messages, routineRequestedBy);
+      // (moved above) — mantém a variável usada abaixo
       const historyForMotor = supersedeMarker ? [{ role: "user", content: lastUserMsg }] : messages;
       const coordination = await runCoordinationMotor(
         lastUserMsg,
         historyForMotor,
         continuity.kind === "intent" ? continuity.intent : null,
         requestedBy,
+        routineRequestedBy,
       );
 
       // FLUXO OPERACIONAL: se o Motor de Coordenação identificou uma solicitação
