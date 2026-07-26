@@ -1383,6 +1383,7 @@ async function runCoordinationMotor(
   history: Array<{ role: string; content: string }> = [],
   preIntent: IntentPayload | null = null,
   requestedBy?: string,
+  routineRequestedBy?: string,
 ): Promise<CoordinationResponse | null> {
   const intent = preIntent ?? (await extractActionIntent(userMessage, history));
   if (!intent) return null;
