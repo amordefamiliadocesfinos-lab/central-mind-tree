@@ -17,10 +17,10 @@ export default function Auth() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate("/assistente", { replace: true });
+      if (data.session) navigate("/", { replace: true });
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (session) navigate("/assistente", { replace: true });
+      if (session) navigate("/", { replace: true });
     });
     return () => sub.subscription.unsubscribe();
   }, [navigate]);
@@ -38,7 +38,7 @@ export default function Auth() {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: `${window.location.origin}/assistente` },
+          options: { emailRedirectTo: `${window.location.origin}/` },
         });
         if (error) throw error;
         toast.success("Cadastro realizado. Verifique seu e-mail se necessário.");
