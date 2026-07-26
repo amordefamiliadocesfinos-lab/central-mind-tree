@@ -17,10 +17,10 @@ export default function Auth() {
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) navigate("/assistente", { replace: true });
+      if (data.session) navigate("/", { replace: true });
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
-      if (session) navigate("/assistente", { replace: true });
+      if (session) navigate("/", { replace: true });
     });
     return () => sub.subscription.unsubscribe();
   }, [navigate]);
