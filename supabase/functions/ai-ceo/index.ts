@@ -1681,6 +1681,28 @@ function resolveConversationContinuity(
     if (isCancel) {
       return { kind: "local", text: `Operação cancelada. Os passos do plano continuam disponíveis.${pcContext({ type: "routine_plan", owner_id: requestedBy, steps })}\n` };
     }
+    // Perguntas locais somente-leitura sobre o plano: não executam ação,
+    // preservam o mesmo pc-context routine_plan.
+    const planCtx = pcContext({ type: "routine_plan", owner_id: requestedBy, steps });
+    const stepLabel = (s: any) => String(s?.label ?? s?.title ?? "").trim() || `passo ${s?.index ?? "?"}`;
+    const formatStep = (s: any) => `Passo ${s.index}: ${stepLabel(s)}`;
+    if (steps.length > 0) {
+      const wordIdx: Record<string, number> = { primeiro: 1, segundo: 2, terceiro: 3, quarto: 4, quinto: 5, ultimo: steps.length };
+      const askStep = userNorm.match(/^(?:qual\s+(?:e|eh|é)\s+)?(?:o\s+)?(primeiro|segundo|terceiro|quarto|quinto|ultimo)\s+passo\??$/);
+      if (askStep) {
+        const idx = wordIdx[askStep[1]];
+        const s = steps.find((it: any) => Number(it.index) === idx);
+        return { kind: "local", text: s ? `${formatStep(s)}${planCtx}\n` : `Esse passo não existe no plano atual.${planCtx}\n` };
+      }
+      if (/^e\s+depois\??$/.test(userNorm) || /^(?:qual\s+(?:e|eh|é)\s+)?(?:o\s+)?proximo\s+passo\??$/.test(userNorm)) {
+        const s = steps[1] ?? steps[0];
+        return { kind: "local", text: s ? `${formatStep(s)}${planCtx}\n` : `Não há próximo passo no plano atual.${planCtx}\n` };
+      }
+      if (/^(?:resuma|resumir|resumo\s+d[eo])\s+(?:o\s+)?plano$/.test(userNorm) || /^mostre?\s+(?:o\s+)?plano$/.test(userNorm)) {
+        const lines = steps.map((s: any) => `- ${formatStep(s)}`).join("\n");
+        return { kind: "local", text: `Plano atual (${steps.length} ${steps.length === 1 ? "passo" : "passos"}):\n${lines}${planCtx}\n` };
+      }
+    }
     const command = userNorm.match(/^(?:execute|executar|faca|pode executar)\s+(?:o\s+)?(?:(?:passo|item)\s*)?(\d+|primeiro|segundo|terceiro|quarto|quinto|ultimo)$/);
     if (!command) return { kind: "passthrough" };
     const words: Record<string, number> = { primeiro: 1, segundo: 2, terceiro: 3, quarto: 4, quinto: 5, ultimo: steps.length };
