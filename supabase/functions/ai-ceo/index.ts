@@ -586,7 +586,7 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
       // • local  → devolve resposta pronta (cancel / sem-confirmação / ambiguidade reduzida)
       // • intent → alimenta o Motor direto, sem re-extração via LLM
       // • passthrough → fluxo normal (LLM extractActionIntent + Motor)
-      const continuity = resolveConversationContinuity(lastUserMsg, messages, requestedBy);
+      const continuity = resolveConversationContinuity(lastUserMsg, messages, routineRequestedBy);
       if (continuity.kind === "local") {
         const stream = prependSSEText(continuity.text, emptyStream());
         return new Response(stream, {
@@ -596,8 +596,6 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
 
       const supersedeMarker = continuity.kind === "passthrough" && continuity.supersede ? continuity.supersede : "";
 
-      const continuity = resolveConversationContinuity(lastUserMsg, messages, routineRequestedBy);
-      // (moved above) — mantém a variável usada abaixo
       const historyForMotor = supersedeMarker ? [{ role: "user", content: lastUserMsg }] : messages;
       const coordination = await runCoordinationMotor(
         lastUserMsg,
@@ -612,7 +610,7 @@ Pedidos: ${JSON.stringify(orders?.slice(0, 10) || [])}`;
       // Não chamamos o LLM nem geramos plano/objetivo/especialistas — isso evita
       // resposta duplicada e faz o Motor assumir oficialmente o fluxo operacional.
       if (coordination) {
-        const motorOnly = formatMotorBlock(coordination, requestedBy);
+        const motorOnly = formatMotorBlock(coordination, routineRequestedBy);
         const stream = prependSSEText(supersedeMarker + motorOnly, emptyStream());
         return new Response(stream, {
           headers: { ...corsHeaders, "Content-Type": "text/event-stream" },
