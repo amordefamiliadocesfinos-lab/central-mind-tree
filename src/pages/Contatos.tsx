@@ -87,6 +87,7 @@ import { useContactTags } from '@/hooks/useContactTags';
 import { useContactNextTasks } from '@/hooks/useContactNextTasks';
 import { useAllConversationsSummary } from '@/hooks/useAllConversationsSummary';
 import { LeadsNeedContactPanel } from '@/components/crm/LeadsNeedContactPanel';
+import { CrmAutomationHub } from '@/components/crm/CrmAutomationHub';
 import { cn } from '@/lib/utils';
 import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { ContactCard } from '@/components/crm/ContactCard';
@@ -991,213 +992,173 @@ export default function Contatos() {
           </Card>
         </div>
 
-        <LeadsNeedContactPanel
+        <CrmAutomationHub
           contacts={leadsPanelContacts}
-          onOpenContact={(contact) => {
-            void openContactForm(contact);
-          }}
-          onWhatsApp={handleWhatsApp}
-          onBulkDispatch={(list) => setBulkDispatchContacts(list)}
           getUrgencyLevel={getUrgencyLevel}
-        />
+          getNoResponseInfo={getNoResponseInfo}
+          tempFilter={tempFilter}
+          setTempFilter={setTempFilter}
+          actionFilter={actionFilter}
+          setActionFilter={setActionFilter}
+          contactDateFilter={contactDateFilter}
+          setContactDateFilter={setContactDateFilter}
+          activeFilterCount={[
+            !!searchQuery,
+            typeFilter !== 'all',
+            statusFilter !== 'all',
+            classificationFilter !== 'all',
+            tagFilter !== 'all',
+            originFilter !== 'all',
+            tempFilter !== 'all',
+            actionFilter !== 'all',
+            contactDateFilter !== 'all',
+          ].filter(Boolean).length}
+          onClearAllFilters={() => {
+            setSearchQuery('');
+            setTypeFilter('all');
+            setStatusFilter('all');
+            setClassificationFilter('all');
+            setTagFilter('all');
+            setOriginFilter('all');
+            setTempFilter('all');
+            setActionFilter('all');
+            setContactDateFilter('all');
+          }}
+          filtersSlot={(
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="relative flex-1 min-w-[140px] max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar nome, telefone, cidade, notas..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-9 bg-muted/50"
+                />
+              </div>
 
-        {/* Filters row */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="relative flex-1 min-w-[140px] max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar nome, telefone, cidade, notas..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 h-9 bg-muted/50"
-            />
-          </div>
-
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-32 h-9">
-              <SelectValue placeholder="Tipo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="cliente">Clientes</SelectItem>
-              <SelectItem value="fornecedor">Fornecedores</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-36 h-9">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              {FUNNEL_STAGES.map(s => (
-                <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          <Select value={classificationFilter} onValueChange={setClassificationFilter}>
-            <SelectTrigger className="w-40 h-9">
-              <SelectValue placeholder="Classificação" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas classif.</SelectItem>
-              {Object.entries(CLIENT_CLASSIFICATION_CONFIG).map(([key, cfg]) => (
-                <SelectItem key={key} value={key}>
-                  <span className="flex items-center gap-1.5">{cfg.emoji} {cfg.label}</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {tags.length > 0 && (
-            <Select value={tagFilter} onValueChange={setTagFilter}>
-              <SelectTrigger className="w-32 h-9">
-                <SelectValue placeholder="Tag" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas tags</SelectItem>
-                {tags.map(t => (
-                  <SelectItem key={t.id} value={t.id}>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full" style={{ backgroundColor: t.color }} />
-                      {t.name}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-
-          {/* Origin filter (lead source tracking) */}
-          {(() => {
-            const origins = Array.from(new Set(
-              contacts
-                .filter(c => c.is_active)
-                .map(c => (c.origem_lead || 'Não Informado').trim())
-                .filter(Boolean)
-            )).sort();
-            if (origins.length === 0) return null;
-            return (
-              <Select value={originFilter} onValueChange={setOriginFilter}>
-                <SelectTrigger className="w-40 h-9">
-                  <SelectValue placeholder="Origem" />
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="w-32 h-9">
+                  <SelectValue placeholder="Tipo" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Todas origens</SelectItem>
-                  {origins.map(o => (
-                    <SelectItem key={o} value={o}>
-                      {o.startsWith('Campanha:') ? `📣 ${o.replace(/^Campanha:\s*/, '')}` : o}
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="cliente">Clientes</SelectItem>
+                  <SelectItem value="fornecedor">Fornecedores</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-36 h-9">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {FUNNEL_STAGES.map(s => (
+                    <SelectItem key={s.key} value={s.key}>{s.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={classificationFilter} onValueChange={setClassificationFilter}>
+                <SelectTrigger className="w-40 h-9">
+                  <SelectValue placeholder="Classificação" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas classif.</SelectItem>
+                  {Object.entries(CLIENT_CLASSIFICATION_CONFIG).map(([key, cfg]) => (
+                    <SelectItem key={key} value={key}>
+                      <span className="flex items-center gap-1.5">{cfg.emoji} {cfg.label}</span>
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            );
-          })()}
 
+              {tags.length > 0 && (
+                <Select value={tagFilter} onValueChange={setTagFilter}>
+                  <SelectTrigger className="w-32 h-9">
+                    <SelectValue placeholder="Tag" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas tags</SelectItem>
+                    {tags.map(t => (
+                      <SelectItem key={t.id} value={t.id}>
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: t.color }} />
+                          {t.name}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
 
+              {(() => {
+                const origins = Array.from(new Set(
+                  contacts
+                    .filter(c => c.is_active)
+                    .map(c => (c.origem_lead || 'Não Informado').trim())
+                    .filter(Boolean)
+                )).sort();
+                if (origins.length === 0) return null;
+                return (
+                  <Select value={originFilter} onValueChange={setOriginFilter}>
+                    <SelectTrigger className="w-40 h-9">
+                      <SelectValue placeholder="Origem" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas origens</SelectItem>
+                      {origins.map(o => (
+                        <SelectItem key={o} value={o}>
+                          {o.startsWith('Campanha:') ? `📣 ${o.replace(/^Campanha:\s*/, '')}` : o}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                );
+              })()}
 
-          {/* Temperature filter chips */}
-          <div className="flex gap-0.5 bg-muted/50 rounded-lg p-0.5">
-            {[
-              { value: 'all', label: 'Todos', icon: null },
-              { value: 'frio', label: 'Frio', icon: Snowflake },
-              { value: 'morno', label: 'Morno', icon: Sun },
-              { value: 'quente', label: 'Quente', icon: Flame },
-            ].map(opt => {
-              const Icon = opt.icon;
-              return (
-                <Button
-                  key={opt.value}
-                  variant={tempFilter === opt.value ? 'default' : 'ghost'}
-                  size="sm"
-                  className={cn(
-                    "h-7 px-2.5 text-xs rounded-md",
-                    tempFilter === opt.value && "shadow-sm"
-                  )}
-                  onClick={() => setTempFilter(opt.value)}
-                >
-                  {Icon && <Icon className="h-3 w-3 mr-0.5" />}
-                  {opt.label}
-                </Button>
-              );
-            })}
-          </div>
+              <Select value={`${sortField}-${sortDir}`} onValueChange={(v) => {
+                const [f, d] = v.split('-') as [SortField, SortDir];
+                setSortField(f);
+                setSortDir(d);
+              }}>
+                <SelectTrigger className="w-40 h-9">
+                  <ArrowUpDown className="h-3.5 w-3.5 mr-1.5 shrink-0" />
+                  <SelectValue placeholder="Ordenar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="name-asc">Nome A→Z</SelectItem>
+                  <SelectItem value="name-desc">Nome Z→A</SelectItem>
+                  <SelectItem value="temperatura-desc">Temp. ↑ Quente</SelectItem>
+                  <SelectItem value="temperatura-asc">Temp. ↓ Frio</SelectItem>
+                  <SelectItem value="ultimo_contato-asc">Últ. Contato ↑ Antigo</SelectItem>
+                  <SelectItem value="ultimo_contato-desc">Últ. Contato ↓ Recente</SelectItem>
+                  <SelectItem value="valor_estimado-desc">Valor ↓ Maior</SelectItem>
+                  <SelectItem value="score-desc">Score ↓ Maior</SelectItem>
+                  <SelectItem value="created_at-desc">Mais recente</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          leadsPanelSlot={(
+            <LeadsNeedContactPanel
+              contacts={leadsPanelContacts}
+              onOpenContact={(contact) => { void openContactForm(contact); }}
+              onWhatsApp={handleWhatsApp}
+              onBulkDispatch={(list) => setBulkDispatchContacts(list)}
+              getUrgencyLevel={getUrgencyLevel}
+            />
+          )}
+        />
 
-          {/* Action quick filters */}
-          <div className="flex gap-0.5 bg-muted/50 rounded-lg p-0.5">
-            {[
-              { value: 'all', label: 'Todos' },
-              { value: 'hoje', label: '📅 Hoje' },
-              { value: 'atrasados', label: '⚠ Atrasados' },
-              { value: 'sem_acao', label: 'Sem ação' },
-            ].map(opt => (
-              <Button
-                key={opt.value}
-                variant={actionFilter === opt.value ? 'default' : 'ghost'}
-                size="sm"
-                className={cn("h-7 px-2.5 text-xs rounded-md", actionFilter === opt.value && "shadow-sm")}
-                onClick={() => setActionFilter(opt.value)}
-              >
-                {opt.label}
-              </Button>
-            ))}
-          </div>
-
-          {/* Próximo Contato filter */}
-          <Button
-            variant={contactDateFilter === 'hoje_contato' ? 'default' : 'outline'}
-            size="sm"
-            className={cn(
-              "h-7 px-2.5 text-xs",
-              contactDateFilter === 'hoje_contato' && "bg-blue-600 hover:bg-blue-700 shadow-sm"
-            )}
-            onClick={() => setContactDateFilter(prev => prev === 'hoje_contato' ? 'all' : 'hoje_contato')}
-          >
-            <Phone className="h-3 w-3 mr-1" />
-            Contatos p/ Hoje
-            {(() => {
-              const count = contacts.filter(c => {
-                if (!c.is_active || !c.next_contact_date) return false;
-                try {
-                  const d = parseISO(c.next_contact_date);
-                  const today = startOfDay(new Date());
-                  return isSameDay(d, new Date()) || isBefore(startOfDay(d), today);
-                } catch { return false; }
-              }).length;
-              return count > 0 ? <Badge className="ml-1 h-4 px-1 text-[9px] bg-red-500 text-white border-0">{count}</Badge> : null;
-            })()}
-          </Button>
-
-          {/* Sort selector */}
-          <Select value={`${sortField}-${sortDir}`} onValueChange={(v) => {
-            const [f, d] = v.split('-') as [SortField, SortDir];
-            setSortField(f);
-            setSortDir(d);
-          }}>
-            <SelectTrigger className="w-40 h-9">
-              <ArrowUpDown className="h-3.5 w-3.5 mr-1.5 shrink-0" />
-              <SelectValue placeholder="Ordenar" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="name-asc">Nome A→Z</SelectItem>
-              <SelectItem value="name-desc">Nome Z→A</SelectItem>
-              <SelectItem value="temperatura-desc">Temp. ↑ Quente</SelectItem>
-              <SelectItem value="temperatura-asc">Temp. ↓ Frio</SelectItem>
-              <SelectItem value="ultimo_contato-asc">Últ. Contato ↑ Antigo</SelectItem>
-              <SelectItem value="ultimo_contato-desc">Últ. Contato ↓ Recente</SelectItem>
-              <SelectItem value="valor_estimado-desc">Valor ↓ Maior</SelectItem>
-              <SelectItem value="score-desc">Score ↓ Maior</SelectItem>
-              <SelectItem value="created_at-desc">Mais recente</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <Button variant="outline" size="sm" className="h-9 gap-1.5 ml-auto" onClick={() => setPosVendaOpen(true)} title="Pós-Venda">
+        {/* Ações e visualização */}
+        <div className="flex items-center gap-2 justify-end flex-wrap">
+          <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={() => setPosVendaOpen(true)} title="Pós-Venda">
             <Heart className="h-4 w-4 text-pink-600" />
             <span className="hidden sm:inline text-xs">Pós-Venda</span>
           </Button>
 
-          <Button variant="outline" size="sm" className="h-9 gap-1.5 mr-2" onClick={() => setAutomationsOpen(true)} title="Automações do Funil">
+          <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={() => setAutomationsOpen(true)} title="Automações do Funil">
             <Zap className="h-4 w-4 text-primary" />
             <span className="hidden sm:inline text-xs">Automações</span>
           </Button>
