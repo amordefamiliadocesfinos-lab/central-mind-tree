@@ -1,110 +1,65 @@
-# Integração do Painel Central — Rotina como centro de execução
+
+# Centro de Automação do CRM — Unificação Frontend
+
+## Problema atual
+Hoje o usuário vê dois blocos separados na página `/contatos`:
+1. Painel amarelo **"Leads que precisam de contato"** (ações urgentes).
+2. **Barra de filtros** (busca, tipo, status, classificação, tag, origem, temperatura, ação, contato p/ hoje, ordenação).
+
+Eles não conversam: o usuário não sabe se deve filtrar primeiro, agir no painel, ou o que fazer depois. A experiência é fragmentada.
 
 ## Objetivo
-1. Fazer a **Rotina** ser o hub de execução: qualquer módulo (Digital, CRM, Financeiro, Produção, Foco, Tarefas) pode enviar uma atividade para ela via botão **"Adicionar à Rotina"**.
-2. Cada **Método de Trabalho (MT)** ganha uma **Área de Trabalho** própria, destacando os módulos prioritários daquela função — sem esconder os demais.
+Fundir os dois blocos em um único **Centro de Automação do CRM** — uma faixa sequencial no topo da página que guia o usuário do diagnóstico à ação, de forma clara e automática. Sem alterar nenhum dado, hook, tabela ou backend.
 
----
+## Estrutura proposta (frontend apenas)
 
-## Parte 1 — Botão "Adicionar à Rotina" (universal)
-
-Novo componente compartilhado `AddToRoutineButton` + dialog `AddToRoutineDialog`.
-
-Campos do dialog:
-- **Título** (pré-preenchido a partir do item de origem: tarefa, lead, pedido, ideia, lançamento)
-- **Usuário responsável** (dropdown `app_users`)
-- **Método de Trabalho** (dropdown `routine_mts`, opcional — só para agrupar)
-- **Data + Horário** (date + time picker)
-- **Duração** (min)
-- **Recorrência** (nenhuma / diária / semanal / mensal — dias da semana quando semanal)
-- **Alerta** (sem alerta / no horário / 5 / 15 / 30 min antes)
-- **Foco** (trabalho_profundo, atendimento, criativo, admin, pausa)
-
-Comportamento:
-- Cria linha em `routine_blocks` para a data escolhida (e clona nas próximas N ocorrências quando recorrente — limitar a 12 para não explodir).
-- Marca `notes` com origem (`origem: crm/lead/<id>`, `origem: financial/entry/<id>` etc.) para rastreio.
-- Ao concluir o bloco na Rotina, opcionalmente marcar a tarefa/pedido de origem como feito (fase 2, fora deste plano).
-
-Pontos de inserção do botão (fase 1):
-- CRM: `ContactCard` (menu de ações) e `LeadDetailDrawer`
-- Financeiro: `FinancialEntriesList` (menu do lançamento)
-- Produção: `OrderCard` / `OrderEditDialog`
-- Digital: card de ideia (menu de ações)
-- Foco: item da fila
-- Tarefas: `TasksDialog` / linha da tarefa
-
-Todos usam o mesmo componente — sem duplicação.
-
----
-
-## Parte 2 — MT complementa, não sobrescreve
-
-Já existe `MTPickerDialog` que aplica o cronograma base do MT. Ajuste:
-- Ao aplicar um MT, **preservar** blocos existentes que tenham `notes` contendo `origem:` (vieram de outros módulos).
-- Só substituir os blocos "base" do MT anterior.
-
-Implementação: no `useRoutine.autoPlanDay` (ou onde o MT é aplicado), filtrar antes de deletar:
-```ts
-.not('notes', 'ilike', '%origem:%')
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│ 🤖 Centro de Automação do CRM                                   │
+│─────────────────────────────────────────────────────────────────│
+│ PASSO 1 — O QUE EXIGE ATENÇÃO HOJE                              │
+│  [🔴 12 Urgentes] [🟡 8 Follow-up] [📅 5 Hoje] [❄ 3 Esfriando]  │
+│  (chips clicáveis = aplicam filtro automaticamente)             │
+│─────────────────────────────────────────────────────────────────│
+│ PASSO 2 — REFINAR (opcional, recolhível)                        │
+│  🔎 buscar…  Tipo ▾  Status ▾  Classif ▾  Tag ▾  Origem ▾       │
+│  Temperatura: [Frio][Morno][Quente]   Ordenar ▾                 │
+│─────────────────────────────────────────────────────────────────│
+│ PASSO 3 — AGIR (aparece quando há resultado)                    │
+│  N leads selecionados · [📱 Disparar WhatsApp em fila]          │
+│                          [✅ Marcar contato feito] [Limpar]     │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
----
+### Comportamento
+- **Passo 1 (Diagnóstico automático):** chips inteligentes derivados dos mesmos dados que já alimentam `LeadsNeedContactPanel` + filtros existentes. Clicar num chip aplica o filtro correspondente e rola para a lista. Um chip ativo fica destacado; clicar de novo limpa.
+- **Passo 2 (Refinar):** a barra atual, agrupada e recolhível ("Mostrar filtros avançados"). Fica fechada por padrão quando um chip do passo 1 está ativo.
+- **Passo 3 (Agir):** o modo de seleção múltipla e o botão "Disparar fila" (hoje escondidos dentro do painel amarelo) sobem para uma barra de ação contextual que aparece só quando há leads visíveis + seleção. Reaproveita o `onBulkDispatch` e `handleWhatsApp` já existentes.
+- **Nudge sequencial:** um pequeno texto guia ("1. Veja o que precisa de atenção → 2. Refine se quiser → 3. Aja em lote") aparece apenas quando nenhum passo foi tocado, e some no primeiro clique.
 
-## Parte 3 — Área de Trabalho por MT
+### Nada muda no backend
+- Reuso integral de `useContacts`, `useNoResponseDetection`, `handleWhatsApp`, `openContactForm`, `bulkDispatchContacts`, `getUrgencyLevel`, `FUNNEL_STAGES`, etc.
+- Sem migrations, sem edge functions, sem alteração em `contacts` ou `contact_history`.
+- Todos os filtros existentes continuam funcionando; apenas ganham entrada guiada pelos chips.
 
-Nova coluna em `routine_mts`:
-- `priority_modules text[]` — lista de rotas priorizadas (ex.: `['/dashboard','/financeiro']`)
+## Arquivos afetados
+- `src/pages/Contatos.tsx` — substituir o bloco atual (linhas ~994–1200) pelo novo componente `CrmAutomationHub`.
+- `src/components/crm/CrmAutomationHub.tsx` — **novo**. Recebe por props o que já está no Contatos.tsx (contacts, filtros e setters, handlers). Renderiza os 3 passos.
+- `src/components/crm/LeadsNeedContactPanel.tsx` — mantido como componente interno usado no passo 3 (modo lista compacta) ou aposentado se o novo hub cobrir tudo. Decisão: manter e reusar dentro do hub para não perder features de seleção múltipla.
 
-Editor: adicionar seção no `MTManagerDialog` — checkboxes com todos os módulos disponíveis:
-`Dashboard, CRM, Digital, Financeiro, Produção, Operações, Foco, Rotina, Tarefas, Rotas, Reuniões, Planejamento, Metas, Atendimento`.
+## Detalhes técnicos
+- Chips do passo 1 calculados via `useMemo` sobre `contacts` + `noResponseMap` (já disponíveis).
+- Estado local do hub: `activeChip`, `filtersExpanded`. Filtros permanecem controlados pelo `Contatos.tsx` (levantados via props) para não quebrar `filteredContacts`.
+- Sem novas dependências. Usa `Card`, `Button`, `Badge`, `Collapsible` (shadcn já instalado).
+- Mobile: chips com scroll horizontal; filtros avançados recolhidos por padrão.
 
-Presets padrão (aplicados só se `priority_modules` estiver vazio):
-- **Gestão** → Dashboard, Metas, Financeiro, Reuniões
-- **Comercial** → CRM, Atendimento, Digital, Financeiro
-- **Produção** → Operações, Produção, Estoque (Operações), Rotas
+## Fora do escopo
+- Não altera Kanban, drawer de contato, timeline, automações do funil, WhatsApp templates.
+- Não altera Assistente/IA/edge functions.
+- Não muda schema, RLS, ou qualquer hook de dados.
 
-Exibição:
-- Novo componente `MTWorkspaceBar` renderizado no topo do `Index`/Dashboard e opcionalmente no header global — mostra ícones grandes dos módulos prioritários do MT ativo do dia.
-- MT ativo = MT do bloco em andamento, ou o mais usado no dia, ou o padrão do usuário.
-- Todos os outros módulos continuam acessíveis pelo menu/rotas normais — só não ficam em destaque.
-
----
-
-## Alterações técnicas
-
-### Banco
-Migration:
-```sql
-ALTER TABLE public.routine_mts
-  ADD COLUMN IF NOT EXISTS priority_modules text[] DEFAULT '{}'::text[];
-```
-
-### Arquivos novos
-- `src/components/routine/AddToRoutineButton.tsx`
-- `src/components/routine/AddToRoutineDialog.tsx`
-- `src/components/routine/MTWorkspaceBar.tsx`
-- `src/hooks/useActiveMT.ts` (retorna o MT ativo do momento)
-
-### Arquivos editados
-- `src/hooks/useRoutine.ts` — helper `addBlockFromModule({source, ...})` + recorrência + preservação de blocos com `origem:`
-- `src/components/routine/MTManagerDialog.tsx` — editor de `priority_modules`
-- `src/components/routine/MTPickerDialog.tsx` — passar flag "preservar externos"
-- `src/pages/Index.tsx` (ou Dashboard) — renderizar `MTWorkspaceBar`
-- Inserção do `AddToRoutineButton` em: `ContactCard`, `LeadDetailDrawer`, `FinancialEntriesList`, `OrderCard`/`OrderEditDialog`, card de ideia digital, `TasksDialog`, item da fila do Foco.
-
-### Fora do escopo desta iteração
-- Marcar item de origem como concluído quando o bloco é concluído (fase 2).
-- Reagendamento automático quando um módulo altera a data da tarefa fonte.
-- Modo "workspace fullscreen" por MT (fase 2).
+## Resultado esperado
+Usuário abre `/contatos` → vê imediatamente **o que precisa fazer hoje** (chips) → clica → lista já filtrada → **age em lote** na mesma tela, tudo em 3 passos visuais.
 
 ---
-
-## Ordem de execução
-1. Migration `priority_modules`.
-2. `AddToRoutineDialog` + hook `useRoutine.addBlockFromModule`.
-3. `AddToRoutineButton` e integração nos 6 pontos listados.
-4. Ajuste do `MTPickerDialog`/`autoPlanDay` para preservar `origem:`.
-5. Editor `priority_modules` no `MTManagerDialog`.
-6. `useActiveMT` + `MTWorkspaceBar` no Index.
-
-Confirma esse plano? Posso ajustar pontos de inserção, presets de MT ou remover a recorrência automática se preferir manter simples.
+Aguardando aprovação para implementar.
