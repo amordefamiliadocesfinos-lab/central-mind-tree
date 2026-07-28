@@ -40,6 +40,8 @@ interface CrmAutomationHubProps {
   setContactDateFilter: (v: string) => void;
   onClearAllFilters: () => void;
   activeFilterCount: number;
+  /** Inicia o Modo Fila com a lista de leads que exigem atenção (ordenada) */
+  onStartQueue?: (queue: Contact[]) => void;
   // Slots
   filtersSlot: ReactNode;
   leadsPanelSlot: ReactNode;
