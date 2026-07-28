@@ -103,30 +103,35 @@ export function CrmAutomationHub({
   setContactDateFilter,
   onClearAllFilters,
   activeFilterCount,
+  onStartQueue,
   filtersSlot,
   leadsPanelSlot,
 }: CrmAutomationHubProps) {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [dismissedGuide, setDismissedGuide] = useState(false);
 
-  const counts = useMemo(() => {
+  const { counts, queue } = useMemo(() => {
     const now = new Date();
     const today = startOfDay(now);
     let urgentes = 0;
     let followUp = 0;
     let hoje = 0;
     let esfriando = 0;
+    const scored: Array<{ c: Contact; score: number }> = [];
 
     for (const c of contacts) {
       if (!c.is_active) continue;
       if (EXCLUDED_STAGES.includes(c.funnel_status)) continue;
 
+      let score = 0;
+
       // Urgentes: alta urgência calculada
-      if (getUrgencyLevel(c) === 'urgente') urgentes++;
+      const isUrgent = getUrgencyLevel(c) === 'urgente';
+      if (isUrgent) { urgentes++; score += 100; }
 
       // Follow-up: sem resposta detectado
       const nr = getNoResponseInfo(c.id);
-      if (nr) followUp++;
+      if (nr) { followUp++; score += 50; }
 
       // Hoje: próximo contato/ação hoje ou vencido
       const hasTodayContact = c.next_contact_date && (() => {
@@ -141,18 +146,26 @@ export function CrmAutomationHub({
           return isSameDay(d, now) || isBefore(startOfDay(d), today);
         } catch { return false; }
       })();
-      if (hasTodayContact || hasTodayAction) hoje++;
+      if (hasTodayContact || hasTodayAction) { hoje++; score += 70; }
 
       // Esfriando: >= 10 dias sem contato ou nunca contatado + lead
       if (!c.ultimo_contato) {
-        if (c.type === 'lead' || c.contact_type === 'orcamento') esfriando++;
+        if (c.type === 'lead' || c.contact_type === 'orcamento') { esfriando++; score += 30; }
       } else {
         try {
-          if (differenceInDays(now, parseISO(c.ultimo_contato)) >= 10) esfriando++;
+          const d = differenceInDays(now, parseISO(c.ultimo_contato));
+          if (d >= 10) { esfriando++; score += 20 + Math.min(d, 60) / 10; }
         } catch { /* noop */ }
       }
+
+      if (score > 0) scored.push({ c, score });
     }
-    return { urgentes, followUp, hoje, esfriando };
+
+    scored.sort((a, b) => b.score - a.score);
+    return {
+      counts: { urgentes, followUp, hoje, esfriando },
+      queue: scored.map(s => s.c),
+    };
   }, [contacts, getUrgencyLevel, getNoResponseInfo]);
 
   const chipCounts: Record<AutomationChipKey, number> = {
