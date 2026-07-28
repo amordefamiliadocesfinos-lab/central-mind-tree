@@ -1140,6 +1140,7 @@ export default function Contatos() {
               </Select>
             </div>
           )}
+          onStartQueue={(list) => { setFocusQueue(list); setFocusQueueOpen(true); }}
           leadsPanelSlot={(
             <LeadsNeedContactPanel
               contacts={leadsPanelContacts}
@@ -1150,6 +1151,18 @@ export default function Contatos() {
             />
           )}
         />
+
+        <CrmFocusQueue
+          open={focusQueueOpen}
+          onOpenChange={setFocusQueueOpen}
+          queue={focusQueue}
+          getUrgencyLevel={getUrgencyLevel}
+          onWhatsApp={handleSmartAttend}
+          onSnooze={handleQueueSnooze}
+          onDone={handleQueueDone}
+          onOpenContact={(contact) => { void openContactForm(contact); }}
+        />
+
 
         {/* Ações e visualização */}
         <div className="flex items-center gap-2 justify-end flex-wrap">
