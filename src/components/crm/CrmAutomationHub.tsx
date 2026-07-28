@@ -291,6 +291,18 @@ export function CrmAutomationHub({
         })}
       </div>
 
+      {/* Modo Fila — tratar um lead por vez */}
+      {onStartQueue && queue.length > 0 && (
+        <Button
+          size="sm"
+          className="mt-2 w-full h-9 gap-2 text-xs font-semibold"
+          onClick={() => onStartQueue(queue)}
+        >
+          <PlayCircle className="h-4 w-4" />
+          Começar — tratar {queue.length} lead{queue.length > 1 ? 's' : ''} um por vez
+        </Button>
+      )}
+
       {/* PASSO 2 — Refinar (collapsible) */}
       <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen} className="mt-2">
         <div className="flex items-center gap-1.5">
