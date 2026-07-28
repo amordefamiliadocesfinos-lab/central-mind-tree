@@ -637,6 +637,28 @@ export default function Contatos() {
     refetchDaily();
   }, [refreshNoResponse, refetchChecklists, refetchDaily]);
 
+  // Modo Fila — adiar próximo contato
+  const handleQueueSnooze = useCallback(async (contact: Contact, days: number) => {
+    const target = new Date();
+    target.setDate(target.getDate() + days);
+    const iso = target.toISOString().slice(0, 10);
+    try {
+      await updateContact(contact.id, { next_contact_date: iso });
+    } catch { /* toast já emitido pelo hook */ }
+  }, [updateContact]);
+
+  // Modo Fila — marcar como tratado agora
+  const handleQueueDone = useCallback(async (contact: Contact) => {
+    const today = getTodayISO();
+    markContactedOptimistically(contact.id);
+    try {
+      await updateContact(contact.id, { ultimo_contato: today });
+    } catch { /* toast já emitido pelo hook */ }
+    setTimeout(refreshContactSignals, 300);
+  }, [markContactedOptimistically, updateContact, refreshContactSignals]);
+
+
+
   const leadsPanelContacts = useMemo(() => {
     if (recentlyContactedIds.size === 0) return contacts;
     const today = getTodayISO();
