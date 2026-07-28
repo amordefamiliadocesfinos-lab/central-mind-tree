@@ -88,6 +88,7 @@ import { useContactNextTasks } from '@/hooks/useContactNextTasks';
 import { useAllConversationsSummary } from '@/hooks/useAllConversationsSummary';
 import { LeadsNeedContactPanel } from '@/components/crm/LeadsNeedContactPanel';
 import { CrmAutomationHub } from '@/components/crm/CrmAutomationHub';
+import { CrmFocusQueue } from '@/components/crm/CrmFocusQueue';
 import { cn } from '@/lib/utils';
 import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { ContactCard } from '@/components/crm/ContactCard';
@@ -617,6 +618,8 @@ export default function Contatos() {
 
   const [whatsAppContact, setWhatsAppContact] = useState<Contact | null>(null);
   const [bulkDispatchContacts, setBulkDispatchContacts] = useState<Contact[] | null>(null);
+  const [focusQueue, setFocusQueue] = useState<Contact[]>([]);
+  const [focusQueueOpen, setFocusQueueOpen] = useState(false);
 
   const markContactedOptimistically = useCallback((contactId: string) => {
     const today = getTodayISO();
@@ -634,6 +637,28 @@ export default function Contatos() {
     refetchChecklists();
     refetchDaily();
   }, [refreshNoResponse, refetchChecklists, refetchDaily]);
+
+  // Modo Fila — adiar próximo contato
+  const handleQueueSnooze = useCallback(async (contact: Contact, days: number) => {
+    const target = new Date();
+    target.setDate(target.getDate() + days);
+    const iso = target.toISOString().slice(0, 10);
+    try {
+      await updateContact(contact.id, { next_contact_date: iso });
+    } catch { /* toast já emitido pelo hook */ }
+  }, [updateContact]);
+
+  // Modo Fila — marcar como tratado agora
+  const handleQueueDone = useCallback(async (contact: Contact) => {
+    const today = getTodayISO();
+    markContactedOptimistically(contact.id);
+    try {
+      await updateContact(contact.id, { ultimo_contato: today });
+    } catch { /* toast já emitido pelo hook */ }
+    setTimeout(refreshContactSignals, 300);
+  }, [markContactedOptimistically, updateContact, refreshContactSignals]);
+
+
 
   const leadsPanelContacts = useMemo(() => {
     if (recentlyContactedIds.size === 0) return contacts;
@@ -1140,6 +1165,7 @@ export default function Contatos() {
               </Select>
             </div>
           )}
+          onStartQueue={(list) => { setFocusQueue(list); setFocusQueueOpen(true); }}
           leadsPanelSlot={(
             <LeadsNeedContactPanel
               contacts={leadsPanelContacts}
@@ -1150,6 +1176,18 @@ export default function Contatos() {
             />
           )}
         />
+
+        <CrmFocusQueue
+          open={focusQueueOpen}
+          onOpenChange={setFocusQueueOpen}
+          queue={focusQueue}
+          getUrgencyLevel={getUrgencyLevel}
+          onWhatsApp={handleSmartAttend}
+          onSnooze={handleQueueSnooze}
+          onDone={handleQueueDone}
+          onOpenContact={(contact) => { void openContactForm(contact); }}
+        />
+
 
         {/* Ações e visualização */}
         <div className="flex items-center gap-2 justify-end flex-wrap">
