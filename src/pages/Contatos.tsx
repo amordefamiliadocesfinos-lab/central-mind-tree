@@ -88,6 +88,7 @@ import { useContactNextTasks } from '@/hooks/useContactNextTasks';
 import { useAllConversationsSummary } from '@/hooks/useAllConversationsSummary';
 import { LeadsNeedContactPanel } from '@/components/crm/LeadsNeedContactPanel';
 import { CrmAutomationHub } from '@/components/crm/CrmAutomationHub';
+import { CrmFocusQueue } from '@/components/crm/CrmFocusQueue';
 import { cn } from '@/lib/utils';
 import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { ContactCard } from '@/components/crm/ContactCard';
