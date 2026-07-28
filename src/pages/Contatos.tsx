@@ -617,6 +617,8 @@ export default function Contatos() {
 
   const [whatsAppContact, setWhatsAppContact] = useState<Contact | null>(null);
   const [bulkDispatchContacts, setBulkDispatchContacts] = useState<Contact[] | null>(null);
+  const [focusQueue, setFocusQueue] = useState<Contact[]>([]);
+  const [focusQueueOpen, setFocusQueueOpen] = useState(false);
 
   const markContactedOptimistically = useCallback((contactId: string) => {
     const today = getTodayISO();
