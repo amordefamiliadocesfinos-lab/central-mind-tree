@@ -660,15 +660,6 @@ export default function Contatos() {
 
 
 
-  const leadsPanelContacts = useMemo(() => {
-    if (recentlyContactedIds.size === 0) return contacts;
-    const today = getTodayISO();
-    return contacts.map(contact => (
-      recentlyContactedIds.has(contact.id)
-        ? { ...contact, ultimo_contato: today }
-        : contact
-    ));
-  }, [contacts, recentlyContactedIds]);
 
   const handleWhatsApp = (contact: Contact) => {
     const phone = contact.whatsapp || contact.mobile || contact.phone;
