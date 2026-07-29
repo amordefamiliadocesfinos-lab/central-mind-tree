@@ -108,7 +108,7 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onB
       <div className="flex items-center gap-2 mb-2 flex-wrap">
         <AlertTriangle className="h-4 w-4 text-amber-600" />
         <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-400">
-          Leads que precisam de contato
+          {preFiltered && filterLabel ? `Leads filtrados — ${filterLabel}` : 'Leads que precisam de contato'}
         </h3>
         <Badge variant="secondary" className="text-[10px] h-5">
           {staleLeads.length}
