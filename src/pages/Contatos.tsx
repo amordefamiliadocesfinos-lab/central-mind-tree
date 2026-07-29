@@ -1048,15 +1048,11 @@ export default function Contatos() {
         </div>
 
         <CrmAutomationHub
-          contacts={leadsPanelContacts}
-          getUrgencyLevel={getUrgencyLevel}
-          getNoResponseInfo={getNoResponseInfo}
-          tempFilter={tempFilter}
-          setTempFilter={setTempFilter}
-          actionFilter={actionFilter}
-          setActionFilter={setActionFilter}
-          contactDateFilter={contactDateFilter}
-          setContactDateFilter={setContactDateFilter}
+          attentionFilter={attentionFilter}
+          setAttentionFilter={setAttentionFilter}
+          counts={attentionCounts}
+          resultCount={filteredContacts.length}
+          queue={filteredQueue}
           activeFilterCount={[
             !!searchQuery,
             typeFilter !== 'all',
@@ -1078,6 +1074,7 @@ export default function Contatos() {
             setTempFilter('all');
             setActionFilter('all');
             setContactDateFilter('all');
+            setAttentionFilter('all');
           }}
           filtersSlot={(
             <div className="flex items-center gap-2 flex-wrap">
