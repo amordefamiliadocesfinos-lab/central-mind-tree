@@ -28,7 +28,7 @@ const URGENCY_DISPLAY: Record<string, { emoji: string; className: string }> = {
   baixo: { emoji: '🔵', className: 'bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-950/40 dark:text-sky-400 dark:border-sky-700' },
 };
 
-export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onBulkDispatch, getUrgencyLevel }: LeadsNeedContactPanelProps) {
+export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onBulkDispatch, getUrgencyLevel, preFiltered, filterLabel }: LeadsNeedContactPanelProps) {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -38,6 +38,7 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onB
       .filter(c => {
         if (!c.is_active) return false;
         if (EXCLUDED_STAGES.includes(c.funnel_status)) return false;
+        if (preFiltered) return true;
         if (!c.ultimo_contato) return true;
         try {
           return differenceInDays(now, parseISO(c.ultimo_contato)) >= 7;
@@ -55,7 +56,7 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onB
         if (b.daysSinceContact === null) return 1;
         return b.daysSinceContact - a.daysSinceContact;
       });
-  }, [contacts]);
+  }, [contacts, preFiltered]);
 
   // Limpa seleção quando lista muda (lead foi contatado e sumiu)
   useEffect(() => {
@@ -67,14 +68,13 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onB
     });
   }, [staleLeads]);
 
-  if (staleLeads.length === 0) return null;
-
   const FUNNEL_LABELS: Record<string, string> = {
     novo_lead: 'Novo Lead',
     contato_realizado: 'Contato Realizado',
     proposta_enviada: 'Proposta Enviada',
     negociacao: 'Negociação',
   };
+
 
   const toggleId = (id: string) => {
     setSelectedIds(prev => {
