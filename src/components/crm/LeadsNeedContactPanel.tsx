@@ -16,6 +16,10 @@ interface LeadsNeedContactPanelProps {
   onWhatsApp?: (contact: Contact) => void;
   onBulkDispatch?: (contacts: Contact[]) => void;
   getUrgencyLevel?: (contact: Contact) => string;
+  /** Quando true, a lista já vem filtrada pelo Centro de Automação (não aplicar regra própria) */
+  preFiltered?: boolean;
+  /** Rótulo do filtro ativo, exibido no título */
+  filterLabel?: string;
 }
 
 const URGENCY_DISPLAY: Record<string, { emoji: string; className: string }> = {
