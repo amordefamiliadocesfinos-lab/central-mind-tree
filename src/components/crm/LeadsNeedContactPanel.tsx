@@ -16,6 +16,10 @@ interface LeadsNeedContactPanelProps {
   onWhatsApp?: (contact: Contact) => void;
   onBulkDispatch?: (contacts: Contact[]) => void;
   getUrgencyLevel?: (contact: Contact) => string;
+  /** Quando true, a lista já vem filtrada pelo Centro de Automação (não aplicar regra própria) */
+  preFiltered?: boolean;
+  /** Rótulo do filtro ativo, exibido no título */
+  filterLabel?: string;
 }
 
 const URGENCY_DISPLAY: Record<string, { emoji: string; className: string }> = {
@@ -24,7 +28,7 @@ const URGENCY_DISPLAY: Record<string, { emoji: string; className: string }> = {
   baixo: { emoji: '🔵', className: 'bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-950/40 dark:text-sky-400 dark:border-sky-700' },
 };
 
-export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onBulkDispatch, getUrgencyLevel }: LeadsNeedContactPanelProps) {
+export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onBulkDispatch, getUrgencyLevel, preFiltered, filterLabel }: LeadsNeedContactPanelProps) {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -34,6 +38,7 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onB
       .filter(c => {
         if (!c.is_active) return false;
         if (EXCLUDED_STAGES.includes(c.funnel_status)) return false;
+        if (preFiltered) return true;
         if (!c.ultimo_contato) return true;
         try {
           return differenceInDays(now, parseISO(c.ultimo_contato)) >= 7;
@@ -51,7 +56,7 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onB
         if (b.daysSinceContact === null) return 1;
         return b.daysSinceContact - a.daysSinceContact;
       });
-  }, [contacts]);
+  }, [contacts, preFiltered]);
 
   // Limpa seleção quando lista muda (lead foi contatado e sumiu)
   useEffect(() => {
@@ -63,14 +68,13 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onB
     });
   }, [staleLeads]);
 
-  if (staleLeads.length === 0) return null;
-
   const FUNNEL_LABELS: Record<string, string> = {
     novo_lead: 'Novo Lead',
     contato_realizado: 'Contato Realizado',
     proposta_enviada: 'Proposta Enviada',
     negociacao: 'Negociação',
   };
+
 
   const toggleId = (id: string) => {
     setSelectedIds(prev => {
@@ -104,7 +108,7 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onB
       <div className="flex items-center gap-2 mb-2 flex-wrap">
         <AlertTriangle className="h-4 w-4 text-amber-600" />
         <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-400">
-          Leads que precisam de contato
+          {preFiltered && filterLabel ? `Leads filtrados — ${filterLabel}` : 'Leads que precisam de contato'}
         </h3>
         <Badge variant="secondary" className="text-[10px] h-5">
           {staleLeads.length}
@@ -158,6 +162,11 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onB
         </div>
       </div>
       <div className="space-y-1.5 max-h-48 overflow-y-auto">
+        {staleLeads.length === 0 && (
+          <p className="text-xs text-muted-foreground py-2 text-center">
+            Nenhum lead neste filtro. Tudo em dia por aqui.
+          </p>
+        )}
         {staleLeads.map(({ contact, daysSinceContact }) => {
           const hasPhone = !!(contact.whatsapp || contact.mobile || contact.phone);
           const isSelected = selectedIds.has(contact.id);
