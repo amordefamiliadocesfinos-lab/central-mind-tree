@@ -340,8 +340,73 @@ export default function Contatos() {
     try { return new Date() > parseISO(contact.next_action_date); } catch { return false; }
   }, []);
 
-  const filteredContacts = useMemo(() => {
-    return contacts.filter((c) => {
+  // ── Organismo único: contatos com overlay otimista + inteligência de atenção ──
+  const leadsPanelContacts = useMemo(() => {
+    if (recentlyContactedIds.size === 0) return contacts;
+    const today = getTodayISO();
+    return contacts.map(contact => (
+      recentlyContactedIds.has(contact.id)
+        ? { ...contact, ultimo_contato: today }
+        : contact
+    ));
+  }, [contacts, recentlyContactedIds]);
+
+  // Urgency scoring shared between sort and display
+  const tempScore: Record<string, number> = { quente: 30, morno: 20, frio: 10 };
+  const classScore: Record<string, number> = { vip: 4, alto_potencial: 3, medio: 2, baixo_potencial: 1 };
+  const noResponseScoreMap: Record<string, number> = { follow_up_urgente: 80, sem_resposta: 60, lead_esfriando: 40 };
+
+  const getUrgencyScore = useCallback((c: Contact): number => {
+    let score = 0;
+    const now = new Date();
+    const today = startOfDay(now);
+    score += tempScore[c.temperatura_lead || 'morno'] || 20;
+    const actionOverdue = c.next_action_date && isBefore(startOfDay(parseISO(c.next_action_date)), today);
+    const contactOverdue = c.next_contact_date && isBefore(startOfDay(parseISO(c.next_contact_date)), today);
+    if (actionOverdue || contactOverdue) score += 100;
+    const actionToday = c.next_action_date && isSameDay(parseISO(c.next_action_date), now);
+    const contactToday = c.next_contact_date && isSameDay(parseISO(c.next_contact_date), now);
+    if (actionToday || contactToday) score += 50;
+    const nrInfo = getNoResponseInfo(c.id);
+    if (nrInfo) score += noResponseScoreMap[nrInfo.status!] || 0;
+    if (c.ultimo_contato) {
+      const days = differenceInDays(now, parseISO(c.ultimo_contato));
+      if (days > 7) score += 15;
+      else if (days > 3) score += 5;
+    }
+    score += (classScore[c.client_classification || ''] || 0) * 2;
+    if (c.valor_estimado && c.valor_estimado > 0) score += Math.min(c.valor_estimado / 1000, 5);
+    return score;
+  }, [getNoResponseInfo]);
+
+  const getUrgencyLevel = useCallback((contact: Contact): keyof typeof URGENCY_LEVELS => {
+    const score = getUrgencyScore(contact);
+    const isHot = contact.temperatura_lead === 'quente';
+    const nrInfo = getNoResponseInfo(contact.id);
+    if (isHot && nrInfo) return 'urgente';
+    if (score >= 100) return 'urgente';
+    if (score >= 40) return 'medio';
+    return 'baixo';
+  }, [getUrgencyScore, getNoResponseInfo]);
+
+  // Priority sort: overdue > hot+today > hot > warm+overdue > warm > cold > rest
+  const prioritySortContacts = useCallback((list: Contact[]) => {
+    return [...list].sort((a, b) => {
+      const ua = getUrgencyScore(a);
+      const ub = getUrgencyScore(b);
+      if (ua !== ub) return ub - ua;
+      return (a.name || '').localeCompare(b.name || '');
+    });
+  }, [getUrgencyScore]);
+
+  const attentionDeps = useMemo(
+    () => ({ getUrgencyLevel, getNoResponseInfo }),
+    [getUrgencyLevel, getNoResponseInfo],
+  );
+
+  /** Base pós filtros avançados (sem o chip) — alimenta os contadores do Passo 1 */
+  const baseFilteredContacts = useMemo(() => {
+    return leadsPanelContacts.filter((c) => {
       if (!c.is_active) return false;
       if (statusFilter !== 'all' && c.funnel_status !== statusFilter) return false;
       if (tempFilter !== 'all' && c.temperatura_lead !== tempFilter) return false;
