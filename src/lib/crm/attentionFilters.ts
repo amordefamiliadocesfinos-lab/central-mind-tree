@@ -105,3 +105,11 @@ export function computeAttention(contacts: Contact[], deps: AttentionDeps): {
   scored.sort((a, b) => b.score - a.score);
   return { counts, queue: scored.map(s => s.c) };
 }
+
+export const ATTENTION_LABELS: Record<AttentionKey, string> = {
+  all: 'Todos',
+  urgentes: 'Urgentes',
+  follow_up: 'Follow-up',
+  hoje: 'Hoje',
+  esfriando: 'Esfriando',
+};
