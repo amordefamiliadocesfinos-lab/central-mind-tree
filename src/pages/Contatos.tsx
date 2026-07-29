@@ -473,7 +473,27 @@ export default function Contatos() {
 
       return true;
     });
-  }, [contacts, deferredSearchQuery, statusFilter, tempFilter, typeFilter, tagFilter, actionFilter, contactDateFilter, classificationFilter, originFilter, getTagsForContact, isNextActionOverdue]);
+  }, [leadsPanelContacts, deferredSearchQuery, statusFilter, tempFilter, typeFilter, tagFilter, actionFilter, contactDateFilter, classificationFilter, originFilter, getTagsForContact, isNextActionOverdue]);
+
+  /** Inteligência do Passo 1 — contadores e fila sempre coerentes com os filtros ativos */
+  const { counts: attentionCounts, queue: attentionQueue } = useMemo(
+    () => computeAttention(baseFilteredContacts, attentionDeps),
+    [baseFilteredContacts, attentionDeps],
+  );
+
+  /** Resultado único: rege lista, kanban, funil e o painel do Passo 3 */
+  const filteredContacts = useMemo(
+    () => baseFilteredContacts.filter(c => matchesAttention(c, attentionFilter, attentionDeps)),
+    [baseFilteredContacts, attentionFilter, attentionDeps],
+  );
+
+  const filteredQueue = useMemo(
+    () => (attentionFilter === 'all'
+      ? attentionQueue
+      : attentionQueue.filter(c => matchesAttention(c, attentionFilter, attentionDeps))),
+    [attentionQueue, attentionFilter, attentionDeps],
+  );
+
 
   const sortedContacts = useMemo(() => {
     return [...filteredContacts].sort((a, b) => {
