@@ -1195,7 +1195,9 @@ export default function Contatos() {
           onStartQueue={(list) => { setFocusQueue(list); setFocusQueueOpen(true); }}
           leadsPanelSlot={(
             <LeadsNeedContactPanel
-              contacts={leadsPanelContacts}
+              contacts={filteredContacts}
+              preFiltered={attentionFilter !== 'all'}
+              filterLabel={ATTENTION_LABELS[attentionFilter]}
               onOpenContact={(contact) => { void openContactForm(contact); }}
               onWhatsApp={handleWhatsApp}
               onBulkDispatch={(list) => setBulkDispatchContacts(list)}
