@@ -14,6 +14,8 @@ interface Message {
   content: string;
   is_ai_suggested: boolean;
   created_at: string;
+  source: 'mobile' | 'crm' | 'provider' | 'legacy' | null;
+  delivery_status: string | null;
 }
 
 interface ContactChatPanelProps {
@@ -80,7 +82,7 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
     const load = async () => {
       const { data } = await supabase
         .from('service_messages')
-        .select('id, conversation_id, sender, content, is_ai_suggested, created_at')
+        .select('id, conversation_id, sender, content, is_ai_suggested, created_at, source, delivery_status')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
       if (!cancelled) {
@@ -124,6 +126,16 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
       setSending(false);
     }
   };
+
+  // Garante que mensagens enviadas pelo WhatsApp do celular também retornem ao histórico.
+  useEffect(() => {
+    if (sessionStorage.getItem('whatsapp-sent-by-me-enabled') === 'true') return;
+    supabase.functions.invoke('whatsapp-configure', { body: { action: 'enable_sent_by_me' } })
+      .then(({ data, error }) => {
+        if (!error && data?.ok) sessionStorage.setItem('whatsapp-sent-by-me-enabled', 'true');
+      })
+      .catch((error) => console.error('Falha ao configurar histórico do WhatsApp:', error));
+  }, []);
 
 
   const handleSuggest = async () => {
@@ -187,6 +199,12 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
                 >
                   {isAi && <div className="text-[10px] font-semibold mb-1 opacity-70">💡 Sugestão da IA</div>}
                   <div>{m.content}</div>
+                  {isAgent && (
+                    <div className="text-[9px] mt-1 opacity-70">
+                      {m.source === 'mobile' ? 'Enviado pelo celular' : 'Enviado pelo CRM'}
+                      {m.delivery_status === 'failed' ? ' · Falhou' : m.delivery_status === 'pending' ? ' · Enviando' : ''}
+                    </div>
+                  )}
                   <div className={`text-[10px] mt-1 opacity-60`}>
                     {format(parseISO(m.created_at), "dd/MM HH:mm", { locale: ptBR })}
                   </div>
