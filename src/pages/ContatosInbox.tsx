@@ -368,10 +368,32 @@ export default function ContatosInbox() {
                 </div>
               </div>
 
-              {/* Timeline */}
-              <div className="p-3">
-                <ContactTimeline contactId={selected.id} />
-              </div>
+              {/* Conversa (padrão) + Histórico */}
+              <Tabs defaultValue="conversa" className="w-full" key={selected.id}>
+                <div className="px-3 pt-2">
+                  <TabsList className="h-8">
+                    <TabsTrigger value="conversa" className="text-xs h-6 gap-1">
+                      <MessageCircle className="h-3 w-3" /> Conversa
+                    </TabsTrigger>
+                    <TabsTrigger value="historico" className="text-xs h-6 gap-1">
+                      <Clock className="h-3 w-3" /> Histórico
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+                <TabsContent value="conversa" className="p-3 pt-2 mt-0">
+                  <ContactChatPanel
+                    contactId={selected.id}
+                    contactName={selected.name}
+                    contactHandle={selected.whatsapp || selected.phone}
+                    contactAvatar={selected.photo_url}
+                    heightClassName="h-[calc(100dvh-320px)] min-h-[340px]"
+                  />
+                </TabsContent>
+                <TabsContent value="historico" className="p-3 pt-2 mt-0">
+                  <ContactTimeline contactId={selected.id} />
+                </TabsContent>
+              </Tabs>
+
             </div>
           )}
         </div>
