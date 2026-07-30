@@ -827,6 +827,7 @@ export type Database = {
           valor_estimado: number | null
           website: string | null
           whatsapp: string | null
+          whatsapp_photo_synced_at: string | null
           zip_code: string | null
         }
         Insert: {
@@ -911,6 +912,7 @@ export type Database = {
           valor_estimado?: number | null
           website?: string | null
           whatsapp?: string | null
+          whatsapp_photo_synced_at?: string | null
           zip_code?: string | null
         }
         Update: {
@@ -995,6 +997,7 @@ export type Database = {
           valor_estimado?: number | null
           website?: string | null
           whatsapp?: string | null
+          whatsapp_photo_synced_at?: string | null
           zip_code?: string | null
         }
         Relationships: [
