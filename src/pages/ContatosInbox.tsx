@@ -13,7 +13,7 @@ import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { MergeDuplicatesDialog } from '@/components/crm/MergeDuplicatesDialog';
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ArrowLeft, Search, Zap, MessageCircle, Phone, ExternalLink, Sparkles, Loader2, Merge, Inbox, Clock } from 'lucide-react';
+import { ArrowLeft, Search, Zap, MessageCircle, Phone, ExternalLink, Sparkles, Loader2, Merge, Clock } from 'lucide-react';
 import { openWhatsApp } from '@/lib/whatsapp';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -21,6 +21,7 @@ import ReactMarkdown from 'react-markdown';
 
 interface InboxItem {
   id: string;
+  conversation_id: string;
   name: string;
   whatsapp: string | null;
   phone: string | null;
@@ -31,6 +32,9 @@ interface InboxItem {
   last_summary: string | null;
   last_date: string | null;
   unread_days: number;
+  unread_count: number;
+  needs_reply: boolean;
+  attendance_state: string | null;
 }
 
 const FUNNEL_LABEL: Record<string, string> = {
@@ -50,97 +54,78 @@ export default function ContatosInbox() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [quickOpen, setQuickOpen] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
-  const [openConvs, setOpenConvs] = useState<Array<{
-    id: string; contact_id: string | null; contact_name: string | null;
-    contact_avatar_url: string | null; last_message_preview: string | null;
-    last_message_at: string; unread_count: number; platform_id: string | null;
-    contact?: { name: string; photo_url: string | null; client_classification: string | null } | null;
-  }>>([]);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [summary, setSummary] = useState('');
   const [summaryLoading, setSummaryLoading] = useState(false);
 
   const load = async () => {
     setLoading(true);
-    // Pega contatos ativos + última interação de cada um
-    const { data: contacts } = await supabase
-      .from('contacts')
-      .select('id,name,whatsapp,phone,photo_url,funnel_status,temperatura_lead,ultimo_contato')
-      .eq('is_active', true)
-      .order('ultimo_contato', { ascending: false, nullsFirst: false })
+    // A Caixa de Entrada tem uma única fonte: conversas reais do Atendimento.
+    // Contatos sem conversa continuam no CRM, mas não poluem esta fila operacional.
+    const { data: conversations, error } = await supabase
+      .from('service_conversations')
+      .select('id,contact_id,contact_name,contact_handle,contact_avatar_url,last_message_preview,last_message_at,unread_count,needs_reply,attendance_state,funnel_stage,status')
+      .not('contact_id', 'is', null)
+      .order('last_message_at', { ascending: false })
       .limit(200);
 
-    if (!contacts?.length) {
+    if (error) {
+      console.error('Erro ao carregar caixa de entrada:', error);
+      toast.error('Não foi possível carregar as conversas.');
       setItems([]);
       setLoading(false);
       return;
     }
 
-    const ids = contacts.map((c) => c.id);
-    const { data: history } = await supabase
-      .from('contact_history')
-      .select('contact_id,description,interaction_date,created_at')
-      .in('contact_id', ids)
-      .order('interaction_date', { ascending: false });
-
-    const byContact = new Map<string, { description: string; date: string }>();
-    for (const h of history || []) {
-      if (!byContact.has(h.contact_id)) {
-        byContact.set(h.contact_id, {
-          description: h.description,
-          date: h.interaction_date || h.created_at,
-        });
-      }
+    if (!conversations?.length) {
+      setItems([]);
+      setLoading(false);
+      return;
     }
 
+    const ids = Array.from(new Set(conversations.map((c) => c.contact_id).filter(Boolean))) as string[];
+    const { data: contacts } = await supabase
+      .from('contacts')
+      .select('id,name,whatsapp,phone,photo_url,funnel_status,temperatura_lead,ultimo_contato')
+      .in('id', ids);
+    const contactsById = new Map((contacts || []).map((contact) => [contact.id, contact]));
+
     const now = Date.now();
-    const merged: InboxItem[] = contacts.map((c) => {
-      const last = byContact.get(c.id);
-      const lastDate = last?.date || null;
+    const seenContacts = new Set<string>();
+    const merged: InboxItem[] = [];
+    for (const conversation of conversations) {
+      if (!conversation.contact_id || seenContacts.has(conversation.contact_id)) continue;
+      seenContacts.add(conversation.contact_id);
+      const contact = contactsById.get(conversation.contact_id);
+      const lastDate = conversation.last_message_at || null;
       const unreadDays = lastDate
         ? Math.floor((now - new Date(lastDate).getTime()) / 86400000)
         : 999;
-      return {
-        ...c,
-        last_summary: last?.description || null,
+      merged.push({
+        id: conversation.contact_id,
+        conversation_id: conversation.id,
+        name: contact?.name || conversation.contact_name || 'Sem nome',
+        whatsapp: contact?.whatsapp || conversation.contact_handle,
+        phone: contact?.phone || null,
+        photo_url: contact?.photo_url || conversation.contact_avatar_url,
+        funnel_status: contact?.funnel_status || conversation.funnel_stage || 'novo_lead',
+        temperatura_lead: contact?.temperatura_lead || null,
+        ultimo_contato: contact?.ultimo_contato || null,
+        last_summary: conversation.last_message_preview || null,
         last_date: lastDate,
         unread_days: unreadDays,
-      };
-    });
-
-    // Ordena: quem tem conversa mais recente primeiro; quem nunca conversou no fim
-    merged.sort((a, b) => {
-      if (!a.last_date && !b.last_date) return 0;
-      if (!a.last_date) return 1;
-      if (!b.last_date) return -1;
-      return new Date(b.last_date).getTime() - new Date(a.last_date).getTime();
-    });
+        unread_count: conversation.unread_count,
+        needs_reply: conversation.needs_reply,
+        attendance_state: conversation.attendance_state,
+      });
+    }
 
     setItems(merged);
     setLoading(false);
   };
 
-  const loadOpenConvs = async () => {
-    const { data } = await supabase
-      .from('service_conversations')
-      .select('id,contact_id,contact_name,contact_avatar_url,last_message_preview,last_message_at,unread_count,platform_id')
-      .eq('status', 'open')
-      .order('last_message_at', { ascending: false })
-      .limit(30);
-    const convs = (data || []) as any[];
-    const cids = Array.from(new Set(convs.map(c => c.contact_id).filter(Boolean))) as string[];
-    let byId = new Map<string, any>();
-    if (cids.length) {
-      const { data: cs } = await supabase.from('contacts')
-        .select('id,name,photo_url,client_classification').in('id', cids);
-      byId = new Map((cs || []).map((c: any) => [c.id, c]));
-    }
-    setOpenConvs(convs.map(c => ({ ...c, contact: c.contact_id ? byId.get(c.contact_id) : null })));
-  };
-
   useEffect(() => {
     load();
-    loadOpenConvs();
   }, []);
 
   // Realtime: nova mensagem atualiza preview/ordenação sem recarregar a página
@@ -150,7 +135,6 @@ export default function ContatosInbox() {
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {
         load();
-        loadOpenConvs();
       }, 600);
     };
     const channel = supabase
@@ -188,12 +172,13 @@ export default function ContatosInbox() {
         body: { contact_id: contactId },
       });
       if (error) throw error;
-      if ((data as any)?.error) {
-        toast.error((data as any).error);
+      const result = data as { error?: string; summary?: string } | null;
+      if (result?.error) {
+        toast.error(result.error);
         setSummaryOpen(false);
         return;
       }
-      setSummary((data as any)?.summary || 'Sem resumo gerado.');
+      setSummary(result?.summary || 'Sem resumo gerado.');
     } catch (e) {
       console.error(e);
       toast.error('Erro ao gerar resumo. Verifique seus créditos de IA.');
@@ -244,46 +229,6 @@ export default function ContatosInbox() {
             />
           </div>
         </div>
-        {openConvs.length > 0 && (
-          <div className="px-3 pb-3 border-t pt-2">
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground mb-1.5 flex items-center gap-1.5">
-              <Inbox className="h-3 w-3" /> Conversas abertas no Atendimento ({openConvs.length})
-            </div>
-            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-              {openConvs.map(c => (
-                <Link
-                  key={c.id}
-                  to={`/digital?tab=atendimento&conversation=${c.id}`}
-                  className="shrink-0 w-[220px] border rounded-md p-2 hover:bg-muted/50 transition-colors bg-card"
-                >
-                  <div className="flex items-center gap-2">
-                    <ContactAvatar
-                      name={c.contact?.name || c.contact_name || '?'}
-                      photoUrl={c.contact?.photo_url || c.contact_avatar_url}
-                      size="sm"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-medium truncate flex items-center gap-1">
-                        {c.contact?.name || c.contact_name || 'Sem nome'}
-                        {c.contact?.client_classification === 'vip' && (
-                          <span className="text-[9px]">👑</span>
-                        )}
-                      </div>
-                      <div className="text-[10px] text-muted-foreground truncate">
-                        {c.last_message_preview || 'Sem mensagens'}
-                      </div>
-                    </div>
-                    {c.unread_count > 0 && (
-                      <Badge variant="destructive" className="text-[9px] h-4 px-1.5 shrink-0">
-                        {c.unread_count}
-                      </Badge>
-                    )}
-                  </div>
-                </Link>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
 
       <div className="grid md:grid-cols-[380px_1fr] gap-0 md:gap-4 md:p-4">
@@ -325,6 +270,16 @@ export default function ContatosInbox() {
                       <Badge variant="outline" className="text-[9px] h-4 px-1.5">
                         {FUNNEL_LABEL[item.funnel_status] || item.funnel_status}
                       </Badge>
+                      {item.needs_reply && (
+                        <Badge variant="destructive" className="text-[9px] h-4 px-1.5">
+                          Responder
+                        </Badge>
+                      )}
+                      {item.unread_count > 0 && (
+                        <Badge className="text-[9px] h-4 min-w-4 px-1.5">
+                          {item.unread_count}
+                        </Badge>
+                      )}
                       {item.last_date && item.unread_days > 7 && (
                         <Badge variant="destructive" className="text-[9px] h-4 px-1.5">
                           {item.unread_days}d sem contato
@@ -424,7 +379,7 @@ export default function ContatosInbox() {
       </div>
 
       {/* Quick conversation */}
-      <MergeDuplicatesDialog open={mergeOpen} onOpenChange={setMergeOpen} onMerged={() => { load(); loadOpenConvs(); }} />
+      <MergeDuplicatesDialog open={mergeOpen} onOpenChange={setMergeOpen} onMerged={load} />
       <QuickConversationDialog
         open={quickOpen}
         onOpenChange={setQuickOpen}
