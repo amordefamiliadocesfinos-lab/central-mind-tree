@@ -126,6 +126,30 @@ export class ZApiWhatsAppConnector implements WhatsAppConnector {
     }
   }
 
+  /** Consulta a foto de perfil atual. Retorna link temporário do provedor. */
+  async getProfilePictureUrl(phone: string): Promise<ProfilePictureResult> {
+    if (!this.isConfigured) {
+      return { ok: false, errorCode: 'not_configured', errorMessage: 'Integração WhatsApp não configurada' };
+    }
+    try {
+      const res = await fetch(
+        `${this.baseUrl}/profile-picture?phone=${encodeURIComponent(phone)}`,
+        { headers: { 'Client-Token': this.clientToken } },
+      );
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        return { ok: false, errorCode: `http_${res.status}`, errorMessage: 'Falha ao consultar foto de perfil' };
+      }
+      const link = body?.link ?? body?.url ?? body?.profileThumbnail ?? body?.imgUrl;
+      if (!link || typeof link !== 'string' || !/^https?:\/\//i.test(link)) {
+        return { ok: false, errorCode: 'no_picture', errorMessage: 'Sem foto de perfil disponível' };
+      }
+      return { ok: true, temporaryUrl: link };
+    } catch (e) {
+      return { ok: false, errorCode: 'network_error', errorMessage: (e as Error).message };
+    }
+  }
+
   async getConnectionStatus(): Promise<ConnectionStatusResult> {
     if (!this.isConfigured) {
       return { status: 'not_configured', instanceReference: this.instanceReference, providerName: PROVIDER };
