@@ -1,5 +1,6 @@
 import type {
   ConnectionStatusResult,
+  ConnectorActionResult,
   NormalizedWebhookEvent,
   ProfilePictureResult,
   SendTextResult,
@@ -121,6 +122,33 @@ export class ZApiWhatsAppConnector implements WhatsAppConnector {
         };
       }
       return { ok: true, externalMessageId: body?.messageId ? String(body.messageId) : undefined };
+    } catch (e) {
+      return { ok: false, errorCode: 'network_error', errorMessage: (e as Error).message };
+    }
+  }
+
+  async enableSentByMeNotifications(): Promise<ConnectorActionResult> {
+    if (!this.isConfigured) {
+      return { ok: false, errorCode: 'not_configured', errorMessage: 'Integração WhatsApp não configurada' };
+    }
+    try {
+      const res = await fetch(`${this.baseUrl}/update-notify-sent-by-me`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Client-Token': this.clientToken,
+        },
+        body: JSON.stringify({ notifySentByMe: true }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok || body?.value !== true) {
+        return {
+          ok: false,
+          errorCode: `http_${res.status}`,
+          errorMessage: String(body?.error ?? body?.message ?? 'Falha ao ativar mensagens enviadas pelo celular'),
+        };
+      }
+      return { ok: true };
     } catch (e) {
       return { ok: false, errorCode: 'network_error', errorMessage: (e as Error).message };
     }
