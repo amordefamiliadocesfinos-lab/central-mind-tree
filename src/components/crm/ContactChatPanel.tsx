@@ -198,20 +198,21 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
         <div ref={bottomRef} />
       </div>
 
-      <div className="border-t pt-2 mt-2 space-y-2">
+      <div className="border-t pt-2 mt-2 space-y-2 bg-background/95">
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Digite uma mensagem..."
+          placeholder="Digite uma mensagem…"
           rows={2}
           className="resize-none text-sm"
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
               handleSend();
             }
           }}
         />
+
         <div className="flex items-center justify-between gap-2">
           <Button size="sm" variant="outline" onClick={handleSuggest} disabled={suggesting || !conversationId}>
             {suggesting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
