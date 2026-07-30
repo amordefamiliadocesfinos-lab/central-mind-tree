@@ -6,12 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { ContactTimeline } from '@/components/crm/ContactTimeline';
+import { ContactChatPanel } from '@/components/crm/ContactChatPanel';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { QuickConversationDialog } from '@/components/crm/QuickConversationDialog';
 import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { MergeDuplicatesDialog } from '@/components/crm/MergeDuplicatesDialog';
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ArrowLeft, Search, Zap, MessageCircle, Phone, ExternalLink, Sparkles, Loader2, Merge, Inbox } from 'lucide-react';
+import { ArrowLeft, Search, Zap, MessageCircle, Phone, ExternalLink, Sparkles, Loader2, Merge, Inbox, Clock } from 'lucide-react';
 import { openWhatsApp } from '@/lib/whatsapp';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -140,6 +142,28 @@ export default function ContatosInbox() {
     load();
     loadOpenConvs();
   }, []);
+
+  // Realtime: nova mensagem atualiza preview/ordenação sem recarregar a página
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const refresh = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        load();
+        loadOpenConvs();
+      }, 600);
+    };
+    const channel = supabase
+      .channel('crm-inbox-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'service_messages' }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'service_conversations' }, refresh)
+      .subscribe();
+    return () => {
+      if (timer) clearTimeout(timer);
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -368,10 +392,32 @@ export default function ContatosInbox() {
                 </div>
               </div>
 
-              {/* Timeline */}
-              <div className="p-3">
-                <ContactTimeline contactId={selected.id} />
-              </div>
+              {/* Conversa (padrão) + Histórico */}
+              <Tabs defaultValue="conversa" className="w-full" key={selected.id}>
+                <div className="px-3 pt-2">
+                  <TabsList className="h-8">
+                    <TabsTrigger value="conversa" className="text-xs h-6 gap-1">
+                      <MessageCircle className="h-3 w-3" /> Conversa
+                    </TabsTrigger>
+                    <TabsTrigger value="historico" className="text-xs h-6 gap-1">
+                      <Clock className="h-3 w-3" /> Histórico
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+                <TabsContent value="conversa" className="p-3 pt-2 mt-0">
+                  <ContactChatPanel
+                    contactId={selected.id}
+                    contactName={selected.name}
+                    contactHandle={selected.whatsapp || selected.phone}
+                    contactAvatar={selected.photo_url}
+                    heightClassName="h-[calc(100dvh-320px)] min-h-[340px]"
+                  />
+                </TabsContent>
+                <TabsContent value="historico" className="p-3 pt-2 mt-0">
+                  <ContactTimeline contactId={selected.id} />
+                </TabsContent>
+              </Tabs>
+
             </div>
           )}
         </div>

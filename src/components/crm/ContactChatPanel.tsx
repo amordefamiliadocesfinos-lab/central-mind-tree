@@ -21,9 +21,11 @@ interface ContactChatPanelProps {
   contactName?: string | null;
   contactHandle?: string | null;
   contactAvatar?: string | null;
+  /** Classe de altura do painel. Padrão: h-[60vh] min-h-[400px] */
+  heightClassName?: string;
 }
 
-export function ContactChatPanel({ contactId, contactName, contactHandle, contactAvatar }: ContactChatPanelProps) {
+export function ContactChatPanel({ contactId, contactName, contactHandle, contactAvatar, heightClassName }: ContactChatPanelProps) {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -156,7 +158,7 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
   };
 
   return (
-    <div className="flex flex-col h-[60vh] min-h-[400px]">
+    <div className={`flex flex-col ${heightClassName ?? 'h-[60vh] min-h-[400px]'}`}>
       <div className="flex-1 overflow-y-auto space-y-2 pr-1">
         {loading ? (
           <div className="flex items-center justify-center h-full">
@@ -196,20 +198,21 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
         <div ref={bottomRef} />
       </div>
 
-      <div className="border-t pt-2 mt-2 space-y-2">
+      <div className="border-t pt-2 mt-2 space-y-2 bg-background/95">
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder="Digite uma mensagem..."
+          placeholder="Digite uma mensagem…"
           rows={2}
           className="resize-none text-sm"
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
               handleSend();
             }
           }}
         />
+
         <div className="flex items-center justify-between gap-2">
           <Button size="sm" variant="outline" onClick={handleSuggest} disabled={suggesting || !conversationId}>
             {suggesting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
@@ -221,7 +224,7 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
           </Button>
         </div>
         <p className="text-[10px] text-muted-foreground text-center">
-          Enviado pelo WhatsApp · aparece no Atendimento e no histórico do contato.
+          Enter envia · Shift+Enter quebra linha · enviado pelo WhatsApp e registrado no Atendimento.
         </p>
 
       </div>
