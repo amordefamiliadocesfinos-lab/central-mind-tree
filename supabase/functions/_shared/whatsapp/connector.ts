@@ -56,12 +56,19 @@ export interface ProfilePictureResult {
   errorMessage?: string;
 }
 
+export interface ConnectorActionResult {
+  ok: boolean;
+  errorCode?: string;
+  errorMessage?: string;
+}
+
 export interface WhatsAppConnector {
   readonly providerName: string;
   readonly instanceReference: string;
   readonly isConfigured: boolean;
   normalizeWebhook(payload: unknown): NormalizedWebhookEvent;
   sendTextMessage(phone: string, message: string): Promise<SendTextResult>;
+  enableSentByMeNotifications(): Promise<ConnectorActionResult>;
   getConnectionStatus(): Promise<ConnectionStatusResult>;
   getProfilePictureUrl(phone: string): Promise<ProfilePictureResult>;
 }
