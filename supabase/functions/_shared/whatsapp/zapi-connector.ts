@@ -1,6 +1,7 @@
 import type {
   ConnectionStatusResult,
   NormalizedWebhookEvent,
+  ProfilePictureResult,
   SendTextResult,
   WhatsAppConnector,
 } from './connector.ts';
