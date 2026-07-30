@@ -48,6 +48,14 @@ export interface ConnectionStatusResult {
   error?: string;
 }
 
+export interface ProfilePictureResult {
+  ok: boolean;
+  /** Link temporário do provedor. Nunca deve ser persistido. */
+  temporaryUrl?: string;
+  errorCode?: string;
+  errorMessage?: string;
+}
+
 export interface WhatsAppConnector {
   readonly providerName: string;
   readonly instanceReference: string;
@@ -55,6 +63,7 @@ export interface WhatsAppConnector {
   normalizeWebhook(payload: unknown): NormalizedWebhookEvent;
   sendTextMessage(phone: string, message: string): Promise<SendTextResult>;
   getConnectionStatus(): Promise<ConnectionStatusResult>;
+  getProfilePictureUrl(phone: string): Promise<ProfilePictureResult>;
 }
 
 /** Normalização de telefone BR: 55 + DDD + número. Inválido => null. */

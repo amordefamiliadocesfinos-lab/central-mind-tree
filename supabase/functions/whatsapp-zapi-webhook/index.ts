@@ -4,12 +4,84 @@ import { normalizeBrPhone } from '../_shared/whatsapp/connector.ts';
 import { getWhatsAppConnector } from '../_shared/whatsapp/zapi-connector.ts';
 
 const MAX_BODY_BYTES = 256 * 1024;
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
+const PHOTO_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
+const AVATAR_BUCKET = 'contact-avatars';
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
+
+/**
+ * Substitui a foto do contato pela foto atual do WhatsApp.
+ * Nunca lança: falhas apenas registram erro técnico (sem secrets/telefone).
+ */
+async function syncWhatsAppPhoto(
+  supabase: any,
+  connector: ReturnType<typeof getWhatsAppConnector>,
+  contactId: string,
+  phone: string,
+  conversationId: string | null,
+) {
+  const { data: contact } = await supabase
+    .from('contacts')
+    .select('whatsapp_photo_synced_at')
+    .eq('id', contactId)
+    .maybeSingle();
+
+  const lastSync = contact?.whatsapp_photo_synced_at ? Date.parse(contact.whatsapp_photo_synced_at) : 0;
+  if (lastSync && Date.now() - lastSync < PHOTO_SYNC_INTERVAL_MS) return;
+
+  // Marca a tentativa antes de executar (evita repetição em caso de falha)
+  await supabase
+    .from('contacts')
+    .update({ whatsapp_photo_synced_at: new Date().toISOString() })
+    .eq('id', contactId);
+
+  const picture = await connector.getProfilePictureUrl(phone);
+  if (!picture.ok || !picture.temporaryUrl) {
+    console.log('photo sync skipped', picture.errorCode ?? 'unknown');
+    return;
+  }
+
+  const res = await fetch(picture.temporaryUrl);
+  if (!res.ok) {
+    console.log('photo download failed', `http_${res.status}`);
+    return;
+  }
+  const contentType = res.headers.get('content-type') ?? '';
+  if (!contentType.startsWith('image/')) {
+    console.log('photo download rejected: content-type inválido');
+    return;
+  }
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  if (!bytes.byteLength || bytes.byteLength > MAX_AVATAR_BYTES) {
+    console.log('photo download rejected: tamanho inválido');
+    return;
+  }
+
+  const path = `whatsapp/${contactId}`;
+  const { error: uploadErr } = await supabase.storage
+    .from(AVATAR_BUCKET)
+    .upload(path, bytes, { contentType, upsert: true });
+  if (uploadErr) {
+    console.log('photo upload failed', uploadErr.message);
+    return;
+  }
+
+  const { data: pub } = supabase.storage.from(AVATAR_BUCKET).getPublicUrl(path);
+  const publicUrl = `${pub.publicUrl}?v=${Date.now()}`;
+
+  await supabase.from('contacts').update({ photo_url: publicUrl }).eq('id', contactId);
+  if (conversationId) {
+    await supabase
+      .from('service_conversations')
+      .update({ contact_avatar_url: publicUrl })
+      .eq('id', conversationId);
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
@@ -189,6 +261,15 @@ Deno.serve(async (req) => {
           : { last_outbound_at: nowIso }),
       })
       .eq('id', conversationId);
+
+    // Sincronização da foto de perfil (não bloqueia o processamento)
+    if (contactId) {
+      try {
+        await syncWhatsAppPhoto(supabase, connector, contactId, phone, conversationId);
+      } catch (e) {
+        console.error('photo sync failed', (e as Error).message);
+      }
+    }
 
     await finish('processed');
     return json({ ok: true, duplicate_message: msgErr?.code === '23505' });
