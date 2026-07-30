@@ -12,7 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, ArrowLeft, Search, LayoutGrid, Columns3, Image, BarChart3, Link2, Settings2, TrendingUp, MessageCircle, Book, Calendar, Headset, X, SlidersHorizontal, Sparkles, Layers, ArrowUpDown, Zap, Table as TableIcon } from 'lucide-react';
+import { Plus, ArrowLeft, Search, LayoutGrid, Columns3, Image, BarChart3, Link2, Settings2, TrendingUp, MessageCircle, Book, Calendar, Headset, X, SlidersHorizontal, Sparkles, Layers, ArrowUpDown, Zap, Table as TableIcon, Megaphone } from 'lucide-react';
 import { Wand2 } from 'lucide-react';
 import { HierarchicalPlatformSelector } from '@/components/digital/HierarchicalPlatformSelector';
 import { PlatformHierarchicalPicker } from '@/components/digital/PlatformHierarchicalPicker';
@@ -40,6 +40,7 @@ const IdeasSpreadsheetView = lazy(() => import('@/components/digital/IdeasSpread
 const AllVariationsSpreadsheetView = lazy(() => import('@/components/digital/AllVariationsSpreadsheetView').then(m => ({ default: m.AllVariationsSpreadsheetView })));
 const QuickActionWizard = lazy(() => import('@/components/digital/QuickActionWizard').then(m => ({ default: m.QuickActionWizard })));
 const IdeaTypesManager = lazy(() => import('@/components/digital/IdeaTypesManager').then(m => ({ default: m.IdeaTypesManager })));
+const CampaignsPanel = lazy(() => import('@/components/digital/CampaignsPanel').then(m => ({ default: m.CampaignsPanel })));
 const DigitalPrioritiesPanel = lazy(() => import('@/components/digital/DigitalPrioritiesPanel').then(m => ({ default: m.DigitalPrioritiesPanel })));
 
 const TabLoading = () => (
@@ -99,7 +100,7 @@ export default function Digital() {
   const [newIdeaPlatformIds, setNewIdeaPlatformIds] = useState<string[]>([]);
   const [showNewIdeaPlatformPicker, setShowNewIdeaPlatformPicker] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'kanban' | 'spreadsheet'>('list');
-  const [activeTab, setActiveTab] = useState<'ideias' | 'calendario' | 'midia' | 'metricas' | 'plataformas' | 'tendencias' | 'engajamento' | 'faq' | 'atendimento'>('ideias');
+  const [activeTab, setActiveTab] = useState<'ideias' | 'calendario' | 'midia' | 'metricas' | 'plataformas' | 'tendencias' | 'engajamento' | 'faq' | 'atendimento' | 'campanhas'>('ideias');
   const [kanbanMode, setKanbanMode] = useState<'ideas' | 'variations'>('ideas');
   const [nodes, setNodes] = useState<Node[]>([]);
   const isMobile = useIsMobile();
@@ -300,6 +301,7 @@ export default function Digital() {
         { value: 'ideias', label: 'Ideias', icon: LayoutGrid },
         { value: 'calendario', label: 'Calendário', icon: Calendar },
         { value: 'midia', label: 'Mídia', icon: Image },
+        { value: 'campanhas', label: 'Campanhas', icon: Megaphone },
       ],
     },
     {
@@ -974,6 +976,8 @@ export default function Digital() {
               platforms={activePlatforms}
               ideas={ideas.map(i => ({ id: i.id, title: i.title }))}
             />
+          ) : activeTab === 'campanhas' ? (
+            <CampaignsPanel ideas={ideas.map(i => ({ id: i.id, title: i.title }))} />
           ) : activeTab === 'tendencias' ? (
             <TrendsPanel />
           ) : activeTab === 'atendimento' ? (

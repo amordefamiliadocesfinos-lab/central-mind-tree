@@ -2,7 +2,10 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation, Navigate } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
+import Login from "./pages/Login";
 import { GlobalSearchBar } from "@/components/GlobalSearchBar";
 import { GlobalFooterBar } from "@/components/GlobalFooterBar";
 import { LightboxProvider, LightboxRoot } from "@/components/lightbox";
@@ -28,7 +31,6 @@ import MinhaArea from "./pages/MinhaArea";
 import Financeiro from "./pages/Financeiro";
 import Assistente from "./pages/Assistente";
 import Contatos from "./pages/Contatos";
-import Auth from "./pages/Auth";
 import ContatosInbox from "./pages/ContatosInbox";
 import TarefasAgendadas from "./pages/TarefasAgendadas";
 import Rotas from "./pages/Rotas";
@@ -87,7 +89,6 @@ function AnimatedRoutes() {
       >
         <Routes location={location}>
           <Route path="/" element={<Index />} />
-          <Route path="/auth" element={<Auth />} />
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/foco" element={<Foco />} />
           <Route path="/planejamento" element={<Planejamento />} />
@@ -111,7 +112,6 @@ function AnimatedRoutes() {
           <Route path="/nucleo" element={<Nucleo />} />
           <Route path="/captura" element={<CapturaCentral />} />
           <Route path="/task/:id" element={<TaskEdit />} />
-          <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </motion.div>
@@ -119,12 +119,13 @@ function AnimatedRoutes() {
   );
 }
 
-function AppContent() {
+/** Shell interno — só renderiza para sessões autenticadas. */
+function AuthenticatedShell() {
   useScheduledTaskPromotion();
   useKeyboardAware();
 
   return (
-    <BrowserRouter>
+    <>
       {/* Floating dock above footer — avoids overlapping page header buttons */}
       <div className="fixed z-40 right-3 bottom-16 md:bottom-20 md:right-4 flex items-center gap-1 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60 border border-border rounded-full shadow-md px-1.5 py-1">
         <NucleoLauncherButton />
@@ -142,9 +143,34 @@ function AppContent() {
       {/* <StockCheckAlert /> desativado a pedido do usuário */}
       <StockCheckWizard />
       <RoutineAlertOverlay />
+    </>
+  );
+}
+
+function AppContent() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <Routes>
+          {/* Rotas públicas */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/auth" element={<Navigate to="/login" replace />} />
+          <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+          {/* Todo o restante é protegido */}
+          <Route
+            path="*"
+            element={
+              <ProtectedRoute>
+                <AuthenticatedShell />
+              </ProtectedRoute>
+            }
+          />
+        </Routes>
+      </AuthProvider>
     </BrowserRouter>
   );
 }
+
 
 const App = () => (
   <QueryClientProvider client={queryClient}>

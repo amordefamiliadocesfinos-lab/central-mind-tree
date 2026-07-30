@@ -1,10 +1,10 @@
 import { useActiveUser } from '@/hooks/useActiveUser';
+import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Users, Check, UserCircle2 } from 'lucide-react';
+import { LogOut, UserCircle2, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 function initials(name: string) {
@@ -21,91 +21,69 @@ interface Props {
   className?: string;
 }
 
+/** Menu somente leitura da conta autenticada + logout. */
 export function ActiveUserPicker({ variant = 'compact', className }: Props) {
-  const { activeUser, users, setActiveUser, loading } = useActiveUser();
+  const { activeUser, loading, isLinked } = useActiveUser();
+  const { user, signOut } = useAuth();
+
+  const label = activeUser?.name?.split(' ')[0] ?? (loading ? '…' : 'Conta');
 
   return (
     <Popover>
       <PopoverTrigger asChild>
         <Button
-          variant={activeUser ? 'secondary' : 'outline'}
+          variant="secondary"
           size={variant === 'compact' ? 'sm' : 'default'}
           className={cn('gap-2', className)}
-          title="Selecionar usuário ativo"
+          title="Conta autenticada"
+          aria-label="Conta autenticada"
         >
-          {activeUser ? (
-            <>
-              <Avatar className="h-5 w-5">
-                <AvatarFallback className="text-[10px] bg-primary text-primary-foreground">
-                  {initials(activeUser.name)}
-                </AvatarFallback>
-              </Avatar>
-              <span className="max-w-[120px] truncate text-xs">{activeUser.name.split(' ')[0]}</span>
-            </>
-          ) : (
-            <>
-              <Users className="h-4 w-4" />
-              <span className="text-xs">Quem é você?</span>
-            </>
-          )}
+          <Avatar className="h-5 w-5">
+            <AvatarFallback className="text-[10px] bg-primary text-primary-foreground">
+              {activeUser ? initials(activeUser.name) : <UserCircle2 className="h-3 w-3" />}
+            </AvatarFallback>
+          </Avatar>
+          <span className="max-w-[120px] truncate text-xs">{label}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-72 p-0">
-        <div className="p-3 border-b">
+        <div className="p-3 border-b space-y-1">
           <div className="text-xs font-semibold flex items-center gap-2">
             <UserCircle2 className="h-4 w-4 text-primary" />
-            Operando como
+            Conta autenticada
           </div>
-          <p className="text-[11px] text-muted-foreground mt-0.5">
-            Cada usuário tem sua própria rotina, MTs e alertas.
-          </p>
+          <p className="text-[11px] text-muted-foreground break-all">{user?.email}</p>
         </div>
-        <ScrollArea className="max-h-72">
-          <div className="p-1">
-            <button
-              onClick={() => setActiveUser(null)}
-              className={cn(
-                'w-full text-left px-2 py-2 rounded-md hover:bg-muted text-sm flex items-center gap-2',
-                !activeUser && 'bg-muted'
+
+        <div className="p-3 space-y-2">
+          {isLinked ? (
+            <>
+              <div className="text-sm font-medium">{activeUser!.name}</div>
+              {activeUser!.role && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+                  {activeUser!.role}
+                </Badge>
               )}
-            >
-              <Users className="h-4 w-4 text-muted-foreground" />
-              <span className="flex-1">Todos (sem filtro)</span>
-              {!activeUser && <Check className="h-4 w-4 text-primary" />}
-            </button>
-            {loading && <div className="text-xs text-muted-foreground p-3">Carregando…</div>}
-            {users.map((u) => {
-              const selected = activeUser?.id === u.id;
-              return (
-                <button
-                  key={u.id}
-                  onClick={() => setActiveUser(u.id)}
-                  className={cn(
-                    'w-full text-left px-2 py-2 rounded-md hover:bg-muted text-sm flex items-center gap-2',
-                    selected && 'bg-muted'
-                  )}
-                >
-                  <Avatar className="h-7 w-7">
-                    <AvatarFallback className="text-[11px] bg-primary/15 text-primary">
-                      {initials(u.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <div className="truncate font-medium">{u.name}</div>
-                    {u.role && (
-                      <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 mt-0.5">
-                        {u.role}
-                      </Badge>
-                    )}
-                  </div>
-                  {selected && <Check className="h-4 w-4 text-primary" />}
-                </button>
-              );
-            })}
-          </div>
-        </ScrollArea>
-        <div className="p-2 border-t text-[10px] text-muted-foreground text-center">
-          Sem senha · acesso total (temporário)
+              <p className="text-[11px] text-muted-foreground">
+                Identidade operacional vinculada. Não é possível trocar de usuário.
+              </p>
+            </>
+          ) : (
+            <div className="flex gap-2 text-[11px] text-destructive">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span>
+                Sua conta não possui vínculo operacional ativo. As ações estão bloqueadas — solicite
+                a liberação ao administrador.
+              </span>
+            </div>
+          )}
+        </div>
+
+        <div className="p-2 border-t">
+          <Button variant="ghost" size="sm" className="w-full justify-start gap-2" onClick={() => signOut()}>
+            <LogOut className="h-4 w-4" />
+            Sair
+          </Button>
         </div>
       </PopoverContent>
     </Popover>

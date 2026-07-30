@@ -297,6 +297,308 @@ export type Database = {
         }
         Relationships: []
       }
+      campaign_applications: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          authenticated_identity_id: string
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          id: string
+          idea_id: string
+          metric_name: string
+          metric_unit: string
+          objective: string
+          owner_user_id: string
+          status: string
+          success_definition: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          authenticated_identity_id?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          idea_id: string
+          metric_name: string
+          metric_unit: string
+          objective: string
+          owner_user_id: string
+          status?: string
+          success_definition: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          authenticated_identity_id?: string
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          id?: string
+          idea_id?: string
+          metric_name?: string
+          metric_unit?: string
+          objective?: string
+          owner_user_id?: string
+          status?: string
+          success_definition?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_applications_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_applications_completed_by_fkey"
+            columns: ["completed_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_applications_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "digital_ideas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_applications_owner_user_id_fkey"
+            columns: ["owner_user_id"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_evidence: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          created_by: string
+          description: string | null
+          execution_id: string
+          id: string
+          kind: string
+          url: string | null
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          execution_id: string
+          id?: string
+          kind?: string
+          url?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          execution_id?: string
+          id?: string
+          kind?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_evidence_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_evidence_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_evidence_execution_id_fkey"
+            columns: ["execution_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_executions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_executions: {
+        Row: {
+          campaign_id: string
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          created_by: string
+          id: string
+          planned_at: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          campaign_id: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          planned_at?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          campaign_id?: string
+          confirmed_at?: string | null
+          confirmed_by?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          planned_at?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_executions_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_executions_confirmed_by_fkey"
+            columns: ["confirmed_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_executions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_learnings: {
+        Row: {
+          campaign_id: string
+          content: string
+          created_at: string
+          created_by: string
+          id: string
+        }
+        Insert: {
+          campaign_id: string
+          content: string
+          created_at?: string
+          created_by: string
+          id?: string
+        }
+        Update: {
+          campaign_id?: string
+          content?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_learnings_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_learnings_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_metrics: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          created_by: string
+          execution_id: string | null
+          id: string
+          measured_at: string
+          metric_name: string
+          metric_unit: string
+          metric_value: number
+          note: string | null
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          created_by: string
+          execution_id?: string | null
+          id?: string
+          measured_at?: string
+          metric_name: string
+          metric_unit: string
+          metric_value: number
+          note?: string | null
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          created_by?: string
+          execution_id?: string | null
+          id?: string
+          measured_at?: string
+          metric_name?: string
+          metric_unit?: string
+          metric_value?: number
+          note?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_metrics_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_applications"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_metrics_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_metrics_execution_id_fkey"
+            columns: ["execution_id"]
+            isOneToOne: false
+            referencedRelation: "campaign_executions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_activities: {
         Row: {
           activity_type: string
@@ -4238,12 +4540,89 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_campaign: {
+        Args: { _campaign_id: string }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          authenticated_identity_id: string
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          id: string
+          idea_id: string
+          metric_name: string
+          metric_unit: string
+          objective: string
+          owner_user_id: string
+          status: string
+          success_definition: string
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "campaign_applications"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      complete_campaign: {
+        Args: { _campaign_id: string }
+        Returns: {
+          approved_at: string | null
+          approved_by: string | null
+          authenticated_identity_id: string
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          id: string
+          idea_id: string
+          metric_name: string
+          metric_unit: string
+          objective: string
+          owner_user_id: string
+          status: string
+          success_definition: string
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "campaign_applications"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      confirm_campaign_execution: {
+        Args: { _execution_id: string }
+        Returns: {
+          campaign_id: string
+          confirmed_at: string | null
+          confirmed_by: string | null
+          created_at: string
+          created_by: string
+          id: string
+          planned_at: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "campaign_executions"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      current_app_user_id: { Args: never; Returns: string }
       map_contact_to_conv_funnel: { Args: { _status: string }; Returns: string }
       map_conv_to_contact_funnel: { Args: { _stage: string }; Returns: string }
       merge_contacts: {
         Args: { _duplicate_id: string; _primary_id: string }
         Returns: Json
       }
+      owns_campaign: { Args: { _campaign_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
