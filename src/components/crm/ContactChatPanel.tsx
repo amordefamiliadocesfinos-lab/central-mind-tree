@@ -206,7 +206,7 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
           onKeyDown={(e) => {
             if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
               e.preventDefault();
-              handleSend('agent');
+              handleSend();
             }
           }}
         />
@@ -215,19 +215,15 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
             {suggesting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
             <span className="ml-1 text-xs">Sugerir IA</span>
           </Button>
-          <div className="flex gap-2">
-            <Button size="sm" variant="ghost" onClick={() => handleSend('customer')} disabled={sending || !text.trim()} title="Registrar mensagem recebida">
-              <span className="text-xs">Recebida</span>
-            </Button>
-            <Button size="sm" onClick={() => handleSend('agent')} disabled={sending || !text.trim()}>
-              {sending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-              <span className="ml-1 text-xs">Enviar</span>
-            </Button>
-          </div>
+          <Button size="sm" onClick={handleSend} disabled={sending || !text.trim() || !conversationId}>
+            {sending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
+            <span className="ml-1 text-xs">Enviar</span>
+          </Button>
         </div>
         <p className="text-[10px] text-muted-foreground text-center">
-          Estas mensagens aparecem no Atendimento e no histórico do contato.
+          Enviado pelo WhatsApp · aparece no Atendimento e no histórico do contato.
         </p>
+
       </div>
     </div>
   );
