@@ -242,7 +242,9 @@ Deno.serve(async (req) => {
       message_type: evt.messageType ?? 'text',
       delivery_status: inbound ? 'received' : 'sent',
       provider_timestamp: evt.providerTimestamp,
-      source: evt.source,
+      // A origem é definida também neste limite de persistência para não depender
+      // de versões anteriores do normalizador em eventos enviados pelo aparelho.
+      source: inbound ? 'provider' : 'mobile',
       provider_name: evt.providerName,
       provider_instance_ref: evt.providerInstanceRef,
     });
