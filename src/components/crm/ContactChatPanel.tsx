@@ -100,24 +100,29 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
     return () => { cancelled = true; supabase.removeChannel(ch); };
   }, [conversationId]);
 
-  const handleSend = async (sender: 'agent' | 'customer' = 'agent') => {
+  const handleSend = async () => {
     if (!conversationId || !text.trim()) return;
     setSending(true);
     const content = text.trim();
-    const { error } = await supabase.from('service_messages').insert({
-      conversation_id: conversationId,
-      content,
-      sender,
-      is_ai_suggested: false,
-    });
-    if (error) { toast.error('Erro ao enviar'); setSending(false); return; }
-    await supabase.from('service_conversations').update({
-      last_message_at: new Date().toISOString(),
-      last_message_preview: content.slice(0, 100),
-    }).eq('id', conversationId);
-    setText('');
-    setSending(false);
+    try {
+      const { data, error } = await supabase.functions.invoke('whatsapp-send', {
+        body: { conversation_id: conversationId, message: content },
+      });
+      const errMsg =
+        (data as { error?: string } | null)?.error ??
+        (error ? 'Não foi possível enviar a mensagem pelo WhatsApp' : null);
+      if (errMsg) {
+        toast.error(errMsg);
+        return;
+      }
+      setText('');
+    } catch {
+      toast.error('Não foi possível enviar a mensagem pelo WhatsApp');
+    } finally {
+      setSending(false);
+    }
   };
+
 
   const handleSuggest = async () => {
     if (!conversationId) return;
