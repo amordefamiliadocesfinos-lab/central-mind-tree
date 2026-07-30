@@ -21,9 +21,11 @@ interface ContactChatPanelProps {
   contactName?: string | null;
   contactHandle?: string | null;
   contactAvatar?: string | null;
+  /** Classe de altura do painel. Padrão: h-[60vh] min-h-[400px] */
+  heightClassName?: string;
 }
 
-export function ContactChatPanel({ contactId, contactName, contactHandle, contactAvatar }: ContactChatPanelProps) {
+export function ContactChatPanel({ contactId, contactName, contactHandle, contactAvatar, heightClassName }: ContactChatPanelProps) {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
