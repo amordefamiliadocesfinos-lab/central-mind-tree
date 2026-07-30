@@ -190,6 +190,15 @@ Deno.serve(async (req) => {
       })
       .eq('id', conversationId);
 
+    // Sincronização da foto de perfil (não bloqueia o processamento)
+    if (contactId) {
+      try {
+        await syncWhatsAppPhoto(supabase, connector, contactId, phone, conversationId);
+      } catch (e) {
+        console.error('photo sync failed', (e as Error).message);
+      }
+    }
+
     await finish('processed');
     return json({ ok: true, duplicate_message: msgErr?.code === '23505' });
   } catch (e) {
