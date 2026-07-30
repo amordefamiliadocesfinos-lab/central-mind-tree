@@ -810,6 +810,7 @@ export type Database = {
           payment_condition: string | null
           person_type: string | null
           phone: string | null
+          phone_normalized: string | null
           photo_url: string | null
           profession: string | null
           rg: string | null
@@ -893,6 +894,7 @@ export type Database = {
           payment_condition?: string | null
           person_type?: string | null
           phone?: string | null
+          phone_normalized?: string | null
           photo_url?: string | null
           profession?: string | null
           rg?: string | null
@@ -976,6 +978,7 @@ export type Database = {
           payment_condition?: string | null
           person_type?: string | null
           phone?: string | null
+          phone_normalized?: string | null
           photo_url?: string | null
           profession?: string | null
           rg?: string | null
@@ -2109,6 +2112,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      integration_webhook_receipts: {
+        Row: {
+          created_at: string
+          deduplication_key: string
+          error_message: string | null
+          event_type: string | null
+          id: string
+          processed_at: string | null
+          processing_status: string
+          provider_instance_ref: string | null
+          provider_name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deduplication_key: string
+          error_message?: string | null
+          event_type?: string | null
+          id?: string
+          processed_at?: string | null
+          processing_status?: string
+          provider_instance_ref?: string | null
+          provider_name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deduplication_key?: string
+          error_message?: string | null
+          event_type?: string | null
+          id?: string
+          processed_at?: string | null
+          processing_status?: string
+          provider_instance_ref?: string | null
+          provider_name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       inventory: {
         Row: {
@@ -4001,7 +4043,9 @@ export type Database = {
       }
       service_conversations: {
         Row: {
+          attendance_state: string | null
           auto_reply_enabled: boolean
+          channel: string
           contact_avatar_url: string | null
           contact_handle: string | null
           contact_id: string | null
@@ -4009,16 +4053,23 @@ export type Database = {
           created_at: string
           funnel_stage: string
           id: string
+          last_inbound_at: string | null
           last_message_at: string
           last_message_preview: string | null
+          last_outbound_at: string | null
+          needs_reply: boolean
           platform_id: string | null
+          resolved_at: string | null
+          return_at: string | null
           sales_channels: Json | null
           status: string
           unread_count: number
           updated_at: string
         }
         Insert: {
+          attendance_state?: string | null
           auto_reply_enabled?: boolean
+          channel?: string
           contact_avatar_url?: string | null
           contact_handle?: string | null
           contact_id?: string | null
@@ -4026,16 +4077,23 @@ export type Database = {
           created_at?: string
           funnel_stage?: string
           id?: string
+          last_inbound_at?: string | null
           last_message_at?: string
           last_message_preview?: string | null
+          last_outbound_at?: string | null
+          needs_reply?: boolean
           platform_id?: string | null
+          resolved_at?: string | null
+          return_at?: string | null
           sales_channels?: Json | null
           status?: string
           unread_count?: number
           updated_at?: string
         }
         Update: {
+          attendance_state?: string | null
           auto_reply_enabled?: boolean
+          channel?: string
           contact_avatar_url?: string | null
           contact_handle?: string | null
           contact_id?: string | null
@@ -4043,9 +4101,14 @@ export type Database = {
           created_at?: string
           funnel_stage?: string
           id?: string
+          last_inbound_at?: string | null
           last_message_at?: string
           last_message_preview?: string | null
+          last_outbound_at?: string | null
+          needs_reply?: boolean
           platform_id?: string | null
+          resolved_at?: string | null
+          return_at?: string | null
           sales_channels?: Json | null
           status?: string
           unread_count?: number
@@ -4067,33 +4130,60 @@ export type Database = {
           content: string
           conversation_id: string
           created_at: string
+          delivery_status: string | null
+          direction: string | null
+          error_code: string | null
+          external_message_id: string | null
           id: string
           intent_detected: string | null
           is_ai_suggested: boolean
           logged_to_history: boolean
+          message_type: string
+          provider_instance_ref: string | null
+          provider_name: string | null
+          provider_timestamp: string | null
           sender: string
+          source: string | null
         }
         Insert: {
           ai_approved?: boolean | null
           content: string
           conversation_id: string
           created_at?: string
+          delivery_status?: string | null
+          direction?: string | null
+          error_code?: string | null
+          external_message_id?: string | null
           id?: string
           intent_detected?: string | null
           is_ai_suggested?: boolean
           logged_to_history?: boolean
+          message_type?: string
+          provider_instance_ref?: string | null
+          provider_name?: string | null
+          provider_timestamp?: string | null
           sender?: string
+          source?: string | null
         }
         Update: {
           ai_approved?: boolean | null
           content?: string
           conversation_id?: string
           created_at?: string
+          delivery_status?: string | null
+          direction?: string | null
+          error_code?: string | null
+          external_message_id?: string | null
           id?: string
           intent_detected?: string | null
           is_ai_suggested?: boolean
           logged_to_history?: boolean
+          message_type?: string
+          provider_instance_ref?: string | null
+          provider_name?: string | null
+          provider_timestamp?: string | null
           sender?: string
+          source?: string | null
         }
         Relationships: [
           {
@@ -4505,6 +4595,45 @@ export type Database = {
         }
         Relationships: []
       }
+      whatsapp_integrations: {
+        Row: {
+          connection_status: string
+          created_at: string
+          id: string
+          instance_reference: string
+          is_enabled: boolean
+          last_checked_at: string | null
+          last_error: string | null
+          last_webhook_at: string | null
+          provider: string
+          updated_at: string
+        }
+        Insert: {
+          connection_status?: string
+          created_at?: string
+          id?: string
+          instance_reference: string
+          is_enabled?: boolean
+          last_checked_at?: string | null
+          last_error?: string | null
+          last_webhook_at?: string | null
+          provider: string
+          updated_at?: string
+        }
+        Update: {
+          connection_status?: string
+          created_at?: string
+          id?: string
+          instance_reference?: string
+          is_enabled?: boolean
+          last_checked_at?: string | null
+          last_error?: string | null
+          last_webhook_at?: string | null
+          provider?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       wizard_steps: {
         Row: {
           created_at: string
@@ -4622,6 +4751,7 @@ export type Database = {
         Args: { _duplicate_id: string; _primary_id: string }
         Returns: Json
       }
+      normalize_br_phone: { Args: { _raw: string }; Returns: string }
       owns_campaign: { Args: { _campaign_id: string }; Returns: boolean }
     }
     Enums: {
