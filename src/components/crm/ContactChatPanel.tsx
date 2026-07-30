@@ -201,7 +201,11 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
                   <div>{m.content}</div>
                   {isAgent && (
                     <div className="text-[9px] mt-1 opacity-70">
-                      {m.source === 'mobile' ? 'Enviado pelo celular' : 'Enviado pelo CRM'}
+                      {m.source === 'mobile'
+                        ? 'Enviado pelo celular'
+                        : m.source === 'crm'
+                        ? 'Enviado pelo CRM'
+                        : 'Enviado pelo WhatsApp'}
                       {m.delivery_status === 'failed' ? ' · Falhou' : m.delivery_status === 'pending' ? ' · Enviando' : ''}
                     </div>
                   )}
