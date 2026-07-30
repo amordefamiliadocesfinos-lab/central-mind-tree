@@ -158,7 +158,7 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
   };
 
   return (
-    <div className="flex flex-col h-[60vh] min-h-[400px]">
+    <div className={`flex flex-col ${heightClassName ?? 'h-[60vh] min-h-[400px]'}`}>
       <div className="flex-1 overflow-y-auto space-y-2 pr-1">
         {loading ? (
           <div className="flex items-center justify-center h-full">
