@@ -97,7 +97,9 @@ export function CrmAutomationHub({
 }: CrmAutomationHubProps) {
   const [filtersOpen, setFiltersOpen] = useState(false);
 
-  const totalAttention = counts.urgentes + counts.follow_up + counts.hoje + counts.esfriando;
+  // Um mesmo lead pode ser urgente, estar em follow-up e vencer hoje.
+  // A fila já contém contatos únicos; use-a para não inflar o total exibido.
+  const totalAttention = queue.length;
 
   const applyChip = (key: AutomationChipKey) => {
     setAttentionFilter(attentionFilter === key ? 'all' : key);

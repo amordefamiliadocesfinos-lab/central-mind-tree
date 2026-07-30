@@ -841,32 +841,26 @@ export function ContactFormDialog({
               </div>
             </div>
 
-            {/* Próxima Ação */}
-            <div className="rounded-lg border bg-muted/30 p-3 space-y-2">
-              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Próxima Ação</Label>
+            {/* Próximo passo: uma única decisão alimenta ação e fila de contato */}
+            <div className="rounded-lg border bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 p-3 space-y-2">
+              <Label className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">Próximo passo</Label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <Input 
                   value={form.next_action_text || ''} 
                   onChange={(e) => updateField('next_action_text' as any, e.target.value)} 
-                  placeholder="Ex: Ligar para confirmar pedido"
+                  placeholder="O que deve ser feito? Ex: confirmar pedido"
                 />
                 <Input 
                   type="datetime-local" 
                   value={form.next_action_date ? (() => { try { const d = parseISO(form.next_action_date); return format(d, "yyyy-MM-dd'T'HH:mm"); } catch { return ''; } })() : ''}
-                  onChange={(e) => updateField('next_action_date' as any, e.target.value ? new Date(e.target.value).toISOString() : '')}
+                  onChange={(e) => {
+                    const value = e.target.value ? new Date(e.target.value).toISOString() : '';
+                    updateField('next_action_date' as any, value);
+                    updateField('next_contact_date' as any, value);
+                  }}
                 />
               </div>
-            </div>
-
-            {/* Próximo Contato */}
-            <div className="rounded-lg border bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800 p-3 space-y-2">
-              <Label className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">📞 Próximo Contato</Label>
-              <Input 
-                type="datetime-local" 
-                value={form.next_contact_date ? (() => { try { const d = parseISO(form.next_contact_date); return format(d, "yyyy-MM-dd'T'HH:mm"); } catch { return ''; } })() : ''}
-                onChange={(e) => updateField('next_contact_date' as any, e.target.value ? new Date(e.target.value).toISOString() : '')}
-              />
-              <p className="text-[10px] text-muted-foreground">Agende quando entrar em contato novamente com este cliente</p>
+              <p className="text-[10px] text-muted-foreground">Defina a ação e quando ela deve aparecer na sua fila de atendimento.</p>
             </div>
 
             {/* Origem da Campanha */}

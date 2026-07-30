@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Sparkles, Send, Phone, Calendar, AlertCircle, Trophy, Heart, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { differenceInDays, parseISO } from 'date-fns';
+import { differenceInDays, isBefore, isSameDay, parseISO, startOfDay } from 'date-fns';
 import type { Contact } from '@/hooks/useContacts';
 
 interface Props {
@@ -34,8 +34,34 @@ function computeSuggestion(c: Contact): Suggestion {
   const sinceContact = daysSince(c.ultimo_contato) ?? daysSince(c.created_at);
   const sinceCreated = daysSince(c.created_at);
 
+  // Ação explicitamente planejada pelo usuário sempre vence sugestões genéricas.
+  if (c.next_action_date) {
+    try {
+      const actionDate = parseISO(c.next_action_date);
+      const today = startOfDay(new Date());
+      if (isBefore(startOfDay(actionDate), today)) {
+        return {
+          id: 'acao_atrasada',
+          title: c.next_action_text || 'Executar ação atrasada',
+          reason: 'Esta ação já venceu. Resolva agora ou reagende com uma nova data.',
+          icon: AlertCircle,
+          tone: 'urgent',
+        };
+      }
+      if (isSameDay(actionDate, new Date())) {
+        return {
+          id: 'acao_hoje',
+          title: c.next_action_text || 'Executar ação de hoje',
+          reason: 'Esta é a próxima ação planejada para hoje.',
+          icon: Calendar,
+          tone: 'warm',
+        };
+      }
+    } catch { /* data inválida: segue para a regra do funil */ }
+  }
+
   // Pós-venda / clientes
-  if (stage === 'cliente_ativo' || stage === 'vip') {
+  if (stage === 'cliente_ativo' || stage === 'pos_venda' || stage === 'fechado' || stage === 'vip') {
     const sincePurchase = daysSince(c.last_purchase_date);
     if (sincePurchase != null && sincePurchase > 60) {
       return { id: 'reativar', title: 'Reativar cliente', reason: `Sem compras há ${sincePurchase} dias. Envie uma oferta de retorno.`, icon: Heart, tone: 'warm' };
@@ -48,7 +74,7 @@ function computeSuggestion(c: Contact): Suggestion {
   }
 
   // Negociação / Proposta
-  if (stage === 'negociacao' || stage === 'proposta') {
+  if (stage === 'negociacao' || stage === 'proposta' || stage === 'proposta_enviada') {
     if (sinceContact != null && sinceContact >= 2) {
       return { id: 'cobrar', title: 'Cobrar resposta', reason: `Proposta enviada e ${sinceContact} dias sem retorno. Faça follow-up agora.`, icon: AlertCircle, tone: 'urgent' };
     }

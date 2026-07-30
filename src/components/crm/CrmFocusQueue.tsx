@@ -160,11 +160,15 @@ export function CrmFocusQueue({
               <Button
                 className="w-full h-11 gap-2 bg-green-600 hover:bg-green-700 text-white"
                 disabled={!phone}
-                onClick={async () => { await onWhatsApp(current); advance(true); }}
+                onClick={async () => { await onWhatsApp(current); }}
               >
                 <MessageCircle className="h-4 w-4" />
-                {phone ? 'WhatsApp inteligente' : 'Sem telefone cadastrado'}
+                {phone ? 'Preparar contato no WhatsApp' : 'Sem telefone cadastrado'}
               </Button>
+
+              <p className="text-[11px] text-muted-foreground text-center">
+                Abrir o WhatsApp não conclui o atendimento. Confirme abaixo somente depois de tratar o cliente.
+              </p>
 
               <div className="grid grid-cols-2 gap-2">
                 <Button
