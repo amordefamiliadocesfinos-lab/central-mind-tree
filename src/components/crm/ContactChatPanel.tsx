@@ -224,7 +224,7 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
           </Button>
         </div>
         <p className="text-[10px] text-muted-foreground text-center">
-          Enviado pelo WhatsApp · aparece no Atendimento e no histórico do contato.
+          Enter envia · Shift+Enter quebra linha · enviado pelo WhatsApp e registrado no Atendimento.
         </p>
 
       </div>
