@@ -143,6 +143,28 @@ export default function ContatosInbox() {
     loadOpenConvs();
   }, []);
 
+  // Realtime: nova mensagem atualiza preview/ordenação sem recarregar a página
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const refresh = () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(() => {
+        load();
+        loadOpenConvs();
+      }, 600);
+    };
+    const channel = supabase
+      .channel('crm-inbox-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'service_messages' }, refresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'service_conversations' }, refresh)
+      .subscribe();
+    return () => {
+      if (timer) clearTimeout(timer);
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return items;
