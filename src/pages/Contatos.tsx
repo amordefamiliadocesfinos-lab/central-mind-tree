@@ -1026,56 +1026,63 @@ export default function Contatos() {
           </Suspense>
         </div>
 
-        {/* Indicadores do CRM */}
-        <div className="grid grid-cols-4 gap-2">
-          <Card className="p-2.5 text-center border-0 shadow-sm bg-card">
-            <Users className="h-4 w-4 mx-auto text-muted-foreground mb-0.5" />
-            <p className="text-xl font-bold leading-tight">{metrics.total}</p>
-            <p className="text-[10px] text-muted-foreground font-medium">Total de Contatos</p>
-          </Card>
-          <Card className="p-2.5 text-center border-0 shadow-sm bg-green-50 dark:bg-green-950/30">
-            <UserPlus className="h-4 w-4 mx-auto text-green-600 mb-0.5" />
-            <p className="text-xl font-bold text-green-700 dark:text-green-400 leading-tight">{metrics.clientesAtivos}</p>
-            <p className="text-[10px] text-green-600 dark:text-green-500 font-medium">Clientes Ativos</p>
-          </Card>
-          <Card className="p-2.5 text-center border-0 shadow-sm bg-yellow-50 dark:bg-yellow-950/30">
-            <FileText className="h-4 w-4 mx-auto text-yellow-600 mb-0.5" />
-            <p className="text-xl font-bold text-yellow-700 dark:text-yellow-400 leading-tight">{metrics.orcamentos}</p>
-            <p className="text-[10px] text-yellow-600 dark:text-yellow-500 font-medium">Orçamentos</p>
-          </Card>
-          <Card className={cn(
-            "p-2.5 text-center border-0 shadow-sm",
-            metrics.followUpHoje > 0 ? "bg-red-50 dark:bg-red-950/30 ring-1 ring-red-200 dark:ring-red-800" : "bg-muted/50"
-          )}>
-            <CalendarClock className={cn("h-4 w-4 mx-auto mb-0.5", metrics.followUpHoje > 0 ? "text-red-600" : "text-muted-foreground")} />
-            <p className={cn("text-xl font-bold leading-tight", metrics.followUpHoje > 0 ? "text-red-700 dark:text-red-400" : "")}>{metrics.followUpHoje}</p>
-            <p className={cn("text-[10px] font-medium", metrics.followUpHoje > 0 ? "text-red-600 dark:text-red-500" : "text-muted-foreground")}>Follow-up Hoje</p>
-          </Card>
-        </div>
+        {/* Indicadores do CRM — quadro único */}
+        <Card className="p-3 border-border/60 shadow-sm">
+          <div className="grid grid-cols-4 gap-2">
+            <div className="text-center rounded-md p-2">
+              <Users className="h-4 w-4 mx-auto text-muted-foreground mb-0.5" />
+              <p className="text-xl font-bold leading-tight">{metrics.total}</p>
+              <p className="text-[10px] text-muted-foreground font-medium">Total de Contatos</p>
+            </div>
+            <div className="text-center rounded-md p-2">
+              <UserPlus className="h-4 w-4 mx-auto text-green-600 mb-0.5" />
+              <p className="text-xl font-bold text-green-700 dark:text-green-400 leading-tight">{metrics.clientesAtivos}</p>
+              <p className="text-[10px] text-green-600 dark:text-green-500 font-medium">Clientes Ativos</p>
+            </div>
+            <div className="text-center rounded-md p-2">
+              <FileText className="h-4 w-4 mx-auto text-yellow-600 mb-0.5" />
+              <p className="text-xl font-bold text-yellow-700 dark:text-yellow-400 leading-tight">{metrics.orcamentos}</p>
+              <p className="text-[10px] text-yellow-600 dark:text-yellow-500 font-medium">Orçamentos</p>
+            </div>
+            <div className={cn(
+              "text-center rounded-md p-2",
+              metrics.followUpHoje > 0 && "bg-red-50 dark:bg-red-950/30 ring-1 ring-red-200 dark:ring-red-800"
+            )}>
+              <CalendarClock className={cn("h-4 w-4 mx-auto mb-0.5", metrics.followUpHoje > 0 ? "text-red-600" : "text-muted-foreground")} />
+              <p className={cn("text-xl font-bold leading-tight", metrics.followUpHoje > 0 ? "text-red-700 dark:text-red-400" : "")}>{metrics.followUpHoje}</p>
+              <p className={cn("text-[10px] font-medium", metrics.followUpHoje > 0 ? "text-red-600 dark:text-red-500" : "text-muted-foreground")}>Follow-up Hoje</p>
+            </div>
+          </div>
 
-        {/* Indicadores do dia */}
-        <div className="grid grid-cols-4 gap-2">
-          <Card className="p-2 text-center border-0 shadow-sm bg-blue-50/60 dark:bg-blue-950/20">
-            <Users className="h-3.5 w-3.5 mx-auto text-blue-600 mb-0.5" />
-            <p className="text-lg font-bold text-blue-700 dark:text-blue-400 leading-tight">{dailyMetrics.contactsAttended}</p>
-            <p className="text-[9px] text-blue-600 dark:text-blue-500 font-medium">Atendidos hoje</p>
-          </Card>
-          <Card className="p-2 text-center border-0 shadow-sm bg-green-50/60 dark:bg-green-950/20">
-            <MessageCircle className="h-3.5 w-3.5 mx-auto text-green-600 mb-0.5" />
-            <p className="text-lg font-bold text-green-700 dark:text-green-400 leading-tight">{dailyMetrics.messagesSent}</p>
-            <p className="text-[9px] text-green-600 dark:text-green-500 font-medium">Mensagens enviadas</p>
-          </Card>
-          <Card className="p-2 text-center border-0 shadow-sm bg-purple-50/60 dark:bg-purple-950/20">
-            <ArrowRight className="h-3.5 w-3.5 mx-auto text-purple-600 mb-0.5" />
-            <p className="text-lg font-bold text-purple-700 dark:text-purple-400 leading-tight">{dailyMetrics.responsesReceived}</p>
-            <p className="text-[9px] text-purple-600 dark:text-purple-500 font-medium">Respostas recebidas</p>
-          </Card>
-          <Card className="p-2 text-center border-0 shadow-sm bg-emerald-50/60 dark:bg-emerald-950/20">
-            <ShoppingCart className="h-3.5 w-3.5 mx-auto text-emerald-600 mb-0.5" />
-            <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400 leading-tight">{dailyMetrics.ordersGenerated}</p>
-            <p className="text-[9px] text-emerald-600 dark:text-emerald-500 font-medium">Pedidos gerados</p>
-          </Card>
-        </div>
+          <div className="my-2 border-t border-border/50" />
+
+          <div className="flex items-center gap-1 mb-1 px-1">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">Hoje</span>
+          </div>
+          <div className="grid grid-cols-4 gap-2">
+            <div className="text-center p-1.5">
+              <Users className="h-3.5 w-3.5 mx-auto text-blue-600 mb-0.5" />
+              <p className="text-lg font-bold text-blue-700 dark:text-blue-400 leading-tight">{dailyMetrics.contactsAttended}</p>
+              <p className="text-[9px] text-blue-600 dark:text-blue-500 font-medium">Atendidos</p>
+            </div>
+            <div className="text-center p-1.5">
+              <MessageCircle className="h-3.5 w-3.5 mx-auto text-green-600 mb-0.5" />
+              <p className="text-lg font-bold text-green-700 dark:text-green-400 leading-tight">{dailyMetrics.messagesSent}</p>
+              <p className="text-[9px] text-green-600 dark:text-green-500 font-medium">Mensagens enviadas</p>
+            </div>
+            <div className="text-center p-1.5">
+              <ArrowRight className="h-3.5 w-3.5 mx-auto text-purple-600 mb-0.5" />
+              <p className="text-lg font-bold text-purple-700 dark:text-purple-400 leading-tight">{dailyMetrics.responsesReceived}</p>
+              <p className="text-[9px] text-purple-600 dark:text-purple-500 font-medium">Respostas recebidas</p>
+            </div>
+            <div className="text-center p-1.5">
+              <ShoppingCart className="h-3.5 w-3.5 mx-auto text-emerald-600 mb-0.5" />
+              <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400 leading-tight">{dailyMetrics.ordersGenerated}</p>
+              <p className="text-[9px] text-emerald-600 dark:text-emerald-500 font-medium">Pedidos gerados</p>
+            </div>
+          </div>
+        </Card>
+
 
         <CrmAutomationHub
           attentionFilter={attentionFilter}
