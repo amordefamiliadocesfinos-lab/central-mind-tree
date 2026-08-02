@@ -115,6 +115,17 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onB
         </Badge>
 
         <div className="ml-auto flex items-center gap-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 px-2 text-[11px] gap-1 text-muted-foreground"
+            onClick={() => setExpanded(v => !v)}
+            aria-expanded={expanded}
+            aria-label={expanded ? 'Ocultar lista' : 'Mostrar lista completa'}
+          >
+            {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            <span className="hidden sm:inline">{expanded ? 'Ocultar' : 'Ver tudo'}</span>
+          </Button>
           {onBulkDispatch && (
             <>
               {selectionMode ? (
