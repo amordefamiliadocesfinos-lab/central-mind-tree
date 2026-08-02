@@ -1,6 +1,5 @@
 import { useMemo, useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
-import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -104,17 +103,17 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onB
   };
 
   return (
-    <Card className="p-3 border-amber-200 dark:border-amber-800 bg-amber-50/50 dark:bg-amber-950/20">
-      <div className="flex items-center gap-2 mb-2 flex-wrap">
-        <AlertTriangle className="h-4 w-4 text-amber-600" />
-        <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-400">
-          {preFiltered && filterLabel ? `Leads filtrados — ${filterLabel}` : 'Leads que precisam de contato'}
+    <div className="rounded-lg border border-border/60 bg-muted/20 p-2">
+      <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+        <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+        <h3 className="text-xs font-semibold">
+          {preFiltered && filterLabel ? filterLabel : 'Leads que precisam de contato'}
         </h3>
-        <Badge variant="secondary" className="text-[10px] h-5">
+        <Badge variant="secondary" className="text-[10px] h-4 px-1.5">
           {staleLeads.length}
         </Badge>
 
-        <div className="ml-auto flex items-center gap-1.5">
+        <div className="ml-auto flex items-center gap-1">
           {onBulkDispatch && (
             <>
               {selectionMode ? (
@@ -122,25 +121,25 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onB
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-7 text-xs gap-1"
+                    className="h-6 px-2 text-[11px] gap-1"
                     onClick={toggleAll}
                   >
-                    {allSelected ? <CheckSquare className="h-3.5 w-3.5" /> : <Square className="h-3.5 w-3.5" />}
+                    {allSelected ? <CheckSquare className="h-3 w-3" /> : <Square className="h-3 w-3" />}
                     {allSelected ? 'Limpar' : 'Todos'}
                   </Button>
                   <Button
                     size="sm"
-                    className="h-7 text-xs gap-1 bg-green-600 hover:bg-green-700 text-white"
+                    className="h-6 px-2 text-[11px] gap-1 bg-green-600 hover:bg-green-700 text-white"
                     onClick={dispatchSelected}
                     disabled={selectedIds.size === 0}
                   >
-                    <Send className="h-3.5 w-3.5" />
-                    Disparar fila ({selectedIds.size})
+                    <Send className="h-3 w-3" />
+                    Disparar ({selectedIds.size})
                   </Button>
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-7 text-xs"
+                    className="h-6 px-2 text-[11px]"
                     onClick={() => { setSelectionMode(false); setSelectedIds(new Set()); }}
                   >
                     Cancelar
@@ -150,10 +149,10 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onB
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-7 text-xs gap-1"
+                  className="h-6 px-2 text-[11px] gap-1"
                   onClick={() => setSelectionMode(true)}
                 >
-                  <CheckSquare className="h-3.5 w-3.5" />
+                  <CheckSquare className="h-3 w-3" />
                   Selecionar vários
                 </Button>
               )}
@@ -161,9 +160,9 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onB
           )}
         </div>
       </div>
-      <div className="space-y-1.5 max-h-48 overflow-y-auto">
+      <div className="divide-y divide-border/50 max-h-40 overflow-y-auto rounded-md bg-background/60">
         {staleLeads.length === 0 && (
-          <p className="text-xs text-muted-foreground py-2 text-center">
+          <p className="text-[11px] text-muted-foreground py-3 text-center">
             Nenhum lead neste filtro. Tudo em dia por aqui.
           </p>
         )}
@@ -174,8 +173,8 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onB
             <div
               key={contact.id}
               className={cn(
-                'flex items-center justify-between gap-2 rounded-md bg-background/80 px-2.5 py-1.5 text-sm',
-                isSelected && 'ring-2 ring-green-500'
+                'flex items-center gap-2 px-2 py-1 text-[13px]',
+                isSelected && 'bg-green-500/10'
               )}
             >
               {selectionMode && (
@@ -185,48 +184,42 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onB
                   onCheckedChange={() => hasPhone && toggleId(contact.id)}
                 />
               )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-medium truncate">{contact.name}</span>
-                  {getUrgencyLevel && (() => {
-                    const level = getUrgencyLevel(contact);
-                    const display = URGENCY_DISPLAY[level];
-                    if (!display) return null;
-                    return (
-                      <span className={cn('inline-flex items-center rounded-full border px-1 py-0 text-[9px] font-semibold', display.className)}>
-                        {display.emoji}
-                      </span>
-                    );
-                  })()}
-                </div>
-                <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                  <span>{FUNNEL_LABELS[contact.funnel_status] || contact.funnel_status}</span>
-                  <span>•</span>
-                  <span className="flex items-center gap-0.5 text-amber-600 dark:text-amber-400 font-medium">
-                    <Clock className="h-3 w-3" />
-                    {daysSinceContact !== null ? `${daysSinceContact}d sem contato` : 'Nunca contatado'}
-                  </span>
-                </div>
+              <div className="flex-1 min-w-0 flex items-center gap-1.5">
+                {getUrgencyLevel && (() => {
+                  const level = getUrgencyLevel(contact);
+                  const display = URGENCY_DISPLAY[level];
+                  if (!display) return null;
+                  return <span className="text-[10px] leading-none">{display.emoji}</span>;
+                })()}
+                <span className="font-medium truncate">{contact.name}</span>
+                <span className="text-[10px] text-muted-foreground truncate hidden sm:inline">
+                  {FUNNEL_LABELS[contact.funnel_status] || contact.funnel_status}
+                </span>
+                <span className="text-[10px] text-amber-600 dark:text-amber-400 shrink-0 inline-flex items-center gap-0.5">
+                  <Clock className="h-2.5 w-2.5" />
+                  {daysSinceContact !== null ? `${daysSinceContact}d` : 'nunca'}
+                </span>
               </div>
               {!selectionMode && (
-                <div className="flex items-center gap-1 shrink-0">
+                <div className="flex items-center gap-0.5 shrink-0">
                   {hasPhone && onWhatsApp && (
                     <Button
                       size="sm"
-                      className="h-7 text-xs gap-1 bg-green-600 hover:bg-green-700 text-white"
+                      className="h-6 px-2 text-[11px] gap-1 bg-green-600 hover:bg-green-700 text-white"
                       onClick={() => onWhatsApp(contact)}
                     >
                       <MessageCircle className="h-3 w-3" />
-                      Atender agora
+                      <span className="hidden sm:inline">Atender</span>
                     </Button>
                   )}
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-7 text-xs shrink-0"
+                    className="h-6 w-6 p-0"
                     onClick={() => onOpenContact(contact)}
+                    aria-label={`Abrir ${contact.name}`}
                   >
-                    Abrir <ChevronRight className="h-3 w-3 ml-0.5" />
+                    <ChevronRight className="h-3.5 w-3.5" />
                   </Button>
                 </div>
               )}
@@ -234,6 +227,7 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onB
           );
         })}
       </div>
-    </Card>
+    </div>
   );
 }
+
