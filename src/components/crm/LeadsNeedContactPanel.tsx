@@ -29,6 +29,7 @@ const URGENCY_DISPLAY: Record<string, { emoji: string; className: string }> = {
 
 export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onBulkDispatch, getUrgencyLevel, preFiltered, filterLabel }: LeadsNeedContactPanelProps) {
   const [selectionMode, setSelectionMode] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const staleLeads = useMemo(() => {
