@@ -40,6 +40,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Plus,
   Search,
@@ -352,6 +353,7 @@ export default function Contatos() {
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [timelineContact, setTimelineContact] = useState<Contact | null>(null);
   const [tagsManagerOpen, setTagsManagerOpen] = useState(false);
+  const [metricsOpen, setMetricsOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [activitiesOpen, setActivitiesOpen] = useState(false);
   const [activitiesContact, setActivitiesContact] = useState<Contact | null>(null);
