@@ -172,13 +172,13 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onB
           )}
         </div>
       </div>
-      <div className="divide-y divide-border/50 max-h-40 overflow-y-auto rounded-md bg-background/60">
+      <div className={cn('divide-y divide-border/50 rounded-md bg-background/60', expanded && 'max-h-40 overflow-y-auto')}>
         {staleLeads.length === 0 && (
           <p className="text-[11px] text-muted-foreground py-3 text-center">
             Nenhum lead neste filtro. Tudo em dia por aqui.
           </p>
         )}
-        {staleLeads.map(({ contact, daysSinceContact }) => {
+        {(expanded ? staleLeads : staleLeads.slice(0, 3)).map(({ contact, daysSinceContact }) => {
           const hasPhone = !!(contact.whatsapp || contact.mobile || contact.phone);
           const isSelected = selectedIds.has(contact.id);
           return (
