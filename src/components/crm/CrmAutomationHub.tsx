@@ -106,7 +106,7 @@ export function CrmAutomationHub({
   };
 
   return (
-    <Card className="p-3 border-border/60 bg-gradient-to-br from-primary/5 via-background to-background">
+    <Card className="p-2.5 border-border/60 bg-gradient-to-br from-primary/5 via-background to-background">
       {/* Header */}
       <div className="flex items-center gap-2 mb-2 flex-wrap">
         <div className="flex items-center gap-1.5">
@@ -225,12 +225,11 @@ export function CrmAutomationHub({
       </Collapsible>
 
       {/* PASSO 3 — Agir em lote (sempre sobre o mesmo resultado filtrado) */}
-      <div className="mt-3 pt-3 border-t border-border/50" id="crm-leads-need-contact">
-        <div className="flex items-center gap-1.5 mb-1.5">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            Passo 3 — Aja em lote
-          </span>
-        </div>
+      <div className="mt-2 pt-2 border-t border-border/50" id="crm-leads-need-contact">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+          Passo 3 — Aja em lote
+        </span>
+        <div className="mt-1" />
         {leadsPanelSlot}
       </div>
     </Card>
