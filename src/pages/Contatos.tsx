@@ -985,7 +985,7 @@ export default function Contatos() {
   return (
     <div className="min-h-screen pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b px-4 py-3 space-y-3">
+      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b px-4 py-2 space-y-2">
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-xl font-bold flex items-center gap-2">
             <UserPlus className="h-5 w-5 text-primary" />
