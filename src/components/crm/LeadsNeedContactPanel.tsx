@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { AlertTriangle, ChevronRight, Clock, MessageCircle, Send, CheckSquare, Square } from 'lucide-react';
+import { AlertTriangle, ChevronRight, ChevronDown, ChevronUp, Clock, MessageCircle, Send, CheckSquare, Square } from 'lucide-react';
 import { differenceInDays, parseISO } from 'date-fns';
 import type { Contact } from '@/hooks/useContacts';
 
@@ -29,6 +29,7 @@ const URGENCY_DISPLAY: Record<string, { emoji: string; className: string }> = {
 
 export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onBulkDispatch, getUrgencyLevel, preFiltered, filterLabel }: LeadsNeedContactPanelProps) {
   const [selectionMode, setSelectionMode] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const staleLeads = useMemo(() => {
@@ -114,6 +115,17 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onB
         </Badge>
 
         <div className="ml-auto flex items-center gap-1">
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-6 px-2 text-[11px] gap-1 text-muted-foreground"
+            onClick={() => setExpanded(v => !v)}
+            aria-expanded={expanded}
+            aria-label={expanded ? 'Ocultar lista' : 'Mostrar lista completa'}
+          >
+            {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            <span className="hidden sm:inline">{expanded ? 'Ocultar' : 'Ver tudo'}</span>
+          </Button>
           {onBulkDispatch && (
             <>
               {selectionMode ? (
@@ -160,13 +172,13 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onB
           )}
         </div>
       </div>
-      <div className="divide-y divide-border/50 max-h-40 overflow-y-auto rounded-md bg-background/60">
+      <div className={cn('divide-y divide-border/50 rounded-md bg-background/60', expanded && 'max-h-40 overflow-y-auto')}>
         {staleLeads.length === 0 && (
           <p className="text-[11px] text-muted-foreground py-3 text-center">
             Nenhum lead neste filtro. Tudo em dia por aqui.
           </p>
         )}
-        {staleLeads.map(({ contact, daysSinceContact }) => {
+        {(expanded ? staleLeads : staleLeads.slice(0, 3)).map(({ contact, daysSinceContact }) => {
           const hasPhone = !!(contact.whatsapp || contact.mobile || contact.phone);
           const isSelected = selectedIds.has(contact.id);
           return (
