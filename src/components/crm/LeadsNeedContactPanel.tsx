@@ -3,7 +3,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { AlertTriangle, ChevronRight, Clock, MessageCircle, Send, CheckSquare, Square } from 'lucide-react';
+import { AlertTriangle, ChevronRight, ChevronDown, ChevronUp, Clock, MessageCircle, Send, CheckSquare, Square } from 'lucide-react';
 import { differenceInDays, parseISO } from 'date-fns';
 import type { Contact } from '@/hooks/useContacts';
 
