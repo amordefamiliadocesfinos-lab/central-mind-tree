@@ -99,7 +99,7 @@ import { differenceInDays, parseISO, format, isSameDay, isBefore, startOfDay } f
 import { toast } from 'sonner';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { openWhatsApp } from '@/lib/whatsapp';
-import { useWhatsAppWithLog } from '@/hooks/useWhatsAppWithLog';
+import { useWhatsAppWithLog, type WhatsAppOperationalResult } from '@/hooks/useWhatsAppWithLog';
 import { getTodayISO } from '@/lib/dateUtils';
 import { CRM_EVENT_CODES, normalizeCrmStage } from '@/lib/crm/model';
 import { syncCrmNextActionTask } from '@/lib/crm/nextAction';
@@ -306,7 +306,7 @@ export default function Contatos() {
   const { checklistMap, refetchChecklists } = useContactChecklist(contactIds);
   const { dailyMetrics, refetchDaily } = useDailyMetrics();
   const { logAndOpen } = useWhatsAppWithLog();
-  const [recentlyContactedIds, setRecentlyContactedIds] = useState<Set<string>>(new Set());
+  const [recentlyContacted, setRecentlyContacted] = useState<Map<string, Partial<Contact>>>(new Map());
   const [searchQuery, setSearchQuery] = useState('');
   const deferredSearchQuery = useDeferredValue(searchQuery);
 
@@ -378,14 +378,14 @@ export default function Contatos() {
 
   // ── Organismo único: contatos com overlay otimista + inteligência de atenção ──
   const leadsPanelContacts = useMemo(() => {
-    if (recentlyContactedIds.size === 0) return contacts;
+    if (recentlyContacted.size === 0) return contacts;
     const today = getTodayISO();
     return contacts.map(contact => (
-      recentlyContactedIds.has(contact.id)
-        ? { ...contact, ultimo_contato: today }
+      recentlyContacted.has(contact.id)
+        ? { ...contact, ultimo_contato: today, ...recentlyContacted.get(contact.id) }
         : contact
     ));
-  }, [contacts, recentlyContactedIds]);
+  }, [contacts, recentlyContacted]);
 
   // Urgency scoring shared between sort and display
   const tempScore: Record<string, number> = { quente: 30, morno: 20, frio: 10 };
@@ -594,8 +594,8 @@ export default function Contatos() {
 
   const metrics = useMemo(() => {
     const active = contacts.filter(c => c.is_active);
-    const clientesAtivos = active.filter(c => c.contact_type === 'cliente_ativo');
-    const orcamentos = active.filter(c => c.contact_type === 'orcamento');
+    const clientesAtivos = active.filter(c => ['fechado', 'pos_venda'].includes(c.funnel_status));
+    const orcamentos = active.filter(c => c.funnel_status === 'proposta_enviada');
     const followUpHoje = active.filter(c => {
       if (!c.next_contact_date) return false;
       try {
@@ -719,16 +719,23 @@ export default function Contatos() {
   const [focusQueue, setFocusQueue] = useState<Contact[]>([]);
   const [focusQueueOpen, setFocusQueueOpen] = useState(false);
 
-  const markContactedOptimistically = useCallback((contactId: string) => {
+  const markContactedOptimistically = useCallback((contactId: string, patch: Partial<Contact> = {}) => {
     const today = getTodayISO();
-    setRecentlyContactedIds(prev => {
-      const next = new Set(prev);
-      next.add(contactId);
+    setRecentlyContacted(prev => {
+      const next = new Map(prev);
+      next.set(contactId, { ...(next.get(contactId) || {}), ...patch });
       return next;
     });
     markContactTouchedLocal(contactId, today);
     window.dispatchEvent(new CustomEvent('crm:whatsapp-sent', { detail: { contactId } }));
   }, [markContactTouchedLocal]);
+
+  const whatsappPatch = useCallback((result: WhatsAppOperationalResult): Partial<Contact> => ({
+    funnel_status: result.nextStage,
+    next_action_text: 'Verificar resposta do cliente',
+    next_action_date: result.followUpAt,
+    next_contact_date: result.followUpAt,
+  }), []);
 
   const refreshContactSignals = useCallback(() => {
     refreshNoResponse();
@@ -854,8 +861,7 @@ export default function Contatos() {
     }
 
     // Atualização otimista: sai da lista e atualiza contadores imediatamente
-    markContactedOptimistically(contact.id);
-    void logAndOpen({
+    const registered = await logAndOpen({
       contactId: contact.id,
       contactName: contact.name,
       phone,
@@ -863,7 +869,9 @@ export default function Contatos() {
       templateLabel,
       source: 'crm_card',
       skipOpen: true,
-    }).finally(() => setTimeout(refreshContactSignals, 500));
+    });
+    if (registered) markContactedOptimistically(contact.id, whatsappPatch(registered));
+    setTimeout(refreshContactSignals, 500);
 
   };
 
@@ -992,9 +1000,7 @@ export default function Contatos() {
       return;
     }
 
-    markContactedOptimistically(contact.id);
-
-    void logAndOpen({
+    const registered = await logAndOpen({
       contactId: contact.id,
       contactName: contact.name,
       phone,
@@ -1002,10 +1008,12 @@ export default function Contatos() {
       approach,
       source: 'crm_smart_attend',
       skipOpen: true,
-    }).finally(() => setTimeout(refreshContactSignals, 500));
+    });
+    if (registered) markContactedOptimistically(contact.id, whatsappPatch(registered));
+    setTimeout(refreshContactSignals, 500);
 
     toast.success(`⚡ Atendimento inteligente: ${approach}`);
-  }, [getSmartMessage, logAndOpen, markContactedOptimistically, updateContact, refreshContactSignals]);
+  }, [getSmartMessage, logAndOpen, markContactedOptimistically, whatsappPatch, updateContact, refreshContactSignals]);
 
   const handleCreateOrder = useCallback((contact: Contact) => {
     const params = new URLSearchParams({
@@ -1121,7 +1129,7 @@ export default function Contatos() {
           <div className="flex items-center gap-x-3 gap-y-1 flex-wrap rounded-lg border border-border/60 bg-muted/30 px-2.5 py-1.5">
             {[
               { label: 'Contatos', value: metrics.total, tone: 'text-foreground' },
-              { label: 'Ativos', value: metrics.clientesAtivos, tone: 'text-green-600 dark:text-green-400' },
+              { label: 'Clientes', value: metrics.clientesAtivos, tone: 'text-green-600 dark:text-green-400' },
               { label: 'Orçamentos', value: metrics.orcamentos, tone: 'text-yellow-600 dark:text-yellow-400' },
               { label: 'Follow-up hoje', value: metrics.followUpHoje, tone: metrics.followUpHoje > 0 ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground' },
               { label: 'Atendidos', value: dailyMetrics.contactsAttended, tone: 'text-blue-600 dark:text-blue-400', today: true },
@@ -1841,8 +1849,8 @@ export default function Contatos() {
             open={!!bulkDispatchContacts}
             onOpenChange={(open) => { if (!open) setBulkDispatchContacts(null); }}
             contacts={bulkDispatchContacts || []}
-            onFinished={(contact) => {
-              if (contact) markContactedOptimistically(contact.id);
+            onFinished={(contact, result) => {
+              if (contact) markContactedOptimistically(contact.id, result ? whatsappPatch(result) : {});
               refreshContactSignals();
             }}
           />

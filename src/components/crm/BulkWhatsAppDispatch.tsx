@@ -6,13 +6,11 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { MessageCircle, Send, SkipForward, CheckCircle2, X, Users, Plus, Pencil, Trash2, Check } from 'lucide-react';
-import { useWhatsAppWithLog } from '@/hooks/useWhatsAppWithLog';
-import { supabase } from '@/integrations/supabase/client';
+import { useWhatsAppWithLog, type WhatsAppOperationalResult } from '@/hooks/useWhatsAppWithLog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { Contact } from '@/hooks/useContacts';
 import { openWhatsApp } from '@/lib/whatsapp';
-import { getTodayISO } from '@/lib/dateUtils';
 import {
   WHATSAPP_TEMPLATES,
   loadCustomTemplates,
@@ -25,7 +23,7 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   contacts: Contact[];
-  onFinished?: (contact?: Contact) => void;
+  onFinished?: (contact?: Contact, result?: WhatsAppOperationalResult) => void;
 }
 
 const DEFAULT_TEMPLATE =
@@ -151,17 +149,7 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
     }
 
     // Sai da lista e atualiza contadores imediatamente, sem esperar o banco.
-    setSentIds(prev => [...prev, sentContact.id]);
-    onFinished?.(sentContact);
-    advance();
-    setBusy(false);
-
-    void supabase
-      .from('contacts')
-      .update({ ultimo_contato: getTodayISO(), updated_at: new Date().toISOString() })
-      .eq('id', sentContact.id);
-
-    void logAndOpen({
+    const registered = await logAndOpen({
       contactId: sentContact.id,
       contactName: sentContact.name,
       phone,
@@ -169,7 +157,16 @@ export function BulkWhatsAppDispatch({ open, onOpenChange, contacts, onFinished 
       templateLabel: hasAttachments ? `Disparo em fila · ${attachments.length} anexo(s)` : 'Disparo em fila',
       source: 'crm_card',
       skipOpen: true,
-    }).then(() => onFinished?.()).catch(() => onFinished?.());
+    });
+    if (!registered) {
+      setBusy(false);
+      return;
+    }
+
+    setSentIds(prev => [...prev, sentContact.id]);
+    onFinished?.(sentContact, registered);
+    advance();
+    setBusy(false);
   };
 
 

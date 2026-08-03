@@ -140,9 +140,8 @@ export function useContacts() {
           ...contact,
           funnel_status: normalizeCrmStage(contact.funnel_status),
         })) as unknown as Contact[];
-        // Libera a primeira página imediatamente e incorpora as demais em lotes.
+        // Mantém os dados parciais em memória; a tela só libera após a base completa.
         setContacts(normalized);
-        if (from === 0) setLoading(false);
         if (data.length < PAGE) break;
         from += PAGE;
       }
