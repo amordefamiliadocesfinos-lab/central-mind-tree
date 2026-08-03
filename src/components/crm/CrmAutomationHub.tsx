@@ -106,9 +106,9 @@ export function CrmAutomationHub({
   };
 
   return (
-    <Card className="p-2.5 border-border/60 bg-gradient-to-br from-primary/5 via-background to-background">
+    <Card className="p-2 border-border/60 bg-gradient-to-br from-primary/5 via-background to-background">
       {/* Header */}
-      <div className="flex items-center gap-2 mb-2 flex-wrap">
+      <div className="flex items-center gap-2 mb-1.5 flex-wrap">
         <div className="flex items-center gap-1.5">
           <div className="h-6 w-6 rounded-md bg-primary/10 flex items-center justify-center">
             <Zap className="h-3.5 w-3.5 text-primary" />
@@ -135,7 +135,7 @@ export function CrmAutomationHub({
 
       {/* Guide */}
       {attentionFilter === 'all' && activeFilterCount === 0 && (
-        <p className="text-[11px] text-muted-foreground mb-2">
+        <p className="hidden text-[10px] text-muted-foreground mb-1.5 lg:block">
           <span className="font-semibold text-foreground">1.</span> Escolha o que precisa de atenção
           <span className="mx-1.5 opacity-40">→</span>
           <span className="font-semibold text-foreground">2.</span> Refine se quiser
@@ -145,7 +145,7 @@ export function CrmAutomationHub({
       )}
 
       {/* PASSO 1 — Diagnóstico */}
-      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
+      <div className="flex items-center gap-1.5 overflow-x-auto -mx-1 px-1">
         <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground shrink-0 mr-1">
           Passo 1
         </span>
@@ -160,7 +160,7 @@ export function CrmAutomationHub({
               size="sm"
               onClick={() => applyChip(chip.key)}
               className={cn(
-                'h-8 shrink-0 gap-1.5 text-xs font-semibold border transition-all',
+                'h-7 shrink-0 gap-1 text-[11px] font-semibold border transition-all',
                 isActive ? chip.toneActive : chip.tone,
                 count === 0 && !isActive && 'opacity-50',
               )}
@@ -178,6 +178,16 @@ export function CrmAutomationHub({
             </Button>
           );
         })}
+        {onStartQueue && queue.length > 0 && (
+          <Button
+            size="sm"
+            className="ml-auto h-7 shrink-0 gap-1.5 px-2.5 text-[11px] font-semibold"
+            onClick={() => onStartQueue(queue)}
+          >
+            <PlayCircle className="h-3.5 w-3.5" />
+            Tratar fila ({queue.length})
+          </Button>
+        )}
       </div>
 
       {/* Resultado unificado — o filtro rege todas as visões */}
@@ -188,20 +198,8 @@ export function CrmAutomationHub({
         </p>
       )}
 
-      {/* Modo Fila — tratar um lead por vez */}
-      {onStartQueue && queue.length > 0 && (
-        <Button
-          size="sm"
-          className="mt-2 w-full h-9 gap-2 text-xs font-semibold"
-          onClick={() => onStartQueue(queue)}
-        >
-          <PlayCircle className="h-4 w-4" />
-          Começar — tratar {queue.length} lead{queue.length > 1 ? 's' : ''} um por vez
-        </Button>
-      )}
-
       {/* PASSO 2 — Refinar (collapsible) */}
-      <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen} className="mt-2">
+      <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen} className="mt-1.5">
         <div className="flex items-center gap-1.5">
           <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground shrink-0">
             Passo 2
@@ -219,17 +217,17 @@ export function CrmAutomationHub({
             </Badge>
           )}
         </div>
-        <CollapsibleContent className="pt-2">
+        <CollapsibleContent className="pt-1.5">
           {filtersSlot}
         </CollapsibleContent>
       </Collapsible>
 
       {/* PASSO 3 — Agir em lote (sempre sobre o mesmo resultado filtrado) */}
-      <div className="mt-2 pt-2 border-t border-border/50" id="crm-leads-need-contact">
+      <div className="mt-1.5 pt-1.5 border-t border-border/50" id="crm-leads-need-contact">
         <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
           Passo 3 — Aja em lote
         </span>
-        <div className="mt-1" />
+        <div className="mt-0.5" />
         {leadsPanelSlot}
       </div>
     </Card>

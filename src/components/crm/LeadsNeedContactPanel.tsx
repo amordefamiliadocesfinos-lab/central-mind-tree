@@ -105,8 +105,8 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onB
   };
 
   return (
-    <div className="rounded-lg border border-border/60 bg-muted/20 p-2">
-      <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+    <div className="rounded-md border border-border/60 bg-muted/20 p-1.5">
+      <div className="flex items-center gap-1.5 mb-1 flex-wrap">
         <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
         <h3 className="text-xs font-semibold">
           {preFiltered && filterLabel ? filterLabel : 'Leads que precisam de contato'}
@@ -179,7 +179,7 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onB
             Nenhum lead neste filtro. Tudo em dia por aqui.
           </p>
         )}
-        {(expanded ? staleLeads : staleLeads.slice(0, 3)).map(({ contact, daysSinceContact }) => {
+        {(expanded ? staleLeads : staleLeads.slice(0, 1)).map(({ contact, daysSinceContact }) => {
           const hasPhone = !!(contact.whatsapp || contact.mobile || contact.phone);
           const isSelected = selectedIds.has(contact.id);
           const reason = getUrgencyReason?.(contact);
@@ -187,7 +187,7 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onB
             <div
               key={contact.id}
               className={cn(
-                'flex items-center gap-2 px-2 py-1 text-[13px]',
+                'flex items-center gap-2 px-2 py-0.5 text-[12px] min-h-7',
                 isSelected && 'bg-green-500/10'
               )}
             >

@@ -1106,36 +1106,36 @@ export default function Contatos() {
   return (
     <div className="min-h-screen pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b px-4 py-2 space-y-2">
+      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b px-3 py-1.5 space-y-1.5">
         <div className="flex items-center justify-between gap-3">
-          <h1 className="text-xl font-bold flex items-center gap-2">
-            <UserPlus className="h-5 w-5 text-primary" />
+          <h1 className="text-lg font-bold flex items-center gap-1.5">
+            <UserPlus className="h-4 w-4 text-primary" />
             Contatos
           </h1>
           <div className="flex items-center gap-2">
             <Link to="/contatos/tarefas">
-              <Button variant="outline" size="sm" className="gap-1">
+              <Button variant="outline" size="sm" className="h-8 gap-1 px-2.5">
                 <CalendarClock className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Tarefas agendadas</span>
                 <span className="sm:hidden">Tarefas</span>
               </Button>
             </Link>
             <Link to="/contatos/inbox">
-              <Button variant="outline" size="sm" className="gap-1">
+              <Button variant="outline" size="sm" className="h-8 gap-1 px-2.5">
                 <MessageCircle className="h-3.5 w-3.5" />
                 <span className="hidden sm:inline">Caixa de entrada</span>
                 <span className="sm:hidden">Inbox</span>
               </Button>
             </Link>
-            <Button variant="outline" size="sm" onClick={() => setTagsManagerOpen(true)}>
+            <Button variant="outline" size="sm" className="h-8 px-2.5" onClick={() => setTagsManagerOpen(true)}>
               <Tag className="h-3.5 w-3.5 mr-1" />
               Tags
             </Button>
-            <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+            <Button variant="outline" size="sm" className="h-8 px-2.5" onClick={() => setImportOpen(true)}>
               <Users className="h-3.5 w-3.5 mr-1" />
               Importar Leads
             </Button>
-            <Button onClick={() => { void openContactForm(); }} size="sm" className="bg-green-600 hover:bg-green-700 shadow-sm">
+            <Button onClick={() => { void openContactForm(); }} size="sm" className="h-8 bg-green-600 hover:bg-green-700 shadow-sm">
               <Plus className="h-4 w-4 mr-1" />
               Novo
             </Button>
@@ -1144,7 +1144,7 @@ export default function Contatos() {
 
         {/* Indicadores — faixa única compacta */}
         <Collapsible open={metricsOpen} onOpenChange={setMetricsOpen}>
-          <div className="flex items-center gap-x-3 gap-y-1 flex-wrap rounded-lg border border-border/60 bg-muted/30 px-2.5 py-1.5">
+          <div className="flex items-center gap-x-2.5 gap-y-1 flex-wrap rounded-md border border-border/60 bg-muted/30 px-2 py-1">
             {[
               { label: 'Contatos', value: metrics.total, tone: 'text-foreground' },
               { label: 'Clientes', value: metrics.clientesAtivos, tone: 'text-green-600 dark:text-green-400' },
@@ -1157,8 +1157,8 @@ export default function Contatos() {
             ].map((m, i) => (
               <div key={m.label} className="flex items-center gap-1.5">
                 {i === 4 && <span className="h-3.5 w-px bg-border mr-1.5" aria-hidden />}
-                <span className={cn('text-[13px] font-bold leading-none tabular-nums', m.tone)}>{m.value}</span>
-                <span className="text-[10px] text-muted-foreground leading-none">
+                <span className={cn('text-xs font-bold leading-none tabular-nums', m.tone)}>{m.value}</span>
+                <span className="text-[9px] text-muted-foreground leading-none">
                   {m.label}
                   {m.today && <span className="opacity-60"> hoje</span>}
                 </span>
@@ -1355,30 +1355,30 @@ export default function Contatos() {
 
         {/* Ações e visualização */}
         <div className="flex items-center gap-2 justify-end flex-wrap">
-          <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={() => setPosVendaOpen(true)} title="Pós-Venda">
+          <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => setPosVendaOpen(true)} title="Pós-Venda">
             <Heart className="h-4 w-4 text-pink-600" />
             <span className="hidden sm:inline text-xs">Pós-Venda</span>
           </Button>
 
-          <Button variant="outline" size="sm" className="h-9 gap-1.5" onClick={() => setAutomationsOpen(true)} title="Automações do Funil">
+          <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => setAutomationsOpen(true)} title="Automações do Funil">
             <Zap className="h-4 w-4 text-primary" />
             <span className="hidden sm:inline text-xs">Automações</span>
           </Button>
 
           <div className="flex border rounded-lg overflow-hidden">
-            <Button variant={viewMode === 'today' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 rounded-none border-r" onClick={() => setViewMode('today')} title="Hoje no CRM">
+            <Button variant={viewMode === 'today' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8 rounded-none border-r" onClick={() => setViewMode('today')} title="Hoje no CRM">
               <CalendarClock className="h-4 w-4" />
             </Button>
-            <Button variant={viewMode === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 rounded-none" onClick={() => setViewMode('kanban')} title="Kanban">
+            <Button variant={viewMode === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8 rounded-none" onClick={() => setViewMode('kanban')} title="Kanban">
               <LayoutGrid className="h-4 w-4" />
             </Button>
-            <Button variant={viewMode === 'sales_funnel' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 rounded-none border-x" onClick={() => setViewMode('sales_funnel')} title="Funil de Vendas">
+            <Button variant={viewMode === 'sales_funnel' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8 rounded-none border-x" onClick={() => setViewMode('sales_funnel')} title="Funil de Vendas">
               <Filter className="h-4 w-4" />
             </Button>
-            <Button variant={viewMode === 'funnel' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 rounded-none border-r" onClick={() => setViewMode('funnel')} title="Análise Funil">
+            <Button variant={viewMode === 'funnel' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8 rounded-none border-r" onClick={() => setViewMode('funnel')} title="Análise Funil">
               <Triangle className="h-4 w-4" />
             </Button>
-            <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 rounded-none" onClick={() => setViewMode('list')} title="Lista">
+            <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8 rounded-none" onClick={() => setViewMode('list')} title="Lista">
               <List className="h-4 w-4" />
             </Button>
           </div>
@@ -1386,7 +1386,7 @@ export default function Contatos() {
       </div>
 
       {/* Content */}
-      <div className="p-4">
+      <div className="p-3">
         {loading ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             {[...Array(6)].map((_, i) => (
