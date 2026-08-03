@@ -3,7 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { openWhatsApp } from '@/lib/whatsapp';
 import { getTodayISO } from '@/lib/dateUtils';
-import { CRM_EVENT_CODES } from '@/lib/crm/model';
+import { CRM_EVENT_CODES, normalizeCrmStage } from '@/lib/crm/model';
+import { syncCrmNextActionTask } from '@/lib/crm/nextAction';
 
 export interface WhatsAppLogOptions {
   contactId: string;
@@ -13,50 +14,67 @@ export interface WhatsAppLogOptions {
   templateLabel?: string;
   approach?: string;
   source: 'crm_card' | 'crm_smart_attend' | 'crm_follow_up' | 'atendimento' | 'dashboard';
-  /** Não abre o WhatsApp aqui — quem chamou já cuidou do envio (ex.: shareToWhatsApp com anexos). */
+  /** O chamador já abriu o WhatsApp, por exemplo ao compartilhar anexos. */
   skipOpen?: boolean;
 }
 
+export interface WhatsAppOperationalResult {
+  nextStage: string;
+  followUpAt: string;
+}
+
 /**
- * Abre WhatsApp e registra automaticamente em:
- * 1. contact_history (timeline do contato)
- * 2. service_conversations (módulo Atendimento Digital)
- *
- * Usar em TODO botão "WhatsApp" do sistema para garantir rastreabilidade.
+ * Executa o ciclo operacional de um contato iniciado pelo WhatsApp:
+ * abre o canal, registra a interação, atualiza o funil e agenda o retorno.
  */
 export function useWhatsAppWithLog() {
   const logAndOpen = useCallback(async (opts: WhatsAppLogOptions) => {
-    const {
-      contactId,
-      contactName,
-      phone,
-      message,
-      templateLabel,
-      approach,
-      source,
-      skipOpen,
-    } = opts;
+    const { contactId, contactName, phone, message, templateLabel, approach, source, skipOpen } = opts;
 
     if (!phone) {
       toast.error('Contato sem telefone/WhatsApp cadastrado');
       return false;
     }
 
+    // Não altera o CRM se o navegador nem sequer conseguiu abrir o WhatsApp.
+    if (!skipOpen) {
+      const opened = openWhatsApp(phone, message);
+      if (!opened) {
+        toast.error('WhatsApp bloqueado pelo navegador. Libere pop-ups e tente novamente.');
+        return false;
+      }
+    }
+
     const now = new Date().toISOString();
+    const followUp = new Date();
+    followUp.setDate(followUp.getDate() + 2);
+    followUp.setHours(9, 0, 0, 0);
+    const followUpAt = followUp.toISOString();
     const preview = message
-      ? message.length > 120
-        ? message.slice(0, 120) + '…'
-        : message
+      ? message.length > 120 ? `${message.slice(0, 120)}…` : message
       : '(sem mensagem prévia)';
 
-    // 1. Registra no contact_history
+    const { data: contact, error: contactError } = await supabase
+      .from('contacts')
+      .select('funnel_status')
+      .eq('id', contactId)
+      .maybeSingle();
+    if (contactError || !contact) {
+      toast.error('Não foi possível atualizar o atendimento no CRM');
+      return false;
+    }
+
+    const previousStage = normalizeCrmStage(contact.funnel_status);
+    const nextStage = ['novo_lead', 'cadencia'].includes(previousStage)
+      ? 'contato_realizado'
+      : previousStage;
     const historyDesc = templateLabel
       ? `📤 WhatsApp enviado · ${templateLabel} · "${preview}"`
       : approach
         ? `⚡ Atendimento inteligente · ${approach} · "${preview}"`
         : `📤 Mensagem iniciada via WhatsApp · "${preview}"`;
 
-    const { error: historyError } = await supabase.from('contact_history').insert({
+    const historyRows = [{
       contact_id: contactId,
       event_type: 'whatsapp',
       interaction_type: 'whatsapp',
@@ -64,47 +82,71 @@ export function useWhatsAppWithLog() {
       event_metadata: { source, template_label: templateLabel || null },
       description: historyDesc,
       interaction_date: now,
-    });
-
-    if (historyError) {
-      console.error('Erro ao registrar no histórico:', historyError);
+    }];
+    if (nextStage !== previousStage) {
+      historyRows.push({
+        contact_id: contactId,
+        event_type: 'stage_change',
+        interaction_type: 'sistema',
+        event_code: CRM_EVENT_CODES.STAGE_CHANGED,
+        event_metadata: { source, old_stage: previousStage, new_stage: nextStage },
+        description: `Movido automaticamente de "${previousStage}" para "${nextStage}" após contato por WhatsApp`,
+        interaction_date: now,
+      });
     }
 
-    // 2. Atualiza ultimo_contato no contato
-    await supabase
-      .from('contacts')
-      .update({ ultimo_contato: getTodayISO(), updated_at: now })
-      .eq('id', contactId);
+    const { error: historyError } = await supabase.from('contact_history').insert(historyRows);
+    if (historyError) console.error('Erro ao registrar no histórico:', historyError);
 
-    // 3. Garante conversa no Atendimento Digital (service_conversations)
-    // Busca conversa existente
+    const { error: contactUpdateError } = await supabase
+      .from('contacts')
+      .update({
+        ultimo_contato: getTodayISO(),
+        funnel_status: nextStage,
+        next_action_text: 'Verificar resposta do cliente',
+        next_action_date: followUpAt,
+        next_contact_date: followUpAt,
+        updated_at: now,
+      })
+      .eq('id', contactId);
+    if (contactUpdateError) {
+      toast.error('Mensagem aberta, mas o CRM não conseguiu atualizar o contato');
+      return false;
+    }
+
+    try {
+      await syncCrmNextActionTask(contactId, {
+        title: 'Verificar resposta do cliente',
+        dueAt: followUpAt,
+      });
+    } catch (error) {
+      console.error('Contato atualizado, mas a tarefa de follow-up falhou:', error);
+      toast.warning('Contato atualizado, mas revise a tarefa de follow-up');
+    }
+
     const { data: existingConv } = await supabase
       .from('service_conversations')
       .select('id')
       .eq('contact_id', contactId)
+      .order('last_message_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
-    if (existingConv?.id) {
-      // Atualiza última mensagem preview
-      await supabase
-        .from('service_conversations')
-        .update({
-          last_message_preview: preview,
-          last_message_at: now,
-          updated_at: now,
-        })
-        .eq('id', existingConv.id);
+    const conversationState = {
+      last_message_preview: preview,
+      last_message_at: now,
+      last_outbound_at: now,
+      funnel_stage: nextStage,
+      attendance_state: 'aguardando_cliente',
+      needs_reply: false,
+      return_at: followUpAt,
+      updated_at: now,
+    };
 
-      // Insere a mensagem em service_messages como "sent"
-      await supabase.from('service_messages').insert({
-        conversation_id: existingConv.id,
-        sender: 'business',
-        content: message || 'Mensagem iniciada via WhatsApp',
-        message_type: 'text',
-        created_at: now,
-      });
+    let conversationId = existingConv?.id || null;
+    if (conversationId) {
+      await supabase.from('service_conversations').update(conversationState).eq('id', conversationId);
     } else {
-      // Cria nova conversa vinculada ao contato
       const { data: newConv } = await supabase
         .from('service_conversations')
         .insert({
@@ -112,35 +154,28 @@ export function useWhatsAppWithLog() {
           contact_name: contactName,
           contact_handle: phone,
           status: 'open',
-          funnel_stage: 'novo_lead',
-          last_message_preview: preview,
-          last_message_at: now,
+          ...conversationState,
         })
-        .select()
+        .select('id')
         .single();
-
-      if (newConv?.id) {
-        await supabase.from('service_messages').insert({
-          conversation_id: newConv.id,
-          sender: 'business',
-          content: message || 'Mensagem iniciada via WhatsApp',
-          message_type: 'text',
-          created_at: now,
-        });
-      }
+      conversationId = newConv?.id || null;
     }
 
-    // 4. Abre WhatsApp (a menos que o chamador já tenha disparado o compartilhamento)
-    if (skipOpen) {
-      toast.success('Registrado no histórico e no Atendimento');
-      return true;
-    }
-    const opened = openWhatsApp(phone, message);
-    if (opened) {
-      toast.success('WhatsApp aberto · Registrado no histórico e no Atendimento');
+    if (conversationId) {
+      await supabase.from('service_messages').insert({
+        conversation_id: conversationId,
+        sender: 'agent',
+        content: message || 'Mensagem iniciada via WhatsApp',
+        message_type: 'text',
+        direction: 'outbound',
+        delivery_status: 'sent',
+        source: 'crm',
+        created_at: now,
+      });
     }
 
-    return opened;
+    toast.success('Atendimento registrado · follow-up em 2 dias');
+    return { nextStage, followUpAt } satisfies WhatsAppOperationalResult;
   }, []);
 
   return { logAndOpen };
