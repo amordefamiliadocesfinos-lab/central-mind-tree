@@ -1,5 +1,3 @@
--- Etapa 1 do CRM: vocabulário único, eventos estruturados e tarefa oficial.
-
 UPDATE public.contacts SET funnel_status = 'novo_lead' WHERE funnel_status IN ('novo', 'lead');
 UPDATE public.contacts SET funnel_status = 'contato_realizado' WHERE funnel_status IN ('em_contato', 'contato_feito', 'qualificado');
 UPDATE public.contacts SET funnel_status = 'proposta_enviada' WHERE funnel_status IN ('proposta', 'orcamento');
@@ -16,9 +14,7 @@ ALTER TABLE public.contact_history
   ADD COLUMN IF NOT EXISTS event_code text,
   ADD COLUMN IF NOT EXISTS event_metadata jsonb NOT NULL DEFAULT '{}'::jsonb;
 
-ALTER TABLE public.tasks
-  ADD COLUMN IF NOT EXISTS source text;
-
+ALTER TABLE public.tasks ADD COLUMN IF NOT EXISTS source text;
 ALTER TABLE public.service_conversations
   ADD COLUMN IF NOT EXISTS assigned_to uuid REFERENCES public.app_users(id) ON DELETE SET NULL;
 
@@ -35,9 +31,7 @@ WHERE event_code IS NULL;
 
 DO $$
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'contacts_funnel_status_canonical'
-  ) THEN
+  IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'contacts_funnel_status_canonical') THEN
     ALTER TABLE public.contacts
       ADD CONSTRAINT contacts_funnel_status_canonical
       CHECK (funnel_status IN ('novo_lead', 'contato_realizado', 'proposta_enviada', 'negociacao', 'fechado', 'pos_venda', 'cadencia', 'perdido'))

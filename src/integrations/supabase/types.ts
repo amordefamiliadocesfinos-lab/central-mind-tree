@@ -4128,6 +4128,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "service_conversations_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "service_conversations_platform_id_fkey"
             columns: ["platform_id"]
             isOneToOne: false
