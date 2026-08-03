@@ -70,6 +70,8 @@ import {
   CalendarClock,
   ChevronUp,
   ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   AlertTriangle,
   Thermometer,
   Phone,
@@ -230,6 +232,7 @@ function formatCurrencyShort(v?: number | null) {
 
 type SortField = 'name' | 'valor_estimado' | 'ultimo_contato' | 'created_at' | 'temperatura' | 'score';
 type SortDir = 'asc' | 'desc';
+const LIST_PAGE_SIZE = 50;
 
 function VirtualContactColumn({
   contacts,
@@ -308,6 +311,7 @@ export default function Contatos() {
   const { logAndOpen } = useWhatsAppWithLog();
   const [recentlyContacted, setRecentlyContacted] = useState<Map<string, Partial<Contact>>>(new Map());
   const [searchQuery, setSearchQuery] = useState('');
+  const [listPage, setListPage] = useState(1);
   const deferredSearchQuery = useDeferredValue(searchQuery);
 
   const openContactForm = useCallback(async (contact?: Contact | null) => {
@@ -546,6 +550,20 @@ export default function Contatos() {
       return sortDir === 'asc' ? cmp : -cmp;
     });
   }, [filteredContacts, sortField, sortDir, getScore]);
+
+  const listPageCount = Math.max(1, Math.ceil(sortedContacts.length / LIST_PAGE_SIZE));
+  const paginatedContacts = useMemo(() => {
+    const start = (listPage - 1) * LIST_PAGE_SIZE;
+    return sortedContacts.slice(start, start + LIST_PAGE_SIZE);
+  }, [sortedContacts, listPage]);
+
+  useEffect(() => {
+    setListPage(1);
+  }, [filteredContacts, sortField, sortDir]);
+
+  useEffect(() => {
+    if (listPage > listPageCount) setListPage(listPageCount);
+  }, [listPage, listPageCount]);
 
 
   const groupedByStage = useMemo(() => {
@@ -1526,7 +1544,7 @@ export default function Contatos() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  sortedContacts.map((contact) => {
+                  paginatedContacts.map((contact) => {
                     const alert = getUltimoContatoAlert(contact.ultimo_contato);
                     const contactTags = getTagsForContact(contact.id);
                     return (
@@ -1748,6 +1766,40 @@ export default function Contatos() {
                 )}
               </TableBody>
             </Table>
+            {sortedContacts.length > 0 && (
+              <div className="flex flex-col gap-2 border-t bg-muted/20 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs text-muted-foreground">
+                  Exibindo {(listPage - 1) * LIST_PAGE_SIZE + 1}–{Math.min(listPage * LIST_PAGE_SIZE, sortedContacts.length)} de {sortedContacts.length} contatos
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    disabled={listPage === 1}
+                    onClick={() => setListPage(page => Math.max(1, page - 1))}
+                  >
+                    <ChevronLeft className="mr-1 h-4 w-4" />
+                    Anterior
+                  </Button>
+                  <span className="min-w-20 text-center text-xs font-medium">
+                    Página {listPage} de {listPageCount}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    disabled={listPage === listPageCount}
+                    onClick={() => setListPage(page => Math.min(listPageCount, page + 1))}
+                  >
+                    Próxima
+                    <ChevronRight className="ml-1 h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </Card>
         )}
       </div>
