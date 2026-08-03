@@ -6,6 +6,7 @@ import { Loader2, Send, Sparkles, MessageCircle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { normalizeCrmStage } from '@/lib/crm/model';
 
 interface Message {
   id: string;
@@ -23,11 +24,12 @@ interface ContactChatPanelProps {
   contactName?: string | null;
   contactHandle?: string | null;
   contactAvatar?: string | null;
+  funnelStage?: string | null;
   /** Classe de altura do painel. Padrão: h-[60vh] min-h-[400px] */
   heightClassName?: string;
 }
 
-export function ContactChatPanel({ contactId, contactName, contactHandle, contactAvatar, heightClassName }: ContactChatPanelProps) {
+export function ContactChatPanel({ contactId, contactName, contactHandle, contactAvatar, funnelStage, heightClassName }: ContactChatPanelProps) {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -43,7 +45,7 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
       setLoading(true);
       const { data: existing } = await supabase
         .from('service_conversations')
-        .select('id')
+        .select('id,funnel_stage')
         .eq('contact_id', contactId)
         .order('last_message_at', { ascending: false })
         .limit(1)
@@ -51,6 +53,13 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
       if (cancelled) return;
       if (existing?.id) {
         setConversationId(existing.id);
+        const canonicalStage = normalizeCrmStage(funnelStage);
+        if (existing.funnel_stage !== canonicalStage) {
+          await supabase
+            .from('service_conversations')
+            .update({ funnel_stage: canonicalStage })
+            .eq('id', existing.id);
+        }
       } else {
         const { data: created, error } = await supabase
           .from('service_conversations')
@@ -60,7 +69,7 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
             contact_handle: contactHandle || null,
             contact_avatar_url: contactAvatar || null,
             status: 'open',
-            funnel_stage: 'lead',
+            funnel_stage: normalizeCrmStage(funnelStage),
           })
           .select('id')
           .single();
@@ -73,7 +82,7 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
       }
     })();
     return () => { cancelled = true; };
-  }, [contactId, contactName, contactHandle, contactAvatar]);
+  }, [contactId, contactName, contactHandle, contactAvatar, funnelStage]);
 
   // Carrega mensagens e realtime
   useEffect(() => {
@@ -152,7 +161,7 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
           query: {
             conversation_history: recent,
             platform: 'crm',
-            funnel_stage: 'lead',
+            funnel_stage: normalizeCrmStage(funnelStage),
             contact_name: contactName || 'Cliente',
           },
         },

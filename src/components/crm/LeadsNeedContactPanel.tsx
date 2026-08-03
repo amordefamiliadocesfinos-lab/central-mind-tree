@@ -15,6 +15,7 @@ interface LeadsNeedContactPanelProps {
   onWhatsApp?: (contact: Contact) => void;
   onBulkDispatch?: (contacts: Contact[]) => void;
   getUrgencyLevel?: (contact: Contact) => string;
+  getUrgencyReason?: (contact: Contact) => string | null;
   /** Quando true, a lista já vem filtrada pelo Centro de Automação (não aplicar regra própria) */
   preFiltered?: boolean;
   /** Rótulo do filtro ativo, exibido no título */
@@ -27,7 +28,7 @@ const URGENCY_DISPLAY: Record<string, { emoji: string; className: string }> = {
   baixo: { emoji: '🔵', className: 'bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-950/40 dark:text-sky-400 dark:border-sky-700' },
 };
 
-export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onBulkDispatch, getUrgencyLevel, preFiltered, filterLabel }: LeadsNeedContactPanelProps) {
+export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onBulkDispatch, getUrgencyLevel, getUrgencyReason, preFiltered, filterLabel }: LeadsNeedContactPanelProps) {
   const [selectionMode, setSelectionMode] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -181,6 +182,7 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onB
         {(expanded ? staleLeads : staleLeads.slice(0, 3)).map(({ contact, daysSinceContact }) => {
           const hasPhone = !!(contact.whatsapp || contact.mobile || contact.phone);
           const isSelected = selectedIds.has(contact.id);
+          const reason = getUrgencyReason?.(contact);
           return (
             <div
               key={contact.id}
@@ -196,7 +198,7 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onB
                   onCheckedChange={() => hasPhone && toggleId(contact.id)}
                 />
               )}
-              <div className="flex-1 min-w-0 flex items-center gap-1.5">
+              <div className="flex-1 min-w-0 flex items-center gap-1.5" title={reason || undefined}>
                 {getUrgencyLevel && (() => {
                   const level = getUrgencyLevel(contact);
                   const display = URGENCY_DISPLAY[level];
@@ -211,6 +213,7 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onB
                   <Clock className="h-2.5 w-2.5" />
                   {daysSinceContact !== null ? `${daysSinceContact}d` : 'nunca'}
                 </span>
+                {reason && <span className="text-[10px] font-bold text-red-600" aria-label={reason}>!</span>}
               </div>
               {!selectionMode && (
                 <div className="flex items-center gap-0.5 shrink-0">

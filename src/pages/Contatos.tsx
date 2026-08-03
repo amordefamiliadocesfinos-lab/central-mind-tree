@@ -79,7 +79,6 @@ import {
 } from 'lucide-react';
 import { useContacts, Contact } from '@/hooks/useContacts';
 import { useContactHistory } from '@/hooks/useContactHistory';
-import { useContactsWithOrders } from '@/hooks/useContactsWithOrders';
 import { useNoResponseDetection } from '@/hooks/useNoResponseDetection';
 import { useContactChecklist } from '@/hooks/useContactChecklist';
 import { useDailyMetrics } from '@/hooks/useDailyMetrics';
@@ -89,8 +88,8 @@ import { useContactNextTasks } from '@/hooks/useContactNextTasks';
 import { useAllConversationsSummary } from '@/hooks/useAllConversationsSummary';
 import { LeadsNeedContactPanel } from '@/components/crm/LeadsNeedContactPanel';
 import { CrmAutomationHub } from '@/components/crm/CrmAutomationHub';
-import { computeAttention, matchesAttention, ATTENTION_LABELS, type AttentionKey } from '@/lib/crm/attentionFilters';
-import { CrmFocusQueue } from '@/components/crm/CrmFocusQueue';
+import { computeAttention, getUrgencyReason, matchesAttention, ATTENTION_LABELS, type AttentionKey } from '@/lib/crm/attentionFilters';
+import { CrmFocusQueue, type QueueOutcome } from '@/components/crm/CrmFocusQueue';
 import { cn } from '@/lib/utils';
 import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { ContactCard } from '@/components/crm/ContactCard';
@@ -102,6 +101,9 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { openWhatsApp } from '@/lib/whatsapp';
 import { useWhatsAppWithLog } from '@/hooks/useWhatsAppWithLog';
 import { getTodayISO } from '@/lib/dateUtils';
+import { CRM_EVENT_CODES, normalizeCrmStage } from '@/lib/crm/model';
+import { syncCrmNextActionTask } from '@/lib/crm/nextAction';
+import { CrmTodayView } from '@/components/crm/CrmTodayView';
 
 // Lazy-loaded heavy components (dialogs/drawers/views só carregam quando abertos)
 const ContactFormDialog = lazy(() => import('@/components/financial/ContactFormDialog').then(m => ({ default: m.ContactFormDialog })));
@@ -290,8 +292,12 @@ export default function Contatos() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { contacts, loading, createContact, updateContact, markContactTouchedLocal, deleteContact, fetchContacts, fetchContactFull } = useContacts();
   const { addEntry } = useContactHistory();
-  const { getTagsForContact } = useContactTags();
-  const { hasOrders } = useContactsWithOrders();
+  const { tags, getTagsForContact } = useContactTags();
+  const contactsWithOrders = useMemo(
+    () => new Set(contacts.filter(contact => (contact.paid_orders_count || 0) > 0).map(contact => contact.id)),
+    [contacts],
+  );
+  const hasOrders = useCallback((contactId: string) => contactsWithOrders.has(contactId), [contactsWithOrders]);
   const { nextTaskByContact } = useContactNextTasks();
   const { byContact: convoSummaryByContact } = useAllConversationsSummary();
   const { getNoResponseInfo, refreshNoResponse } = useNoResponseDetection();
@@ -339,7 +345,7 @@ export default function Contatos() {
   const [classificationFilter, setClassificationFilter] = useState<string>('all');
   const [originFilter, setOriginFilter] = useState<string>('all');
   const [attentionFilter, setAttentionFilter] = useState<AttentionKey>('all');
-  const [viewMode, setViewMode] = useState<'kanban' | 'funnel' | 'list' | 'sales_funnel'>('kanban');
+  const [viewMode, setViewMode] = useState<'today' | 'kanban' | 'funnel' | 'list' | 'sales_funnel'>('today');
   const [formOpen, setFormOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | undefined>();
   const [detailOpen, setDetailOpen] = useState(false);
@@ -411,13 +417,15 @@ export default function Contatos() {
 
   const getUrgencyLevel = useCallback((contact: Contact): keyof typeof URGENCY_LEVELS => {
     const score = getUrgencyScore(contact);
-    const isHot = contact.temperatura_lead === 'quente';
-    const nrInfo = getNoResponseInfo(contact.id);
-    if (isHot && nrInfo) return 'urgente';
-    if (score >= 100) return 'urgente';
+    if (getUrgencyReason(contact, getNoResponseInfo)) return 'urgente';
     if (score >= 40) return 'medio';
     return 'baixo';
   }, [getUrgencyScore, getNoResponseInfo]);
+
+  const getContactUrgencyReason = useCallback(
+    (contact: Contact) => getUrgencyReason(contact, getNoResponseInfo),
+    [getNoResponseInfo],
+  );
 
   // Priority sort: overdue > hot+today > hot > warm+overdue > warm > cold > rest
   const prioritySortContacts = useCallback((list: Contact[]) => {
@@ -618,13 +626,20 @@ export default function Contatos() {
 
       await updateContact(editingContact.id, data);
 
+      if (newAction !== oldAction || newContact2 !== oldContact) {
+        await syncCrmNextActionTask(editingContact.id, {
+          title: data.next_action_text,
+          dueAt: newAction || newContact2,
+        });
+      }
+
       // Log next_action_date changes
       if (newAction && newAction !== oldAction) {
         const dateStr = (() => { try { return format(parseISO(newAction), "dd/MM 'às' HH:mm"); } catch { return ''; } })();
         const desc = oldAction
           ? `Follow-up atualizado para ${dateStr}`
           : `Follow-up agendado para ${dateStr}`;
-        await addEntry(editingContact.id, 'follow_up', desc, new Date().toISOString());
+        await addEntry(editingContact.id, 'follow_up', desc, new Date().toISOString(), CRM_EVENT_CODES.FOLLOW_UP_SCHEDULED);
       }
 
       // Log next_contact_date changes
@@ -633,12 +648,12 @@ export default function Contatos() {
         const desc = oldContact
           ? `Próximo contato atualizado para ${dateStr}`
           : `Próximo contato agendado para ${dateStr}`;
-        await addEntry(editingContact.id, 'follow_up', desc, new Date().toISOString());
+        await addEntry(editingContact.id, 'follow_up', desc, new Date().toISOString(), CRM_EVENT_CODES.FOLLOW_UP_SCHEDULED);
       }
     } else {
       const newContact = await createContact(data);
       if (newContact?.id) {
-        await addEntry(newContact.id, 'lead_criado', 'Lead criado', new Date().toISOString());
+        await addEntry(newContact.id, 'lead_criado', 'Lead criado', new Date().toISOString(), CRM_EVENT_CODES.LEAD_CREATED);
       }
     }
     setFormOpen(false);
@@ -648,18 +663,30 @@ export default function Contatos() {
   const [lostDialogContact, setLostDialogContact] = useState<Contact | null>(null);
 
   const applyStatusChange = async (contact: Contact, newStatus: string, extra: Partial<Contact> = {}, historyDesc?: string) => {
+    newStatus = normalizeCrmStage(newStatus);
     const oldStage = FUNNEL_STAGES.find(s => s.key === contact.funnel_status);
     const newStage = FUNNEL_STAGES.find(s => s.key === newStatus);
     const suggestedAction = getStageNextAction(newStatus);
     const updates: Partial<Contact> = { funnel_status: newStatus, ...suggestedAction, ...extra };
     if (newStatus === 'fechado' && contact.funnel_status !== 'fechado') {
       updates.converted_at = new Date().toISOString();
-      await addEntry(contact.id, 'conversion', `Negócio Fechado!`, new Date().toISOString());
+      await addEntry(contact.id, 'conversion', 'Negócio fechado!', new Date().toISOString(), CRM_EVENT_CODES.SALE_WON);
       toast.success('🎉 Negócio fechado!');
     } else {
-      await addEntry(contact.id, 'stage_change', historyDesc || `Movido de "${oldStage?.label || contact.funnel_status}" para "${newStage?.label || newStatus}"`, new Date().toISOString());
+      await addEntry(
+        contact.id,
+        'stage_change',
+        historyDesc || `Movido de "${oldStage?.label || contact.funnel_status}" para "${newStage?.label || newStatus}"`,
+        new Date().toISOString(),
+        newStatus === 'perdido' ? CRM_EVENT_CODES.SALE_LOST : CRM_EVENT_CODES.STAGE_CHANGED,
+        { old_stage: contact.funnel_status, new_stage: newStatus },
+      );
     }
     await updateContact(contact.id, updates);
+    await syncCrmNextActionTask(contact.id, {
+      title: updates.next_action_text,
+      dueAt: updates.next_action_date || updates.next_contact_date,
+    });
     if (suggestedAction.next_action_text) {
       toast.success(`Próxima ação criada: ${suggestedAction.next_action_text}`);
     }
@@ -713,21 +740,90 @@ export default function Contatos() {
   const handleQueueSnooze = useCallback(async (contact: Contact, days: number) => {
     const target = new Date();
     target.setDate(target.getDate() + days);
-    const iso = target.toISOString().slice(0, 10);
+    target.setHours(9, 0, 0, 0);
+    const iso = target.toISOString();
     try {
-      await updateContact(contact.id, { next_contact_date: iso });
+      await updateContact(contact.id, {
+        next_contact_date: iso,
+        next_action_date: iso,
+        next_action_text: contact.next_action_text || 'Retomar atendimento',
+      });
+      await syncCrmNextActionTask(contact.id, {
+        title: contact.next_action_text || 'Retomar atendimento',
+        dueAt: iso,
+      });
     } catch { /* toast já emitido pelo hook */ }
   }, [updateContact]);
 
-  // Modo Fila — marcar como tratado agora
-  const handleQueueDone = useCallback(async (contact: Contact) => {
+  // Modo Fila — registrar resultado e transformar atendimento em próximo passo.
+  const handleQueueDone = useCallback(async (contact: Contact, outcome: QueueOutcome): Promise<boolean> => {
+    if (outcome === 'no_interest') {
+      setFocusQueueOpen(false);
+      setLostDialogContact(contact);
+      return false;
+    }
+
+    const now = new Date();
     const today = getTodayISO();
+    const dueIn = (days: number) => {
+      const due = new Date(now);
+      due.setDate(due.getDate() + days);
+      due.setHours(9, 0, 0, 0);
+      return due.toISOString();
+    };
+
+    const resultConfig: Record<Exclude<QueueOutcome, 'no_interest'>, {
+      label: string;
+      stage?: string;
+      action?: string | null;
+      days?: number;
+    }> = {
+      awaiting_response: {
+        label: 'Atendimento realizado — aguardando resposta',
+        stage: ['novo_lead', 'cadencia'].includes(contact.funnel_status) ? 'contato_realizado' : contact.funnel_status,
+        action: 'Verificar resposta do cliente',
+        days: 2,
+      },
+      proposal_sent: { label: 'Proposta enviada', stage: 'proposta_enviada', action: 'Fazer follow-up da proposta', days: 2 },
+      negotiation: { label: 'Cliente em negociação', stage: 'negociacao', action: 'Retomar negociação', days: 1 },
+      sale_closed: { label: 'Venda fechada', stage: 'fechado', action: 'Realizar pós-venda', days: 3 },
+      post_sale_done: { label: 'Pós-venda realizado', stage: 'cadencia', action: 'Reativar relacionamento com o cliente', days: 30 },
+      record_only: { label: 'Atendimento registrado', action: null },
+    };
+
+    const config = resultConfig[outcome];
+    const nextDate = config.action && config.days != null ? dueIn(config.days) : null;
+    const updates = {
+      ultimo_contato: today,
+      next_action_text: config.action,
+      next_action_date: nextDate,
+      next_contact_date: nextDate,
+    } as Partial<Contact>;
+
     markContactedOptimistically(contact.id);
     try {
-      await updateContact(contact.id, { ultimo_contato: today });
-    } catch { /* toast já emitido pelo hook */ }
+      if (config.stage && config.stage !== contact.funnel_status) {
+        await applyStatusChange(contact, config.stage, updates, config.label);
+      } else {
+        await updateContact(contact.id, updates);
+        const eventByOutcome: Record<Exclude<QueueOutcome, 'no_interest'>, typeof CRM_EVENT_CODES[keyof typeof CRM_EVENT_CODES]> = {
+          awaiting_response: CRM_EVENT_CODES.CONTACT_ATTEMPTED,
+          proposal_sent: CRM_EVENT_CODES.PROPOSAL_SENT,
+          negotiation: CRM_EVENT_CODES.NEGOTIATION_STARTED,
+          sale_closed: CRM_EVENT_CODES.SALE_WON,
+          post_sale_done: CRM_EVENT_CODES.POST_SALE_COMPLETED,
+          record_only: CRM_EVENT_CODES.CONTACT_ATTEMPTED,
+        };
+        await addEntry(contact.id, 'contact', config.label, now.toISOString(), eventByOutcome[outcome]);
+        await syncCrmNextActionTask(contact.id, { title: config.action, dueAt: nextDate });
+      }
+    } catch {
+      toast.error('Não foi possível registrar o resultado. O contato continuará na fila.');
+      return false;
+    }
     setTimeout(refreshContactSignals, 300);
-  }, [markContactedOptimistically, updateContact, refreshContactSignals]);
+    return true;
+  }, [markContactedOptimistically, updateContact, addEntry, refreshContactSignals]);
 
 
 
@@ -980,7 +1076,6 @@ export default function Contatos() {
     );
   }, [getUrgencyLevel, getNoResponseInfo, getScore, hasOrders, checklistMap, draggedContact, handleWhatsApp, handleTempChange, addEntry, refreshContactSignals, handleSmartAttend, handleCreateOrder, logAndOpen, markContactedOptimistically, convoSummaryByContact]);
 
-  const { tags } = useContactTags();
 
   return (
     <div className="min-h-screen pb-20">
@@ -1210,10 +1305,11 @@ export default function Contatos() {
               contacts={filteredQueue}
               preFiltered
               filterLabel={attentionFilter === 'all' ? 'Fila de atenção' : ATTENTION_LABELS[attentionFilter]}
-              onOpenContact={(contact) => { void openContactForm(contact); }}
+              onOpenContact={(contact) => { setDetailContact(contact); setDetailOpen(true); }}
               onWhatsApp={handleWhatsApp}
               onBulkDispatch={(list) => setBulkDispatchContacts(list)}
               getUrgencyLevel={getUrgencyLevel}
+              getUrgencyReason={getContactUrgencyReason}
             />
           )}
         />
@@ -1223,10 +1319,11 @@ export default function Contatos() {
           onOpenChange={setFocusQueueOpen}
           queue={focusQueue}
           getUrgencyLevel={getUrgencyLevel}
+          getUrgencyReason={getContactUrgencyReason}
           onWhatsApp={handleSmartAttend}
           onSnooze={handleQueueSnooze}
           onDone={handleQueueDone}
-          onOpenContact={(contact) => { void openContactForm(contact); }}
+          onOpenContact={(contact) => { setDetailContact(contact); setDetailOpen(true); }}
         />
 
 
@@ -1243,6 +1340,9 @@ export default function Contatos() {
           </Button>
 
           <div className="flex border rounded-lg overflow-hidden">
+            <Button variant={viewMode === 'today' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 rounded-none border-r" onClick={() => setViewMode('today')} title="Hoje no CRM">
+              <CalendarClock className="h-4 w-4" />
+            </Button>
             <Button variant={viewMode === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-9 w-9 rounded-none" onClick={() => setViewMode('kanban')} title="Kanban">
               <LayoutGrid className="h-4 w-4" />
             </Button>
@@ -1271,6 +1371,16 @@ export default function Contatos() {
               </div>
             ))}
           </div>
+        ) : viewMode === 'today' ? (
+          <CrmTodayView
+            queue={attentionQueue}
+            counts={attentionCounts}
+            getUrgencyReason={getContactUrgencyReason}
+            onSelectFilter={setAttentionFilter}
+            onStartQueue={() => { setFocusQueue(attentionQueue); setFocusQueueOpen(true); }}
+            onOpenContact={(contact) => { setDetailContact(contact); setDetailOpen(true); }}
+            onWhatsApp={handleWhatsApp}
+          />
         ) : viewMode === 'kanban' ? (
           <div className="flex gap-0 overflow-x-auto">
             {FUNNEL_STAGES.map((stage) => {
@@ -1646,6 +1756,11 @@ export default function Contatos() {
             onOpenChange={setDetailOpen}
             contact={(detailContact && contacts.find(c => c.id === detailContact.id)) || detailContact || null}
             onSave={updateContact}
+            onOpenFull={() => {
+              const contact = (detailContact && contacts.find(c => c.id === detailContact.id)) || detailContact;
+              setDetailOpen(false);
+              if (contact) void openContactForm(contact);
+            }}
           />
         )}
 

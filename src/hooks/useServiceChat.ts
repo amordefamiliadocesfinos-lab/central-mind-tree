@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { normalizeCrmStage, type CrmFunnelStage } from '@/lib/crm/model';
 
 export interface SalesChannelEntry {
   platform_id: string;
@@ -15,7 +16,7 @@ export interface ServiceConversation {
   contact_handle: string | null;
   contact_avatar_url: string | null;
   status: 'open' | 'closed' | 'archived';
-  funnel_stage: 'lead' | 'interested' | 'engaged' | 'customer';
+  funnel_stage: CrmFunnelStage;
   last_message_at: string;
   last_message_preview: string | null;
   unread_count: number;
@@ -55,7 +56,10 @@ export function useServiceChat() {
       setLoading(false);
       return;
     }
-    setConversations((data || []) as unknown as ServiceConversation[]);
+    setConversations((data || []).map(conversation => ({
+      ...conversation,
+      funnel_stage: normalizeCrmStage(conversation.funnel_stage),
+    })) as unknown as ServiceConversation[]);
     setLoading(false);
   }, []);
 
@@ -102,7 +106,7 @@ export function useServiceChat() {
         contact_name: data.contact_name || null,
         contact_handle: data.contact_handle || null,
         status: 'open',
-        funnel_stage: 'lead',
+        funnel_stage: 'novo_lead',
       })
       .select()
       .single();
@@ -227,7 +231,7 @@ export function useServiceChat() {
               content: m.content,
             })),
             platform: conv?.platform_id || 'general',
-            funnel_stage: conv?.funnel_stage || 'lead',
+            funnel_stage: conv?.funnel_stage || 'novo_lead',
             contact_name: conv?.contact_name || 'Cliente',
             contact_context: contactContext || undefined,
           },
@@ -307,6 +311,9 @@ export function useServiceChat() {
 
   const updateConversation = useCallback(async (id: string, updates: Partial<ServiceConversation>) => {
     const updatePayload: Record<string, any> = { ...updates };
+    if (updates.funnel_stage) {
+      updatePayload.funnel_stage = normalizeCrmStage(updates.funnel_stage);
+    }
     if (updates.sales_channels) {
       updatePayload.sales_channels = updates.sales_channels as any;
     }

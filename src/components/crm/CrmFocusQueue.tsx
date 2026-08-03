@@ -11,6 +11,12 @@ import {
   X,
   ExternalLink,
   PartyPopper,
+  Send,
+  FileText,
+  Handshake,
+  Trophy,
+  Heart,
+  Ban,
 } from 'lucide-react';
 import { differenceInDays, parseISO } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -24,11 +30,31 @@ interface CrmFocusQueueProps {
   /** Fila congelada no momento da abertura (ordem já definida pelo chamador) */
   queue: Contact[];
   getUrgencyLevel: (c: Contact) => string;
+  getUrgencyReason: (c: Contact) => string | null;
   onWhatsApp: (c: Contact) => void | Promise<void>;
   onSnooze: (c: Contact, days: number) => void | Promise<void>;
-  onDone: (c: Contact) => void | Promise<void>;
+  onDone: (c: Contact, outcome: QueueOutcome) => boolean | void | Promise<boolean | void>;
   onOpenContact: (c: Contact) => void;
 }
+
+export type QueueOutcome =
+  | 'awaiting_response'
+  | 'proposal_sent'
+  | 'negotiation'
+  | 'sale_closed'
+  | 'post_sale_done'
+  | 'no_interest'
+  | 'record_only';
+
+const OUTCOMES: Array<{ key: QueueOutcome; label: string; Icon: typeof Send }> = [
+  { key: 'awaiting_response', label: 'Aguardando resposta', Icon: Send },
+  { key: 'proposal_sent', label: 'Proposta enviada', Icon: FileText },
+  { key: 'negotiation', label: 'Em negociação', Icon: Handshake },
+  { key: 'sale_closed', label: 'Venda fechada', Icon: Trophy },
+  { key: 'post_sale_done', label: 'Pós-venda realizado', Icon: Heart },
+  { key: 'no_interest', label: 'Sem interesse', Icon: Ban },
+  { key: 'record_only', label: 'Apenas registrar', Icon: CheckCircle2 },
+];
 
 const URGENCY_UI: Record<string, { label: string; className: string }> = {
   urgente: { label: '🔴 Urgente', className: 'bg-red-100 text-red-800 border-red-300 dark:bg-red-950/40 dark:text-red-400 dark:border-red-800' },
@@ -46,6 +72,7 @@ export function CrmFocusQueue({
   onOpenChange,
   queue,
   getUrgencyLevel,
+  getUrgencyReason,
   onWhatsApp,
   onSnooze,
   onDone,
@@ -53,9 +80,10 @@ export function CrmFocusQueue({
 }: CrmFocusQueueProps) {
   const [index, setIndex] = useState(0);
   const [treated, setTreated] = useState(0);
+  const [choosingOutcome, setChoosingOutcome] = useState(false);
 
   useEffect(() => {
-    if (open) { setIndex(0); setTreated(0); }
+    if (open) { setIndex(0); setTreated(0); setChoosingOutcome(false); }
   }, [open]);
 
   const total = queue.length;
@@ -77,6 +105,15 @@ export function CrmFocusQueue({
     [current, getUrgencyLevel],
   );
   const urgencyUi = URGENCY_UI[urgency] || URGENCY_UI.baixo;
+  const urgencyReason = current ? getUrgencyReason(current) : null;
+
+  const registerOutcome = async (outcome: QueueOutcome) => {
+    if (!current) return;
+    const completed = await onDone(current, outcome);
+    if (completed === false) return;
+    setChoosingOutcome(false);
+    advance(true);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -155,6 +192,12 @@ export function CrmFocusQueue({
               </div>
             </div>
 
+            {urgencyReason && (
+              <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700 dark:border-red-900 dark:bg-red-950/30 dark:text-red-300">
+                <span className="font-semibold">Motivo da prioridade:</span> {urgencyReason}
+              </div>
+            )}
+
             {/* Ações */}
             <div className="space-y-2">
               <Button
@@ -182,12 +225,31 @@ export function CrmFocusQueue({
                 <Button
                   variant="outline"
                   className="h-10 gap-1.5 text-xs"
-                  onClick={async () => { await onDone(current); advance(true); }}
+                  onClick={() => setChoosingOutcome(v => !v)}
                 >
                   <CheckCircle2 className="h-3.5 w-3.5" />
-                  Já tratei
+                  Registrar resultado
                 </Button>
               </div>
+
+              {choosingOutcome && (
+                <div className="rounded-lg border bg-muted/20 p-2 space-y-1.5">
+                  <p className="px-1 text-[11px] font-semibold text-muted-foreground">Qual foi o resultado?</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {OUTCOMES.map(({ key, label, Icon }) => (
+                      <Button
+                        key={key}
+                        variant="outline"
+                        className="h-auto min-h-9 justify-start gap-1.5 px-2 py-1.5 text-[11px] whitespace-normal text-left"
+                        onClick={() => void registerOutcome(key)}
+                      >
+                        <Icon className="h-3.5 w-3.5 shrink-0" />
+                        {label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <Button
                 variant="ghost"

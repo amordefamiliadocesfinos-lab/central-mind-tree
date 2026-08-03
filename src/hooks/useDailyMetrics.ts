@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { getTodayISO } from '@/lib/dateUtils';
+import { CRM_EVENT_CODES } from '@/lib/crm/model';
 
 export interface DailyMetrics {
   contactsAttended: number;
@@ -23,7 +24,7 @@ export function useDailyMetrics() {
   const fetchMetrics = useCallback(async () => {
     const { data, error } = await supabase
       .from('contact_history')
-      .select('contact_id, interaction_type, description')
+      .select('contact_id, interaction_type, description, event_code')
       .gte('interaction_date', todayStart);
 
     if (error || !data) return;
@@ -37,14 +38,15 @@ export function useDailyMetrics() {
       uniqueContacts.add(entry.contact_id);
       const type = (entry.interaction_type || '').toLowerCase();
       const desc = (entry.description || '').toLowerCase();
+      const eventCode = entry.event_code;
 
-      if (type === 'whatsapp' || type === 'mensagem' || desc.includes('mensagem')) {
+      if (eventCode === CRM_EVENT_CODES.MESSAGE_SENT || type === 'whatsapp' || type === 'mensagem' || desc.includes('mensagem')) {
         messages++;
       }
-      if (type === 'ligacao' || type === 'reuniao' || desc.includes('resposta') || desc.includes('respondeu') || desc.includes('retornou')) {
+      if (eventCode === CRM_EVENT_CODES.CUSTOMER_REPLIED || (!eventCode && (type === 'ligacao' || type === 'reuniao' || desc.includes('resposta') || desc.includes('respondeu') || desc.includes('retornou')))) {
         responses++;
       }
-      if (type === 'venda' || type === 'orcamento' || desc.includes('pedido') || desc.includes('convertido')) {
+      if (eventCode === CRM_EVENT_CODES.SALE_WON || (!eventCode && (type === 'venda' || type === 'orcamento' || desc.includes('pedido') || desc.includes('convertido')))) {
         orders++;
       }
     }

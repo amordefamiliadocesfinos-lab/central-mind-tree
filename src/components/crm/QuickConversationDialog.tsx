@@ -11,6 +11,7 @@ import { useContactHistory, INTERACTION_TYPES } from '@/hooks/useContactHistory'
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Send, Zap, UserPlus } from 'lucide-react';
+import { syncCrmNextActionTask } from '@/lib/crm/nextAction';
 
 interface Props {
   open: boolean;
@@ -83,7 +84,7 @@ export function QuickConversationDialog({ open, onOpenChange, initialContactId, 
           .insert({
             name: contactName.trim(),
             whatsapp: contactPhone.trim() || null,
-            type: 'cliente',
+            type: 'lead',
             funnel_status: 'novo_lead',
             temperatura_lead: 'morno',
           })
@@ -111,6 +112,10 @@ export function QuickConversationDialog({ open, onOpenChange, initialContactId, 
             next_action_date: next.toISOString(),
           })
           .eq('id', finalContactId);
+        await syncCrmNextActionTask(finalContactId, {
+          title: `Retornar conversa: ${summary.trim().slice(0, 80)}`,
+          dueAt: next.toISOString(),
+        });
         toast.success(`Follow-up agendado para ${days} dia(s)`);
       }
 
