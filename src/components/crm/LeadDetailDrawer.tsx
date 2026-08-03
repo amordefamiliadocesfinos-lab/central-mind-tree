@@ -246,6 +246,7 @@ export function LeadDetailDrawer({ contact, open, onOpenChange, onSave, onOpenFu
               contactName={contact.name}
               contactHandle={contact.whatsapp || contact.phone || contact.mobile || contact.email}
               contactAvatar={contact.photo_url}
+              funnelStage={contact.funnel_status}
             />
           </TabsContent>
 

@@ -385,6 +385,7 @@ export default function ContatosInbox() {
                     contactName={selected.name}
                     contactHandle={selected.whatsapp || selected.phone}
                     contactAvatar={selected.photo_url}
+                    funnelStage={selected.funnel_status}
                     heightClassName="h-[calc(100dvh-320px)] min-h-[340px]"
                   />
                 </TabsContent>

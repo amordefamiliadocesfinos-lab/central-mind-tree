@@ -39,6 +39,9 @@ export async function syncCrmNextActionTask(contactId: string, action: CrmNextAc
   }
 
   const due = new Date(action.dueAt);
+  if (Number.isNaN(due.getTime())) {
+    throw new Error('Data inválida para a próxima ação do CRM');
+  }
   const payload = {
     title: action.title,
     contact_id: contactId,
@@ -60,4 +63,3 @@ export async function syncCrmNextActionTask(contactId: string, action: CrmNextAc
   const { error } = await supabase.from('tasks').insert(payload);
   if (error) throw error;
 }
-

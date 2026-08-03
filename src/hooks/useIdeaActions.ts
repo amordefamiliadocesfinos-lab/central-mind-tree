@@ -148,7 +148,7 @@ export function useIdeaActions() {
             .from('contacts')
             .select('id')
             .eq('is_active', true)
-            .in('funnel_status', ['orcamento', 'negociacao', 'novo_lead'])
+            .in('funnel_status', ['proposta_enviada', 'negociacao', 'novo_lead'])
             .limit(20);
 
           if (activeContacts && activeContacts.length > 0) {
