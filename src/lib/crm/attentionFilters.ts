@@ -33,7 +33,37 @@ export function isAttentionEligible(c: Contact): boolean {
 }
 
 export function isUrgente(c: Contact, deps: AttentionDeps): boolean {
-  return deps.getUrgencyLevel(c) === 'urgente';
+  return getUrgencyReason(c, deps.getNoResponseInfo) !== null;
+}
+
+/**
+ * Urgência precisa ter uma causa objetiva e resolvível. Pontuação comercial
+ * continua servindo para ordenar, mas não transforma sozinha um lead em urgente.
+ */
+export function getUrgencyReason(
+  c: Contact,
+  getNoResponseInfo: AttentionDeps['getNoResponseInfo'],
+): string | null {
+  const today = startOfDay(new Date());
+  const overdue = [c.next_action_date, c.next_contact_date]
+    .map(safeParse)
+    .filter((d): d is Date => !!d && isBefore(startOfDay(d), today));
+
+  if (overdue.length > 0) {
+    const oldest = overdue.sort((a, b) => a.getTime() - b.getTime())[0];
+    const days = Math.max(1, differenceInDays(today, startOfDay(oldest)));
+    return `Ação atrasada há ${days} dia${days === 1 ? '' : 's'}`;
+  }
+
+  const noResponse = getNoResponseInfo(c.id);
+  if (noResponse?.status === 'follow_up_urgente' || noResponse?.status === 'lead_esfriando') {
+    return `Sem resposta há ${noResponse.daysSince} dias`;
+  }
+  if (c.temperatura_lead === 'quente' && noResponse) {
+    return `Lead quente sem resposta há ${noResponse.daysSince} dias`;
+  }
+
+  return null;
 }
 
 export function isFollowUp(c: Contact, deps: AttentionDeps): boolean {

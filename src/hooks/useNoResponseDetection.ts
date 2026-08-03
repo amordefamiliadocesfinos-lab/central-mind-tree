@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { differenceInDays } from 'date-fns';
+import { CRM_EVENT_CODES } from '@/lib/crm/model';
 
 export type NoResponseStatus = 'sem_resposta' | 'follow_up_urgente' | 'lead_esfriando' | null;
 
@@ -48,7 +49,7 @@ export function useNoResponseDetection() {
   const fetchData = useCallback(async () => {
     const { data, error } = await supabase
       .from('contact_history')
-      .select('contact_id, interaction_type, interaction_date, description, created_at')
+      .select('contact_id, interaction_type, interaction_date, description, created_at, event_code')
       .order('interaction_date', { ascending: false })
       .limit(5000);
 
@@ -57,7 +58,7 @@ export function useNoResponseDetection() {
       return;
     }
 
-    const contactEntries: Record<string, Array<{ interaction_type: string; interaction_date: string; description: string }>> = {};
+    const contactEntries: Record<string, Array<{ interaction_type: string; interaction_date: string; description: string; event_code: string | null }>> = {};
     
     for (const entry of data) {
       if (!contactEntries[entry.contact_id]) contactEntries[entry.contact_id] = [];
@@ -65,6 +66,7 @@ export function useNoResponseDetection() {
         interaction_type: entry.interaction_type || '',
         interaction_date: entry.interaction_date || entry.created_at || '',
         description: entry.description || '',
+        event_code: entry.event_code,
       });
     }
 
@@ -75,7 +77,7 @@ export function useNoResponseDetection() {
       // entries are sorted desc by interaction_date
       // Find the most recent WhatsApp message sent
       const lastWhatsAppIdx = entries.findIndex(
-        e => e.interaction_type === 'whatsapp' || e.description.includes('Mensagem iniciada via WhatsApp')
+        e => e.event_code === CRM_EVENT_CODES.MESSAGE_SENT || e.interaction_type === 'whatsapp' || e.description.includes('Mensagem iniciada via WhatsApp')
       );
 
       if (lastWhatsAppIdx === -1) continue; // No WhatsApp message sent
@@ -83,7 +85,9 @@ export function useNoResponseDetection() {
       const lastWhatsApp = entries[lastWhatsAppIdx];
 
       // Check if there's any newer interaction (index < lastWhatsAppIdx means newer)
-      const hasNewerInteraction = lastWhatsAppIdx > 0;
+      const hasNewerInteraction = entries
+        .slice(0, lastWhatsAppIdx)
+        .some(entry => entry.event_code === CRM_EVENT_CODES.CUSTOMER_REPLIED || (!entry.event_code && entry.interaction_type !== 'whatsapp'));
 
       if (hasNewerInteraction) continue; // There's been a response/interaction after WhatsApp
 

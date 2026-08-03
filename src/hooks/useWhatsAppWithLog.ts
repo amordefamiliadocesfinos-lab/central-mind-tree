@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { openWhatsApp } from '@/lib/whatsapp';
 import { getTodayISO } from '@/lib/dateUtils';
+import { CRM_EVENT_CODES } from '@/lib/crm/model';
 
 export interface WhatsAppLogOptions {
   contactId: string;
@@ -59,6 +60,8 @@ export function useWhatsAppWithLog() {
       contact_id: contactId,
       event_type: 'whatsapp',
       interaction_type: 'whatsapp',
+      event_code: CRM_EVENT_CODES.MESSAGE_SENT,
+      event_metadata: { source, template_label: templateLabel || null },
       description: historyDesc,
       interaction_date: now,
     });
@@ -109,7 +112,7 @@ export function useWhatsAppWithLog() {
           contact_name: contactName,
           contact_handle: phone,
           status: 'open',
-          funnel_stage: 'lead',
+          funnel_stage: 'novo_lead',
           last_message_preview: preview,
           last_message_at: now,
         })

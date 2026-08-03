@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { WhatsAppAttachments, appendAttachmentsToMessage, type WhatsAppAttachment } from './WhatsAppAttachments';
+import { normalizeCrmStage } from '@/lib/crm/model';
 
 interface WhatsAppTemplate {
   key: string;
@@ -21,7 +22,7 @@ const WHATSAPP_TEMPLATES: WhatsAppTemplate[] = [
   {
     key: 'orcamento',
     label: 'Orçamento',
-    stages: ['orcamento'],
+    stages: ['proposta_enviada'],
     message: 'Olá, tudo bem?\nEstou passando para saber se você conseguiu analisar o orçamento que enviamos 😊',
   },
   {
@@ -33,13 +34,13 @@ const WHATSAPP_TEMPLATES: WhatsAppTemplate[] = [
   {
     key: 'follow_up',
     label: 'Follow-up',
-    stages: ['novo', 'contato_feito', 'qualificado'],
+    stages: ['novo_lead', 'contato_realizado', 'cadencia'],
     message: 'Olá, tudo bem?\nSó passando para ver se posso te ajudar com seu pedido 😊',
   },
   {
     key: 'cliente_ativo',
     label: 'Cliente Ativo',
-    stages: ['fechado'],
+    stages: ['fechado', 'pos_venda'],
     message: 'Olá! Tudo bem?\nEstamos com produção aberta essa semana, deseja fazer um novo pedido?',
   },
 ];
@@ -84,7 +85,8 @@ interface Props {
 
 export function WhatsAppMessageSelector({ open, onOpenChange, contactName, funnelStatus, contactId, onSend }: Props) {
   const suggestedTemplate = useMemo(() => {
-    return WHATSAPP_TEMPLATES.find(t => t.stages.includes(funnelStatus)) || WHATSAPP_TEMPLATES[2];
+    const normalizedStage = normalizeCrmStage(funnelStatus);
+    return WHATSAPP_TEMPLATES.find(t => t.stages.includes(normalizedStage)) || WHATSAPP_TEMPLATES[2];
   }, [funnelStatus]);
 
   const [selectedKey, setSelectedKey] = useState(suggestedTemplate.key);

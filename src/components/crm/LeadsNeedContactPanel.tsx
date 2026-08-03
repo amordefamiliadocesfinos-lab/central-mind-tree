@@ -16,6 +16,7 @@ interface LeadsNeedContactPanelProps {
   onWhatsApp?: (contact: Contact) => void;
   onBulkDispatch?: (contacts: Contact[]) => void;
   getUrgencyLevel?: (contact: Contact) => string;
+  getUrgencyReason?: (contact: Contact) => string | null;
   /** Quando true, a lista já vem filtrada pelo Centro de Automação (não aplicar regra própria) */
   preFiltered?: boolean;
   /** Rótulo do filtro ativo, exibido no título */
@@ -28,7 +29,7 @@ const URGENCY_DISPLAY: Record<string, { emoji: string; className: string }> = {
   baixo: { emoji: '🔵', className: 'bg-sky-100 text-sky-700 border-sky-300 dark:bg-sky-950/40 dark:text-sky-400 dark:border-sky-700' },
 };
 
-export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onBulkDispatch, getUrgencyLevel, preFiltered, filterLabel }: LeadsNeedContactPanelProps) {
+export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onBulkDispatch, getUrgencyLevel, getUrgencyReason, preFiltered, filterLabel }: LeadsNeedContactPanelProps) {
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -170,6 +171,7 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onB
         {staleLeads.map(({ contact, daysSinceContact }) => {
           const hasPhone = !!(contact.whatsapp || contact.mobile || contact.phone);
           const isSelected = selectedIds.has(contact.id);
+          const reason = getUrgencyReason?.(contact);
           return (
             <div
               key={contact.id}
@@ -207,6 +209,11 @@ export function LeadsNeedContactPanel({ contacts, onOpenContact, onWhatsApp, onB
                     {daysSinceContact !== null ? `${daysSinceContact}d sem contato` : 'Nunca contatado'}
                   </span>
                 </div>
+                {reason && (
+                  <p className="mt-0.5 truncate text-[10px] font-medium text-red-600 dark:text-red-400">
+                    {reason}
+                  </p>
+                )}
               </div>
               {!selectionMode && (
                 <div className="flex items-center gap-1 shrink-0">

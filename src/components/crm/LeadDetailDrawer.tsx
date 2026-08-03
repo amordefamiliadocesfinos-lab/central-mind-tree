@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Check, MessageCircle, Phone } from 'lucide-react';
+import { Loader2, Check, MessageCircle, Phone, CalendarClock, FileText } from 'lucide-react';
 import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { ContactTimeline } from '@/components/crm/ContactTimeline';
 import { ContactTasksPanel } from '@/components/crm/ContactTasksPanel';
@@ -15,6 +15,8 @@ import { NextBestAction } from '@/components/crm/NextBestAction';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { Contact } from '@/hooks/useContacts';
+import { getCrmStageLabel } from '@/lib/crm/model';
+import { Button } from '@/components/ui/button';
 
 interface LeadDetailDrawerProps {
   contact: Contact | null;
@@ -58,7 +60,7 @@ const formatDateShort = (s?: string) => {
   try { return format(parseISO(s), 'dd/MM/yyyy', { locale: ptBR }); } catch { return s; }
 };
 
-export function LeadDetailDrawer({ contact, open, onOpenChange, onSave }: LeadDetailDrawerProps) {
+export function LeadDetailDrawer({ contact, open, onOpenChange, onSave, onOpenFull }: LeadDetailDrawerProps) {
   const [form, setForm] = useState<FormState>(() => contact ? toForm(contact) : toForm({} as Contact));
   const [savingField, setSavingField] = useState<string | null>(null);
   const [savedField, setSavedField] = useState<string | null>(null);
@@ -129,7 +131,7 @@ export function LeadDetailDrawer({ contact, open, onOpenChange, onSave }: LeadDe
                   Edição rápida • salvamento automático
                 </SheetDescription>
                 <div className="flex flex-wrap gap-1 mt-2">
-                  {contact.funnel_status && <Badge variant="secondary" className="text-[10px]">{contact.funnel_status}</Badge>}
+                  {contact.funnel_status && <Badge variant="secondary" className="text-[10px]">{getCrmStageLabel(contact.funnel_status)}</Badge>}
                   {contact.temperatura_lead && <Badge variant="outline" className="text-[10px] capitalize">{contact.temperatura_lead}</Badge>}
                   {contact.client_classification && <Badge variant="outline" className="text-[10px] capitalize">{contact.client_classification}</Badge>}
                 </div>
@@ -150,6 +152,14 @@ export function LeadDetailDrawer({ contact, open, onOpenChange, onSave }: LeadDe
 
           <TabsContent value="detalhes" className="p-4 space-y-4 mt-0">
             <NextBestAction contact={contact} />
+
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
+              <div className="flex items-center gap-2 text-xs font-semibold text-primary">
+                <CalendarClock className="h-4 w-4" /> Próxima ação
+              </div>
+              <p className="mt-1 text-sm font-medium">{contact.next_action_text || 'Nenhuma ação definida'}</p>
+              <p className="text-xs text-muted-foreground">{formatDate(contact.next_action_date || contact.next_contact_date)}</p>
+            </div>
 
             <Field label="Nome" status={<FieldStatus field="name" />}>
               <Input value={form.name} onChange={(e) => handleChange('name', e.target.value)} onBlur={() => handleBlur('name')} placeholder="Nome do lead" />
@@ -218,6 +228,12 @@ export function LeadDetailDrawer({ contact, open, onOpenChange, onSave }: LeadDe
             <p className="text-[10px] text-muted-foreground text-center pt-2">
               As alterações são salvas automaticamente.
             </p>
+
+            {onOpenFull && (
+              <Button variant="outline" className="w-full gap-2" onClick={onOpenFull}>
+                <FileText className="h-4 w-4" /> Abrir cadastro completo
+              </Button>
+            )}
           </TabsContent>
 
           <TabsContent value="tarefas" className="p-4 mt-0">

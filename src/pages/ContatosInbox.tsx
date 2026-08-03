@@ -18,6 +18,7 @@ import { openWhatsApp } from '@/lib/whatsapp';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
+import { getCrmStageLabel, normalizeCrmStage } from '@/lib/crm/model';
 
 interface InboxItem {
   id: string;
@@ -35,22 +36,17 @@ interface InboxItem {
   unread_count: number;
   needs_reply: boolean;
   attendance_state: string | null;
+  assigned_to: string | null;
 }
 
-const FUNNEL_LABEL: Record<string, string> = {
-  novo_lead: 'Novo Lead',
-  em_contato: 'Em Contato',
-  qualificado: 'Qualificado',
-  proposta: 'Proposta',
-  negociacao: 'Negociação',
-  convertido: 'Convertido',
-  perdido: 'Perdido',
-};
+type InboxFilter = 'all' | 'needs_reply' | 'waiting_customer' | 'overdue' | 'unassigned';
 
 export default function ContatosInbox() {
   const [items, setItems] = useState<InboxItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [inboxFilter, setInboxFilter] = useState<InboxFilter>('all');
+  const [loadLimit, setLoadLimit] = useState(200);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [quickOpen, setQuickOpen] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
@@ -64,10 +60,10 @@ export default function ContatosInbox() {
     // Contatos sem conversa continuam no CRM, mas não poluem esta fila operacional.
     const { data: conversations, error } = await supabase
       .from('service_conversations')
-      .select('id,contact_id,contact_name,contact_handle,contact_avatar_url,last_message_preview,last_message_at,unread_count,needs_reply,attendance_state,funnel_stage,status')
+      .select('id,contact_id,contact_name,contact_handle,contact_avatar_url,last_message_preview,last_message_at,unread_count,needs_reply,attendance_state,assigned_to,funnel_stage,status')
       .not('contact_id', 'is', null)
       .order('last_message_at', { ascending: false })
-      .limit(200);
+      .limit(loadLimit);
 
     if (error) {
       console.error('Erro ao carregar caixa de entrada:', error);
@@ -108,7 +104,7 @@ export default function ContatosInbox() {
         whatsapp: contact?.whatsapp || conversation.contact_handle,
         phone: contact?.phone || null,
         photo_url: contact?.photo_url || conversation.contact_avatar_url,
-        funnel_status: contact?.funnel_status || conversation.funnel_stage || 'novo_lead',
+        funnel_status: normalizeCrmStage(contact?.funnel_status || conversation.funnel_stage),
         temperatura_lead: contact?.temperatura_lead || null,
         ultimo_contato: contact?.ultimo_contato || null,
         last_summary: conversation.last_message_preview || null,
@@ -117,6 +113,7 @@ export default function ContatosInbox() {
         unread_count: conversation.unread_count,
         needs_reply: conversation.needs_reply,
         attendance_state: conversation.attendance_state,
+        assigned_to: conversation.assigned_to,
       });
     }
 
@@ -126,7 +123,7 @@ export default function ContatosInbox() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [loadLimit]);
 
   // Realtime: nova mensagem atualiza preview/ordenação sem recarregar a página
   useEffect(() => {
@@ -151,15 +148,20 @@ export default function ContatosInbox() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter(
-      (i) =>
+    return items.filter((i) => {
+      const matchesSearch = !q ||
         i.name.toLowerCase().includes(q) ||
         (i.whatsapp || '').includes(q) ||
         (i.phone || '').includes(q) ||
-        (i.last_summary || '').toLowerCase().includes(q),
-    );
-  }, [items, search]);
+        (i.last_summary || '').toLowerCase().includes(q);
+      if (!matchesSearch) return false;
+      if (inboxFilter === 'needs_reply') return i.needs_reply;
+      if (inboxFilter === 'waiting_customer') return i.attendance_state === 'aguardando_cliente';
+      if (inboxFilter === 'overdue') return i.needs_reply && i.unread_days >= 2;
+      if (inboxFilter === 'unassigned') return !i.assigned_to;
+      return true;
+    });
+  }, [items, search, inboxFilter]);
 
   const selected = items.find((i) => i.id === selectedId) || null;
 
@@ -228,6 +230,19 @@ export default function ContatosInbox() {
               className="pl-8 h-9"
             />
           </div>
+          <div className="mt-2 flex gap-1.5 overflow-x-auto pb-0.5">
+            {([
+              ['all', 'Todas'],
+              ['needs_reply', 'Responder'],
+              ['waiting_customer', 'Aguardando cliente'],
+              ['overdue', 'Atrasadas'],
+              ['unassigned', 'Sem responsável'],
+            ] as Array<[InboxFilter, string]>).map(([key, label]) => (
+              <Button key={key} size="sm" variant={inboxFilter === key ? 'default' : 'outline'} className="h-7 shrink-0 text-[11px]" onClick={() => setInboxFilter(key)}>
+                {label}
+              </Button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -268,7 +283,7 @@ export default function ContatosInbox() {
                     </p>
                     <div className="flex items-center gap-1 mt-1">
                       <Badge variant="outline" className="text-[9px] h-4 px-1.5">
-                        {FUNNEL_LABEL[item.funnel_status] || item.funnel_status}
+                        {getCrmStageLabel(item.funnel_status)}
                       </Badge>
                       {item.needs_reply && (
                         <Badge variant="destructive" className="text-[9px] h-4 px-1.5">
@@ -289,6 +304,11 @@ export default function ContatosInbox() {
                   </div>
                 </button>
               ))}
+              {items.length >= loadLimit && (
+                <div className="p-3 text-center">
+                  <Button variant="outline" size="sm" onClick={() => setLoadLimit(limit => limit + 200)}>Carregar mais conversas</Button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -316,7 +336,7 @@ export default function ContatosInbox() {
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-sm truncate">{selected.name}</div>
                   <div className="text-[11px] text-muted-foreground truncate">
-                    {selected.whatsapp || selected.phone || 'Sem telefone'} · {FUNNEL_LABEL[selected.funnel_status] || selected.funnel_status}
+                    {selected.whatsapp || selected.phone || 'Sem telefone'} · {getCrmStageLabel(selected.funnel_status)}
                   </div>
                 </div>
                 <div className="flex gap-1">

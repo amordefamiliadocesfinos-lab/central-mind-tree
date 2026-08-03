@@ -648,6 +648,8 @@ export type Database = {
           contact_id: string
           created_at: string
           description: string
+          event_code: string | null
+          event_metadata: Json
           event_type: string
           id: string
           interaction_date: string | null
@@ -659,6 +661,8 @@ export type Database = {
           contact_id: string
           created_at?: string
           description: string
+          event_code?: string | null
+          event_metadata?: Json
           event_type?: string
           id?: string
           interaction_date?: string | null
@@ -670,6 +674,8 @@ export type Database = {
           contact_id?: string
           created_at?: string
           description?: string
+          event_code?: string | null
+          event_metadata?: Json
           event_type?: string
           id?: string
           interaction_date?: string | null
@@ -4046,6 +4052,7 @@ export type Database = {
       }
       service_conversations: {
         Row: {
+          assigned_to: string | null
           attendance_state: string | null
           auto_reply_enabled: boolean
           channel: string
@@ -4070,6 +4077,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          assigned_to?: string | null
           attendance_state?: string | null
           auto_reply_enabled?: boolean
           channel?: string
@@ -4094,6 +4102,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          assigned_to?: string | null
           attendance_state?: string | null
           auto_reply_enabled?: boolean
           channel?: string
@@ -4434,6 +4443,7 @@ export type Database = {
           progress: number
           scheduled_date: string | null
           scheduled_time: string | null
+          source: string | null
           status: string
           title: string
           updated_at: string
@@ -4462,6 +4472,7 @@ export type Database = {
           progress?: number
           scheduled_date?: string | null
           scheduled_time?: string | null
+          source?: string | null
           status?: string
           title: string
           updated_at?: string
@@ -4490,6 +4501,7 @@ export type Database = {
           progress?: number
           scheduled_date?: string | null
           scheduled_time?: string | null
+          source?: string | null
           status?: string
           title?: string
           updated_at?: string

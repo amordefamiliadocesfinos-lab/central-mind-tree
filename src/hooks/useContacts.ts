@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { normalizeCrmStage } from '@/lib/crm/model';
 
 export interface Contact {
   id: string;
@@ -123,7 +124,7 @@ export function useContacts() {
   const fetchContacts = async () => {
     setLoading(true);
     try {
-      const PAGE = 1000;
+      const PAGE = 500;
       let from = 0;
       const all: any[] = [];
       while (true) {
@@ -135,10 +136,16 @@ export function useContacts() {
         if (error) throw error;
         if (!data || data.length === 0) break;
         all.push(...data);
+        const normalized = all.map(contact => ({
+          ...contact,
+          funnel_status: normalizeCrmStage(contact.funnel_status),
+        })) as unknown as Contact[];
+        // Libera a primeira página imediatamente e incorpora as demais em lotes.
+        setContacts(normalized);
+        if (from === 0) setLoading(false);
         if (data.length < PAGE) break;
         from += PAGE;
       }
-      setContacts(all as unknown as Contact[]);
     } catch (error: any) {
       console.error('Error fetching contacts:', error);
       toast.error('Erro ao carregar contatos');
@@ -233,7 +240,7 @@ export function useContacts() {
         notes: cleanValue(contact.notes),
         next_action_text: cleanValue(contact.next_action_text),
         next_action_date: cleanValue(contact.next_action_date),
-        funnel_status: contact.funnel_status || 'novo_lead',
+        funnel_status: normalizeCrmStage(contact.funnel_status),
         next_contact_date: cleanValue(contact.next_contact_date),
         temperatura_lead: contact.temperatura_lead || 'morno',
         valor_estimado: cleanNumber(contact.valor_estimado),
@@ -274,6 +281,7 @@ export function useContacts() {
         .from('contacts')
         .update({
           ...contact,
+          ...(contact.funnel_status ? { funnel_status: normalizeCrmStage(contact.funnel_status) } : {}),
           updated_at: new Date().toISOString(),
         })
         .eq('id', id)
