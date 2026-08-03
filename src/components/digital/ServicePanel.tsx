@@ -27,13 +27,15 @@ import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { CRM_FUNNEL_STAGES, normalizeCrmStage } from '@/lib/crm/model';
 
-const FUNNEL_STAGES = {
-  lead: { label: 'Lead', color: 'bg-blue-500' },
-  interested: { label: 'Interessado', color: 'bg-yellow-500' },
-  engaged: { label: 'Engajado', color: 'bg-orange-500' },
-  customer: { label: 'Cliente', color: 'bg-green-500' },
-};
+const FUNNEL_STAGES = Object.fromEntries(CRM_FUNNEL_STAGES.map((stage, index) => [
+  stage.key,
+  {
+    label: stage.label,
+    color: ['bg-blue-500', 'bg-cyan-500', 'bg-yellow-500', 'bg-orange-500', 'bg-green-500', 'bg-emerald-500', 'bg-violet-500', 'bg-slate-500'][index],
+  },
+])) as Record<string, { label: string; color: string }>;
 
 export function ServicePanel() {
   const {
@@ -419,7 +421,7 @@ function ConversationList({ conversations, platforms, activeId, onSelect }: {
     <div className="divide-y">
       {conversations.map(conv => {
         const platform = platforms.find(p => p.id === conv.platform_id);
-        const funnel = FUNNEL_STAGES[conv.funnel_stage] || FUNNEL_STAGES.lead;
+        const funnel = FUNNEL_STAGES[normalizeCrmStage(conv.funnel_stage)] || FUNNEL_STAGES.novo_lead;
         const initials = (conv.contact_name || 'C').slice(0, 2).toUpperCase();
 
         return (

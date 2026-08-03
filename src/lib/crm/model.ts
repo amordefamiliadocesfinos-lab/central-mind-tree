@@ -17,11 +17,14 @@ const STAGE_ALIASES: Record<string, CrmFunnelStage> = {
   em_contato: 'contato_realizado',
   contato_feito: 'contato_realizado',
   qualificado: 'contato_realizado',
+  interested: 'contato_realizado',
+  engaged: 'negociacao',
   proposta: 'proposta_enviada',
   orcamento: 'proposta_enviada',
   convertido: 'fechado',
   cliente_ativo: 'pos_venda',
   vip: 'pos_venda',
+  customer: 'pos_venda',
   inativo: 'cadencia',
 };
 
@@ -54,4 +57,3 @@ export const CRM_EVENT_CODES = {
 } as const;
 
 export type CrmEventCode = typeof CRM_EVENT_CODES[keyof typeof CRM_EVENT_CODES];
-

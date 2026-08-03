@@ -220,7 +220,7 @@ Deno.serve(async (req) => {
           contact_name: contactName,
           contact_handle: phone,
           status: 'open',
-          funnel_stage: 'lead',
+          funnel_stage: 'novo_lead',
           channel: 'whatsapp',
         })
         .select('id')
