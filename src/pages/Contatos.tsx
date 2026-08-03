@@ -40,6 +40,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   Plus,
   Search,
@@ -358,6 +359,7 @@ export default function Contatos() {
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [timelineContact, setTimelineContact] = useState<Contact | null>(null);
   const [tagsManagerOpen, setTagsManagerOpen] = useState(false);
+  const [metricsOpen, setMetricsOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [activitiesOpen, setActivitiesOpen] = useState(false);
   const [activitiesContact, setActivitiesContact] = useState<Contact | null>(null);
@@ -1078,7 +1080,7 @@ export default function Contatos() {
   return (
     <div className="min-h-screen pb-20">
       {/* Header */}
-      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b px-4 py-3 space-y-3">
+      <div className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b px-4 py-2 space-y-2">
         <div className="flex items-center justify-between gap-3">
           <h1 className="text-xl font-bold flex items-center gap-2">
             <UserPlus className="h-5 w-5 text-primary" />
@@ -1114,63 +1116,43 @@ export default function Contatos() {
           </div>
         </div>
 
-        {/* Dashboard Comercial - tempo real */}
-        <div className="px-4 pt-2 pb-1">
-          <Suspense fallback={<div className="h-24" />}>
-            <CommercialDashboard />
-          </Suspense>
-        </div>
+        {/* Indicadores — faixa única compacta */}
+        <Collapsible open={metricsOpen} onOpenChange={setMetricsOpen}>
+          <div className="flex items-center gap-x-3 gap-y-1 flex-wrap rounded-lg border border-border/60 bg-muted/30 px-2.5 py-1.5">
+            {[
+              { label: 'Contatos', value: metrics.total, tone: 'text-foreground' },
+              { label: 'Ativos', value: metrics.clientesAtivos, tone: 'text-green-600 dark:text-green-400' },
+              { label: 'Orçamentos', value: metrics.orcamentos, tone: 'text-yellow-600 dark:text-yellow-400' },
+              { label: 'Follow-up hoje', value: metrics.followUpHoje, tone: metrics.followUpHoje > 0 ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground' },
+              { label: 'Atendidos', value: dailyMetrics.contactsAttended, tone: 'text-blue-600 dark:text-blue-400', today: true },
+              { label: 'Msgs', value: dailyMetrics.messagesSent, tone: 'text-green-600 dark:text-green-400', today: true },
+              { label: 'Respostas', value: dailyMetrics.responsesReceived, tone: 'text-purple-600 dark:text-purple-400', today: true },
+              { label: 'Pedidos', value: dailyMetrics.ordersGenerated, tone: 'text-emerald-600 dark:text-emerald-400', today: true },
+            ].map((m, i) => (
+              <div key={m.label} className="flex items-center gap-1.5">
+                {i === 4 && <span className="h-3.5 w-px bg-border mr-1.5" aria-hidden />}
+                <span className={cn('text-[13px] font-bold leading-none tabular-nums', m.tone)}>{m.value}</span>
+                <span className="text-[10px] text-muted-foreground leading-none">
+                  {m.label}
+                  {m.today && <span className="opacity-60"> hoje</span>}
+                </span>
+              </div>
+            ))}
+            <CollapsibleTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-6 px-2 ml-auto text-[10px] gap-1 text-muted-foreground">
+                {metricsOpen ? 'Ocultar painel' : 'Painel comercial'}
+                {metricsOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              </Button>
+            </CollapsibleTrigger>
+          </div>
+          <CollapsibleContent className="pt-2">
+            <Suspense fallback={<div className="h-20" />}>
+              <CommercialDashboard />
+            </Suspense>
+          </CollapsibleContent>
+        </Collapsible>
 
-        {/* Indicadores do CRM */}
-        <div className="grid grid-cols-4 gap-2">
-          <Card className="p-2.5 text-center border-0 shadow-sm bg-card">
-            <Users className="h-4 w-4 mx-auto text-muted-foreground mb-0.5" />
-            <p className="text-xl font-bold leading-tight">{metrics.total}</p>
-            <p className="text-[10px] text-muted-foreground font-medium">Total de Contatos</p>
-          </Card>
-          <Card className="p-2.5 text-center border-0 shadow-sm bg-green-50 dark:bg-green-950/30">
-            <UserPlus className="h-4 w-4 mx-auto text-green-600 mb-0.5" />
-            <p className="text-xl font-bold text-green-700 dark:text-green-400 leading-tight">{metrics.clientesAtivos}</p>
-            <p className="text-[10px] text-green-600 dark:text-green-500 font-medium">Clientes Ativos</p>
-          </Card>
-          <Card className="p-2.5 text-center border-0 shadow-sm bg-yellow-50 dark:bg-yellow-950/30">
-            <FileText className="h-4 w-4 mx-auto text-yellow-600 mb-0.5" />
-            <p className="text-xl font-bold text-yellow-700 dark:text-yellow-400 leading-tight">{metrics.orcamentos}</p>
-            <p className="text-[10px] text-yellow-600 dark:text-yellow-500 font-medium">Orçamentos</p>
-          </Card>
-          <Card className={cn(
-            "p-2.5 text-center border-0 shadow-sm",
-            metrics.followUpHoje > 0 ? "bg-red-50 dark:bg-red-950/30 ring-1 ring-red-200 dark:ring-red-800" : "bg-muted/50"
-          )}>
-            <CalendarClock className={cn("h-4 w-4 mx-auto mb-0.5", metrics.followUpHoje > 0 ? "text-red-600" : "text-muted-foreground")} />
-            <p className={cn("text-xl font-bold leading-tight", metrics.followUpHoje > 0 ? "text-red-700 dark:text-red-400" : "")}>{metrics.followUpHoje}</p>
-            <p className={cn("text-[10px] font-medium", metrics.followUpHoje > 0 ? "text-red-600 dark:text-red-500" : "text-muted-foreground")}>Follow-up Hoje</p>
-          </Card>
-        </div>
 
-        {/* Indicadores do dia */}
-        <div className="grid grid-cols-4 gap-2">
-          <Card className="p-2 text-center border-0 shadow-sm bg-blue-50/60 dark:bg-blue-950/20">
-            <Users className="h-3.5 w-3.5 mx-auto text-blue-600 mb-0.5" />
-            <p className="text-lg font-bold text-blue-700 dark:text-blue-400 leading-tight">{dailyMetrics.contactsAttended}</p>
-            <p className="text-[9px] text-blue-600 dark:text-blue-500 font-medium">Atendidos hoje</p>
-          </Card>
-          <Card className="p-2 text-center border-0 shadow-sm bg-green-50/60 dark:bg-green-950/20">
-            <MessageCircle className="h-3.5 w-3.5 mx-auto text-green-600 mb-0.5" />
-            <p className="text-lg font-bold text-green-700 dark:text-green-400 leading-tight">{dailyMetrics.messagesSent}</p>
-            <p className="text-[9px] text-green-600 dark:text-green-500 font-medium">Mensagens enviadas</p>
-          </Card>
-          <Card className="p-2 text-center border-0 shadow-sm bg-purple-50/60 dark:bg-purple-950/20">
-            <ArrowRight className="h-3.5 w-3.5 mx-auto text-purple-600 mb-0.5" />
-            <p className="text-lg font-bold text-purple-700 dark:text-purple-400 leading-tight">{dailyMetrics.responsesReceived}</p>
-            <p className="text-[9px] text-purple-600 dark:text-purple-500 font-medium">Respostas recebidas</p>
-          </Card>
-          <Card className="p-2 text-center border-0 shadow-sm bg-emerald-50/60 dark:bg-emerald-950/20">
-            <ShoppingCart className="h-3.5 w-3.5 mx-auto text-emerald-600 mb-0.5" />
-            <p className="text-lg font-bold text-emerald-700 dark:text-emerald-400 leading-tight">{dailyMetrics.ordersGenerated}</p>
-            <p className="text-[9px] text-emerald-600 dark:text-emerald-500 font-medium">Pedidos gerados</p>
-          </Card>
-        </div>
 
         <CrmAutomationHub
           attentionFilter={attentionFilter}
@@ -1320,9 +1302,9 @@ export default function Contatos() {
           onStartQueue={(list) => { setFocusQueue(list); setFocusQueueOpen(true); }}
           leadsPanelSlot={(
             <LeadsNeedContactPanel
-              contacts={filteredContacts}
-              preFiltered={attentionFilter !== 'all'}
-              filterLabel={ATTENTION_LABELS[attentionFilter]}
+              contacts={filteredQueue}
+              preFiltered
+              filterLabel={attentionFilter === 'all' ? 'Fila de atenção' : ATTENTION_LABELS[attentionFilter]}
               onOpenContact={(contact) => { setDetailContact(contact); setDetailOpen(true); }}
               onWhatsApp={handleWhatsApp}
               onBulkDispatch={(list) => setBulkDispatchContacts(list)}

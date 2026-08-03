@@ -18,17 +18,24 @@ export function useContactChecklist(contactIds: string[]) {
     if (contactIds.length === 0) return;
     setLoading(true);
 
-    const { data, error } = await supabase
-      .from('contact_history')
-      .select('contact_id, interaction_type, description, event_type, event_code')
-      .in('contact_id', contactIds)
-      .gte('interaction_date', subDays(new Date(), 120).toISOString())
-      .limit(5000);
-
-    if (error) {
-      setLoading(false);
-      return;
+    // Lotes pequenos: URLs com centenas de UUIDs estouram o limite do servidor (414).
+    const CHUNK = 60;
+    const rows: Array<{ contact_id: string; interaction_type: string | null; description: string | null; event_type: string | null; event_code: string | null }> = [];
+    for (let i = 0; i < contactIds.length; i += CHUNK) {
+      const { data, error } = await supabase
+        .from('contact_history')
+        .select('contact_id, interaction_type, description, event_type, event_code')
+        .in('contact_id', contactIds.slice(i, i + CHUNK))
+        .gte('interaction_date', subDays(new Date(), 120).toISOString())
+        .limit(5000);
+      if (error) {
+        setLoading(false);
+        return;
+      }
+      rows.push(...(data || []));
     }
+    const data = rows;
+
 
     const map: Record<string, ContactChecklistStatus> = {};
 
