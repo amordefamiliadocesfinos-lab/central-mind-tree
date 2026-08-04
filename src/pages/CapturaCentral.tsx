@@ -96,9 +96,23 @@ function fmtSize(b: number) {
   return `${(b / 1024 / 1024).toFixed(1)} MB`;
 }
 
+const SUPPORT_PHRASES = [
+  "Pode deixar isso aqui.",
+  "Não precisa organizar agora.",
+  "Uma frase já é suficiente.",
+  "Conte apenas o necessário.",
+  "Sua mente pode descansar.",
+  "Registre antes que a ideia passe.",
+  "Tudo começa com um registro.",
+];
+
 export default function CapturaCentral() {
   const { activeUser } = useActiveUser();
   const { toast } = useToast();
+  const [supportPhrase] = useState(
+    () => SUPPORT_PHRASES[Math.floor(Math.random() * SUPPORT_PHRASES.length)],
+  );
+
 
   const [text, setText] = useState("");
   const [pending, setPending] = useState<PendingAttachment[]>([]);
@@ -276,7 +290,7 @@ export default function CapturaCentral() {
       setText("");
       pending.forEach((p) => URL.revokeObjectURL(p.previewUrl));
       setPending([]);
-      toast({ title: "Registrado na Caixa de Entrada" });
+      toast({ title: "Registrado. Agora o Painel Central cuida dessa informação." });
       fetchEntries();
       textareaRef.current?.focus();
     } catch (e: any) {
@@ -442,25 +456,27 @@ export default function CapturaCentral() {
               Captura Central
             </h1>
             <p className="text-xs text-muted-foreground truncate">
-              Caixa de Entrada universal — registre sem classificar
+              Um lugar para registrar sua realidade. A organização vem depois.
             </p>
           </div>
           <Badge variant="secondary" className="hidden sm:inline-flex">
-            {entries.length} pendentes
+            {entries.length} capturas
           </Badge>
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 py-4 space-y-6">
+      <main className="max-w-3xl mx-auto px-4 py-6 space-y-8">
         {/* Capture card */}
-        <Card className="p-4 sm:p-5 space-y-3 shadow-sm">
+        <Card className="p-5 sm:p-6 space-y-4 shadow-sm">
           <Textarea
             ref={textareaRef}
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Digite ou registre qualquer ideia, tarefa, problema, reflexão ou informação..."
+            placeholder="Conte o que está passando pela sua cabeça..."
             className="min-h-[120px] resize-y text-base leading-relaxed border-none focus-visible:ring-0 shadow-none px-0"
           />
+          <p className="text-xs text-muted-foreground/70 -mt-2">{supportPhrase}</p>
+
 
           {/* Pending attachments preview */}
           {pending.length > 0 && (
@@ -641,10 +657,10 @@ export default function CapturaCentral() {
         </Card>
 
         {/* Pending list */}
-        <section className="space-y-2">
+        <section className="space-y-3">
           <div className="flex items-center justify-between px-1">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-              Aguardando Seleção
+              Capturas recentes
             </h2>
             <Badge variant="outline" className="text-xs">
               {entries.length}
@@ -660,7 +676,8 @@ export default function CapturaCentral() {
               Nenhum registro pendente. Comece capturando algo acima.
             </Card>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
+
               {entries.map((entry) => {
                 const meta = TYPE_META[entry.entry_type] ?? TYPE_META.texto;
                 const isEditing = editingId === entry.id;
