@@ -1,3 +1,4 @@
+import { CapturaStateIndicator } from "@/components/captura/CapturaStateIndicator";
 import { useEffect, useRef, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -761,7 +762,7 @@ export default function CapturaCentral() {
 
                     <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50 text-xs text-muted-foreground">
                       <span>{entry.user_name ?? "Sem usuário"}</span>
-                      <span className="italic">Aguardando Seleção</span>
+                      <CapturaStateIndicator state="em_analise" />
                     </div>
                   </Card>
                 );
