@@ -290,7 +290,7 @@ export default function CapturaCentral() {
       setText("");
       pending.forEach((p) => URL.revokeObjectURL(p.previewUrl));
       setPending([]);
-      toast({ title: "Registrado na Caixa de Entrada" });
+      toast({ title: "Registrado. Agora o Painel Central cuida dessa informação." });
       fetchEntries();
       textareaRef.current?.focus();
     } catch (e: any) {
