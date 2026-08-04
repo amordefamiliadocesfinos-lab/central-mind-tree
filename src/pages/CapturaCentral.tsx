@@ -657,10 +657,10 @@ export default function CapturaCentral() {
         </Card>
 
         {/* Pending list */}
-        <section className="space-y-2">
+        <section className="space-y-3">
           <div className="flex items-center justify-between px-1">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-              Aguardando Seleção
+              Capturas recentes
             </h2>
             <Badge variant="outline" className="text-xs">
               {entries.length}
@@ -676,7 +676,8 @@ export default function CapturaCentral() {
               Nenhum registro pendente. Comece capturando algo acima.
             </Card>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
+
               {entries.map((entry) => {
                 const meta = TYPE_META[entry.entry_type] ?? TYPE_META.texto;
                 const isEditing = editingId === entry.id;
