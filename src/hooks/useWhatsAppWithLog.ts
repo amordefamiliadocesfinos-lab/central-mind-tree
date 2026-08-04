@@ -74,7 +74,7 @@ export function useWhatsAppWithLog() {
         ? `⚡ Atendimento inteligente · ${approach} · "${preview}"`
         : `📤 Mensagem iniciada via WhatsApp · "${preview}"`;
 
-    const historyRows = [{
+    const historyRows: Record<string, any>[] = [{
       contact_id: contactId,
       event_type: 'whatsapp',
       interaction_type: 'whatsapp',
