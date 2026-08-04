@@ -136,15 +136,15 @@ export function useContacts() {
         if (error) throw error;
         if (!data || data.length === 0) break;
         all.push(...data);
-        const normalized = all.map(contact => ({
-          ...contact,
-          funnel_status: normalizeCrmStage(contact.funnel_status),
-        })) as unknown as Contact[];
-        // Mantém os dados parciais em memória; a tela só libera após a base completa.
-        setContacts(normalized);
         if (data.length < PAGE) break;
         from += PAGE;
       }
+      const normalized = all.map(contact => ({
+        ...contact,
+        funnel_status: normalizeCrmStage(contact.funnel_status),
+      })) as unknown as Contact[];
+      // Troca a base de uma vez para impedir indicadores parciais durante a paginação.
+      setContacts(normalized);
     } catch (error: any) {
       console.error('Error fetching contacts:', error);
       toast.error('Erro ao carregar contatos');
