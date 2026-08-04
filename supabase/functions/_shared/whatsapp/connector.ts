@@ -32,6 +32,7 @@ export interface NormalizedWebhookEvent {
   content?: string;
   providerTimestamp?: string;
   deduplicationKey?: string;
+  errorCode?: string;
 }
 
 export interface SendTextResult {
