@@ -3,6 +3,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Input } from '@/components/ui/input';
 import {
   MessageCircle,
   Clock,
@@ -11,6 +12,7 @@ import {
   X,
   ExternalLink,
   PartyPopper,
+  RotateCcw,
   Send,
   FileText,
   Handshake,
@@ -32,7 +34,7 @@ interface CrmFocusQueueProps {
   getUrgencyLevel: (c: Contact) => string;
   getUrgencyReason: (c: Contact) => string | null;
   onWhatsApp: (c: Contact) => void | Promise<void>;
-  onSnooze: (c: Contact, days: number) => void | Promise<void>;
+  onSnooze: (c: Contact, when: number | string) => void | Promise<void>;
   onDone: (c: Contact, outcome: QueueOutcome) => boolean | void | Promise<boolean | void>;
   onOpenContact: (c: Contact) => void;
 }
@@ -43,6 +45,9 @@ export type QueueOutcome =
   | 'negotiation'
   | 'sale_closed'
   | 'post_sale_done'
+  | 'client_replied'
+  | 'invalid_phone'
+  | 'waiting_internal_quote'
   | 'no_interest'
   | 'record_only';
 
@@ -52,6 +57,9 @@ const OUTCOMES: Array<{ key: QueueOutcome; label: string; Icon: typeof Send }> =
   { key: 'negotiation', label: 'Em negociação', Icon: Handshake },
   { key: 'sale_closed', label: 'Venda fechada', Icon: Trophy },
   { key: 'post_sale_done', label: 'Pós-venda realizado', Icon: Heart },
+  { key: 'client_replied', label: 'Cliente respondeu', Icon: MessageCircle },
+  { key: 'waiting_internal_quote', label: 'Aguardando orçamento interno', Icon: FileText },
+  { key: 'invalid_phone', label: 'Telefone inválido ou ausente', Icon: Ban },
   { key: 'no_interest', label: 'Sem interesse', Icon: Ban },
   { key: 'record_only', label: 'Apenas registrar', Icon: CheckCircle2 },
 ];
@@ -65,6 +73,13 @@ const URGENCY_UI: Record<string, { label: string; className: string }> = {
 function daysSince(dateStr?: string | null): number | null {
   if (!dateStr) return null;
   try { return differenceInDays(new Date(), parseISO(dateStr)); } catch { return null; }
+}
+
+const QUEUE_SESSION_STORAGE_KEY = 'crm-focus-session-v1';
+
+function localDateKey() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 }
 
 export function CrmFocusQueue({
@@ -81,10 +96,27 @@ export function CrmFocusQueue({
   const [index, setIndex] = useState(0);
   const [treated, setTreated] = useState(0);
   const [choosingOutcome, setChoosingOutcome] = useState(false);
+  const [choosingSnooze, setChoosingSnooze] = useState(false);
+  const [customSnoozeDate, setCustomSnoozeDate] = useState('');
+
+  const queueFingerprint = useMemo(() => queue.map(contact => contact.id).join(','), [queue]);
 
   useEffect(() => {
-    if (open) { setIndex(0); setTreated(0); setChoosingOutcome(false); }
-  }, [open]);
+    if (!open) return;
+    setChoosingOutcome(false);
+    setChoosingSnooze(false);
+    setCustomSnoozeDate('');
+    try {
+      const saved = JSON.parse(localStorage.getItem(QUEUE_SESSION_STORAGE_KEY) || 'null');
+      if (saved?.date === localDateKey() && saved?.fingerprint === queueFingerprint) {
+        setIndex(Math.min(Number(saved.index) || 0, queue.length));
+        setTreated(Math.min(Number(saved.treated) || 0, queue.length));
+        return;
+      }
+    } catch { /* sessão inválida: iniciar uma nova */ }
+    setIndex(0);
+    setTreated(0);
+  }, [open, queue.length, queueFingerprint]);
 
   const total = queue.length;
   const current = queue[index];
@@ -93,8 +125,24 @@ export function CrmFocusQueue({
   const progress = total > 0 ? Math.round((Math.min(index, total) / total) * 100) : 0;
 
   const advance = (didTreat: boolean) => {
-    if (didTreat) setTreated(t => t + 1);
-    setIndex(i => i + 1);
+    const nextIndex = index + 1;
+    const nextTreated = treated + (didTreat ? 1 : 0);
+    setIndex(nextIndex);
+    setTreated(nextTreated);
+    localStorage.setItem(QUEUE_SESSION_STORAGE_KEY, JSON.stringify({
+      date: localDateKey(),
+      fingerprint: queueFingerprint,
+      index: nextIndex,
+      treated: nextTreated,
+    }));
+  };
+
+  const snoozeAndAdvance = async (when: number | string) => {
+    if (!current) return;
+    await onSnooze(current, when);
+    setChoosingSnooze(false);
+    setCustomSnoozeDate('');
+    advance(false);
   };
 
   const phone = current ? (current.whatsapp || current.mobile || current.phone) : null;
@@ -125,10 +173,28 @@ export function CrmFocusQueue({
             <Badge variant="secondary" className="text-[10px] h-5">
               {Math.min(index + (finished ? 0 : 1), total)} de {total}
             </Badge>
+            {(index > 0 || treated > 0) && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 ml-auto"
+                title="Reiniciar esta sessão"
+                aria-label="Reiniciar esta sessão"
+                onClick={() => {
+                  localStorage.removeItem(QUEUE_SESSION_STORAGE_KEY);
+                  setIndex(0);
+                  setTreated(0);
+                  setChoosingOutcome(false);
+                  setChoosingSnooze(false);
+                }}
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+              </Button>
+            )}
             <Button
               variant="ghost"
               size="icon"
-              className="h-7 w-7 ml-auto"
+              className={cn('h-7 w-7', index === 0 && treated === 0 && 'ml-auto')}
               onClick={() => onOpenChange(false)}
             >
               <X className="h-4 w-4" />
@@ -144,7 +210,10 @@ export function CrmFocusQueue({
             <p className="text-sm text-muted-foreground">
               {treated} de {total} leads tratados agora.
             </p>
-            <Button className="w-full" onClick={() => onOpenChange(false)}>
+            <Button className="w-full" onClick={() => {
+              localStorage.removeItem(QUEUE_SESSION_STORAGE_KEY);
+              onOpenChange(false);
+            }}>
               Fechar
             </Button>
           </div>
@@ -217,10 +286,10 @@ export function CrmFocusQueue({
                 <Button
                   variant="outline"
                   className="h-10 gap-1.5 text-xs"
-                  onClick={async () => { await onSnooze(current, 3); advance(false); }}
+                  onClick={() => setChoosingSnooze(value => !value)}
                 >
                   <Clock className="h-3.5 w-3.5" />
-                  Adiar 3 dias
+                  Adiar atendimento
                 </Button>
                 <Button
                   variant="outline"
@@ -231,6 +300,34 @@ export function CrmFocusQueue({
                   Registrar resultado
                 </Button>
               </div>
+
+              {choosingSnooze && (
+                <div className="rounded-lg border bg-muted/20 p-2 space-y-2">
+                  <p className="px-1 text-[11px] font-semibold text-muted-foreground">Quando retomar?</p>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <Button variant="outline" className="h-8 text-[11px]" onClick={() => void snoozeAndAdvance(1)}>Amanhã</Button>
+                    <Button variant="outline" className="h-8 text-[11px]" onClick={() => void snoozeAndAdvance(3)}>3 dias</Button>
+                    <Button variant="outline" className="h-8 text-[11px]" onClick={() => void snoozeAndAdvance(7)}>7 dias</Button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="date"
+                      value={customSnoozeDate}
+                      min={localDateKey()}
+                      onChange={(event) => setCustomSnoozeDate(event.target.value)}
+                      className="h-8 text-xs"
+                    />
+                    <Button
+                      size="sm"
+                      className="h-8 text-[11px]"
+                      disabled={!customSnoozeDate}
+                      onClick={() => void snoozeAndAdvance(customSnoozeDate)}
+                    >
+                      Confirmar
+                    </Button>
+                  </div>
+                </div>
+              )}
 
               {choosingOutcome && (
                 <div className="rounded-lg border bg-muted/20 p-2 space-y-1.5">

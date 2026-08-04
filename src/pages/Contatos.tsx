@@ -349,6 +349,7 @@ export default function Contatos() {
   const [classificationFilter, setClassificationFilter] = useState<string>('all');
   const [originFilter, setOriginFilter] = useState<string>('all');
   const [attentionFilter, setAttentionFilter] = useState<AttentionKey>('all');
+  const [qualityOnly, setQualityOnly] = useState(false);
   const [viewMode, setViewMode] = useState<'today' | 'kanban' | 'funnel' | 'list' | 'sales_funnel'>('today');
   const [formOpen, setFormOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | undefined>();
@@ -517,6 +518,37 @@ export default function Contatos() {
     });
   }, [leadsPanelContacts, deferredSearchQuery, statusFilter, tempFilter, typeFilter, tagFilter, actionFilter, contactDateFilter, classificationFilter, originFilter, getTagsForContact, isNextActionOverdue]);
 
+  const qualityIssueByContact = useMemo(() => {
+    const phoneCounts = new Map<string, number>();
+    const nameCounts = new Map<string, number>();
+    const phoneKey = (contact: Contact) => {
+      const digits = (contact.whatsapp || contact.mobile || contact.phone || '').replace(/\D/g, '');
+      return digits.length >= 8 ? digits.slice(-10) : '';
+    };
+    const nameKey = (contact: Contact) => (contact.name || '').trim().toLocaleLowerCase('pt-BR');
+
+    leadsPanelContacts.filter(contact => contact.is_active).forEach(contact => {
+      const phone = phoneKey(contact);
+      const name = nameKey(contact);
+      if (phone) phoneCounts.set(phone, (phoneCounts.get(phone) || 0) + 1);
+      if (name.length >= 5) nameCounts.set(name, (nameCounts.get(name) || 0) + 1);
+    });
+
+    const issues = new Map<string, string[]>();
+    leadsPanelContacts.filter(contact => contact.is_active).forEach(contact => {
+      const contactIssues: string[] = [];
+      const name = (contact.name || '').trim();
+      const phone = phoneKey(contact);
+      if (!phone) contactIssues.push('Sem telefone válido');
+      if (name.length < 3 || /^\W+$/u.test(name) || /\bnan\b/i.test(name)) contactIssues.push('Nome precisa de revisão');
+      if (phone && (phoneCounts.get(phone) || 0) > 1) contactIssues.push('Possível telefone duplicado');
+      const normalizedName = nameKey(contact);
+      if (normalizedName.length >= 5 && (nameCounts.get(normalizedName) || 0) > 1) contactIssues.push('Possível nome duplicado');
+      if (contactIssues.length > 0) issues.set(contact.id, contactIssues);
+    });
+    return issues;
+  }, [leadsPanelContacts]);
+
   /** Inteligência do Passo 1 — contadores e fila sempre coerentes com os filtros ativos */
   const { counts: attentionCounts, queue: attentionQueue } = useMemo(
     () => computeAttention(baseFilteredContacts, attentionDeps),
@@ -525,15 +557,19 @@ export default function Contatos() {
 
   /** Resultado único: rege lista, kanban, funil e o painel do Passo 3 */
   const filteredContacts = useMemo(
-    () => baseFilteredContacts.filter(c => matchesAttention(c, attentionFilter, attentionDeps)),
-    [baseFilteredContacts, attentionFilter, attentionDeps],
+    () => (qualityOnly
+      ? baseFilteredContacts.filter(contact => qualityIssueByContact.has(contact.id))
+      : baseFilteredContacts.filter(c => matchesAttention(c, attentionFilter, attentionDeps))),
+    [baseFilteredContacts, attentionFilter, attentionDeps, qualityOnly, qualityIssueByContact],
   );
 
   const filteredQueue = useMemo(
-    () => (attentionFilter === 'all'
+    () => (qualityOnly
+      ? []
+      : attentionFilter === 'all'
       ? attentionQueue
       : attentionQueue.filter(c => matchesAttention(c, attentionFilter, attentionDeps))),
-    [attentionQueue, attentionFilter, attentionDeps],
+    [attentionQueue, attentionFilter, attentionDeps, qualityOnly],
   );
 
 
@@ -736,6 +772,12 @@ export default function Contatos() {
   const [bulkDispatchContacts, setBulkDispatchContacts] = useState<Contact[] | null>(null);
   const [focusQueue, setFocusQueue] = useState<Contact[]>([]);
   const [focusQueueOpen, setFocusQueueOpen] = useState(false);
+  const [queueSessionSize, setQueueSessionSize] = useState(20);
+
+  const startFocusSession = useCallback((list: Contact[]) => {
+    setFocusQueue(list.slice(0, queueSessionSize));
+    setFocusQueueOpen(true);
+  }, [queueSessionSize]);
 
   const markContactedOptimistically = useCallback((contactId: string, patch: Partial<Contact> = {}) => {
     const today = getTodayISO();
@@ -762,10 +804,12 @@ export default function Contatos() {
   }, [refreshNoResponse, refetchChecklists, refetchDaily]);
 
   // Modo Fila — adiar próximo contato
-  const handleQueueSnooze = useCallback(async (contact: Contact, days: number) => {
-    const target = new Date();
-    target.setDate(target.getDate() + days);
-    target.setHours(9, 0, 0, 0);
+  const handleQueueSnooze = useCallback(async (contact: Contact, when: number | string) => {
+    const target = typeof when === 'number' ? new Date() : new Date(`${when}T09:00:00`);
+    if (typeof when === 'number') {
+      target.setDate(target.getDate() + when);
+      target.setHours(9, 0, 0, 0);
+    }
     const iso = target.toISOString();
     try {
       await updateContact(contact.id, {
@@ -813,6 +857,23 @@ export default function Contatos() {
       negotiation: { label: 'Cliente em negociação', stage: 'negociacao', action: 'Retomar negociação', days: 1 },
       sale_closed: { label: 'Venda fechada', stage: 'fechado', action: 'Realizar pós-venda', days: 3 },
       post_sale_done: { label: 'Pós-venda realizado', stage: 'cadencia', action: 'Reativar relacionamento com o cliente', days: 30 },
+      client_replied: {
+        label: 'Cliente respondeu',
+        stage: ['novo_lead', 'cadencia'].includes(contact.funnel_status) ? 'contato_realizado' : contact.funnel_status,
+        action: 'Definir próximo passo comercial',
+        days: 1,
+      },
+      waiting_internal_quote: {
+        label: 'Aguardando orçamento interno',
+        stage: ['novo_lead', 'cadencia'].includes(contact.funnel_status) ? 'contato_realizado' : contact.funnel_status,
+        action: 'Concluir orçamento interno',
+        days: 1,
+      },
+      invalid_phone: {
+        label: 'Telefone inválido ou ausente',
+        action: 'Corrigir telefone do contato',
+        days: 1,
+      },
       record_only: { label: 'Atendimento registrado', action: null },
     };
 
@@ -837,6 +898,9 @@ export default function Contatos() {
           negotiation: CRM_EVENT_CODES.NEGOTIATION_STARTED,
           sale_closed: CRM_EVENT_CODES.SALE_WON,
           post_sale_done: CRM_EVENT_CODES.POST_SALE_COMPLETED,
+          client_replied: CRM_EVENT_CODES.CUSTOMER_REPLIED,
+          waiting_internal_quote: CRM_EVENT_CODES.FOLLOW_UP_SCHEDULED,
+          invalid_phone: CRM_EVENT_CODES.CONTACT_ATTEMPTED,
           record_only: CRM_EVENT_CODES.CONTACT_ATTEMPTED,
         };
         await addEntry(contact.id, 'contact', config.label, now.toISOString(), eventByOutcome[outcome]);
@@ -1112,7 +1176,27 @@ export default function Contatos() {
             <UserPlus className="h-4 w-4 text-primary" />
             Contatos
           </h1>
+          <div className="relative hidden min-w-52 max-w-sm flex-1 md:block">
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              aria-label="Buscar contatos no CRM"
+              placeholder="Buscar contato, telefone ou Instagram…"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              className="h-8 bg-muted/40 pl-8 text-xs"
+            />
+          </div>
           <div className="flex items-center gap-2">
+            <Select value={String(queueSessionSize)} onValueChange={(value) => setQueueSessionSize(Number(value))}>
+              <SelectTrigger className="hidden h-8 w-[118px] text-xs lg:flex" aria-label="Tamanho da sessão de atendimento">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="10">Sessão: 10</SelectItem>
+                <SelectItem value="20">Sessão: 20</SelectItem>
+                <SelectItem value="30">Sessão: 30</SelectItem>
+              </SelectContent>
+            </Select>
             <Link to="/contatos/tarefas">
               <Button variant="outline" size="sm" className="h-8 gap-1 px-2.5">
                 <CalendarClock className="h-3.5 w-3.5" />
@@ -1142,9 +1226,32 @@ export default function Contatos() {
           </div>
         </div>
 
+        <div className="flex items-center gap-2 md:hidden">
+          <div className="relative min-w-0 flex-1">
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              aria-label="Buscar contatos no CRM"
+              placeholder="Buscar contato ou telefone…"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              className="h-8 bg-muted/40 pl-8 text-xs"
+            />
+          </div>
+          <Select value={String(queueSessionSize)} onValueChange={(value) => setQueueSessionSize(Number(value))}>
+            <SelectTrigger className="h-8 w-[110px] text-xs" aria-label="Tamanho da sessão de atendimento">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="10">Sessão: 10</SelectItem>
+              <SelectItem value="20">Sessão: 20</SelectItem>
+              <SelectItem value="30">Sessão: 30</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* Indicadores — faixa única compacta */}
         <Collapsible open={metricsOpen} onOpenChange={setMetricsOpen}>
-          <div className="flex items-center gap-x-2.5 gap-y-1 flex-wrap rounded-md border border-border/60 bg-muted/30 px-2 py-1">
+          <div className="flex items-center gap-x-2.5 gap-y-1 flex-wrap rounded-md border border-border/60 bg-muted/30 px-2 py-1" aria-busy={loading}>
             {[
               { label: 'Contatos', value: metrics.total, tone: 'text-foreground' },
               { label: 'Clientes', value: metrics.clientesAtivos, tone: 'text-green-600 dark:text-green-400' },
@@ -1157,7 +1264,7 @@ export default function Contatos() {
             ].map((m, i) => (
               <div key={m.label} className="flex items-center gap-1.5">
                 {i === 4 && <span className="h-3.5 w-px bg-border mr-1.5" aria-hidden />}
-                <span className={cn('text-xs font-bold leading-none tabular-nums', m.tone)}>{m.value}</span>
+                <span className={cn('text-xs font-bold leading-none tabular-nums', m.tone)}>{loading ? '…' : m.value}</span>
                 <span className="text-[9px] text-muted-foreground leading-none">
                   {m.label}
                   {m.today && <span className="opacity-60"> hoje</span>}
@@ -1208,19 +1315,10 @@ export default function Contatos() {
             setActionFilter('all');
             setContactDateFilter('all');
             setAttentionFilter('all');
+            setQualityOnly(false);
           }}
           filtersSlot={(
             <div className="flex items-center gap-2 flex-wrap">
-              <div className="relative flex-1 min-w-[140px] max-w-md">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar nome, telefone, cidade, notas..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 h-9 bg-muted/50"
-                />
-              </div>
-
               <Select value={typeFilter} onValueChange={setTypeFilter}>
                 <SelectTrigger className="w-32 h-9">
                   <SelectValue placeholder="Tipo" />
@@ -1325,7 +1423,7 @@ export default function Contatos() {
               </Select>
             </div>
           )}
-          onStartQueue={(list) => { setFocusQueue(list); setFocusQueueOpen(true); }}
+          onStartQueue={startFocusSession}
           leadsPanelSlot={(
             <LeadsNeedContactPanel
               contacts={filteredQueue}
@@ -1355,6 +1453,23 @@ export default function Contatos() {
 
         {/* Ações e visualização */}
         <div className="flex items-center gap-2 justify-end flex-wrap">
+          <Button
+            variant={qualityOnly ? 'secondary' : 'outline'}
+            size="sm"
+            className={cn('h-8 gap-1.5', qualityOnly && 'border-amber-300 bg-amber-100 text-amber-800')}
+            onClick={() => {
+              const next = !qualityOnly;
+              setQualityOnly(next);
+              if (next) {
+                setAttentionFilter('all');
+                setViewMode('list');
+              }
+            }}
+            title="Contatos com telefone ausente, nome inválido ou possível duplicidade"
+          >
+            <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+            <span className="text-xs">Qualidade ({qualityIssueByContact.size})</span>
+          </Button>
           <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => setPosVendaOpen(true)} title="Pós-Venda">
             <Heart className="h-4 w-4 text-pink-600" />
             <span className="hidden sm:inline text-xs">Pós-Venda</span>
@@ -1399,11 +1514,15 @@ export default function Contatos() {
           </div>
         ) : viewMode === 'today' ? (
           <CrmTodayView
-            queue={attentionQueue}
+            queue={filteredQueue}
             counts={attentionCounts}
+            activeFilter={attentionFilter}
             getUrgencyReason={getContactUrgencyReason}
-            onSelectFilter={setAttentionFilter}
-            onStartQueue={() => { setFocusQueue(attentionQueue); setFocusQueueOpen(true); }}
+            onSelectFilter={(filter) => {
+              setQualityOnly(false);
+              setAttentionFilter(current => current === filter ? 'all' : filter);
+            }}
+            onStartQueue={() => startFocusSession(filteredQueue)}
             onOpenContact={(contact) => { setDetailContact(contact); setDetailOpen(true); }}
             onWhatsApp={handleWhatsApp}
           />
@@ -1508,6 +1627,12 @@ export default function Contatos() {
 
         ) : (
           <Card className="overflow-hidden">
+            {qualityOnly && (
+              <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                <span><strong>{filteredContacts.length}</strong> contatos precisam de revisão cadastral. Corrija o motivo exibido abaixo do nome.</span>
+              </div>
+            )}
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
@@ -1557,6 +1682,11 @@ export default function Contatos() {
                                 {contact.name}
                               </span>
                               {contact.fantasy_name && <p className="text-xs text-muted-foreground">{contact.fantasy_name}</p>}
+                              {qualityOnly && qualityIssueByContact.has(contact.id) && (
+                                <p className="max-w-64 text-[10px] font-medium text-amber-700">
+                                  {qualityIssueByContact.get(contact.id)?.join(' · ')}
+                                </p>
+                              )}
                             </div>
                           </div>
                         </TableCell>

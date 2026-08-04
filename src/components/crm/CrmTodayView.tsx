@@ -8,6 +8,7 @@ import type { AttentionCounts, AttentionKey } from '@/lib/crm/attentionFilters';
 interface Props {
   queue: Contact[];
   counts: AttentionCounts;
+  activeFilter: AttentionKey;
   getUrgencyReason: (contact: Contact) => string | null;
   onSelectFilter: (filter: AttentionKey) => void;
   onStartQueue: () => void;
@@ -31,6 +32,7 @@ const SECTIONS: Array<{
 export function CrmTodayView({
   queue,
   counts,
+  activeFilter,
   getUrgencyReason,
   onSelectFilter,
   onStartQueue,
@@ -54,11 +56,17 @@ export function CrmTodayView({
         </div>
       </Card>
 
-      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {SECTIONS.map(section => {
           const Icon = section.icon;
           return (
-            <button key={section.key} type="button" className={`rounded-lg border p-3 text-left transition hover:shadow-sm ${section.tone}`} onClick={() => onSelectFilter(section.key)}>
+            <button
+              key={section.key}
+              type="button"
+              aria-pressed={activeFilter === section.key}
+              className={`rounded-lg border p-3 text-left transition hover:shadow-sm ${section.tone} ${activeFilter === section.key ? 'ring-2 ring-primary ring-offset-1' : ''}`}
+              onClick={() => onSelectFilter(section.key)}
+            >
               <div className="flex items-center justify-between gap-2">
                 <Icon className="h-4 w-4" />
                 <span className="text-xl font-bold">{counts[section.key] || 0}</span>
