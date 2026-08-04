@@ -96,9 +96,23 @@ function fmtSize(b: number) {
   return `${(b / 1024 / 1024).toFixed(1)} MB`;
 }
 
+const SUPPORT_PHRASES = [
+  "Pode deixar isso aqui.",
+  "Não precisa organizar agora.",
+  "Uma frase já é suficiente.",
+  "Conte apenas o necessário.",
+  "Sua mente pode descansar.",
+  "Registre antes que a ideia passe.",
+  "Tudo começa com um registro.",
+];
+
 export default function CapturaCentral() {
   const { activeUser } = useActiveUser();
   const { toast } = useToast();
+  const [supportPhrase] = useState(
+    () => SUPPORT_PHRASES[Math.floor(Math.random() * SUPPORT_PHRASES.length)],
+  );
+
 
   const [text, setText] = useState("");
   const [pending, setPending] = useState<PendingAttachment[]>([]);
