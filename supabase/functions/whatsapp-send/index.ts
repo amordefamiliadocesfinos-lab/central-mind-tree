@@ -1,7 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
 import { normalizeBrPhone } from '../_shared/whatsapp/connector.ts';
-import { getWhatsAppConnector } from '../_shared/whatsapp/zapi-connector.ts';
+import { getWhatsAppConnector } from '../_shared/whatsapp/meta-connector.ts';
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
 
   const { data: conv } = await supabase
     .from('service_conversations')
-    .select('id, contact_id, contact_handle')
+    .select('id, contact_id, contact_handle, last_inbound_at')
     .eq('id', conversationId)
     .maybeSingle();
   if (!conv) return json({ error: 'Conversa não encontrada' }, 404);
@@ -62,6 +62,15 @@ Deno.serve(async (req) => {
     phone = contact?.phone_normalized ?? null;
   }
   if (!phone) return json({ error: 'Contato sem telefone de WhatsApp válido' }, 400);
+
+  // Texto livre só pode ser enviado dentro da janela de atendimento da Meta.
+  const lastInboundAt = conv.last_inbound_at ? Date.parse(conv.last_inbound_at) : 0;
+  if (!lastInboundAt || Date.now() - lastInboundAt > 24 * 60 * 60 * 1000) {
+    return json({
+      error: 'A janela de atendimento de 24 horas está encerrada. Use um template aprovado pela Meta para reiniciar a conversa.',
+      code: 'template_required',
+    }, 409);
+  }
 
   const connector = getWhatsAppConnector();
   if (!connector.isConfigured) {

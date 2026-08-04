@@ -1,6 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { corsHeaders } from 'npm:@supabase/supabase-js@2/cors';
-import { getWhatsAppConnector } from '../_shared/whatsapp/zapi-connector.ts';
+import { getWhatsAppConnector } from '../_shared/whatsapp/meta-connector.ts';
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
