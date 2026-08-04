@@ -456,25 +456,27 @@ export default function CapturaCentral() {
               Captura Central
             </h1>
             <p className="text-xs text-muted-foreground truncate">
-              Caixa de Entrada universal — registre sem classificar
+              Um lugar para registrar sua realidade. A organização vem depois.
             </p>
           </div>
           <Badge variant="secondary" className="hidden sm:inline-flex">
-            {entries.length} pendentes
+            {entries.length} capturas
           </Badge>
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 py-4 space-y-6">
+      <main className="max-w-3xl mx-auto px-4 py-6 space-y-8">
         {/* Capture card */}
-        <Card className="p-4 sm:p-5 space-y-3 shadow-sm">
+        <Card className="p-5 sm:p-6 space-y-4 shadow-sm">
           <Textarea
             ref={textareaRef}
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Digite ou registre qualquer ideia, tarefa, problema, reflexão ou informação..."
+            placeholder="Conte o que está passando pela sua cabeça..."
             className="min-h-[120px] resize-y text-base leading-relaxed border-none focus-visible:ring-0 shadow-none px-0"
           />
+          <p className="text-xs text-muted-foreground/70 -mt-2">{supportPhrase}</p>
+
 
           {/* Pending attachments preview */}
           {pending.length > 0 && (
