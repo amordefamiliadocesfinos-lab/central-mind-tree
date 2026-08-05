@@ -42,62 +42,64 @@ function SummaryCard({ title, value, count, icon, variant = 'default' }: Summary
   };
   return (
     <Card className={variants[variant]}>
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground">{title}</p>
-            <p className="text-2xl font-bold">{formatCurrency(value)}</p>
-            {count !== undefined && <p className="text-xs text-muted-foreground">{count} lançamento(s)</p>}
+      <CardContent className="p-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-[11px] text-muted-foreground truncate">{title}</p>
+            <p className="text-lg font-bold leading-tight">{formatCurrency(value)}</p>
+            {count !== undefined && <p className="text-[10px] text-muted-foreground">{count} lançamento(s)</p>}
           </div>
-          <div className={iconVariants[variant]}>{icon}</div>
+          <div className={`${iconVariants[variant]} [&_svg]:h-4 [&_svg]:w-4`}>{icon}</div>
         </div>
       </CardContent>
     </Card>
   );
 }
 
+
 function TypeSummary({ title, summary, type }: { title: string; summary: FinancialSummary; type: 'pagar' | 'receber' }) {
   const Icon = type === 'receber' ? TrendingUp : TrendingDown;
   const iconColor = type === 'receber' ? 'text-emerald-500' : 'text-red-500';
   return (
     <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Icon className={`h-5 w-5 ${iconColor}`} />
+      <CardHeader className="p-3 pb-1.5">
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Icon className={`h-4 w-4 ${iconColor}`} />
           {title}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-lg bg-muted/50 p-3">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Clock className="h-4 w-4" />Em Aberto
+      <CardContent className="p-3 pt-0 space-y-2">
+        <div className="grid grid-cols-3 gap-2">
+          <div className="rounded-md bg-muted/50 p-2">
+            <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+              <Clock className="h-3 w-3" />Em Aberto
             </div>
-            <p className="text-lg font-semibold">{formatCurrency(summary.total_open)}</p>
-            <p className="text-xs text-muted-foreground">{summary.count_open} lançamento(s)</p>
+            <p className="text-sm font-semibold">{formatCurrency(summary.total_open, { compact: true })}</p>
+            <p className="text-[10px] text-muted-foreground">{summary.count_open}</p>
           </div>
-          <div className="rounded-lg bg-red-500/10 p-3">
-            <div className="flex items-center gap-2 text-sm text-red-500">
-              <AlertTriangle className="h-4 w-4" />Atrasadas
+          <div className="rounded-md bg-red-500/10 p-2">
+            <div className="flex items-center gap-1 text-[11px] text-red-500">
+              <AlertTriangle className="h-3 w-3" />Atrasadas
             </div>
-            <p className="text-lg font-semibold text-red-500">{formatCurrency(summary.total_overdue)}</p>
-            <p className="text-xs text-muted-foreground">{summary.count_overdue} lançamento(s)</p>
+            <p className="text-sm font-semibold text-red-500">{formatCurrency(summary.total_overdue, { compact: true })}</p>
+            <p className="text-[10px] text-muted-foreground">{summary.count_overdue}</p>
           </div>
-        </div>
-        <div className="rounded-lg bg-emerald-500/10 p-3">
-          <div className="flex items-center gap-2 text-sm text-emerald-500">
-            <CheckCircle className="h-4 w-4" />{type === 'receber' ? 'Recebido' : 'Pago'}
+          <div className="rounded-md bg-emerald-500/10 p-2">
+            <div className="flex items-center gap-1 text-[11px] text-emerald-500">
+              <CheckCircle className="h-3 w-3" />{type === 'receber' ? 'Recebido' : 'Pago'}
+            </div>
+            <p className="text-sm font-semibold text-emerald-500">{formatCurrency(summary.total_paid, { compact: true })}</p>
+            <p className="text-[10px] text-muted-foreground">{summary.count_paid}</p>
           </div>
-          <p className="text-lg font-semibold text-emerald-500">{formatCurrency(summary.total_paid)}</p>
-          <p className="text-xs text-muted-foreground">{summary.count_paid} lançamento(s)</p>
         </div>
         {summary.count_partial > 0 && (
-          <p className="text-xs text-amber-500">{summary.count_partial} lançamento(s) com pagamento parcial</p>
+          <p className="text-[10px] text-amber-500">{summary.count_partial} com pagamento parcial</p>
         )}
       </CardContent>
     </Card>
   );
 }
+
 
 type GroupBy = 'category' | 'contact' | 'account' | 'type' | 'status';
 type ChartKind = 'pie' | 'bar';
@@ -180,21 +182,22 @@ function InteractiveBreakdown({ entries }: { entries: FinancialEntry[] }) {
 
   return (
     <Card>
-      <CardHeader className="pb-3">
+      <CardHeader className="p-3 pb-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <BarChart3 className="h-5 w-5 text-primary" />
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <BarChart3 className="h-4 w-4 text-primary" />
             Análise interativa de gastos
           </CardTitle>
           <div className="flex items-center gap-2">
-            <Badge variant="secondary">
+            <Badge variant="secondary" className="text-[10px] h-5">
               {selected.size > 0 ? `${selected.size} selecionadas` : `${filteredList.length} lançamentos`}
             </Badge>
-            <span className="text-sm font-semibold">{formatCurrency(totalValue)}</span>
+            <span className="text-xs font-semibold">{formatCurrency(totalValue)}</span>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="p-3 pt-0 space-y-2">
+
         {/* Controls */}
         <div className="grid gap-2 md:grid-cols-4">
           <div className="relative md:col-span-2">
@@ -244,9 +247,10 @@ function InteractiveBreakdown({ entries }: { entries: FinancialEntry[] }) {
           </div>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-2 lg:grid-cols-2">
           {/* Chart */}
-          <div className="rounded-lg border bg-muted/20 p-3 h-[340px]">
+          <div className="rounded-lg border bg-muted/20 p-2 h-[230px]">
+
             {chartData.length === 0 ? (
               <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
                 Sem dados para o filtro atual
@@ -305,7 +309,7 @@ function InteractiveBreakdown({ entries }: { entries: FinancialEntry[] }) {
                 </Button>
               )}
             </div>
-            <ScrollArea className="h-[290px]">
+            <ScrollArea className="h-[185px]">
               <div className="divide-y">
                 {filteredList.length === 0 ? (
                   <p className="p-4 text-sm text-muted-foreground text-center">Nenhum lançamento</p>
@@ -347,13 +351,14 @@ function InteractiveBreakdown({ entries }: { entries: FinancialEntry[] }) {
 
         {/* Breakdown table */}
         {chartData.length > 0 && (
-          <div className="rounded-lg border">
-            <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 border-b bg-muted/30 p-2 text-xs font-semibold text-muted-foreground">
+          <div className="rounded-lg border max-h-[180px] overflow-y-auto">
+            <div className="sticky top-0 grid grid-cols-[1fr_auto_auto_auto] gap-2 border-b bg-muted/60 backdrop-blur p-1.5 text-[10px] font-semibold text-muted-foreground">
               <span>Grupo</span>
               <span className="text-right">Qtd</span>
               <span className="text-right">Valor</span>
               <span className="text-right">%</span>
             </div>
+
             <div className="divide-y">
               {chartData.map((d, i) => (
                 <div key={d.name} className="grid grid-cols-[1fr_auto_auto_auto] gap-2 p-2 text-sm items-center">
@@ -390,17 +395,17 @@ export function FinancialDashboard(props: FinancialDashboardProps = {}) {
 
 
   return (
-    <div className="space-y-6">
-      <div className="grid gap-4 md:grid-cols-3">
-        <SummaryCard title="Total Entradas (Período)" value={summary.totalEntradas}
-          icon={<TrendingUp className="h-6 w-6" />} variant="success" />
-        <SummaryCard title="Total Saídas (Período)" value={summary.totalSaidas}
-          icon={<TrendingDown className="h-6 w-6" />} variant="danger" />
+    <div className="space-y-3">
+      <div className="grid gap-2 grid-cols-3">
+        <SummaryCard title="Entradas (Período)" value={summary.totalEntradas}
+          icon={<TrendingUp />} variant="success" />
+        <SummaryCard title="Saídas (Período)" value={summary.totalSaidas}
+          icon={<TrendingDown />} variant="danger" />
         <SummaryCard title="Saldo do Período" value={summary.saldo}
-          icon={<Wallet className="h-6 w-6" />} variant={summary.saldo >= 0 ? 'success' : 'danger'} />
+          icon={<Wallet />} variant={summary.saldo >= 0 ? 'success' : 'danger'} />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-2 md:grid-cols-2">
         <TypeSummary title="Contas a Receber" summary={summary.receber} type="receber" />
         <TypeSummary title="Contas a Pagar" summary={summary.pagar} type="pagar" />
       </div>
@@ -408,30 +413,32 @@ export function FinancialDashboard(props: FinancialDashboardProps = {}) {
       <InteractiveBreakdown entries={entries} />
 
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Wallet className="h-5 w-5" />Saldo por Conta
+        <CardHeader className="p-3 pb-1.5">
+          <CardTitle className="flex items-center gap-2 text-sm">
+            <Wallet className="h-4 w-4" />Saldo por Conta
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3 pt-0">
           {accounts.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhuma conta cadastrada</p>
+            <p className="text-xs text-muted-foreground">Nenhuma conta cadastrada</p>
           ) : (
             <div className="space-y-2">
-              {accounts.map((account) => (
-                <div key={account.id} className="flex items-center justify-between rounded-lg bg-muted/50 p-3">
-                  <div>
-                    <p className="font-medium">{account.name}</p>
-                    <p className="text-xs text-muted-foreground capitalize">{account.type}</p>
+              <div className="grid gap-1.5 sm:grid-cols-2 lg:grid-cols-3 max-h-[150px] overflow-y-auto">
+                {accounts.map((account) => (
+                  <div key={account.id} className="flex items-center justify-between gap-2 rounded-md bg-muted/50 px-2 py-1.5">
+                    <div className="min-w-0">
+                      <p className="text-xs font-medium truncate">{account.name}</p>
+                      <p className="text-[10px] text-muted-foreground capitalize">{account.type}</p>
+                    </div>
+                    <p className={`text-xs font-semibold shrink-0 ${account.current_balance >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                      {formatCurrency(account.current_balance, { compact: true })}
+                    </p>
                   </div>
-                  <p className={`font-semibold ${account.current_balance >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                    {formatCurrency(account.current_balance)}
-                  </p>
-                </div>
-              ))}
-              <div className="flex items-center justify-between border-t pt-3">
-                <p className="font-medium">Total</p>
-                <p className={`text-lg font-bold ${summary.totalAccountsBalance >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                ))}
+              </div>
+              <div className="flex items-center justify-between border-t pt-2">
+                <p className="text-xs font-medium">Total</p>
+                <p className={`text-base font-bold ${summary.totalAccountsBalance >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                   {formatCurrency(summary.totalAccountsBalance)}
                 </p>
               </div>
@@ -441,4 +448,5 @@ export function FinancialDashboard(props: FinancialDashboardProps = {}) {
       </Card>
     </div>
   );
+
 }
