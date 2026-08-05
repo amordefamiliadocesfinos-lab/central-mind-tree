@@ -40,6 +40,7 @@ import Oportunidades from "./pages/Oportunidades";
 import Nucleo from "./pages/Nucleo";
 import CapturaCentral from "./pages/CapturaCentral";
 import OAuthConsent from "./pages/OAuthConsent";
+import PoliticaPrivacidade from "./pages/PoliticaPrivacidade";
 import { NucleoLauncherButton } from "@/components/NucleoLauncherButton";
 import NotFound from "./pages/NotFound";
 import { QuickConversationFAB } from "@/components/crm/QuickConversationFAB";
@@ -156,6 +157,7 @@ function AppContent() {
           <Route path="/login" element={<Login />} />
           <Route path="/auth" element={<Navigate to="/login" replace />} />
           <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+          <Route path="/politica-de-privacidade" element={<PoliticaPrivacidade />} />
           {/* Todo o restante é protegido */}
           <Route
             path="*"
