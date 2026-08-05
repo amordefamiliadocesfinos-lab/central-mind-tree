@@ -91,13 +91,13 @@ Deno.serve(async (req) => {
         if (error) throw error; contact = data;
       }
 
-      let conversation: { id: string } | null = null;
+      let conversation: { id: string; unread_count?: number | null } | null = null;
       if (contact) {
-        const result = await supabase.from('service_conversations').select('id').eq('contact_id', contact.id).order('last_message_at', { ascending: false }).limit(1).maybeSingle();
+        const result = await supabase.from('service_conversations').select('id,unread_count').eq('contact_id', contact.id).order('last_message_at', { ascending: false }).limit(1).maybeSingle();
         conversation = result.data;
       }
       if (!conversation) {
-        const result = await supabase.from('service_conversations').select('id').eq('contact_handle', phone).limit(1).maybeSingle();
+        const result = await supabase.from('service_conversations').select('id,unread_count').eq('contact_handle', phone).limit(1).maybeSingle();
         conversation = result.data;
       }
       if (!conversation) {
@@ -118,8 +118,17 @@ Deno.serve(async (req) => {
       if (messageError && messageError.code !== '23505') throw messageError;
       await supabase.from('service_conversations').update({
         last_message_at: now, last_inbound_at: now, last_message_preview: (evt.content ?? '').slice(0, 100),
-        needs_reply: true, status: 'open', resolved_at: null, attendance_state: null,
+        needs_reply: true, status: 'open', resolved_at: null, attendance_state: 'responder',
+        unread_count: (conversation!.unread_count ?? 0) + 1,
       }).eq('id', conversation!.id);
+      if (contact) {
+        await supabase.from('contacts').update({
+          next_action_text: 'Responder cliente no WhatsApp',
+          next_action_date: now,
+          next_contact_date: now,
+          updated_at: new Date().toISOString(),
+        }).eq('id', contact.id);
+      }
       await finish('processed'); processed++;
     } catch (error) {
       console.error('meta webhook processing failed', (error as Error).message);

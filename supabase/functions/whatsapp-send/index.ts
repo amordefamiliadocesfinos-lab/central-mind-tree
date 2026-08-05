@@ -47,7 +47,7 @@ Deno.serve(async (req) => {
 
   const { data: conv } = await supabase
     .from('service_conversations')
-    .select('id, contact_id, contact_handle, last_inbound_at')
+    .select('id, contact_id, contact_handle, last_inbound_at, funnel_stage')
     .eq('id', conversationId)
     .maybeSingle();
   if (!conv) return json({ error: 'Conversa não encontrada' }, 404);
@@ -135,8 +135,46 @@ Deno.serve(async (req) => {
       last_outbound_at: nowIso,
       last_message_preview: message.slice(0, 100),
       needs_reply: false,
+      unread_count: 0,
+      attendance_state: 'aguardando_cliente',
     })
     .eq('id', conversationId);
+
+  if (conv.contact_id) {
+    const { data: contact } = await supabase
+      .from('contacts')
+      .select('funnel_status')
+      .eq('id', conv.contact_id)
+      .maybeSingle();
+    const currentStage = contact?.funnel_status ?? conv.funnel_stage ?? 'novo_lead';
+    const nextStage = currentStage === 'novo_lead' ? 'contato_realizado' : currentStage;
+    const returnAt = new Date(Date.now() + 2 * 86400000);
+    returnAt.setUTCHours(12, 0, 0, 0);
+    const dueDate = returnAt.toISOString().slice(0, 10);
+
+    await supabase.from('contacts').update({
+      funnel_status: nextStage,
+      next_action_text: 'Verificar resposta no WhatsApp',
+      next_action_date: returnAt.toISOString(),
+      next_contact_date: returnAt.toISOString(),
+      updated_at: nowIso,
+    }).eq('id', conv.contact_id);
+    await supabase.from('service_conversations').update({
+      funnel_stage: nextStage,
+      return_at: returnAt.toISOString(),
+    }).eq('id', conversationId);
+
+    const { data: existingTask } = await supabase.from('tasks')
+      .select('id').eq('contact_id', conv.contact_id).eq('source', 'crm_next_action')
+      .is('deleted_at', null).neq('status', 'concluÃ­do').order('created_at', { ascending: false }).limit(1).maybeSingle();
+    const taskPayload = {
+      title: 'Verificar resposta no WhatsApp', contact_id: conv.contact_id,
+      node_id: 'd7c76db8-b7e0-4ce1-87ca-21275c346326', source: 'crm_next_action',
+      status: 'pendente', scheduled_date: dueDate, due_date: dueDate, scheduled_time: '09:00', updated_at: nowIso,
+    };
+    if (existingTask?.id) await supabase.from('tasks').update(taskPayload).eq('id', existingTask.id);
+    else await supabase.from('tasks').insert(taskPayload);
+  }
 
   return json({ ok: true, message_id: pending.id, external_message_id: result.externalMessageId ?? null });
 });

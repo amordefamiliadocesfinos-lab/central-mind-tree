@@ -115,7 +115,6 @@ interface ContactCardProps {
   onDragStart: (e: React.DragEvent) => void;
   onFollowUp: (type: string, note: string) => Promise<void>;
   onSendSuggestion: () => Promise<void>;
-  onSmartAttend: () => Promise<void>;
   hasPhone: boolean;
   nextTaskDate?: string | null;
   convoSummary?: { openCount: number; totalUnread: number };
@@ -140,7 +139,6 @@ function ContactCardInner({
   onDragStart,
   onFollowUp,
   onSendSuggestion,
-  onSmartAttend,
   hasPhone,
   nextTaskDate,
   convoSummary,
@@ -254,8 +252,7 @@ function ContactCardInner({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                 <DropdownMenuItem onClick={onEdit}><Edit className="h-4 w-4 mr-2" /> Editar</DropdownMenuItem>
-                <DropdownMenuItem onClick={onWhatsApp}><MessageCircle className="h-4 w-4 mr-2" /> WhatsApp</DropdownMenuItem>
-                <DropdownMenuItem onClick={async () => { await onSmartAttend(); }}><Send className="h-4 w-4 mr-2" /> Atender agora</DropdownMenuItem>
+                <DropdownMenuItem onClick={onWhatsApp}><MessageCircle className="h-4 w-4 mr-2" /> Atender na Caixa</DropdownMenuItem>
                 <DropdownMenuItem onClick={onViewOrders}><ShoppingCart className="h-4 w-4 mr-2" /> Pedidos</DropdownMenuItem>
                 <DropdownMenuItem onClick={onCreateOrder} className="text-green-700 dark:text-green-500 font-medium"><ShoppingCart className="h-4 w-4 mr-2" /> Novo Pedido</DropdownMenuItem>
                 <DropdownMenuItem onClick={onViewHistory}><History className="h-4 w-4 mr-2" /> Histórico</DropdownMenuItem>
