@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -13,12 +13,13 @@ import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { MergeDuplicatesDialog } from '@/components/crm/MergeDuplicatesDialog';
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ArrowLeft, Search, Zap, MessageCircle, Phone, ExternalLink, Sparkles, Loader2, Merge, Clock } from 'lucide-react';
+import { ArrowLeft, Search, Zap, MessageCircle, Phone, ExternalLink, Sparkles, Loader2, Merge, Clock, UserCheck, UserMinus, CheckCircle2, RotateCcw } from 'lucide-react';
 import { openWhatsApp } from '@/lib/whatsapp';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import { getCrmStageLabel, normalizeCrmStage } from '@/lib/crm/model';
+import { useActiveUser } from '@/hooks/useActiveUser';
 
 interface InboxItem {
   id: string;
@@ -37,11 +38,15 @@ interface InboxItem {
   needs_reply: boolean;
   attendance_state: string | null;
   assigned_to: string | null;
+  status: string;
 }
 
 type InboxFilter = 'all' | 'needs_reply' | 'waiting_customer' | 'overdue' | 'unassigned';
 
 export default function ContatosInbox() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { activeUserId, isLinked } = useActiveUser();
+  const deepLinkHandled = useRef<string | null>(null);
   const [items, setItems] = useState<InboxItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -54,7 +59,7 @@ export default function ContatosInbox() {
   const [summary, setSummary] = useState('');
   const [summaryLoading, setSummaryLoading] = useState(false);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     // A Caixa de Entrada tem uma única fonte: conversas reais do Atendimento.
     // Contatos sem conversa continuam no CRM, mas não poluem esta fila operacional.
@@ -114,16 +119,17 @@ export default function ContatosInbox() {
         needs_reply: conversation.needs_reply,
         attendance_state: conversation.attendance_state,
         assigned_to: conversation.assigned_to,
+        status: conversation.status || 'open',
       });
     }
 
     setItems(merged);
     setLoading(false);
-  };
+  }, [loadLimit]);
 
   useEffect(() => {
     load();
-  }, [loadLimit]);
+  }, [load]);
 
   // Realtime: nova mensagem atualiza preview/ordenação sem recarregar a página
   useEffect(() => {
@@ -143,7 +149,64 @@ export default function ContatosInbox() {
       if (timer) clearTimeout(timer);
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [load]);
+
+  useEffect(() => {
+    const contactId = searchParams.get('contact');
+    if (!contactId || deepLinkHandled.current === contactId || !isLinked || !activeUserId) return;
+    deepLinkHandled.current = contactId;
+
+    const openAttendance = async () => {
+      const { data: contact, error: contactError } = await supabase
+        .from('contacts')
+        .select('id,name,whatsapp,phone,mobile,photo_url,funnel_status')
+        .eq('id', contactId)
+        .maybeSingle();
+      if (contactError || !contact) {
+        toast.error('Contato não encontrado.');
+        return;
+      }
+
+      const { data: existing } = await supabase
+        .from('service_conversations')
+        .select('id')
+        .eq('contact_id', contactId)
+        .order('last_message_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const phone = contact.whatsapp || contact.mobile || contact.phone || null;
+      const operationalState = {
+        assigned_to: activeUserId,
+        attendance_state: 'em_atendimento',
+        status: 'open',
+        resolved_at: null,
+        unread_count: 0,
+      };
+      const result = existing
+        ? await supabase.from('service_conversations').update(operationalState).eq('id', existing.id)
+        : await supabase.from('service_conversations').insert({
+            contact_id: contact.id,
+            contact_name: contact.name,
+            contact_handle: phone,
+            contact_avatar_url: contact.photo_url,
+            funnel_stage: normalizeCrmStage(contact.funnel_status),
+            channel: 'whatsapp',
+            needs_reply: false,
+            ...operationalState,
+          });
+
+      if (result.error) {
+        toast.error('Não foi possível iniciar o atendimento.');
+        return;
+      }
+      await load();
+      setSelectedId(contactId);
+      setSearchParams({}, { replace: true });
+    };
+
+    void openAttendance();
+  }, [activeUserId, isLinked, load, searchParams, setSearchParams]);
 
 
   const filtered = useMemo(() => {
@@ -164,6 +227,25 @@ export default function ContatosInbox() {
   }, [items, search, inboxFilter]);
 
   const selected = items.find((i) => i.id === selectedId) || null;
+
+  const openConversation = async (item: InboxItem) => {
+    setSelectedId(item.id);
+    if (item.unread_count > 0) {
+      setItems(current => current.map(row => row.id === item.id ? { ...row, unread_count: 0 } : row));
+      await supabase.from('service_conversations').update({ unread_count: 0 }).eq('id', item.conversation_id);
+    }
+  };
+
+  const updateAttendance = async (patch: Record<string, unknown>, successMessage: string) => {
+    if (!selected) return;
+    const { error } = await supabase.from('service_conversations').update(patch).eq('id', selected.conversation_id);
+    if (error) {
+      toast.error('Não foi possível atualizar o atendimento.');
+      return;
+    }
+    toast.success(successMessage);
+    await load();
+  };
 
   const handleSummarize = async (contactId: string) => {
     setSummaryLoading(true);
@@ -264,7 +346,7 @@ export default function ContatosInbox() {
               {filtered.map((item) => (
                 <button
                   key={item.id}
-                  onClick={() => setSelectedId(item.id)}
+                  onClick={() => void openConversation(item)}
                   className={cn(
                     'w-full text-left p-3 hover:bg-muted/50 transition-colors flex gap-3 items-start',
                     selectedId === item.id && 'bg-muted',
@@ -340,6 +422,25 @@ export default function ContatosInbox() {
                   </div>
                 </div>
                 <div className="flex gap-1">
+                  {!selected.assigned_to && (
+                    <Button size="sm" variant="outline" className="h-8 gap-1" disabled={!isLinked} onClick={() => void updateAttendance({ assigned_to: activeUserId, attendance_state: 'em_atendimento', status: 'open', resolved_at: null }, 'Atendimento assumido.')}>
+                      <UserCheck className="h-3.5 w-3.5" /> Assumir
+                    </Button>
+                  )}
+                  {selected.assigned_to && selected.status !== 'resolved' && (
+                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => void updateAttendance({ assigned_to: null, attendance_state: null }, 'Atendimento liberado para a equipe.')} title="Liberar atendimento">
+                      <UserMinus className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {selected.status === 'resolved' ? (
+                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => void updateAttendance({ status: 'open', resolved_at: null, attendance_state: 'em_atendimento', assigned_to: activeUserId }, 'Atendimento reaberto.')} title="Reabrir atendimento">
+                      <RotateCcw className="h-4 w-4" />
+                    </Button>
+                  ) : (
+                    <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => void updateAttendance({ status: 'resolved', resolved_at: new Date().toISOString(), attendance_state: 'concluido', needs_reply: false, unread_count: 0 }, 'Atendimento concluído.')} title="Concluir atendimento">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                    </Button>
+                  )}
                   <Button
                     size="icon"
                     variant="ghost"

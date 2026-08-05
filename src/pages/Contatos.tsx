@@ -917,12 +917,9 @@ export default function Contatos() {
 
 
 
-  const handleWhatsApp = (contact: Contact) => {
-    const phone = contact.whatsapp || contact.mobile || contact.phone;
-    if (phone) {
-      setWhatsAppContact(contact);
-    }
-  };
+  const handleAttend = useCallback((contact: Contact) => {
+    navigate(`/contatos/inbox?contact=${contact.id}&attend=1`);
+  }, [navigate]);
 
   const handleWhatsAppSend = async (message: string, templateLabel: string, attachments?: any[]) => {
     if (!whatsAppContact) return;
@@ -1129,7 +1126,7 @@ export default function Contatos() {
         nextTaskDate={nextTaskByContact[contact.id] || null}
         convoSummary={convoSummaryByContact[contact.id]}
         onEdit={() => { setDetailContact(contact); setDetailOpen(true); }}
-        onWhatsApp={() => handleWhatsApp(contact)}
+        onWhatsApp={() => handleAttend(contact)}
         onViewOrders={() => { setHistoryContact(contact); setHistoryOpen(true); }}
         onViewHistory={() => { setTimelineContact(contact); setTimelineOpen(true); }}
         onViewActivities={() => { setActivitiesContact(contact); setActivitiesOpen(true); }}
@@ -1161,10 +1158,9 @@ export default function Contatos() {
             skipOpen: true,
           }).finally(() => setTimeout(refreshContactSignals, 500));
         }}
-        onSmartAttend={async () => handleSmartAttend(contact)}
       />
     );
-  }, [getUrgencyLevel, getNoResponseInfo, getScore, hasOrders, checklistMap, draggedContact, handleWhatsApp, handleTempChange, addEntry, refreshContactSignals, handleSmartAttend, handleCreateOrder, logAndOpen, markContactedOptimistically, convoSummaryByContact]);
+  }, [getUrgencyLevel, getNoResponseInfo, getScore, hasOrders, checklistMap, draggedContact, handleAttend, handleTempChange, addEntry, refreshContactSignals, handleCreateOrder, logAndOpen, markContactedOptimistically, convoSummaryByContact]);
 
 
   return (
@@ -1430,7 +1426,7 @@ export default function Contatos() {
               preFiltered
               filterLabel={attentionFilter === 'all' ? 'Fila de atenção' : ATTENTION_LABELS[attentionFilter]}
               onOpenContact={(contact) => { setDetailContact(contact); setDetailOpen(true); }}
-              onWhatsApp={handleWhatsApp}
+              onWhatsApp={handleAttend}
               onBulkDispatch={(list) => setBulkDispatchContacts(list)}
               getUrgencyLevel={getUrgencyLevel}
               getUrgencyReason={getContactUrgencyReason}
@@ -1444,7 +1440,7 @@ export default function Contatos() {
           queue={focusQueue}
           getUrgencyLevel={getUrgencyLevel}
           getUrgencyReason={getContactUrgencyReason}
-          onWhatsApp={handleSmartAttend}
+          onWhatsApp={handleAttend}
           onSnooze={handleQueueSnooze}
           onDone={handleQueueDone}
           onOpenContact={(contact) => { setDetailContact(contact); setDetailOpen(true); }}
@@ -1524,7 +1520,7 @@ export default function Contatos() {
             }}
             onStartQueue={() => startFocusSession(filteredQueue)}
             onOpenContact={(contact) => { setDetailContact(contact); setDetailOpen(true); }}
-            onWhatsApp={handleWhatsApp}
+            onWhatsApp={handleAttend}
           />
         ) : viewMode === 'kanban' ? (
           <div className="flex gap-0 overflow-x-auto">
