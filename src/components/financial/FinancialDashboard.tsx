@@ -42,62 +42,64 @@ function SummaryCard({ title, value, count, icon, variant = 'default' }: Summary
   };
   return (
     <Card className={variants[variant]}>
-      <CardContent className="p-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground">{title}</p>
-            <p className="text-2xl font-bold">{formatCurrency(value)}</p>
-            {count !== undefined && <p className="text-xs text-muted-foreground">{count} lançamento(s)</p>}
+      <CardContent className="p-2.5">
+        <div className="flex items-center justify-between gap-2">
+          <div className="min-w-0">
+            <p className="text-[11px] text-muted-foreground truncate">{title}</p>
+            <p className="text-lg font-bold leading-tight">{formatCurrency(value)}</p>
+            {count !== undefined && <p className="text-[10px] text-muted-foreground">{count} lançamento(s)</p>}
           </div>
-          <div className={iconVariants[variant]}>{icon}</div>
+          <div className={`${iconVariants[variant]} [&_svg]:h-4 [&_svg]:w-4`}>{icon}</div>
         </div>
       </CardContent>
     </Card>
   );
 }
 
+
 function TypeSummary({ title, summary, type }: { title: string; summary: FinancialSummary; type: 'pagar' | 'receber' }) {
   const Icon = type === 'receber' ? TrendingUp : TrendingDown;
   const iconColor = type === 'receber' ? 'text-emerald-500' : 'text-red-500';
   return (
     <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Icon className={`h-5 w-5 ${iconColor}`} />
+      <CardHeader className="p-3 pb-1.5">
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Icon className={`h-4 w-4 ${iconColor}`} />
           {title}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-lg bg-muted/50 p-3">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <Clock className="h-4 w-4" />Em Aberto
+      <CardContent className="p-3 pt-0 space-y-2">
+        <div className="grid grid-cols-3 gap-2">
+          <div className="rounded-md bg-muted/50 p-2">
+            <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+              <Clock className="h-3 w-3" />Em Aberto
             </div>
-            <p className="text-lg font-semibold">{formatCurrency(summary.total_open)}</p>
-            <p className="text-xs text-muted-foreground">{summary.count_open} lançamento(s)</p>
+            <p className="text-sm font-semibold">{formatCurrency(summary.total_open, { compact: true })}</p>
+            <p className="text-[10px] text-muted-foreground">{summary.count_open}</p>
           </div>
-          <div className="rounded-lg bg-red-500/10 p-3">
-            <div className="flex items-center gap-2 text-sm text-red-500">
-              <AlertTriangle className="h-4 w-4" />Atrasadas
+          <div className="rounded-md bg-red-500/10 p-2">
+            <div className="flex items-center gap-1 text-[11px] text-red-500">
+              <AlertTriangle className="h-3 w-3" />Atrasadas
             </div>
-            <p className="text-lg font-semibold text-red-500">{formatCurrency(summary.total_overdue)}</p>
-            <p className="text-xs text-muted-foreground">{summary.count_overdue} lançamento(s)</p>
+            <p className="text-sm font-semibold text-red-500">{formatCurrency(summary.total_overdue, { compact: true })}</p>
+            <p className="text-[10px] text-muted-foreground">{summary.count_overdue}</p>
           </div>
-        </div>
-        <div className="rounded-lg bg-emerald-500/10 p-3">
-          <div className="flex items-center gap-2 text-sm text-emerald-500">
-            <CheckCircle className="h-4 w-4" />{type === 'receber' ? 'Recebido' : 'Pago'}
+          <div className="rounded-md bg-emerald-500/10 p-2">
+            <div className="flex items-center gap-1 text-[11px] text-emerald-500">
+              <CheckCircle className="h-3 w-3" />{type === 'receber' ? 'Recebido' : 'Pago'}
+            </div>
+            <p className="text-sm font-semibold text-emerald-500">{formatCurrency(summary.total_paid, { compact: true })}</p>
+            <p className="text-[10px] text-muted-foreground">{summary.count_paid}</p>
           </div>
-          <p className="text-lg font-semibold text-emerald-500">{formatCurrency(summary.total_paid)}</p>
-          <p className="text-xs text-muted-foreground">{summary.count_paid} lançamento(s)</p>
         </div>
         {summary.count_partial > 0 && (
-          <p className="text-xs text-amber-500">{summary.count_partial} lançamento(s) com pagamento parcial</p>
+          <p className="text-[10px] text-amber-500">{summary.count_partial} com pagamento parcial</p>
         )}
       </CardContent>
     </Card>
   );
 }
+
 
 type GroupBy = 'category' | 'contact' | 'account' | 'type' | 'status';
 type ChartKind = 'pie' | 'bar';
