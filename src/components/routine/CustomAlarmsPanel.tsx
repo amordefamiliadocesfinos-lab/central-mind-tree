@@ -250,9 +250,33 @@ export function CustomAlarmsPanel() {
     });
   }
 
+  const ringing = pending[0] || null;
+
+  function snoozeRinging() {
+    if (!ringing) return;
+    const target = ringing;
+    dismissPending(target.id, target.time, target.date);
+    window.setTimeout(() => {
+      setPending(prev => {
+        const next = [...prev, { ...target, time: `${target.time} (soneca)` }];
+        savePending(next);
+        return next;
+      });
+    }, 5 * 60_000);
+    toast({ title: 'Soneca de 5 minutos', description: target.name });
+  }
+
   return (
     <Card className="p-4 space-y-3">
+      <AlarmRingOverlay
+        alarm={ringing}
+        queued={Math.max(0, pending.length - 1)}
+        onStop={() => ringing && dismissPending(ringing.id, ringing.time, ringing.date)}
+        onSnooze={snoozeRinging}
+      />
+
       {/* Alarmes pendentes — visíveis até serem dispensados */}
+
       {pending.length > 0 && (
         <div className="space-y-2">
           {pending.map(p => (
