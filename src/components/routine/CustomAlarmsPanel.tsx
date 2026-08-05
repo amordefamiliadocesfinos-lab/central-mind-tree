@@ -11,6 +11,8 @@ import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Bell, Plus, Pencil, Trash2, Volume2, Clock, X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { AlarmRingOverlay } from './AlarmRingOverlay';
+import { unlockAlarmAudio } from '@/lib/alarmSound';
 
 type Recurrence = 'once' | 'daily' | 'weekdays' | 'weekly';
 
@@ -116,60 +118,81 @@ export function CustomAlarmsPanel() {
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission().catch(() => {});
     }
+    // Libera o áudio no primeiro gesto do usuário (exigência dos navegadores)
+    const unlock = () => unlockAlarmAudio();
+    window.addEventListener('pointerdown', unlock);
+    window.addEventListener('keydown', unlock);
+    return () => {
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
   }, []);
 
-  // Poller: a cada 20s verifica horários
+  // Poller: verifica horários (com recuperação de minutos perdidos em segundo plano)
   useEffect(() => {
-    const tick = () => {
-      const now = new Date();
-      const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-      const today = now.toISOString().slice(0, 10);
-      let changed = false;
+    const lastCheck = { ms: Date.now() };
 
-      for (const a of alarms) {
-        if (!a.times.includes(hhmm)) continue;
-        if (!shouldRunToday(a.recurrence, null)) continue;
+    const fireFor = (a: CustomAlarm, hhmm: string, date: string, weekKeyDate: Date) => {
+      const key = a.recurrence === 'weekly'
+        ? `${a.id}|${hhmm}|${date.slice(0, 7)}-w${Math.ceil(weekKeyDate.getDate() / 7)}`
+        : `${a.id}|${hhmm}|${date}`;
 
-        const key = a.recurrence === 'weekly'
-          ? `${a.id}|${hhmm}|${today.slice(0, 7)}-w${Math.ceil(now.getDate() / 7)}`
-          : `${a.id}|${hhmm}|${today}`;
+      if (firedRef.current[key]) return false;
+      firedRef.current[key] = true;
 
-        if (firedRef.current[key]) continue;
-        firedRef.current[key] = true;
-        changed = true;
+      setPending(prev => {
+        const already = prev.some(p => p.id === a.id && p.time === hhmm && p.date === date);
+        if (already) return prev;
+        const next = [...prev, { id: a.id, name: a.name, message: a.message, time: hhmm, date }];
+        savePending(next);
+        return next;
+      });
 
-        // Aviso visual sempre (mesmo com alarme desativado)
-        setPending(prev => {
-          const already = prev.some(p => p.id === a.id && p.time === hhmm && p.date === today);
-          if (already) return prev;
-          const next = [...prev, { id: a.id, name: a.name, message: a.message, time: hhmm, date: today }];
-          savePending(next);
+      if (a.recurrence === 'once') {
+        setAlarms(prev => {
+          const next = prev.map(x => x.id === a.id ? { ...x, enabled: false } : x);
+          saveAlarms(next);
           return next;
         });
+      }
+      return true;
+    };
 
-        // Som / toast / notificação apenas quando ativado
-        if (a.enabled) {
-          speak(a.message || a.name);
-          toast({ title: `⏰ ${a.name}`, description: a.message || `Alarme das ${hhmm}` });
-          if ('Notification' in window && Notification.permission === 'granted') {
-            try { new Notification(`⏰ ${a.name}`, { body: a.message || `Alarme das ${hhmm}` }); } catch {}
-          }
+    const tick = () => {
+      const now = new Date();
+      // recupera minutos que passaram enquanto a aba estava suspensa (máx. 120)
+      const missedMinutes = Math.min(
+        120,
+        Math.max(0, Math.floor((now.getTime() - lastCheck.ms) / 60_000))
+      );
+      lastCheck.ms = now.getTime();
 
-          if (a.recurrence === 'once') {
-            setAlarms(prev => {
-              const next = prev.map(x => x.id === a.id ? { ...x, enabled: false } : x);
-              saveAlarms(next);
-              return next;
-            });
-          }
+      let changed = false;
+      for (let back = missedMinutes; back >= 0; back--) {
+        const d = new Date(now.getTime() - back * 60_000);
+        const hhmm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+        for (const a of alarms) {
+          if (!a.enabled) continue;
+          if (!a.times.includes(hhmm)) continue;
+          if (!shouldRunToday(a.recurrence, null)) continue;
+          if (fireFor(a, hhmm, date, d)) changed = true;
         }
       }
       if (changed) saveFired(firedRef.current);
     };
+
     tick();
-    const i = setInterval(tick, 20_000);
-    return () => clearInterval(i);
+    const i = setInterval(tick, 10_000);
+    const onVisible = () => { if (!document.hidden) tick(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(i);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [alarms]);
+
 
   function openCreate() {
     setEditing(null);
@@ -227,9 +250,33 @@ export function CustomAlarmsPanel() {
     });
   }
 
+  const ringing = pending[0] || null;
+
+  function snoozeRinging() {
+    if (!ringing) return;
+    const target = ringing;
+    dismissPending(target.id, target.time, target.date);
+    window.setTimeout(() => {
+      setPending(prev => {
+        const next = [...prev, { ...target, time: `${target.time} (soneca)` }];
+        savePending(next);
+        return next;
+      });
+    }, 5 * 60_000);
+    toast({ title: 'Soneca de 5 minutos', description: target.name });
+  }
+
   return (
     <Card className="p-4 space-y-3">
+      <AlarmRingOverlay
+        alarm={ringing}
+        queued={Math.max(0, pending.length - 1)}
+        onStop={() => ringing && dismissPending(ringing.id, ringing.time, ringing.date)}
+        onSnooze={snoozeRinging}
+      />
+
       {/* Alarmes pendentes — visíveis até serem dispensados */}
+
       {pending.length > 0 && (
         <div className="space-y-2">
           {pending.map(p => (
