@@ -11,6 +11,8 @@ import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Bell, Plus, Pencil, Trash2, Volume2, Clock, X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { AlarmRingOverlay } from './AlarmRingOverlay';
+import { unlockAlarmAudio } from '@/lib/alarmSound';
 
 type Recurrence = 'once' | 'daily' | 'weekdays' | 'weekly';
 
