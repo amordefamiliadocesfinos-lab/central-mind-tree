@@ -4158,6 +4158,10 @@ export type Database = {
           is_ai_suggested: boolean
           logged_to_history: boolean
           message_type: string
+          media_caption: string | null
+          media_filename: string | null
+          media_mime_type: string | null
+          media_url: string | null
           provider_instance_ref: string | null
           provider_name: string | null
           provider_timestamp: string | null
@@ -4178,6 +4182,10 @@ export type Database = {
           is_ai_suggested?: boolean
           logged_to_history?: boolean
           message_type?: string
+          media_caption?: string | null
+          media_filename?: string | null
+          media_mime_type?: string | null
+          media_url?: string | null
           provider_instance_ref?: string | null
           provider_name?: string | null
           provider_timestamp?: string | null
@@ -4198,6 +4206,10 @@ export type Database = {
           is_ai_suggested?: boolean
           logged_to_history?: boolean
           message_type?: string
+          media_caption?: string | null
+          media_filename?: string | null
+          media_mime_type?: string | null
+          media_url?: string | null
           provider_instance_ref?: string | null
           provider_name?: string | null
           provider_timestamp?: string | null

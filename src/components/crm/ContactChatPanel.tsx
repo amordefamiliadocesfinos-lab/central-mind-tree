@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Send, Sparkles, MessageCircle } from 'lucide-react';
+import { FileText, Loader2, Send, Sparkles, MessageCircle } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -17,6 +17,11 @@ interface Message {
   created_at: string;
   source: 'mobile' | 'crm' | 'provider' | 'legacy' | null;
   delivery_status: string | null;
+  message_type: string;
+  media_url: string | null;
+  media_mime_type: string | null;
+  media_filename: string | null;
+  media_caption: string | null;
 }
 
 interface ContactChatPanelProps {
@@ -91,7 +96,7 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
     const load = async () => {
       const { data } = await supabase
         .from('service_messages')
-        .select('id, conversation_id, sender, content, is_ai_suggested, created_at, source, delivery_status')
+        .select('id, conversation_id, sender, content, is_ai_suggested, created_at, source, delivery_status, message_type, media_url, media_mime_type, media_filename, media_caption')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: true });
       if (!cancelled) {
@@ -207,7 +212,25 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
                   }`}
                 >
                   {isAi && <div className="text-[10px] font-semibold mb-1 opacity-70">💡 Sugestão da IA</div>}
-                  <div>{m.content}</div>
+                  {m.media_url && m.message_type === 'image' && (
+                    <a href={m.media_url} target="_blank" rel="noreferrer" className="block mb-1">
+                      <img src={m.media_url} alt={m.media_caption || 'Imagem recebida'} className="max-h-72 rounded-md object-contain" loading="lazy" />
+                    </a>
+                  )}
+                  {m.media_url && m.message_type === 'audio' && (
+                    <audio controls preload="metadata" className="mb-1 max-w-full" src={m.media_url}>
+                      Seu navegador não conseguiu reproduzir este áudio.
+                    </audio>
+                  )}
+                  {m.media_url && m.message_type === 'video' && (
+                    <video controls preload="metadata" className="mb-1 max-h-72 max-w-full rounded-md" src={m.media_url} />
+                  )}
+                  {m.media_url && !['image', 'audio', 'video'].includes(m.message_type) && (
+                    <a href={m.media_url} target="_blank" rel="noreferrer" className="mb-1 flex items-center gap-1 underline underline-offset-2">
+                      <FileText className="h-4 w-4" /> {m.media_filename || 'Abrir anexo'}
+                    </a>
+                  )}
+                  {(!m.media_url || Boolean(m.media_caption)) && <div>{m.media_caption || m.content}</div>}
                   {isAgent && (
                     <div className="text-[9px] mt-1 opacity-70">
                       {m.source === 'mobile'

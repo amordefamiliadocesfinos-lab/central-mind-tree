@@ -17,7 +17,18 @@ function renderMessage(message: Record<string, any>) {
     audio: 'Áudio recebido', image: 'Imagem recebida', video: 'Vídeo recebido', document: 'Documento recebido',
     sticker: 'Figurinha recebida', location: 'Localização recebida', contacts: 'Contato recebido', reaction: 'Reação recebida',
   };
-  return { type, content: labels[type] ?? 'Mensagem não suportada' };
+  const media = ['audio', 'image', 'video', 'document', 'sticker'].includes(type)
+    ? (message[type] ?? {})
+    : null;
+  const caption = String(media?.caption ?? '').trim() || undefined;
+  return {
+    type,
+    content: caption || labels[type] || 'Mensagem não suportada',
+    mediaId: media?.id ? String(media.id) : undefined,
+    mediaMimeType: media?.mime_type ? String(media.mime_type) : undefined,
+    mediaFilename: media?.filename ? String(media.filename) : undefined,
+    mediaCaption: caption,
+  };
 }
 
 export class MetaWhatsAppConnector implements WhatsAppConnector {
@@ -40,20 +51,26 @@ export class MetaWhatsAppConnector implements WhatsAppConnector {
     const root = (payload ?? {}) as Record<string, any>;
     const events: NormalizedWebhookEvent[] = [];
     for (const entry of root.entry ?? []) for (const change of entry.changes ?? []) {
-      if (change.field !== 'messages') continue;
+      if (change.field !== 'messages' && change.field !== 'smb_message_echoes') continue;
       const value = change.value ?? {};
       const phoneNumberId = String(value.metadata?.phone_number_id ?? this.instanceReference);
       const contacts = new Map<string, any>((value.contacts ?? []).map((c: any) => [String(c.wa_id), c]));
-      for (const message of value.messages ?? []) {
-        const id = String(message.id ?? ''); const from = String(message.from ?? '');
-        if (!id || !from) continue;
-        const rendered = renderMessage(message); const contact = contacts.get(from);
+      const isMobileEcho = change.field === 'smb_message_echoes';
+      const messages = isMobileEcho ? (value.message_echoes ?? value.messages ?? []) : (value.messages ?? []);
+      for (const message of messages) {
+        const id = String(message.id ?? '');
+        const phone = String(isMobileEcho ? (message.to ?? message.recipient_id ?? '') : (message.from ?? ''));
+        if (!id || !phone) continue;
+        const rendered = renderMessage(message); const contact = contacts.get(phone);
         events.push({
           accepted: true, providerName: PROVIDER, providerInstanceRef: phoneNumberId, eventType: 'message',
-          externalMessageId: id, direction: 'inbound', source: 'provider', contactPhoneRaw: from,
+          externalMessageId: id, direction: isMobileEcho ? 'outbound' : 'inbound',
+          source: isMobileEcho ? 'mobile' : 'provider', contactPhoneRaw: phone,
           contactName: contact?.profile?.name, messageType: rendered.type, content: rendered.content,
+          mediaId: rendered.mediaId, mediaMimeType: rendered.mediaMimeType,
+          mediaFilename: rendered.mediaFilename, mediaCaption: rendered.mediaCaption,
           providerTimestamp: message.timestamp ? new Date(Number(message.timestamp) * 1000).toISOString() : new Date().toISOString(),
-          deduplicationKey: `${PROVIDER}:${phoneNumberId}:message:${id}`,
+          deduplicationKey: `${PROVIDER}:${phoneNumberId}:${isMobileEcho ? 'mobile_echo' : 'message'}:${id}`,
         });
       }
       for (const status of value.statuses ?? []) {
@@ -85,6 +102,25 @@ export class MetaWhatsAppConnector implements WhatsAppConnector {
       };
       return { ok: true, externalMessageId: body?.messages?.[0]?.id ? String(body.messages[0].id) : undefined };
     } catch (error) { return { ok: false, errorCode: 'network_error', errorMessage: (error as Error).message }; }
+  }
+
+  async downloadMedia(mediaId: string) {
+    if (!this.isConfigured) throw new Error('Meta WhatsApp Cloud API não configurada');
+    const metadataResponse = await fetch(`https://graph.facebook.com/${this.graphVersion}/${encodeURIComponent(mediaId)}`, {
+      headers: { Authorization: `Bearer ${this.accessToken}` },
+    });
+    const metadata = await metadataResponse.json().catch(() => ({}));
+    if (!metadataResponse.ok || !metadata?.url) {
+      throw new Error(String(metadata?.error?.message ?? `Falha ao localizar mídia (${metadataResponse.status})`));
+    }
+    const mediaResponse = await fetch(String(metadata.url), {
+      headers: { Authorization: `Bearer ${this.accessToken}` },
+    });
+    if (!mediaResponse.ok) throw new Error(`Falha ao baixar mídia (${mediaResponse.status})`);
+    return {
+      bytes: await mediaResponse.arrayBuffer(),
+      mimeType: String(metadata.mime_type ?? mediaResponse.headers.get('content-type') ?? 'application/octet-stream'),
+    };
   }
 
   async enableSentByMeNotifications(): Promise<ConnectorActionResult> { return { ok: true }; }
