@@ -32,9 +32,10 @@ interface ContactChatPanelProps {
   funnelStage?: string | null;
   /** Classe de altura do painel. Padrão: h-[60vh] min-h-[400px] */
   heightClassName?: string;
+  onMessageSent?: (content: string) => void | Promise<void>;
 }
 
-export function ContactChatPanel({ contactId, contactName, contactHandle, contactAvatar, funnelStage, heightClassName }: ContactChatPanelProps) {
+export function ContactChatPanel({ contactId, contactName, contactHandle, contactAvatar, funnelStage, heightClassName, onMessageSent }: ContactChatPanelProps) {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
@@ -134,6 +135,7 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
         return;
       }
       setText('');
+      await onMessageSent?.(content);
     } catch {
       toast.error('Não foi possível enviar a mensagem pelo WhatsApp');
     } finally {

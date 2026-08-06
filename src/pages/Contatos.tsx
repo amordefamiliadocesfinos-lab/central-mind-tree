@@ -106,6 +106,7 @@ import { getTodayISO } from '@/lib/dateUtils';
 import { CRM_EVENT_CODES, normalizeCrmStage } from '@/lib/crm/model';
 import { syncCrmNextActionTask } from '@/lib/crm/nextAction';
 import { CrmTodayView } from '@/components/crm/CrmTodayView';
+import { applyAttendanceOutcome, snoozeAttendance, type AttendanceOutcome } from '@/lib/crm/attendance';
 
 // Lazy-loaded heavy components (dialogs/drawers/views só carregam quando abertos)
 const ContactFormDialog = lazy(() => import('@/components/financial/ContactFormDialog').then(m => ({ default: m.ContactFormDialog })));
@@ -805,24 +806,12 @@ export default function Contatos() {
 
   // Modo Fila — adiar próximo contato
   const handleQueueSnooze = useCallback(async (contact: Contact, when: number | string) => {
-    const target = typeof when === 'number' ? new Date() : new Date(`${when}T09:00:00`);
-    if (typeof when === 'number') {
-      target.setDate(target.getDate() + when);
-      target.setHours(9, 0, 0, 0);
-    }
-    const iso = target.toISOString();
     try {
-      await updateContact(contact.id, {
-        next_contact_date: iso,
-        next_action_date: iso,
-        next_action_text: contact.next_action_text || 'Retomar atendimento',
-      });
-      await syncCrmNextActionTask(contact.id, {
-        title: contact.next_action_text || 'Retomar atendimento',
-        dueAt: iso,
-      });
-    } catch { /* toast já emitido pelo hook */ }
-  }, [updateContact]);
+      await snoozeAttendance({ contactId: contact.id, when });
+      toast.success('Atendimento adiado e próxima ação atualizada.');
+      setTimeout(refreshContactSignals, 300);
+    } catch { toast.error('Não foi possível adiar o atendimento.'); }
+  }, [refreshContactSignals]);
 
   // Modo Fila — registrar resultado e transformar atendimento em próximo passo.
   const handleQueueDone = useCallback(async (contact: Contact, outcome: QueueOutcome): Promise<boolean> => {
@@ -832,94 +821,29 @@ export default function Contatos() {
       return false;
     }
 
-    const now = new Date();
-    const today = getTodayISO();
-    const dueIn = (days: number) => {
-      const due = new Date(now);
-      due.setDate(due.getDate() + days);
-      due.setHours(9, 0, 0, 0);
-      return due.toISOString();
-    };
-
-    const resultConfig: Record<Exclude<QueueOutcome, 'no_interest'>, {
-      label: string;
-      stage?: string;
-      action?: string | null;
-      days?: number;
-    }> = {
-      awaiting_response: {
-        label: 'Atendimento realizado — aguardando resposta',
-        stage: ['novo_lead', 'cadencia'].includes(contact.funnel_status) ? 'contato_realizado' : contact.funnel_status,
-        action: 'Verificar resposta do cliente',
-        days: 2,
-      },
-      proposal_sent: { label: 'Proposta enviada', stage: 'proposta_enviada', action: 'Fazer follow-up da proposta', days: 2 },
-      negotiation: { label: 'Cliente em negociação', stage: 'negociacao', action: 'Retomar negociação', days: 1 },
-      sale_closed: { label: 'Venda fechada', stage: 'fechado', action: 'Realizar pós-venda', days: 3 },
-      post_sale_done: { label: 'Pós-venda realizado', stage: 'cadencia', action: 'Reativar relacionamento com o cliente', days: 30 },
-      client_replied: {
-        label: 'Cliente respondeu',
-        stage: ['novo_lead', 'cadencia'].includes(contact.funnel_status) ? 'contato_realizado' : contact.funnel_status,
-        action: 'Definir próximo passo comercial',
-        days: 1,
-      },
-      waiting_internal_quote: {
-        label: 'Aguardando orçamento interno',
-        stage: ['novo_lead', 'cadencia'].includes(contact.funnel_status) ? 'contato_realizado' : contact.funnel_status,
-        action: 'Concluir orçamento interno',
-        days: 1,
-      },
-      invalid_phone: {
-        label: 'Telefone inválido ou ausente',
-        action: 'Corrigir telefone do contato',
-        days: 1,
-      },
-      record_only: { label: 'Atendimento registrado', action: null },
-    };
-
-    const config = resultConfig[outcome];
-    const nextDate = config.action && config.days != null ? dueIn(config.days) : null;
-    const updates = {
-      ultimo_contato: today,
-      next_action_text: config.action,
-      next_action_date: nextDate,
-      next_contact_date: nextDate,
-    } as Partial<Contact>;
-
     markContactedOptimistically(contact.id);
     try {
-      if (config.stage && config.stage !== contact.funnel_status) {
-        await applyStatusChange(contact, config.stage, updates, config.label);
-      } else {
-        await updateContact(contact.id, updates);
-        const eventByOutcome: Record<Exclude<QueueOutcome, 'no_interest'>, typeof CRM_EVENT_CODES[keyof typeof CRM_EVENT_CODES]> = {
-          awaiting_response: CRM_EVENT_CODES.CONTACT_ATTEMPTED,
-          proposal_sent: CRM_EVENT_CODES.PROPOSAL_SENT,
-          negotiation: CRM_EVENT_CODES.NEGOTIATION_STARTED,
-          sale_closed: CRM_EVENT_CODES.SALE_WON,
-          post_sale_done: CRM_EVENT_CODES.POST_SALE_COMPLETED,
-          client_replied: CRM_EVENT_CODES.CUSTOMER_REPLIED,
-          waiting_internal_quote: CRM_EVENT_CODES.FOLLOW_UP_SCHEDULED,
-          invalid_phone: CRM_EVENT_CODES.CONTACT_ATTEMPTED,
-          record_only: CRM_EVENT_CODES.CONTACT_ATTEMPTED,
-        };
-        await addEntry(contact.id, 'contact', config.label, now.toISOString(), eventByOutcome[outcome]);
-        await syncCrmNextActionTask(contact.id, { title: config.action, dueAt: nextDate });
-      }
+      await applyAttendanceOutcome({ contactId: contact.id, outcome: outcome as AttendanceOutcome });
     } catch {
       toast.error('Não foi possível registrar o resultado. O contato continuará na fila.');
       return false;
     }
     setTimeout(refreshContactSignals, 300);
     return true;
-  }, [markContactedOptimistically, updateContact, addEntry, refreshContactSignals]);
+  }, [markContactedOptimistically, refreshContactSignals]);
 
 
 
 
   const handleAttend = useCallback((contact: Contact) => {
+    if (viewMode === 'today') {
+      sessionStorage.setItem('crm-attendance-queue', JSON.stringify({
+        source: 'today',
+        ids: filteredQueue.map(item => item.id),
+      }));
+    }
     navigate(`/contatos/inbox?contact=${contact.id}&attend=1`);
-  }, [navigate]);
+  }, [filteredQueue, navigate, viewMode]);
 
   const handleWhatsAppSend = async (message: string, templateLabel: string, attachments?: any[]) => {
     if (!whatsAppContact) return;
