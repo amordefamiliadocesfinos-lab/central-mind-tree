@@ -203,6 +203,29 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
 
   return (
     <div className={`flex flex-col ${heightClassName ?? 'h-[60vh] min-h-[400px]'}`}>
+      <div className="flex items-center justify-end gap-1 pb-1">
+        <span className="text-[10px] text-muted-foreground mr-1">Tamanho do texto</span>
+        <Button
+          size="icon"
+          variant="outline"
+          className="h-6 w-6"
+          onClick={() => changeFont(-1)}
+          disabled={fontSize <= MIN_FONT}
+          aria-label="Diminuir tamanho do texto das mensagens"
+        >
+          <AArrowDown className="h-3 w-3" />
+        </Button>
+        <Button
+          size="icon"
+          variant="outline"
+          className="h-6 w-6"
+          onClick={() => changeFont(1)}
+          disabled={fontSize >= MAX_FONT}
+          aria-label="Aumentar tamanho do texto das mensagens"
+        >
+          <AArrowUp className="h-3 w-3" />
+        </Button>
+      </div>
       <div className="flex-1 overflow-y-auto space-y-2 pr-1">
         {loading ? (
           <div className="flex items-center justify-center h-full">
@@ -221,7 +244,8 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
             return (
               <div key={m.id} className={`flex ${isAgent ? 'justify-end' : 'justify-start'}`}>
                 <div
-                  className={`max-w-[80%] rounded-lg px-3 py-2 text-sm whitespace-pre-wrap ${
+                  style={{ fontSize: `${fontSize}px`, lineHeight: 1.45 }}
+                  className={`max-w-[80%] rounded-lg px-3 py-2 whitespace-pre-wrap ${
                     isAgent
                       ? 'bg-primary text-primary-foreground'
                       : isAi
@@ -229,6 +253,7 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
                       : 'bg-muted'
                   }`}
                 >
+
                   {isAi && <div className="text-[10px] font-semibold mb-1 opacity-70">💡 Sugestão da IA</div>}
                   {m.media_url && m.message_type === 'image' && (
                     <a href={m.media_url} target="_blank" rel="noreferrer" className="block mb-1">
