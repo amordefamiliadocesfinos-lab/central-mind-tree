@@ -13,7 +13,7 @@ import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { MergeDuplicatesDialog } from '@/components/crm/MergeDuplicatesDialog';
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ArrowLeft, Search, Zap, MessageCircle, Phone, ExternalLink, Sparkles, Loader2, Merge, Clock, UserCheck, UserMinus, CheckCircle2, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Search, Zap, MessageCircle, Phone, ExternalLink, Sparkles, Loader2, Merge, Clock, UserCheck, UserMinus, CheckCircle2, RotateCcw, ArrowRight } from 'lucide-react';
 import { openWhatsApp } from '@/lib/whatsapp';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -21,6 +21,8 @@ import ReactMarkdown from 'react-markdown';
 import { getCrmStageLabel, normalizeCrmStage } from '@/lib/crm/model';
 import { useActiveUser } from '@/hooks/useActiveUser';
 import { MetaWindowBadge } from '@/components/crm/MetaWindowBadge';
+import { AttendanceActionBar } from '@/components/crm/AttendanceActionBar';
+import { applyAttendanceOutcome, snoozeAttendance, ATTENDANCE_STATE_LABELS, type AttendanceOutcome } from '@/lib/crm/attendance';
 
 interface InboxItem {
   id: string;
@@ -41,9 +43,10 @@ interface InboxItem {
   assigned_to: string | null;
   status: string;
   last_inbound_at: string | null;
+  return_at: string | null;
 }
 
-type InboxFilter = 'all' | 'needs_reply' | 'waiting_customer' | 'overdue' | 'unassigned';
+type InboxFilter = 'all' | 'today' | 'needs_reply' | 'waiting_customer' | 'overdue' | 'unassigned';
 
 export default function ContatosInbox() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -60,6 +63,8 @@ export default function ContatosInbox() {
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [summary, setSummary] = useState('');
   const [summaryLoading, setSummaryLoading] = useState(false);
+  const [attendanceBusy, setAttendanceBusy] = useState(false);
+  const [sendConfirmation, setSendConfirmation] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -67,7 +72,7 @@ export default function ContatosInbox() {
     // Contatos sem conversa continuam no CRM, mas não poluem esta fila operacional.
     const { data: conversations, error } = await supabase
       .from('service_conversations')
-      .select('id,contact_id,contact_name,contact_handle,contact_avatar_url,last_message_preview,last_message_at,last_inbound_at,unread_count,needs_reply,attendance_state,assigned_to,funnel_stage,status')
+      .select('id,contact_id,contact_name,contact_handle,contact_avatar_url,last_message_preview,last_message_at,last_inbound_at,return_at,unread_count,needs_reply,attendance_state,assigned_to,funnel_stage,status')
       .not('contact_id', 'is', null)
       .order('last_message_at', { ascending: false })
       .limit(loadLimit);
@@ -123,6 +128,7 @@ export default function ContatosInbox() {
         assigned_to: conversation.assigned_to,
         status: conversation.status || 'open',
         last_inbound_at: conversation.last_inbound_at,
+        return_at: conversation.return_at,
       });
     }
 
@@ -221,6 +227,12 @@ export default function ContatosInbox() {
         (i.phone || '').includes(q) ||
         (i.last_summary || '').toLowerCase().includes(q);
       if (!matchesSearch) return false;
+      if (inboxFilter === 'today') {
+        if (!i.return_at) return false;
+        const due = new Date(i.return_at);
+        const end = new Date(); end.setHours(23, 59, 59, 999);
+        return due <= end;
+      }
       if (inboxFilter === 'needs_reply') return i.needs_reply;
       if (inboxFilter === 'waiting_customer') return i.attendance_state === 'aguardando_cliente';
       if (inboxFilter === 'overdue') return i.needs_reply && i.unread_days >= 2;
@@ -248,6 +260,55 @@ export default function ContatosInbox() {
     }
     toast.success(successMessage);
     await load();
+  };
+
+  const attendanceQueue = useMemo(() => {
+    try {
+      const stored = JSON.parse(sessionStorage.getItem('crm-attendance-queue') || 'null');
+      return stored?.source === 'today' && Array.isArray(stored.ids) ? stored.ids as string[] : [];
+    } catch { return []; }
+  }, [selectedId]);
+
+  const nextAttendance = () => {
+    if (!selected || attendanceQueue.length === 0) return;
+    const nextId = attendanceQueue[attendanceQueue.indexOf(selected.id) + 1];
+    if (!nextId) {
+      toast.success('Fila de hoje concluída.');
+      sessionStorage.removeItem('crm-attendance-queue');
+      return;
+    }
+    const next = items.find(item => item.id === nextId);
+    if (next) void openConversation(next);
+  };
+
+  const registerOutcome = async (outcome: AttendanceOutcome) => {
+    if (!selected) return;
+    setAttendanceBusy(true);
+    try {
+      const result = await applyAttendanceOutcome({ contactId: selected.id, conversationId: selected.conversation_id, outcome });
+      toast.success(`${result.label}${result.returnAt ? ' · retorno agendado' : ''}`);
+      setSendConfirmation(false);
+      await load();
+      nextAttendance();
+    } catch (error) {
+      console.error(error);
+      toast.error('Não foi possível registrar o resultado do atendimento.');
+    } finally { setAttendanceBusy(false); }
+  };
+
+  const snoozeSelected = async (when: number | string) => {
+    if (!selected) return;
+    setAttendanceBusy(true);
+    try {
+      await snoozeAttendance({ contactId: selected.id, conversationId: selected.conversation_id, when });
+      toast.success('Atendimento adiado e próxima ação atualizada.');
+      setSendConfirmation(false);
+      await load();
+      nextAttendance();
+    } catch (error) {
+      console.error(error);
+      toast.error('Não foi possível adiar o atendimento.');
+    } finally { setAttendanceBusy(false); }
   };
 
   const handleSummarize = async (contactId: string) => {
@@ -318,8 +379,9 @@ export default function ContatosInbox() {
           <div className="mt-2 flex gap-1.5 overflow-x-auto pb-0.5">
             {([
               ['all', 'Todas'],
+              ['today', 'Hoje'],
               ['needs_reply', 'Responder'],
-              ['waiting_customer', 'Aguardando cliente'],
+              ['waiting_customer', 'Aguardando resposta'],
               ['overdue', 'Atrasadas'],
               ['unassigned', 'Sem responsável'],
             ] as Array<[InboxFilter, string]>).map(([key, label]) => (
@@ -370,6 +432,11 @@ export default function ContatosInbox() {
                       <Badge variant="outline" className="text-[9px] h-4 px-1.5">
                         {getCrmStageLabel(item.funnel_status)}
                       </Badge>
+                      {item.attendance_state && (
+                        <Badge variant="secondary" className="text-[9px] h-4 px-1.5">
+                          {ATTENDANCE_STATE_LABELS[item.attendance_state] || item.attendance_state}
+                        </Badge>
+                      )}
                       {item.needs_reply && (
                         <Badge variant="destructive" className="text-[9px] h-4 px-1.5">
                           Responder
@@ -492,8 +559,26 @@ export default function ContatosInbox() {
                     contactHandle={selected.whatsapp || selected.phone}
                     contactAvatar={selected.photo_url}
                     funnelStage={selected.funnel_status}
-                    heightClassName="h-[calc(100dvh-320px)] min-h-[340px]"
+                    heightClassName="h-[calc(100dvh-455px)] min-h-[280px]"
+                    onMessageSent={() => setSendConfirmation(true)}
                   />
+                  {sendConfirmation && (
+                    <div className="mt-2 flex items-center justify-between gap-2 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">
+                      <span>Mensagem enviada · aguardando resposta · retorno automático em 2 dias.</span>
+                      <Button size="sm" variant="ghost" className="h-7 shrink-0 text-[11px]" onClick={() => setSendConfirmation(false)}>Manter</Button>
+                    </div>
+                  )}
+                  <div className="mt-2 space-y-2">
+                    <AttendanceActionBar busy={attendanceBusy} onOutcome={registerOutcome} onSnooze={snoozeSelected} />
+                    {attendanceQueue.length > 0 && (
+                      <div className="flex items-center justify-between rounded-md border px-2 py-1.5 text-[11px]">
+                        <span>Fila Hoje · {Math.max(1, attendanceQueue.indexOf(selected.id) + 1)} de {attendanceQueue.length}</span>
+                        <Button size="sm" variant="ghost" className="h-7 gap-1 text-[11px]" onClick={nextAttendance}>
+                          Próximo atendimento <ArrowRight className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </TabsContent>
                 <TabsContent value="historico" className="p-3 pt-2 mt-0">
                   <ContactTimeline contactId={selected.id} />
