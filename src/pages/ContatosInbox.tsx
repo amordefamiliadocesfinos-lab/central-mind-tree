@@ -618,7 +618,16 @@ export default function ContatosInbox() {
         </div>
       </div>
 
+      {/* Barra lateral do lead (mesma da tela de Contatos) */}
+      <LeadDetailDrawer
+        contact={leadContact}
+        open={leadPanelOpen && !!selectedId}
+        onOpenChange={setLeadPanelOpen}
+        onSave={updateContact}
+      />
+
       {/* Quick conversation */}
+
       <MergeDuplicatesDialog open={mergeOpen} onOpenChange={setMergeOpen} onMerged={load} />
       <QuickConversationDialog
         open={quickOpen}
