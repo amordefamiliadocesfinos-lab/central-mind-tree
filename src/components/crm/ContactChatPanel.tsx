@@ -35,6 +35,10 @@ interface ContactChatPanelProps {
   onMessageSent?: (content: string) => void | Promise<void>;
 }
 
+const CHAT_FONT_KEY = 'crm-chat-font-size';
+const MIN_FONT = 12;
+const MAX_FONT = 22;
+
 export function ContactChatPanel({ contactId, contactName, contactHandle, contactAvatar, funnelStage, heightClassName, onMessageSent }: ContactChatPanelProps) {
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -42,7 +46,19 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
   const [sending, setSending] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
   const [text, setText] = useState('');
+  const [fontSize, setFontSize] = useState<number>(() => {
+    const stored = Number(localStorage.getItem(CHAT_FONT_KEY));
+    return stored >= MIN_FONT && stored <= MAX_FONT ? stored : 14;
+  });
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  const changeFont = (delta: number) => {
+    setFontSize((prev) => {
+      const next = Math.min(MAX_FONT, Math.max(MIN_FONT, prev + delta));
+      localStorage.setItem(CHAT_FONT_KEY, String(next));
+      return next;
+    });
+  };
 
   // Localiza ou cria a conversa para este contato
   useEffect(() => {
