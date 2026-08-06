@@ -550,11 +550,21 @@ export default function ContatosInbox() {
                   >
                     <Phone className="h-4 w-4 text-green-600" />
                   </Button>
+                  <Button
+                    size="icon"
+                    variant={leadPanelOpen ? 'secondary' : 'ghost'}
+                    className="h-8 w-8"
+                    onClick={() => setLeadPanelOpen((v) => !v)}
+                    title={leadPanelOpen ? 'Ocultar detalhes do lead' : 'Mostrar detalhes do lead'}
+                  >
+                    <PanelRight className="h-4 w-4" />
+                  </Button>
                   <Link to={`/contatos?contact=${selected.id}`}>
                     <Button size="icon" variant="ghost" className="h-8 w-8" title="Abrir ficha completa">
                       <ExternalLink className="h-4 w-4" />
                     </Button>
                   </Link>
+
                 </div>
               </div>
 
