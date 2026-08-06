@@ -71,6 +71,18 @@ export default function ContatosInbox() {
   const [leadContact, setLeadContact] = useState<Contact | null>(null);
   const { fetchContactFull, updateContact } = useContacts();
 
+  // Carrega a ficha do lead para a barra lateral (somente quando visível).
+  useEffect(() => {
+    if (!leadPanelOpen || !selectedId) return;
+    let cancelled = false;
+    setLeadContact(null);
+    void fetchContactFull(selectedId).then((c) => {
+      if (!cancelled) setLeadContact(c);
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leadPanelOpen, selectedId]);
+
 
   const load = useCallback(async () => {
     setLoading(true);
