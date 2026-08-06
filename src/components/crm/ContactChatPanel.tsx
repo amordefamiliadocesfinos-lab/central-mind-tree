@@ -301,7 +301,8 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
           onChange={(e) => setText(e.target.value)}
           placeholder="Digite uma mensagem…"
           rows={2}
-          className="resize-none text-sm"
+          className="resize-none"
+          style={{ fontSize: `${fontSize}px` }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
