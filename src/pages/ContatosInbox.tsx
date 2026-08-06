@@ -67,6 +67,10 @@ export default function ContatosInbox() {
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [attendanceBusy, setAttendanceBusy] = useState(false);
   const [sendConfirmation, setSendConfirmation] = useState(false);
+  const [leadPanelOpen, setLeadPanelOpen] = useState(false);
+  const [leadContact, setLeadContact] = useState<Contact | null>(null);
+  const { fetchContactFull, updateContact } = useContacts();
+
 
   const load = useCallback(async () => {
     setLoading(true);
