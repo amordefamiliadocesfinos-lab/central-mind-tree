@@ -20,6 +20,7 @@ import { toast } from 'sonner';
 import ReactMarkdown from 'react-markdown';
 import { getCrmStageLabel, normalizeCrmStage } from '@/lib/crm/model';
 import { useActiveUser } from '@/hooks/useActiveUser';
+import { MetaWindowBadge } from '@/components/crm/MetaWindowBadge';
 
 interface InboxItem {
   id: string;
@@ -39,6 +40,7 @@ interface InboxItem {
   attendance_state: string | null;
   assigned_to: string | null;
   status: string;
+  last_inbound_at: string | null;
 }
 
 type InboxFilter = 'all' | 'needs_reply' | 'waiting_customer' | 'overdue' | 'unassigned';
@@ -65,7 +67,7 @@ export default function ContatosInbox() {
     // Contatos sem conversa continuam no CRM, mas não poluem esta fila operacional.
     const { data: conversations, error } = await supabase
       .from('service_conversations')
-      .select('id,contact_id,contact_name,contact_handle,contact_avatar_url,last_message_preview,last_message_at,unread_count,needs_reply,attendance_state,assigned_to,funnel_stage,status')
+      .select('id,contact_id,contact_name,contact_handle,contact_avatar_url,last_message_preview,last_message_at,last_inbound_at,unread_count,needs_reply,attendance_state,assigned_to,funnel_stage,status')
       .not('contact_id', 'is', null)
       .order('last_message_at', { ascending: false })
       .limit(loadLimit);
@@ -120,6 +122,7 @@ export default function ContatosInbox() {
         attendance_state: conversation.attendance_state,
         assigned_to: conversation.assigned_to,
         status: conversation.status || 'open',
+        last_inbound_at: conversation.last_inbound_at,
       });
     }
 
@@ -382,6 +385,7 @@ export default function ContatosInbox() {
                           {item.unread_days}d sem contato
                         </Badge>
                       )}
+                      <MetaWindowBadge lastInboundAt={item.last_inbound_at} compact />
                     </div>
                   </div>
                 </button>
@@ -422,6 +426,7 @@ export default function ContatosInbox() {
                   </div>
                 </div>
                 <div className="flex gap-1">
+                  <MetaWindowBadge lastInboundAt={selected.last_inbound_at} className="h-8 px-2 text-[10px]" />
                   {!selected.assigned_to && (
                     <Button size="sm" variant="outline" className="h-8 gap-1" disabled={!isLinked} onClick={() => void updateAttendance({ assigned_to: activeUserId, attendance_state: 'em_atendimento', status: 'open', resolved_at: null }, 'Atendimento assumido.')}>
                       <UserCheck className="h-3.5 w-3.5" /> Assumir

@@ -14,6 +14,17 @@ function constantTimeEqual(a: string, b: string) {
   return diff === 0;
 }
 
+function mediaExtension(mimeType?: string, filename?: string) {
+  const fromName = filename?.split('.').pop()?.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+  if (fromName) return fromName;
+  const extensions: Record<string, string> = {
+    'audio/ogg': 'ogg', 'audio/mpeg': 'mp3', 'audio/mp4': 'm4a', 'audio/aac': 'aac',
+    'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
+    'video/mp4': 'mp4', 'application/pdf': 'pdf',
+  };
+  return extensions[String(mimeType ?? '').split(';')[0]] ?? 'bin';
+}
+
 async function validSignature(raw: string, signature: string | null, secret: string) {
   if (!signature?.startsWith('sha256=')) return false;
   const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
@@ -109,19 +120,44 @@ Deno.serve(async (req) => {
       }
 
       const now = evt.providerTimestamp ?? new Date().toISOString();
+      let mediaUrl: string | null = null;
+      let mediaMimeType: string | null = evt.mediaMimeType ?? null;
+      if (evt.mediaId && connector.downloadMedia) {
+        try {
+          const media = await connector.downloadMedia(evt.mediaId);
+          mediaMimeType = media.mimeType || mediaMimeType;
+          const extension = mediaExtension(mediaMimeType ?? undefined, evt.mediaFilename);
+          const safeMessageId = String(evt.externalMessageId ?? crypto.randomUUID()).replace(/[^a-zA-Z0-9_-]/g, '_');
+          const path = `whatsapp/${evt.providerInstanceRef}/${safeMessageId}.${extension}`;
+          const { error: uploadError } = await supabase.storage.from('media').upload(path, media.bytes, {
+            contentType: mediaMimeType ?? 'application/octet-stream', upsert: true,
+          });
+          if (uploadError) throw uploadError;
+          mediaUrl = supabase.storage.from('media').getPublicUrl(path).data.publicUrl;
+        } catch (mediaError) {
+          // Never discard the message when Meta media download is temporarily unavailable.
+          console.error('meta media persistence failed', (mediaError as Error).message);
+        }
+      }
+      const inbound = evt.direction !== 'outbound';
       const { error: messageError } = await supabase.from('service_messages').insert({
-        conversation_id: conversation!.id, sender: 'customer', content: evt.content ?? 'Mensagem não suportada',
-        is_ai_suggested: false, external_message_id: evt.externalMessageId, direction: 'inbound',
-        message_type: evt.messageType ?? 'text', delivery_status: 'received', provider_timestamp: now,
-        source: 'provider', provider_name: evt.providerName, provider_instance_ref: evt.providerInstanceRef,
+        conversation_id: conversation!.id, sender: inbound ? 'customer' : 'agent', content: evt.content ?? 'Mensagem não suportada',
+        is_ai_suggested: false, external_message_id: evt.externalMessageId, direction: evt.direction ?? 'inbound',
+        message_type: evt.messageType ?? 'text', delivery_status: inbound ? 'received' : 'sent', provider_timestamp: now,
+        source: evt.source ?? 'provider', provider_name: evt.providerName, provider_instance_ref: evt.providerInstanceRef,
+        media_url: mediaUrl, media_mime_type: mediaMimeType, media_filename: evt.mediaFilename ?? null,
+        media_caption: evt.mediaCaption ?? null,
       });
       if (messageError && messageError.code !== '23505') throw messageError;
-      await supabase.from('service_conversations').update({
-        last_message_at: now, last_inbound_at: now, last_message_preview: (evt.content ?? '').slice(0, 100),
-        needs_reply: true, status: 'open', resolved_at: null, attendance_state: 'responder',
-        unread_count: (conversation!.unread_count ?? 0) + 1,
+      const { error: conversationError } = await supabase.from('service_conversations').update({
+        last_message_at: now,
+        ...(inbound
+          ? { last_inbound_at: now, needs_reply: true, status: 'open', resolved_at: null, attendance_state: 'responder', unread_count: (conversation!.unread_count ?? 0) + 1 }
+          : { last_outbound_at: now, needs_reply: false, attendance_state: 'aguardando_cliente' }),
+        last_message_preview: (evt.content ?? '').slice(0, 100),
       }).eq('id', conversation!.id);
-      if (contact) {
+      if (conversationError) throw conversationError;
+      if (contact && inbound) {
         await supabase.from('contacts').update({
           next_action_text: 'Responder cliente no WhatsApp',
           next_action_date: now,

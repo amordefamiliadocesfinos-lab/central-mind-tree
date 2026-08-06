@@ -33,6 +33,16 @@ export interface NormalizedWebhookEvent {
   providerTimestamp?: string;
   deduplicationKey?: string;
   errorCode?: string;
+  mediaId?: string;
+  mediaMimeType?: string;
+  mediaFilename?: string;
+  mediaCaption?: string;
+}
+
+export interface DownloadedMedia {
+  bytes: ArrayBuffer;
+  mimeType: string;
+  filename?: string;
 }
 
 export interface SendTextResult {
@@ -72,6 +82,7 @@ export interface WhatsAppConnector {
   enableSentByMeNotifications(): Promise<ConnectorActionResult>;
   getConnectionStatus(): Promise<ConnectionStatusResult>;
   getProfilePictureUrl(phone: string): Promise<ProfilePictureResult>;
+  downloadMedia?(mediaId: string): Promise<DownloadedMedia>;
 }
 
 /** Normalização de telefone BR: 55 + DDD + número. Inválido => null. */
