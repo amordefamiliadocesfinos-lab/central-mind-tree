@@ -13,7 +13,9 @@ import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { MergeDuplicatesDialog } from '@/components/crm/MergeDuplicatesDialog';
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ArrowLeft, Search, Zap, MessageCircle, Phone, ExternalLink, Sparkles, Loader2, Merge, Clock, UserCheck, UserMinus, CheckCircle2, RotateCcw, ArrowRight } from 'lucide-react';
+import { ArrowLeft, Search, Zap, MessageCircle, Phone, ExternalLink, Sparkles, Loader2, Merge, Clock, UserCheck, UserMinus, CheckCircle2, RotateCcw, ArrowRight, PanelRight } from 'lucide-react';
+import { LeadDetailDrawer } from '@/components/crm/LeadDetailDrawer';
+import { useContacts, type Contact } from '@/hooks/useContacts';
 import { openWhatsApp } from '@/lib/whatsapp';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -65,6 +67,22 @@ export default function ContatosInbox() {
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [attendanceBusy, setAttendanceBusy] = useState(false);
   const [sendConfirmation, setSendConfirmation] = useState(false);
+  const [leadPanelOpen, setLeadPanelOpen] = useState(false);
+  const [leadContact, setLeadContact] = useState<Contact | null>(null);
+  const { fetchContactFull, updateContact } = useContacts();
+
+  // Carrega a ficha do lead para a barra lateral (somente quando visível).
+  useEffect(() => {
+    if (!leadPanelOpen || !selectedId) return;
+    let cancelled = false;
+    setLeadContact(null);
+    void fetchContactFull(selectedId).then((c) => {
+      if (!cancelled) setLeadContact(c);
+    });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leadPanelOpen, selectedId]);
+
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -532,11 +550,21 @@ export default function ContatosInbox() {
                   >
                     <Phone className="h-4 w-4 text-green-600" />
                   </Button>
+                  <Button
+                    size="icon"
+                    variant={leadPanelOpen ? 'secondary' : 'ghost'}
+                    className="h-8 w-8"
+                    onClick={() => setLeadPanelOpen((v) => !v)}
+                    title={leadPanelOpen ? 'Ocultar detalhes do lead' : 'Mostrar detalhes do lead'}
+                  >
+                    <PanelRight className="h-4 w-4" />
+                  </Button>
                   <Link to={`/contatos?contact=${selected.id}`}>
                     <Button size="icon" variant="ghost" className="h-8 w-8" title="Abrir ficha completa">
                       <ExternalLink className="h-4 w-4" />
                     </Button>
                   </Link>
+
                 </div>
               </div>
 
@@ -590,7 +618,16 @@ export default function ContatosInbox() {
         </div>
       </div>
 
+      {/* Barra lateral do lead (mesma da tela de Contatos) */}
+      <LeadDetailDrawer
+        contact={leadContact}
+        open={leadPanelOpen && !!selectedId}
+        onOpenChange={setLeadPanelOpen}
+        onSave={updateContact}
+      />
+
       {/* Quick conversation */}
+
       <MergeDuplicatesDialog open={mergeOpen} onOpenChange={setMergeOpen} onMerged={load} />
       <QuickConversationDialog
         open={quickOpen}
