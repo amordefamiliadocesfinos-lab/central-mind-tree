@@ -295,48 +295,41 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
         <div ref={bottomRef} />
       </div>
 
-      <div className="border-t pt-2 mt-2 space-y-2 bg-background/95">
+      <div className="border-t pt-1.5 mt-1.5 space-y-1.5 bg-background/95">
         {attachment && (
-          <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-2 py-1.5 text-xs">
-            {attachment.type.startsWith('audio/') ? <Mic className="h-4 w-4" /> : attachment.type.startsWith('video/') ? <Video className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+          <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-2 py-1 text-xs">
+            {attachment.type.startsWith('audio/') ? <Mic className="h-3.5 w-3.5" /> : attachment.type.startsWith('video/') ? <Video className="h-3.5 w-3.5" /> : <FileText className="h-3.5 w-3.5" />}
             <span className="min-w-0 flex-1 truncate">{attachment.name}</span>
             <span className="text-[10px] text-muted-foreground">{(attachment.size / 1024 / 1024).toFixed(1)} MB</span>
             <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setAttachment(null)} aria-label="Remover anexo"><X className="h-3 w-3" /></Button>
           </div>
         )}
-        <Textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Digite uma mensagem…"
-          rows={2}
-          className="resize-none"
-          style={{ fontSize: `${fontSize}px` }}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-              e.preventDefault();
-              handleSend();
-            }
-          }}
-        />
-
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1">
-            <input ref={fileInputRef} type="file" className="hidden" accept="image/*,audio/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt" onChange={(event) => setAttachment(event.target.files?.[0] || null)} />
-            <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => fileInputRef.current?.click()} disabled={sending || !conversationId} title="Anexar imagem, áudio, vídeo ou documento"><Paperclip className="h-3.5 w-3.5" /></Button>
-            <Button size="sm" variant="outline" onClick={handleSuggest} disabled={suggesting || !conversationId}>
-              {suggesting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-              <span className="ml-1 text-xs">Sugerir IA</span>
-            </Button>
-          </div>
-          <Button size="sm" onClick={handleSend} disabled={sending || (!text.trim() && !attachment) || !conversationId}>
-            {sending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
-            <span className="ml-1 text-xs">Enviar</span>
+        <div className="flex items-end gap-1">
+          <input ref={fileInputRef} type="file" className="hidden" accept="image/*,audio/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt" onChange={(event) => setAttachment(event.target.files?.[0] || null)} />
+          <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => fileInputRef.current?.click()} disabled={sending || !conversationId} title="Anexar imagem, áudio, vídeo ou documento"><Paperclip className="h-4 w-4" /></Button>
+          <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={handleSuggest} disabled={suggesting || !conversationId} title="Sugerir resposta com IA">
+            {suggesting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+          </Button>
+          <Textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Digite uma mensagem…"
+            rows={1}
+            className="resize-none min-h-[36px] max-h-28 py-2"
+            style={{ fontSize: `${fontSize}px` }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+          />
+          <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => changeFont(-1)} disabled={fontSize <= MIN_FONT} title="Diminuir texto das mensagens"><AArrowDown className="h-4 w-4" /></Button>
+          <Button size="icon" variant="ghost" className="h-8 w-8 shrink-0" onClick={() => changeFont(1)} disabled={fontSize >= MAX_FONT} title="Aumentar texto das mensagens"><AArrowUp className="h-4 w-4" /></Button>
+          <Button size="icon" className="h-8 w-8 shrink-0" onClick={handleSend} disabled={sending || (!text.trim() && !attachment) || !conversationId} title="Enviar">
+            {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
           </Button>
         </div>
-        <p className="text-[10px] text-muted-foreground text-center">
-          Enter envia · Shift+Enter quebra linha · enviado pelo WhatsApp e registrado no Atendimento.
-        </p>
-
       </div>
     </div>
   );
