@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { FileText, Loader2, Send, Sparkles, MessageCircle, AArrowDown, AArrowUp } from 'lucide-react';
+import { FileText, Loader2, Send, Sparkles, MessageCircle, AArrowDown, AArrowUp, Paperclip, X, Mic, Video } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -46,11 +46,13 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
   const [sending, setSending] = useState(false);
   const [suggesting, setSuggesting] = useState(false);
   const [text, setText] = useState('');
+  const [attachment, setAttachment] = useState<File | null>(null);
   const [fontSize, setFontSize] = useState<number>(() => {
     const stored = Number(localStorage.getItem(CHAT_FONT_KEY));
     return stored >= MIN_FONT && stored <= MAX_FONT ? stored : 14;
   });
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const changeFont = (delta: number) => {
     setFontSize((prev) => {
@@ -136,12 +138,32 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
   }, [conversationId]);
 
   const handleSend = async () => {
-    if (!conversationId || !text.trim()) return;
+    if (!conversationId || (!text.trim() && !attachment)) return;
     setSending(true);
     const content = text.trim();
     try {
+      let mediaPayload: Record<string, string> = {};
+      if (attachment) {
+        const maxBytes = attachment.type.startsWith('image/') ? 5 * 1024 * 1024 : 16 * 1024 * 1024;
+        if (attachment.size > maxBytes) {
+          toast.error(`Arquivo excede o limite de ${maxBytes / 1024 / 1024} MB.`);
+          return;
+        }
+        const mediaType = attachment.type.startsWith('image/') ? 'image'
+          : attachment.type.startsWith('audio/') ? 'audio'
+          : attachment.type.startsWith('video/') ? 'video' : 'document';
+        const safeName = attachment.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const path = `whatsapp/outbound/${conversationId}/${crypto.randomUUID()}-${safeName}`;
+        const { error: uploadError } = await supabase.storage.from('media').upload(path, attachment, { contentType: attachment.type, upsert: false });
+        if (uploadError) throw uploadError;
+        const mediaUrl = supabase.storage.from('media').getPublicUrl(path).data.publicUrl;
+        mediaPayload = {
+          media_url: mediaUrl, media_type: mediaType,
+          media_mime_type: attachment.type, media_filename: attachment.name,
+        };
+      }
       const { data, error } = await supabase.functions.invoke('whatsapp-send', {
-        body: { conversation_id: conversationId, message: content },
+        body: { conversation_id: conversationId, message: content, ...mediaPayload },
       });
       const errMsg =
         (data as { error?: string } | null)?.error ??
@@ -151,6 +173,7 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
         return;
       }
       setText('');
+      setAttachment(null);
       await onMessageSent?.(content);
     } catch {
       toast.error('Não foi possível enviar a mensagem pelo WhatsApp');
@@ -296,6 +319,14 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
       </div>
 
       <div className="border-t pt-2 mt-2 space-y-2 bg-background/95">
+        {attachment && (
+          <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-2 py-1.5 text-xs">
+            {attachment.type.startsWith('audio/') ? <Mic className="h-4 w-4" /> : attachment.type.startsWith('video/') ? <Video className="h-4 w-4" /> : <FileText className="h-4 w-4" />}
+            <span className="min-w-0 flex-1 truncate">{attachment.name}</span>
+            <span className="text-[10px] text-muted-foreground">{(attachment.size / 1024 / 1024).toFixed(1)} MB</span>
+            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => setAttachment(null)} aria-label="Remover anexo"><X className="h-3 w-3" /></Button>
+          </div>
+        )}
         <Textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -312,11 +343,15 @@ export function ContactChatPanel({ contactId, contactName, contactHandle, contac
         />
 
         <div className="flex items-center justify-between gap-2">
-          <Button size="sm" variant="outline" onClick={handleSuggest} disabled={suggesting || !conversationId}>
-            {suggesting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-            <span className="ml-1 text-xs">Sugerir IA</span>
-          </Button>
-          <Button size="sm" onClick={handleSend} disabled={sending || !text.trim() || !conversationId}>
+          <div className="flex items-center gap-1">
+            <input ref={fileInputRef} type="file" className="hidden" accept="image/*,audio/*,video/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt" onChange={(event) => setAttachment(event.target.files?.[0] || null)} />
+            <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => fileInputRef.current?.click()} disabled={sending || !conversationId} title="Anexar imagem, áudio, vídeo ou documento"><Paperclip className="h-3.5 w-3.5" /></Button>
+            <Button size="sm" variant="outline" onClick={handleSuggest} disabled={suggesting || !conversationId}>
+              {suggesting ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+              <span className="ml-1 text-xs">Sugerir IA</span>
+            </Button>
+          </div>
+          <Button size="sm" onClick={handleSend} disabled={sending || (!text.trim() && !attachment) || !conversationId}>
             {sending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
             <span className="ml-1 text-xs">Enviar</span>
           </Button>

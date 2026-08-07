@@ -1,6 +1,6 @@
 import type {
   ConnectionStatusResult, ConnectorActionResult, NormalizedWebhookEvent,
-  ProfilePictureResult, SendTextResult, WhatsAppConnector,
+  ProfilePictureResult, SendMediaInput, SendTextResult, WhatsAppConnector,
 } from './connector.ts';
 
 const PROVIDER = 'meta_cloud_api';
@@ -121,6 +121,25 @@ export class MetaWhatsAppConnector implements WhatsAppConnector {
       bytes: await mediaResponse.arrayBuffer(),
       mimeType: String(metadata.mime_type ?? mediaResponse.headers.get('content-type') ?? 'application/octet-stream'),
     };
+  }
+
+  async sendMediaMessage(phone: string, media: SendMediaInput): Promise<SendTextResult> {
+    if (!this.isConfigured) return { ok: false, errorCode: 'not_configured', errorMessage: 'Meta WhatsApp Cloud API não configurada' };
+    try {
+      const mediaPayload: Record<string, string> = { link: media.url };
+      if (media.caption && media.type !== 'audio') mediaPayload.caption = media.caption;
+      if (media.filename && media.type === 'document') mediaPayload.filename = media.filename;
+      const res = await fetch(`${this.baseUrl}/messages`, {
+        method: 'POST', headers: { Authorization: `Bearer ${this.accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messaging_product: 'whatsapp', recipient_type: 'individual', to: phone, type: media.type, [media.type]: mediaPayload }),
+      });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) return {
+        ok: false, errorCode: body?.error?.code ? String(body.error.code) : `http_${res.status}`,
+        errorMessage: String(body?.error?.error_user_msg ?? body?.error?.message ?? 'Falha no envio da mídia pela Meta'),
+      };
+      return { ok: true, externalMessageId: body?.messages?.[0]?.id ? String(body.messages[0].id) : undefined };
+    } catch (error) { return { ok: false, errorCode: 'network_error', errorMessage: (error as Error).message }; }
   }
 
   async enableSentByMeNotifications(): Promise<ConnectorActionResult> { return { ok: true }; }
