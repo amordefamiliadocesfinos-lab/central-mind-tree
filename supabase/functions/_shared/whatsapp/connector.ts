@@ -52,6 +52,13 @@ export interface SendTextResult {
   errorMessage?: string;
 }
 
+export interface SendMediaInput {
+  type: 'image' | 'audio' | 'video' | 'document';
+  url: string;
+  caption?: string;
+  filename?: string;
+}
+
 export interface ConnectionStatusResult {
   status: ConnectionStatus;
   instanceReference: string;
@@ -79,6 +86,7 @@ export interface WhatsAppConnector {
   readonly isConfigured: boolean;
   normalizeWebhook(payload: unknown): NormalizedWebhookEvent;
   sendTextMessage(phone: string, message: string): Promise<SendTextResult>;
+  sendMediaMessage?(phone: string, media: SendMediaInput): Promise<SendTextResult>;
   enableSentByMeNotifications(): Promise<ConnectorActionResult>;
   getConnectionStatus(): Promise<ConnectionStatusResult>;
   getProfilePictureUrl(phone: string): Promise<ProfilePictureResult>;

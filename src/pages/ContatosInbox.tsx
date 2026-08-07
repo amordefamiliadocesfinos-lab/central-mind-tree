@@ -13,8 +13,7 @@ import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { MergeDuplicatesDialog } from '@/components/crm/MergeDuplicatesDialog';
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ArrowLeft, Search, Zap, MessageCircle, Phone, ExternalLink, Sparkles, Loader2, Merge, Clock, UserCheck, UserMinus, CheckCircle2, RotateCcw, ArrowRight, PanelRight } from 'lucide-react';
-import { LeadDetailDrawer } from '@/components/crm/LeadDetailDrawer';
+import { ArrowLeft, Search, Zap, MessageCircle, Phone, ExternalLink, Sparkles, Loader2, Merge, Clock, UserCheck, UserMinus, CheckCircle2, RotateCcw, ArrowRight, PanelRight, Trash2, X } from 'lucide-react';
 import { useContacts, type Contact } from '@/hooks/useContacts';
 import { openWhatsApp } from '@/lib/whatsapp';
 import { cn } from '@/lib/utils';
@@ -69,7 +68,7 @@ export default function ContatosInbox() {
   const [sendConfirmation, setSendConfirmation] = useState(false);
   const [leadPanelOpen, setLeadPanelOpen] = useState(false);
   const [leadContact, setLeadContact] = useState<Contact | null>(null);
-  const { fetchContactFull, updateContact } = useContacts();
+  const { fetchContactFull } = useContacts();
 
   // Carrega a ficha do lead para a barra lateral (somente quando visível).
   useEffect(() => {
@@ -112,7 +111,7 @@ export default function ContatosInbox() {
     const ids = Array.from(new Set(conversations.map((c) => c.contact_id).filter(Boolean))) as string[];
     const { data: contacts } = await supabase
       .from('contacts')
-      .select('id,name,whatsapp,phone,photo_url,funnel_status,temperatura_lead,ultimo_contato')
+      .select('id,name,whatsapp,phone,photo_url,funnel_status,temperatura_lead,ultimo_contato,is_active')
       .in('id', ids);
     const contactsById = new Map((contacts || []).map((contact) => [contact.id, contact]));
 
@@ -123,6 +122,7 @@ export default function ContatosInbox() {
       if (!conversation.contact_id || seenContacts.has(conversation.contact_id)) continue;
       seenContacts.add(conversation.contact_id);
       const contact = contactsById.get(conversation.contact_id);
+      if (contact?.is_active === false) continue;
       const lastDate = conversation.last_message_at || null;
       const unreadDays = lastDate
         ? Math.floor((now - new Date(lastDate).getTime()) / 86400000)
@@ -280,6 +280,44 @@ export default function ContatosInbox() {
     await load();
   };
 
+  const updateSelectedPhoto = async (photoUrl: string | null) => {
+    if (!selected) return;
+    try {
+      const [{ error: contactError }, { error: conversationError }] = await Promise.all([
+        supabase.from('contacts').update({ photo_url: photoUrl, updated_at: new Date().toISOString() }).eq('id', selected.id),
+        supabase.from('service_conversations').update({ contact_avatar_url: photoUrl }).eq('contact_id', selected.id),
+      ]);
+      if (contactError || conversationError) throw contactError || conversationError;
+      setItems(current => current.map(item => item.id === selected.id ? { ...item, photo_url: photoUrl } : item));
+      setLeadContact(current => current ? { ...current, photo_url: photoUrl || undefined } : current);
+    } catch (error) {
+      console.error(error);
+      toast.error('Não foi possível atualizar a foto do lead.');
+    }
+  };
+
+  const removeSelectedLead = async () => {
+    if (!selected) return;
+    const confirmed = window.confirm(`Remover "${selected.name}" da fila e desativar este lead? O histórico será preservado.`);
+    if (!confirmed) return;
+    setAttendanceBusy(true);
+    try {
+      const now = new Date().toISOString();
+      const [{ error: contactError }, { error: conversationError }] = await Promise.all([
+        supabase.from('contacts').update({ is_active: false, updated_at: now }).eq('id', selected.id),
+        supabase.from('service_conversations').update({ status: 'resolved', resolved_at: now, attendance_state: 'concluido', needs_reply: false, unread_count: 0 }).eq('contact_id', selected.id),
+      ]);
+      if (contactError || conversationError) throw contactError || conversationError;
+      setItems(current => current.filter(item => item.id !== selected.id));
+      setSelectedId(null);
+      setLeadPanelOpen(false);
+      toast.success('Lead removido da fila. O histórico foi preservado.');
+    } catch (error) {
+      console.error(error);
+      toast.error('Não foi possível remover o lead.');
+    } finally { setAttendanceBusy(false); }
+  };
+
   const attendanceQueue = useMemo(() => {
     try {
       const stored = JSON.parse(sessionStorage.getItem('crm-attendance-queue') || 'null');
@@ -364,9 +402,9 @@ export default function ContatosInbox() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24">
+    <div className="h-[calc(100dvh-4rem)] min-h-[560px] overflow-hidden bg-background flex flex-col">
       {/* Header */}
-      <div className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="z-30 shrink-0 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center gap-2 p-3">
           <Link to="/contatos">
             <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -411,9 +449,9 @@ export default function ContatosInbox() {
         </div>
       </div>
 
-      <div className="grid md:grid-cols-[380px_1fr] gap-0 md:gap-4 md:p-4">
+      <div className={cn('grid flex-1 min-h-0 gap-0 md:p-2', leadPanelOpen ? 'md:grid-cols-[320px_minmax(0,1fr)_300px]' : 'md:grid-cols-[340px_minmax(0,1fr)]')}>
         {/* Lista */}
-        <div className={cn('md:border md:rounded-lg md:bg-card', selected && 'hidden md:block')}>
+        <div className={cn('min-h-0 overflow-y-auto md:border md:rounded-l-lg md:bg-card', selected && 'hidden md:block')}>
           {loading ? (
             <div className="p-6 text-center text-sm text-muted-foreground">Carregando...</div>
           ) : filtered.length === 0 ? (
@@ -485,16 +523,16 @@ export default function ContatosInbox() {
         </div>
 
         {/* Painel detalhe */}
-        <div className={cn('md:border md:rounded-lg md:bg-card', !selected && 'hidden md:block')}>
+        <div className={cn('min-h-0 overflow-hidden md:border-y md:border-r md:bg-card flex flex-col', !selected && 'hidden md:flex')}>
           {!selected ? (
             <div className="p-8 text-center text-sm text-muted-foreground">
               <MessageCircle className="h-10 w-10 mx-auto mb-2 opacity-30" />
               Selecione um contato para ver a conversa
             </div>
           ) : (
-            <div>
+            <div className="flex min-h-0 flex-1 flex-col">
               {/* Header do contato */}
-              <div className="border-b p-3 flex items-center gap-3 sticky top-[105px] bg-card z-10">
+              <div className="border-b px-3 py-2 flex items-center gap-3 shrink-0 bg-card z-10">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -503,7 +541,7 @@ export default function ContatosInbox() {
                 >
                   <ArrowLeft className="h-4 w-4" />
                 </Button>
-                <ContactAvatar name={selected.name} photoUrl={selected.photo_url} size="md" />
+                <ContactAvatar name={selected.name} photoUrl={selected.photo_url} size="md" editable onPhotoChange={updateSelectedPhoto} />
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-sm truncate">{selected.name}</div>
                   <div className="text-[11px] text-muted-foreground truncate">
@@ -540,6 +578,9 @@ export default function ContatosInbox() {
                   >
                     <Sparkles className="h-4 w-4 text-primary" />
                   </Button>
+                  <Button size="icon" variant="ghost" className="h-8 w-8" disabled={attendanceBusy} onClick={() => void removeSelectedLead()} title="Remover lead da fila">
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
                   <Button
                     size="icon"
                     variant="ghost"
@@ -569,7 +610,7 @@ export default function ContatosInbox() {
               </div>
 
               {/* Conversa (padrão) + Histórico */}
-              <Tabs defaultValue="conversa" className="w-full" key={selected.id}>
+              <Tabs defaultValue="conversa" className="flex min-h-0 flex-1 flex-col" key={selected.id}>
                 <div className="px-3 pt-2">
                   <TabsList className="h-8">
                     <TabsTrigger value="conversa" className="text-xs h-6 gap-1">
@@ -580,14 +621,14 @@ export default function ContatosInbox() {
                     </TabsTrigger>
                   </TabsList>
                 </div>
-                <TabsContent value="conversa" className="p-3 pt-2 mt-0">
+                <TabsContent value="conversa" className="p-3 pt-2 mt-0 min-h-0 flex-1 overflow-hidden flex flex-col">
                   <ContactChatPanel
                     contactId={selected.id}
                     contactName={selected.name}
                     contactHandle={selected.whatsapp || selected.phone}
                     contactAvatar={selected.photo_url}
                     funnelStage={selected.funnel_status}
-                    heightClassName="h-[calc(100dvh-455px)] min-h-[280px]"
+                    heightClassName="min-h-0 flex-1"
                     onMessageSent={() => setSendConfirmation(true)}
                   />
                   {sendConfirmation && (
@@ -608,7 +649,7 @@ export default function ContatosInbox() {
                     )}
                   </div>
                 </TabsContent>
-                <TabsContent value="historico" className="p-3 pt-2 mt-0">
+                <TabsContent value="historico" className="p-3 pt-2 mt-0 min-h-0 flex-1 overflow-y-auto">
                   <ContactTimeline contactId={selected.id} />
                 </TabsContent>
               </Tabs>
@@ -616,15 +657,28 @@ export default function ContatosInbox() {
             </div>
           )}
         </div>
+        {leadPanelOpen && selected && (
+          <aside className="hidden md:flex min-h-0 flex-col overflow-hidden border-y border-r rounded-r-lg bg-card">
+            <div className="flex items-center justify-between border-b px-3 py-2">
+              <span className="text-sm font-semibold">Detalhes do lead</span>
+              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setLeadPanelOpen(false)} title="Ocultar detalhes"><X className="h-4 w-4" /></Button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div className="flex flex-col items-center gap-2 text-center">
+                <ContactAvatar name={selected.name} photoUrl={selected.photo_url} size="lg" editable onPhotoChange={updateSelectedPhoto} />
+                <div><div className="font-medium">{selected.name}</div><div className="text-xs text-muted-foreground">{selected.whatsapp || selected.phone || 'Sem telefone'}</div></div>
+              </div>
+              <div className="grid gap-2 text-xs">
+                <div className="rounded-md border p-2"><span className="text-muted-foreground">Etapa comercial</span><div className="mt-0.5 font-medium">{getCrmStageLabel(selected.funnel_status)}</div></div>
+                <div className="rounded-md border p-2"><span className="text-muted-foreground">Estado do atendimento</span><div className="mt-0.5 font-medium">{selected.attendance_state ? ATTENDANCE_STATE_LABELS[selected.attendance_state] || selected.attendance_state : 'Sem estado'}</div></div>
+                <div className="rounded-md border p-2"><span className="text-muted-foreground">Última interação</span><div className="mt-0.5 font-medium">{formatLastDate(selected.last_date)}</div></div>
+              </div>
+              {leadContact && <p className="text-xs text-muted-foreground whitespace-pre-wrap line-clamp-6">{leadContact.notes || 'Nenhuma observação cadastrada.'}</p>}
+              <Link to={`/contatos?contact=${selected.id}`} className="block"><Button variant="outline" size="sm" className="w-full gap-2"><ExternalLink className="h-3.5 w-3.5" /> Abrir cadastro completo</Button></Link>
+            </div>
+          </aside>
+        )}
       </div>
-
-      {/* Barra lateral do lead (mesma da tela de Contatos) */}
-      <LeadDetailDrawer
-        contact={leadContact}
-        open={leadPanelOpen && !!selectedId}
-        onOpenChange={setLeadPanelOpen}
-        onSave={updateContact}
-      />
 
       {/* Quick conversation */}
 

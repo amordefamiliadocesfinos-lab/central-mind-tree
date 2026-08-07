@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
   );
   if (claimsError || !claimsData?.claims) return json({ error: 'Não autenticado' }, 401);
 
-  let body: { conversation_id?: string; message?: string };
+  let body: { conversation_id?: string; message?: string; media_url?: string; media_type?: string; media_mime_type?: string; media_filename?: string };
   try {
     body = await req.json();
   } catch {
@@ -35,8 +35,12 @@ Deno.serve(async (req) => {
 
   const conversationId = String(body.conversation_id ?? '').trim();
   const message = String(body.message ?? '').trim();
+  const mediaUrl = String(body.media_url ?? '').trim();
+  const mediaType = String(body.media_type ?? '').trim();
+  const allowedMedia = ['image', 'audio', 'video', 'document'];
   if (!conversationId) return json({ error: 'Conversa não informada' }, 400);
-  if (!message) return json({ error: 'Mensagem vazia' }, 400);
+  if (!message && !mediaUrl) return json({ error: 'Mensagem vazia' }, 400);
+  if (mediaUrl && !allowedMedia.includes(mediaType)) return json({ error: 'Tipo de mídia não suportado' }, 400);
   if (message.length > 4096) return json({ error: 'Mensagem muito longa' }, 400);
 
   const supabase = createClient(
@@ -91,15 +95,20 @@ Deno.serve(async (req) => {
   }
 
   const nowIso = new Date().toISOString();
+  const preview = mediaUrl ? (message || `${mediaType === 'audio' ? 'Áudio' : mediaType === 'video' ? 'Vídeo' : mediaType === 'image' ? 'Imagem' : 'Documento'} enviado`) : message;
   const { data: pending, error: pendingErr } = await supabase
     .from('service_messages')
     .insert({
       conversation_id: conversationId,
       sender: 'agent',
-      content: message,
+      content: preview,
       is_ai_suggested: false,
       direction: 'outbound',
-      message_type: 'text',
+      message_type: mediaUrl ? mediaType : 'text',
+      media_url: mediaUrl || null,
+      media_mime_type: body.media_mime_type || null,
+      media_filename: body.media_filename || null,
+      media_caption: mediaUrl && message ? message : null,
       delivery_status: 'pending',
       source: 'crm',
       provider_name: connector.providerName,
@@ -109,7 +118,12 @@ Deno.serve(async (req) => {
     .single();
   if (pendingErr) return json({ error: 'Falha ao registrar mensagem' }, 500);
 
-  const result = await connector.sendTextMessage(phone, message);
+  const result = mediaUrl
+    ? await connector.sendMediaMessage(phone, {
+        type: mediaType as 'image' | 'audio' | 'video' | 'document',
+        url: mediaUrl, caption: message || undefined, filename: body.media_filename || undefined,
+      })
+    : await connector.sendTextMessage(phone, message);
 
   if (!result.ok) {
     await supabase
@@ -133,7 +147,7 @@ Deno.serve(async (req) => {
     .update({
       last_message_at: nowIso,
       last_outbound_at: nowIso,
-      last_message_preview: message.slice(0, 100),
+      last_message_preview: preview.slice(0, 100),
       needs_reply: false,
       unread_count: 0,
       attendance_state: 'aguardando_cliente',
