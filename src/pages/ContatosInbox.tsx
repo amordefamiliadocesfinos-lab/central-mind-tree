@@ -245,6 +245,11 @@ export default function ContatosInbox() {
   }, [activeUserId, isLinked, load, searchParams, setSearchParams]);
 
 
+  const taggedContactIds = useMemo(() => {
+    if (tagFilter === 'all') return null;
+    return new Set(assignments.filter((a) => a.tag_id === tagFilter).map((a) => a.contact_id));
+  }, [assignments, tagFilter]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return items.filter((i) => {
@@ -254,6 +259,7 @@ export default function ContatosInbox() {
         (i.phone || '').includes(q) ||
         (i.last_summary || '').toLowerCase().includes(q);
       if (!matchesSearch) return false;
+      if (taggedContactIds && !taggedContactIds.has(i.id)) return false;
       if (inboxFilter === 'today') {
         if (!i.return_at) return false;
         const due = new Date(i.return_at);
@@ -266,7 +272,8 @@ export default function ContatosInbox() {
       if (inboxFilter === 'unassigned') return !i.assigned_to;
       return true;
     });
-  }, [items, search, inboxFilter]);
+  }, [items, search, inboxFilter, taggedContactIds]);
+
 
   const selected = items.find((i) => i.id === selectedId) || null;
 
