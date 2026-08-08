@@ -713,7 +713,9 @@ export default function ContatosInbox() {
                 <div className="rounded-md border p-2"><span className="text-muted-foreground">Estado do atendimento</span><div className="mt-0.5 font-medium">{selected.attendance_state ? ATTENDANCE_STATE_LABELS[selected.attendance_state] || selected.attendance_state : 'Sem estado'}</div></div>
                 <div className="rounded-md border p-2"><span className="text-muted-foreground">Última interação</span><div className="mt-0.5 font-medium">{formatLastDate(selected.last_date)}</div></div>
               </div>
+              <InboxNoteBlock contactId={selected.id} onSaved={load} onRegisterSale={() => setSaleOpen(true)} />
               {leadContact && <p className="text-xs text-muted-foreground whitespace-pre-wrap line-clamp-6">{leadContact.notes || 'Nenhuma observação cadastrada.'}</p>}
+
               <Link to={`/contatos?contact=${selected.id}`} className="block"><Button variant="outline" size="sm" className="w-full gap-2"><ExternalLink className="h-3.5 w-3.5" /> Abrir cadastro completo</Button></Link>
             </div>
           </aside>
