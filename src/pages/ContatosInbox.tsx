@@ -13,8 +13,13 @@ import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { MergeDuplicatesDialog } from '@/components/crm/MergeDuplicatesDialog';
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ArrowLeft, Search, Zap, MessageCircle, Phone, ExternalLink, Sparkles, Loader2, Merge, Clock, UserCheck, UserMinus, CheckCircle2, RotateCcw, ArrowRight, PanelRight, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Search, Zap, MessageCircle, Phone, ExternalLink, Sparkles, Loader2, Merge, Clock, UserCheck, UserMinus, CheckCircle2, RotateCcw, ArrowRight, PanelRight, Trash2, X, Tag, ShoppingCart } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useContactTags } from '@/hooks/useContactTags';
+import { InboxNoteBlock } from '@/components/crm/InboxNoteBlock';
+import { InboxSaleDialog } from '@/components/crm/InboxSaleDialog';
 import { useContacts, type Contact } from '@/hooks/useContacts';
+
 import { openWhatsApp } from '@/lib/whatsapp';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -68,10 +73,14 @@ export default function ContatosInbox() {
   const [sendConfirmation, setSendConfirmation] = useState(false);
   const [leadPanelOpen, setLeadPanelOpen] = useState(false);
   const [leadContact, setLeadContact] = useState<Contact | null>(null);
+  const [tagFilter, setTagFilter] = useState<string>('all');
+  const [saleOpen, setSaleOpen] = useState(false);
+  const { tags, assignments } = useContactTags();
   const { fetchContactFull } = useContacts();
 
   // Carrega a ficha do lead para a barra lateral (somente quando visível).
   useEffect(() => {
+
     if (!leadPanelOpen || !selectedId) return;
     let cancelled = false;
     setLeadContact(null);
@@ -236,6 +245,11 @@ export default function ContatosInbox() {
   }, [activeUserId, isLinked, load, searchParams, setSearchParams]);
 
 
+  const taggedContactIds = useMemo(() => {
+    if (tagFilter === 'all') return null;
+    return new Set(assignments.filter((a) => a.tag_id === tagFilter).map((a) => a.contact_id));
+  }, [assignments, tagFilter]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return items.filter((i) => {
@@ -245,6 +259,7 @@ export default function ContatosInbox() {
         (i.phone || '').includes(q) ||
         (i.last_summary || '').toLowerCase().includes(q);
       if (!matchesSearch) return false;
+      if (taggedContactIds && !taggedContactIds.has(i.id)) return false;
       if (inboxFilter === 'today') {
         if (!i.return_at) return false;
         const due = new Date(i.return_at);
@@ -257,7 +272,8 @@ export default function ContatosInbox() {
       if (inboxFilter === 'unassigned') return !i.assigned_to;
       return true;
     });
-  }, [items, search, inboxFilter]);
+  }, [items, search, inboxFilter, taggedContactIds]);
+
 
   const selected = items.find((i) => i.id === selectedId) || null;
 
@@ -432,7 +448,7 @@ export default function ContatosInbox() {
               className="pl-8 h-9"
             />
           </div>
-          <div className="mt-2 flex gap-1.5 overflow-x-auto pb-0.5">
+          <div className="mt-2 flex items-center gap-1.5 overflow-x-auto pb-0.5">
             {([
               ['all', 'Todas'],
               ['today', 'Hoje'],
@@ -445,7 +461,27 @@ export default function ContatosInbox() {
                 {label}
               </Button>
             ))}
+            <Select value={tagFilter} onValueChange={setTagFilter}>
+              <SelectTrigger className="h-7 w-[132px] shrink-0 text-[11px]">
+                <div className="flex items-center gap-1 truncate">
+                  <Tag className="h-3 w-3" />
+                  <SelectValue placeholder="Tag" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-xs">Todas as tags</SelectItem>
+                {tags.map((tag) => (
+                  <SelectItem key={tag.id} value={tag.id} className="text-xs">
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: tag.color }} />
+                      {tag.name}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+
         </div>
       </div>
 
@@ -578,7 +614,11 @@ export default function ContatosInbox() {
                   >
                     <Sparkles className="h-4 w-4 text-primary" />
                   </Button>
+                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setSaleOpen(true)} title="Registrar venda deste contato">
+                    <ShoppingCart className="h-4 w-4 text-emerald-600" />
+                  </Button>
                   <Button size="icon" variant="ghost" className="h-8 w-8" disabled={attendanceBusy} onClick={() => void removeSelectedLead()} title="Remover lead da fila">
+
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                   <Button
@@ -673,7 +713,9 @@ export default function ContatosInbox() {
                 <div className="rounded-md border p-2"><span className="text-muted-foreground">Estado do atendimento</span><div className="mt-0.5 font-medium">{selected.attendance_state ? ATTENDANCE_STATE_LABELS[selected.attendance_state] || selected.attendance_state : 'Sem estado'}</div></div>
                 <div className="rounded-md border p-2"><span className="text-muted-foreground">Última interação</span><div className="mt-0.5 font-medium">{formatLastDate(selected.last_date)}</div></div>
               </div>
+              <InboxNoteBlock contactId={selected.id} onSaved={load} onRegisterSale={() => setSaleOpen(true)} />
               {leadContact && <p className="text-xs text-muted-foreground whitespace-pre-wrap line-clamp-6">{leadContact.notes || 'Nenhuma observação cadastrada.'}</p>}
+
               <Link to={`/contatos?contact=${selected.id}`} className="block"><Button variant="outline" size="sm" className="w-full gap-2"><ExternalLink className="h-3.5 w-3.5" /> Abrir cadastro completo</Button></Link>
             </div>
           </aside>
@@ -682,7 +724,18 @@ export default function ContatosInbox() {
 
       {/* Quick conversation */}
 
+      {selected && (
+        <InboxSaleDialog
+          open={saleOpen}
+          onOpenChange={setSaleOpen}
+          contactId={selected.id}
+          contactName={selected.name}
+          contactHandle={selected.whatsapp || selected.phone}
+          onCreated={load}
+        />
+      )}
       <MergeDuplicatesDialog open={mergeOpen} onOpenChange={setMergeOpen} onMerged={load} />
+
       <QuickConversationDialog
         open={quickOpen}
         onOpenChange={setQuickOpen}
