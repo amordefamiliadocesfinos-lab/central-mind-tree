@@ -432,7 +432,7 @@ export default function ContatosInbox() {
               className="pl-8 h-9"
             />
           </div>
-          <div className="mt-2 flex gap-1.5 overflow-x-auto pb-0.5">
+          <div className="mt-2 flex items-center gap-1.5 overflow-x-auto pb-0.5">
             {([
               ['all', 'Todas'],
               ['today', 'Hoje'],
@@ -445,7 +445,27 @@ export default function ContatosInbox() {
                 {label}
               </Button>
             ))}
+            <Select value={tagFilter} onValueChange={setTagFilter}>
+              <SelectTrigger className="h-7 w-[132px] shrink-0 text-[11px]">
+                <div className="flex items-center gap-1 truncate">
+                  <Tag className="h-3 w-3" />
+                  <SelectValue placeholder="Tag" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-xs">Todas as tags</SelectItem>
+                {tags.map((tag) => (
+                  <SelectItem key={tag.id} value={tag.id} className="text-xs">
+                    <span className="inline-flex items-center gap-1.5">
+                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: tag.color }} />
+                      {tag.name}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
+
         </div>
       </div>
 
