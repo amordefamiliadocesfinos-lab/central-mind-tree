@@ -13,8 +13,13 @@ import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { MergeDuplicatesDialog } from '@/components/crm/MergeDuplicatesDialog';
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ArrowLeft, Search, Zap, MessageCircle, Phone, ExternalLink, Sparkles, Loader2, Merge, Clock, UserCheck, UserMinus, CheckCircle2, RotateCcw, ArrowRight, PanelRight, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Search, Zap, MessageCircle, Phone, ExternalLink, Sparkles, Loader2, Merge, Clock, UserCheck, UserMinus, CheckCircle2, RotateCcw, ArrowRight, PanelRight, Trash2, X, Tag, ShoppingCart } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useContactTags } from '@/hooks/useContactTags';
+import { InboxNoteBlock } from '@/components/crm/InboxNoteBlock';
+import { InboxSaleDialog } from '@/components/crm/InboxSaleDialog';
 import { useContacts, type Contact } from '@/hooks/useContacts';
+
 import { openWhatsApp } from '@/lib/whatsapp';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
