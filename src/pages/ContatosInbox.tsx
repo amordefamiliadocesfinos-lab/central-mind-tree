@@ -73,10 +73,14 @@ export default function ContatosInbox() {
   const [sendConfirmation, setSendConfirmation] = useState(false);
   const [leadPanelOpen, setLeadPanelOpen] = useState(false);
   const [leadContact, setLeadContact] = useState<Contact | null>(null);
+  const [tagFilter, setTagFilter] = useState<string>('all');
+  const [saleOpen, setSaleOpen] = useState(false);
+  const { tags, assignments } = useContactTags();
   const { fetchContactFull } = useContacts();
 
   // Carrega a ficha do lead para a barra lateral (somente quando visível).
   useEffect(() => {
+
     if (!leadPanelOpen || !selectedId) return;
     let cancelled = false;
     setLeadContact(null);
