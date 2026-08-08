@@ -724,7 +724,18 @@ export default function ContatosInbox() {
 
       {/* Quick conversation */}
 
+      {selected && (
+        <InboxSaleDialog
+          open={saleOpen}
+          onOpenChange={setSaleOpen}
+          contactId={selected.id}
+          contactName={selected.name}
+          contactHandle={selected.whatsapp || selected.phone}
+          onCreated={load}
+        />
+      )}
       <MergeDuplicatesDialog open={mergeOpen} onOpenChange={setMergeOpen} onMerged={load} />
+
       <QuickConversationDialog
         open={quickOpen}
         onOpenChange={setQuickOpen}
