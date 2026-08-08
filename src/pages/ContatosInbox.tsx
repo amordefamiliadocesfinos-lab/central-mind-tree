@@ -614,7 +614,11 @@ export default function ContatosInbox() {
                   >
                     <Sparkles className="h-4 w-4 text-primary" />
                   </Button>
+                  <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setSaleOpen(true)} title="Registrar venda deste contato">
+                    <ShoppingCart className="h-4 w-4 text-emerald-600" />
+                  </Button>
                   <Button size="icon" variant="ghost" className="h-8 w-8" disabled={attendanceBusy} onClick={() => void removeSelectedLead()} title="Remover lead da fila">
+
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
                   <Button
