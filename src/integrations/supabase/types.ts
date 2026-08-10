@@ -2077,16 +2077,10 @@ export type Database = {
           attachments: Json
           content: string | null
           created_at: string
-          decided_at: string | null
-          decision: string | null
-          estimated_minutes: number | null
           entry_type: string
           id: string
-          linked_task_id: string | null
           media_path: string | null
           media_url: string | null
-          planned_bucket: string | null
-          related_node_id: string | null
           status: string
           updated_at: string
           user_id: string | null
@@ -2096,16 +2090,10 @@ export type Database = {
           attachments?: Json
           content?: string | null
           created_at?: string
-          decided_at?: string | null
-          decision?: string | null
-          estimated_minutes?: number | null
           entry_type: string
           id?: string
-          linked_task_id?: string | null
           media_path?: string | null
           media_url?: string | null
-          planned_bucket?: string | null
-          related_node_id?: string | null
           status?: string
           updated_at?: string
           user_id?: string | null
@@ -2115,16 +2103,10 @@ export type Database = {
           attachments?: Json
           content?: string | null
           created_at?: string
-          decided_at?: string | null
-          decision?: string | null
-          estimated_minutes?: number | null
           entry_type?: string
           id?: string
-          linked_task_id?: string | null
           media_path?: string | null
           media_url?: string | null
-          planned_bucket?: string | null
-          related_node_id?: string | null
           status?: string
           updated_at?: string
           user_id?: string | null
