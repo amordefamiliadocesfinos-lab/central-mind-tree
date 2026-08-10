@@ -759,7 +759,7 @@ export default function Foco() {
               <Button
                 size="sm"
                 variant="default"
-                onClick={handleCompleteTask}
+                onClick={() => handleCompleteTask()}
                 className="flex-1 h-11"
               >
                 <Check className="h-4 w-4 mr-1" />
