@@ -100,7 +100,7 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
   const [accountToDelete, setAccountToDelete] = useState<FinancialAccount | null>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const { createContact } = useContacts();
+  const { contacts, createContact } = useContacts();
 
   // Edit movement form
   const [editMovementForm, setEditMovementForm] = useState({
