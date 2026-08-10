@@ -2079,8 +2079,8 @@ export type Database = {
           created_at: string
           decided_at: string | null
           decision: string | null
-          estimated_minutes: number | null
           entry_type: string
+          estimated_minutes: number | null
           id: string
           linked_task_id: string | null
           media_path: string | null
@@ -2098,8 +2098,8 @@ export type Database = {
           created_at?: string
           decided_at?: string | null
           decision?: string | null
-          estimated_minutes?: number | null
           entry_type: string
+          estimated_minutes?: number | null
           id?: string
           linked_task_id?: string | null
           media_path?: string | null
@@ -2117,8 +2117,8 @@ export type Database = {
           created_at?: string
           decided_at?: string | null
           decision?: string | null
-          estimated_minutes?: number | null
           entry_type?: string
+          estimated_minutes?: number | null
           id?: string
           linked_task_id?: string | null
           media_path?: string | null
@@ -2131,6 +2131,20 @@ export type Database = {
           user_name?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "inbox_entries_linked_task_id_fkey"
+            columns: ["linked_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inbox_entries_related_node_id_fkey"
+            columns: ["related_node_id"]
+            isOneToOne: false
+            referencedRelation: "nodes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "inbox_entries_user_id_fkey"
             columns: ["user_id"]
@@ -4715,6 +4729,60 @@ export type Database = {
           step_key?: string
         }
         Relationships: []
+      }
+      workflow_plans: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          current_task_id: string | null
+          focus_queue_ids: string[]
+          id: string
+          priority_task_ids: string[]
+          selected_task_ids: string[]
+          updated_at: string
+          user_id: string | null
+          week_start: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          current_task_id?: string | null
+          focus_queue_ids?: string[]
+          id?: string
+          priority_task_ids?: string[]
+          selected_task_ids?: string[]
+          updated_at?: string
+          user_id?: string | null
+          week_start: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          current_task_id?: string | null
+          focus_queue_ids?: string[]
+          id?: string
+          priority_task_ids?: string[]
+          selected_task_ids?: string[]
+          updated_at?: string
+          user_id?: string | null
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workflow_plans_current_task_id_fkey"
+            columns: ["current_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workflow_plans_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
