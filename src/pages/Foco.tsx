@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, RotateCcw, ArrowLeft, CalendarCheck, Plus, X, Check, Clock, ExternalLink, AlertTriangle, Timer, GripVertical, LayoutGrid, Table as TableIcon } from "lucide-react";
+import { Play, Pause, RotateCcw, ArrowLeft, CalendarCheck, Plus, X, Check, Clock, ExternalLink, AlertTriangle, Timer, GripVertical, LayoutGrid, Table as TableIcon, MoreHorizontal } from "lucide-react";
 import { TasksSpreadsheetView } from "@/components/foco/TasksSpreadsheetView";
 import { 
   DndContext, 
@@ -35,6 +35,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 interface Task {
   id: string;
@@ -637,7 +638,12 @@ export default function Foco() {
   };
 
   const handleRemoveFromQueue = (taskId: string) => {
-    setQueue(queue.filter(id => id !== taskId));
+    const nextQueue = queue.filter(id => id !== taskId);
+    setQueue(nextQueue);
+    if (activeTaskId === taskId) {
+      setActiveTaskId(nextQueue[0] || null);
+      setSession({ startedAt: null, pausedAt: null, elapsedMs: 0 });
+    }
   };
 
   const queuedTasks = queue
@@ -657,26 +663,7 @@ export default function Foco() {
             <h1 className="text-lg sm:text-2xl font-bold text-foreground truncate">Foco</h1>
           </div>
           <div className="flex items-center gap-2">
-            <div className="inline-flex rounded-md border bg-muted/30 p-0.5">
-              <Button
-                variant={viewMode === 'cards' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('cards')}
-                className="h-8 px-2"
-                title="Visualização em cards"
-              >
-                <LayoutGrid className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === 'spreadsheet' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('spreadsheet')}
-                className="h-8 px-2"
-                title="Visualização em planilha"
-              >
-                <TableIcon className="h-4 w-4" />
-              </Button>
-            </div>
+            <Button variant="ghost" size="sm" onClick={() => navigate('/rotina')} className="hidden h-10 sm:inline-flex">Rotina</Button>
             <Button 
               variant={isReplanningDay() ? "default" : "outline"} 
               size="sm"
@@ -690,8 +677,9 @@ export default function Foco() {
         </div>
       </div>
 
-      <div className={cn("p-4 space-y-4", viewMode === 'spreadsheet' ? "max-w-[1600px] mx-auto" : "max-w-2xl mx-auto")}>
+      <div className="p-4 space-y-4 max-w-3xl mx-auto">
         <Card className="p-4 mb-6 bg-destructive/10 border-destructive/30">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-destructive">Agora</p>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="text-3xl font-mono font-bold text-destructive">
@@ -707,38 +695,35 @@ export default function Foco() {
             <div className="flex gap-2">
               {!isRunning && !isPaused && (
                 <Button
-                  size="icon"
+                  size="sm"
                   variant="default"
                   onClick={handleStart}
                   disabled={!activeTaskId}
                   title="Iniciar"
                 >
-                  <Play className="h-4 w-4" />
+                  <Play className="mr-2 h-4 w-4" />Iniciar
                 </Button>
               )}
               {isRunning && (
                 <Button
-                  size="icon"
+                  size="sm"
                   variant="destructive"
                   onClick={handlePause}
                   title="Pausar"
                 >
-                  <Pause className="h-4 w-4" />
+                  <Pause className="mr-2 h-4 w-4" />Pausar
                 </Button>
               )}
               {isPaused && (
                 <Button
-                  size="icon"
+                  size="sm"
                   variant="default"
                   onClick={handleResume}
                   title="Retomar"
                 >
-                  <Play className="h-4 w-4" />
+                  <Play className="mr-2 h-4 w-4" />Retomar
                 </Button>
               )}
-              <Button size="icon" variant="outline" onClick={handleReset} title="Zerar">
-                <RotateCcw className="h-4 w-4" />
-              </Button>
             </div>
           </div>
           {activeTaskId && (() => {
@@ -780,29 +765,22 @@ export default function Foco() {
                 <Check className="h-4 w-4 mr-1" />
                 Concluir
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleMoveToPending}
-                className="flex-1 h-11"
-              >
-                <Clock className="h-4 w-4 mr-1" />
-                Pendente
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleOpenEdit}
-                className="h-11 w-11 p-0"
-              >
-                <ExternalLink className="h-4 w-4" />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild><Button size="sm" variant="ghost" className="h-11 w-11 p-0" aria-label="Mais ações"><MoreHorizontal className="h-5 w-5" /></Button></DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => void handleMoveToPending()}><Clock className="mr-2 h-4 w-4" />Devolver ao Planejamento</DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleOpenEdit}><ExternalLink className="mr-2 h-4 w-4" />Abrir detalhes</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => void handleReset()}><RotateCcw className="mr-2 h-4 w-4" />Zerar cronômetro</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleRemoveFromQueue(activeTaskId)}>Remover do Top 3</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           )}
         </Card>
 
         {/* Fila ativa - horizontal drag & drop */}
-        {visibleQueue.length > 0 && (
+        {false && visibleQueue.length > 0 && (
           <QueueList
             tasks={visibleQueue}
             activeTaskId={activeTaskId}
@@ -813,7 +791,26 @@ export default function Foco() {
           />
         )}
 
-        {/* Lista de tarefas */}
+        {visibleQueue.filter(task => task.id !== activeTaskId).length > 0 && (
+          <section className="space-y-2">
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold">Depois</h2>
+              <span className="text-xs text-muted-foreground">Próximas prioridades</span>
+            </div>
+            <Card className="divide-y">
+              {visibleQueue.filter(task => task.id !== activeTaskId).map(task => (
+                <button key={task.id} onClick={() => handleSelectTask(task.id)} className="flex w-full items-center gap-3 p-3 text-left hover:bg-muted/50">
+                  <span className="text-xs font-semibold text-muted-foreground">{queue.indexOf(task.id) + 1}</span>
+                  <span className="min-w-0 flex-1 truncate font-medium">{task.title}</span>
+                  <span className="hidden text-xs text-muted-foreground sm:inline">{nodes[task.node_id]?.title || 'Sem área'}</span>
+                </button>
+              ))}
+            </Card>
+          </section>
+        )}
+
+        {/* Visualização detalhada preservada no código, mas fora do fluxo operacional principal. */}
+        <div className="hidden">
         {viewMode === 'spreadsheet' ? (
           <TasksSpreadsheetView
             tasks={visibleQueue}
@@ -901,8 +898,9 @@ export default function Foco() {
           )}
         </div>
         )}
+        </div>
 
-        <ReplanningBanner />
+        {isReplanningDay() && <ReplanningBanner />}
         <DueDateBanner />
         <FollowUpBanner />
       </div>
