@@ -1928,22 +1928,83 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
               </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Tipo</Label>
+                <Select
+                  value={editMovementForm.type}
+                  onValueChange={(v) => setEditMovementForm({ ...editMovementForm, type: v as 'pagar' | 'receber', category_id: '' })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pagar">Saída</SelectItem>
+                    <SelectItem value="receber">Entrada</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Conta financeira</Label>
+                <Select
+                  value={editMovementForm.account_id}
+                  onValueChange={(v) => setEditMovementForm({ ...editMovementForm, account_id: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecionar conta" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accounts.map((acc) => (
+                      <SelectItem key={acc.id} value={acc.id}>{acc.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label>Categoria</Label>
               <Select 
-                value={editMovementForm.category_id} 
-                onValueChange={(v) => setEditMovementForm({ ...editMovementForm, category_id: v })}
+                value={editMovementForm.category_id || 'none'} 
+                onValueChange={(v) => setEditMovementForm({ ...editMovementForm, category_id: v === 'none' ? '' : v })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Selecionar categoria" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                  ))}
+                  <SelectItem value="none">Sem categoria</SelectItem>
+                  {categories
+                    .filter((cat) => cat.type === editMovementForm.type || cat.type === 'ambos')
+                    .map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label>Cliente ou fornecedor</Label>
+              <div className="flex gap-2">
+                <Select
+                  value={editMovementForm.contact_id || 'none'}
+                  onValueChange={(v) => setEditMovementForm({ ...editMovementForm, contact_id: v === 'none' ? '' : v })}
+                >
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Selecionar contato" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-64">
+                    <SelectItem value="none">Sem cliente/fornecedor</SelectItem>
+                    {contacts.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button type="button" variant="outline" size="icon" onClick={() => setContactDialogOpen(true)}>
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
 
             <div className="space-y-2">
               <Label>Observações</Label>
