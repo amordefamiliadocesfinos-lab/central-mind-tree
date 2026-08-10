@@ -109,7 +109,11 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
     movement_date: '',
     category_id: '',
     notes: '',
+    type: 'pagar' as 'pagar' | 'receber',
+    account_id: '',
+    contact_id: '',
   });
+
 
   // Filters
   const [categoryFilter, setCategoryFilter] = useState('all');
