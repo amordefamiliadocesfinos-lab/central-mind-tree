@@ -1,44 +1,30 @@
 import { cn } from "@/lib/utils";
 
-/**
- * Estados visuais da Captura Central.
- * Apenas "em_analise" é utilizado hoje. Os demais estão preparados
- * para evolução futura (sem nenhuma lógica associada).
- */
 export type CapturaState =
-  | "em_analise"
-  | "relacionado"
-  | "oportunidades"
-  | "aguardando_decisao"
-  | "transformado";
+  | "nova"
+  | "decidindo"
+  | "planejada"
+  | "em_execucao"
+  | "resolvida"
+  | "referencia"
+  | "arquivada";
 
 const STATE_META: Record<CapturaState, { label: string; dotClass: string }> = {
-  em_analise: { label: "Em análise", dotClass: "bg-muted-foreground/50" },
-  relacionado: { label: "Relacionado", dotClass: "bg-primary/50" },
-  oportunidades: { label: "Com oportunidades encontradas", dotClass: "bg-primary/70" },
-  aguardando_decisao: { label: "Aguardando decisão", dotClass: "bg-accent-foreground/40" },
-  transformado: { label: "Transformado em ação", dotClass: "bg-primary" },
+  nova: { label: "Nova", dotClass: "bg-sky-500" },
+  decidindo: { label: "Aguardando decisão", dotClass: "bg-amber-500" },
+  planejada: { label: "Planejada", dotClass: "bg-violet-500" },
+  em_execucao: { label: "Em execução", dotClass: "bg-red-500" },
+  resolvida: { label: "Resolvida", dotClass: "bg-emerald-500" },
+  referencia: { label: "Referência", dotClass: "bg-blue-500" },
+  arquivada: { label: "Arquivada", dotClass: "bg-muted-foreground/50" },
 };
 
-interface CapturaStateIndicatorProps {
-  state?: CapturaState;
-  className?: string;
-}
-
-export const CapturaStateIndicator = ({
-  state = "em_analise",
-  className,
-}: CapturaStateIndicatorProps) => {
-  const meta = STATE_META[state] ?? STATE_META.em_analise;
+export function CapturaStateIndicator({ state = "nova", className }: { state?: CapturaState; className?: string }) {
+  const meta = STATE_META[state] ?? STATE_META.nova;
   return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 text-[10px] text-muted-foreground/70 leading-none",
-        className,
-      )}
-    >
+    <span className={cn("inline-flex items-center gap-1.5 text-[10px] text-muted-foreground leading-none", className)}>
       <span className={cn("h-1.5 w-1.5 rounded-full", meta.dotClass)} />
       {meta.label}
     </span>
   );
-};
+}

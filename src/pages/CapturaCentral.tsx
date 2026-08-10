@@ -4,11 +4,17 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useActiveUser } from "@/hooks/useActiveUser";
+import { getWeekStartISO } from "@/lib/dateUtils";
+import { loadWorkflowPlan, saveWorkflowPlan } from "@/lib/workflowPlan";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,6 +43,10 @@ import {
   FileAudio,
   FileVideo,
   Download,
+  PlayCircle,
+  CalendarDays,
+  Archive,
+  BookOpen,
 } from "lucide-react";
 
 type EntryType = "texto" | "audio" | "foto" | "video";
@@ -59,7 +69,14 @@ interface InboxEntry {
   user_name: string | null;
   created_at: string;
   status: string;
+  decision?: string | null;
+  linked_task_id?: string | null;
+  related_node_id?: string | null;
+  planned_bucket?: string | null;
+  estimated_minutes?: number | null;
 }
+
+interface NodeOption { id: string; title: string; color: string | null }
 
 interface PendingAttachment {
   id: string;
@@ -139,10 +156,16 @@ export default function CapturaCentral() {
 
   const [deletingEntry, setDeletingEntry] = useState<InboxEntry | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [nodes, setNodes] = useState<NodeOption[]>([]);
+  const [decisionEntry, setDecisionEntry] = useState<InboxEntry | null>(null);
+  const [decisionMode, setDecisionMode] = useState<"fazer" | "planejar">("planejar");
+  const [decisionSaving, setDecisionSaving] = useState(false);
+  const [decisionForm, setDecisionForm] = useState({ title: "", nodeId: "", bucket: "semana", minutes: "30" });
 
   useEffect(() => {
     document.title = "Captura Central — Caixa de Entrada";
     fetchEntries();
+    void supabase.from("nodes").select("id,title,color").order("title").then(({ data }) => setNodes((data || []) as NodeOption[]));
     const channel = supabase
       .channel("inbox-entries-changes")
       .on(
@@ -167,8 +190,8 @@ export default function CapturaCentral() {
     setLoadingList(true);
     const { data, error } = await supabase
       .from("inbox_entries")
-      .select("id, content, entry_type, media_url, media_path, attachments, user_name, created_at, status")
-      .eq("status", "aguardando_selecao")
+      .select("id, content, entry_type, media_url, media_path, attachments, user_name, created_at, status, decision, linked_task_id, related_node_id, planned_bucket, estimated_minutes")
+      .in("status", ["nova", "decidindo", "aguardando_selecao"])
       .order("created_at", { ascending: false })
       .limit(200);
     if (!error && data) setEntries(data as unknown as InboxEntry[]);
@@ -284,7 +307,7 @@ export default function CapturaCentral() {
         attachments: attachments as any,
         user_id: activeUser?.id ?? null,
         user_name: activeUser?.name ?? null,
-        status: "aguardando_selecao",
+        status: "nova",
       });
       if (error) throw error;
 
@@ -353,6 +376,92 @@ export default function CapturaCentral() {
       toast({ title: "Erro ao excluir", description: e?.message ?? String(e), variant: "destructive" });
     } finally {
       setDeleting(false);
+    }
+  }
+
+  function openDecision(entry: InboxEntry, mode: "fazer" | "planejar") {
+    const raw = (entry.content || "Nova ação").trim().replace(/\s+/g, " ");
+    setDecisionEntry(entry);
+    setDecisionMode(mode);
+    setDecisionForm({
+      title: raw.slice(0, 120),
+      nodeId: entry.related_node_id || nodes[0]?.id || "",
+      bucket: mode === "fazer" ? "hoje" : "semana",
+      minutes: "30",
+    });
+  }
+
+  async function resolveWithoutTask(entry: InboxEntry, decision: "referencia" | "arquivada") {
+    const { error } = await supabase.from("inbox_entries").update({
+      status: decision,
+      decision,
+      decided_at: new Date().toISOString(),
+    }).eq("id", entry.id);
+    if (error) {
+      toast({ title: "Não foi possível concluir a decisão", description: error.message, variant: "destructive" });
+      return;
+    }
+    setEntries(prev => prev.filter(item => item.id !== entry.id));
+    toast({ title: decision === "referencia" ? "Guardado como referência" : "Captura arquivada" });
+  }
+
+  async function createTaskFromCapture() {
+    if (!decisionEntry || !decisionForm.title.trim() || !decisionForm.nodeId) {
+      toast({ title: "Informe o título e a área da ação", variant: "destructive" });
+      return;
+    }
+    setDecisionSaving(true);
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const { data: task, error: taskError } = await supabase.from("tasks").insert({
+        title: decisionForm.title.trim(),
+        description: decisionEntry.content || null,
+        node_id: decisionForm.nodeId,
+        status: "pendente",
+        progress: 0,
+        source: "captura_central",
+        assigned_to: activeUser?.id || null,
+        scheduled_date: decisionForm.bucket === "hoje" ? today : null,
+        media_urls: (decisionEntry.attachments || []).map(item => item.url),
+      }).select("id").single();
+      if (taskError || !task) throw taskError || new Error("Tarefa não criada");
+
+      const status = decisionMode === "fazer" ? "em_execucao" : "planejada";
+      const { error: entryError } = await supabase.from("inbox_entries").update({
+        status,
+        decision: decisionMode,
+        decided_at: new Date().toISOString(),
+        linked_task_id: task.id,
+        related_node_id: decisionForm.nodeId,
+        planned_bucket: decisionForm.bucket,
+        estimated_minutes: Number(decisionForm.minutes),
+      }).eq("id", decisionEntry.id);
+      if (entryError) throw entryError;
+
+      if (decisionMode === "fazer") {
+        const queue = JSON.parse(localStorage.getItem("pc.focus.queue") || "[]") as string[];
+        const nextQueue = [task.id, ...queue.filter(id => id !== task.id)].slice(0, 3);
+        localStorage.setItem("pc.focus.queue", JSON.stringify(nextQueue));
+        localStorage.setItem("pc.focus.currentTaskId", task.id);
+      }
+      if (activeUser?.id) {
+        const weekStart = getWeekStartISO();
+        const plan = await loadWorkflowPlan(activeUser.id, weekStart);
+        if (decisionMode === "fazer") {
+          const nextQueue = [task.id, ...(plan?.focus_queue_ids || []).filter(id => id !== task.id)].slice(0, 3);
+          await saveWorkflowPlan(activeUser.id, weekStart, { focus_queue_ids: nextQueue, current_task_id: task.id });
+        } else {
+          const selected = [...new Set([...(plan?.selected_task_ids || []), task.id])];
+          await saveWorkflowPlan(activeUser.id, weekStart, { selected_task_ids: selected });
+        }
+      }
+      setEntries(prev => prev.filter(item => item.id !== decisionEntry.id));
+      setDecisionEntry(null);
+      toast({ title: decisionMode === "fazer" ? "Ação enviada para o Foco" : "Ação enviada para o Planejamento" });
+    } catch (error: any) {
+      toast({ title: "Erro ao criar ação", description: error?.message || String(error), variant: "destructive" });
+    } finally {
+      setDecisionSaving(false);
     }
   }
 
@@ -760,9 +869,23 @@ export default function CapturaCentral() {
 
                     {renderEntryAttachments(entry)}
 
-                    <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/50 text-xs text-muted-foreground">
+                    <div className="mt-3 flex flex-wrap gap-1.5 border-t border-border/50 pt-2">
+                      <Button size="sm" className="h-8 gap-1.5" onClick={() => openDecision(entry, "fazer")}>
+                        <PlayCircle className="h-3.5 w-3.5" /> Fazer
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-8 gap-1.5" onClick={() => openDecision(entry, "planejar")}>
+                        <CalendarDays className="h-3.5 w-3.5" /> Planejar
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-8 gap-1.5" onClick={() => void resolveWithoutTask(entry, "referencia")}>
+                        <BookOpen className="h-3.5 w-3.5" /> Guardar
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-8 gap-1.5 text-muted-foreground" onClick={() => void resolveWithoutTask(entry, "arquivada")}>
+                        <Archive className="h-3.5 w-3.5" /> Arquivar
+                      </Button>
+                    </div>
+                    <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
                       <span>{entry.user_name ?? "Sem usuário"}</span>
-                      <CapturaStateIndicator state="em_analise" />
+                      <CapturaStateIndicator state={entry.status === "aguardando_selecao" ? "decidindo" : "nova"} />
                     </div>
                   </Card>
                 );
@@ -771,6 +894,47 @@ export default function CapturaCentral() {
           )}
         </section>
       </main>
+
+      <Dialog open={!!decisionEntry} onOpenChange={(open) => !open && setDecisionEntry(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>{decisionMode === "fazer" ? "Fazer agora" : "Enviar ao Planejamento"}</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1">
+              <Label>Título da ação</Label>
+              <Input value={decisionForm.title} onChange={e => setDecisionForm(prev => ({ ...prev, title: e.target.value }))} autoFocus />
+            </div>
+            <div className="space-y-1">
+              <Label>Área relacionada</Label>
+              <Select value={decisionForm.nodeId} onValueChange={nodeId => setDecisionForm(prev => ({ ...prev, nodeId }))}>
+                <SelectTrigger><SelectValue placeholder="Selecione a área" /></SelectTrigger>
+                <SelectContent>{nodes.map(node => <SelectItem key={node.id} value={node.id}>{node.title}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>Quando</Label>
+                <Select value={decisionForm.bucket} onValueChange={bucket => setDecisionForm(prev => ({ ...prev, bucket }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="hoje">Hoje</SelectItem><SelectItem value="semana">Esta semana</SelectItem><SelectItem value="depois">Depois</SelectItem></SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Duração</Label>
+                <Select value={decisionForm.minutes} onValueChange={minutes => setDecisionForm(prev => ({ ...prev, minutes }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{[15, 30, 60, 90].map(value => <SelectItem key={value} value={String(value)}>{value} min</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDecisionEntry(null)}>Cancelar</Button>
+            <Button onClick={() => void createTaskFromCapture()} disabled={decisionSaving}>
+              {decisionSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Confirmar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!deletingEntry} onOpenChange={(o) => !o && setDeletingEntry(null)}>
         <AlertDialogContent>
