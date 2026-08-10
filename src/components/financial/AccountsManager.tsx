@@ -683,6 +683,9 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
       movement_date: movement.movement_date,
       category_id: movement.entry?.category_id || '',
       notes: movement.notes || '',
+      type: (movement.entry?.type === 'receber' ? 'receber' : 'pagar'),
+      account_id: movement.account_id || '',
+      contact_id: movement.entry?.contact_id || '',
     });
     setEditMovementDialogOpen(true);
   };
@@ -705,6 +708,10 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
         description: editMovementForm.description,
         value,
         category_id: editMovementForm.category_id || null,
+        contact_id: editMovementForm.contact_id || null,
+        type: editMovementForm.type,
+        due_date: editMovementForm.movement_date,
+        payment_date: editMovementForm.movement_date,
       })
       .eq('id', editingMovement.entry_id);
 
@@ -720,6 +727,7 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
         value,
         movement_date: editMovementForm.movement_date,
         notes: editMovementForm.notes || null,
+        account_id: editMovementForm.account_id || null,
       })
       .eq('id', editingMovement.id);
 
@@ -733,6 +741,7 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
     setEditingMovement(null);
     fetchMovements();
   };
+
 
   // Delete movement
   const handleDeleteMovement = async () => {
