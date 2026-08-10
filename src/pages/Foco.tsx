@@ -31,6 +31,10 @@ import { cn } from "@/lib/utils";
 import { useActiveUser } from "@/hooks/useActiveUser";
 import { getWeekStartISO } from "@/lib/dateUtils";
 import { loadWorkflowPlan, saveWorkflowPlan } from "@/lib/workflowPlan";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Task {
   id: string;
@@ -219,12 +223,16 @@ export default function Foco() {
             }
             return plan.prioritizedTaskIds;
           }
-        } catch {}
+        } catch {
+          // Ignora apenas o cache local inválido e usa a fila persistida no banco.
+        }
       }
     }
     return parsed;
   });
   const [session, setSession] = useState<SessionState>(loadSession);
+  const [pendingSwitchTaskId, setPendingSwitchTaskId] = useState<string | null>(null);
+  const [operationPending, setOperationPending] = useState(false);
   const [displayMs, setDisplayMs] = useState(0);
   const [taskTotalTime, setTaskTotalTime] = useState<number>(0);
   
@@ -238,9 +246,13 @@ export default function Foco() {
     if (!activeUserId) return;
     loadWorkflowPlan(activeUserId, getWeekStartISO())
       .then((plan) => {
-        if (!plan || plan.focus_queue_ids.length === 0) return;
-        setQueue(plan.focus_queue_ids.slice(0, 3));
-        setActiveTaskId(plan.current_task_id || plan.focus_queue_ids[0] || null);
+        const canonicalQueue = (plan?.focus_queue_ids || []).slice(0, 3);
+        setQueue(canonicalQueue);
+        setActiveTaskId(
+          plan?.current_task_id && canonicalQueue.includes(plan.current_task_id)
+            ? plan.current_task_id
+            : canonicalQueue[0] || null,
+        );
       })
       .catch(() => toast.error("Não foi possível sincronizar a fila do Foco."));
   }, [activeUserId]);
@@ -314,7 +326,7 @@ export default function Foco() {
           if (queue.length > 0 && activeTaskId) {
             const currentIndex = queue.indexOf(activeTaskId);
             const nextIndex = (currentIndex + 1) % queue.length;
-            setActiveTaskId(queue[nextIndex]);
+            handleSelectTask(queue[nextIndex]);
           }
           break;
         case 'KeyC':
@@ -380,7 +392,7 @@ export default function Foco() {
   }, [queue, activeTaskId, activeUserId]);
 
   const fetchTasks = useCallback(async () => {
-    // Fetch tasks that are either in the queue OR have status 'andamento'
+    // O Top 3 confirmado é a única fonte da tela de Foco.
     const currentQueue = JSON.parse(localStorage.getItem(STORAGE_KEYS.queue) || '[]');
     
     let tasksData: Task[] = [];
@@ -398,23 +410,6 @@ export default function Foco() {
       }
     }
     
-    // Also fetch any 'andamento' tasks not in queue for potential addition
-    const { data: andamentoTasks } = await supabase
-      .from('tasks')
-      .select('id, title, description, node_id, progress, order_index, dependency_id, status')
-      .eq('status', 'andamento')
-      .order('order_index');
-    
-    if (andamentoTasks) {
-      // Merge, avoiding duplicates
-      const existingIds = new Set(tasksData.map(t => t.id));
-      andamentoTasks.forEach(t => {
-        if (!existingIds.has(t.id)) {
-          tasksData.push(t);
-        }
-      });
-    }
-
     if (tasksData.length > 0) {
       setTasks(tasksData);
       const nodeIds = [...new Set(tasksData.map(t => t.node_id))];
@@ -463,26 +458,51 @@ export default function Foco() {
   }, [activeTaskId, getTaskTotalTime]);
 
   const handleSelectTask = (taskId: string) => {
+    if (taskId === activeTaskId) return;
+    if ((isRunning || isPaused) && activeTaskId) {
+      setPendingSwitchTaskId(taskId);
+      return;
+    }
     setActiveTaskId(taskId);
   };
 
-  const handleStart = async () => {
+  const confirmTaskSwitch = async () => {
+    if (!pendingSwitchTaskId) return;
     if (activeTaskId) {
-      const activeTask = tasks.find(t => t.id === activeTaskId);
-      await startTracking(activeTaskId, activeTask?.node_id, 'focus');
-      await (supabase as any).from('inbox_entries').update({ status: 'em_execucao' }).eq('linked_task_id', activeTaskId);
+      await stopTracking(activeTaskId);
+      await supabase.from('inbox_entries').update({ status: 'pausada' }).eq('linked_task_id', activeTaskId);
     }
+    setSession({ startedAt: null, pausedAt: null, elapsedMs: 0 });
+    setActiveTaskId(pendingSwitchTaskId);
+    setPendingSwitchTaskId(null);
+  };
+
+  const handleStart = async () => {
+    if (!activeTaskId || operationPending) return;
+    setOperationPending(true);
+    const activeTask = tasks.find(t => t.id === activeTaskId);
+    const { error: taskError } = await supabase.from('tasks').update({ status: 'andamento' }).eq('id', activeTaskId);
+    if (taskError) {
+      toast.error('Não foi possível iniciar. Tente novamente.');
+      setOperationPending(false);
+      return;
+    }
+    await startTracking(activeTaskId, activeTask?.node_id, 'focus');
+    const { error: captureError } = await supabase.from('inbox_entries').update({ status: 'em_execucao' }).eq('linked_task_id', activeTaskId);
+    if (captureError) toast.warning('Tarefa iniciada, mas o vínculo da captura precisa ser sincronizado.');
     setSession({
       startedAt: Date.now(),
       pausedAt: null,
       elapsedMs: 0,
     });
+    setOperationPending(false);
   };
 
   const handlePause = async () => {
     if (!session.startedAt) return;
     if (activeTaskId) {
       await stopTracking(activeTaskId);
+      await supabase.from('inbox_entries').update({ status: 'pausada' }).eq('linked_task_id', activeTaskId);
     }
     const elapsed = session.elapsedMs + (Date.now() - session.startedAt);
     setSession({
@@ -496,6 +516,7 @@ export default function Foco() {
     if (activeTaskId) {
       const activeTask = tasks.find(t => t.id === activeTaskId);
       await startTracking(activeTaskId, activeTask?.node_id, 'focus');
+      await supabase.from('inbox_entries').update({ status: 'em_execucao' }).eq('linked_task_id', activeTaskId);
     }
     setSession({
       startedAt: Date.now(),
@@ -507,6 +528,7 @@ export default function Foco() {
   const handleReset = async () => {
     if (activeTaskId) {
       await stopTracking(activeTaskId);
+      await supabase.from('inbox_entries').update({ status: 'pausada' }).eq('linked_task_id', activeTaskId);
       // Refresh total time
       const total = await getTaskTotalTime(activeTaskId);
       setTaskTotalTime(total);
@@ -518,21 +540,28 @@ export default function Foco() {
     });
   };
 
-  const handleCompleteTask = async () => {
-    if (!activeTaskId) return;
+  const handleCompleteTask = async (taskId = activeTaskId) => {
+    if (!taskId || operationPending) return;
+    setOperationPending(true);
     
     // Stop time tracking first
-    await stopTracking(activeTaskId);
+    await stopTracking(taskId);
     
-    await supabase
+    const { error: taskError } = await supabase
       .from('tasks')
       .update({ status: 'concluído', progress: 100 })
-      .eq('id', activeTaskId);
-    await (supabase as any).from('inbox_entries').update({ status: 'resolvida' }).eq('linked_task_id', activeTaskId);
+      .eq('id', taskId);
+    if (taskError) {
+      toast.error('Não foi possível concluir. Tente novamente.');
+      setOperationPending(false);
+      return;
+    }
+    const { error: captureError } = await supabase.from('inbox_entries').update({ status: 'resolvida' }).eq('linked_task_id', taskId);
+    if (captureError) toast.warning('Tarefa concluída; vínculo da captura pendente de sincronização.');
     
     // Remove from queue and select next
-    const currentIndex = queue.indexOf(activeTaskId);
-    const newQueue = queue.filter(id => id !== activeTaskId);
+    const currentIndex = queue.indexOf(taskId);
+    const newQueue = queue.filter(id => id !== taskId);
     setQueue(newQueue);
     
     // Select next task from queue
@@ -549,23 +578,30 @@ export default function Foco() {
       elapsedMs: 0,
     });
     toast.success("Tarefa concluída!");
+    setOperationPending(false);
   };
 
-  const handleMoveToPending = async () => {
-    if (!activeTaskId) return;
+  const handleMoveToPending = async (taskId = activeTaskId) => {
+    if (!taskId || operationPending) return;
+    setOperationPending(true);
     
     // Stop time tracking
-    await stopTracking(activeTaskId);
+    await stopTracking(taskId);
     
-    await supabase
+    const { error: taskError } = await supabase
       .from('tasks')
       .update({ status: 'pendente' })
-      .eq('id', activeTaskId);
-    await (supabase as any).from('inbox_entries').update({ status: 'planejada' }).eq('linked_task_id', activeTaskId);
+      .eq('id', taskId);
+    if (taskError) {
+      toast.error('Não foi possível devolver ao Planejamento. Tente novamente.');
+      setOperationPending(false);
+      return;
+    }
+    await supabase.from('inbox_entries').update({ status: 'planejada' }).eq('linked_task_id', taskId);
     
     // Remove from queue and select next
-    const currentIndex = queue.indexOf(activeTaskId);
-    const newQueue = queue.filter(id => id !== activeTaskId);
+    const currentIndex = queue.indexOf(taskId);
+    const newQueue = queue.filter(id => id !== taskId);
     setQueue(newQueue);
     
     if (newQueue.length > 0) {
@@ -581,6 +617,7 @@ export default function Foco() {
       elapsedMs: 0,
     });
     toast.info("Tarefa movida para pendente");
+    setOperationPending(false);
   };
 
   const handleOpenEdit = () => {
@@ -590,6 +627,10 @@ export default function Foco() {
 
   const handleAddToQueue = (taskId: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    if (queue.length >= 3) {
+      toast.info('O Foco já possui 3 prioridades. Ajuste no Planejamento.');
+      return;
+    }
     if (!queue.includes(taskId)) {
       setQueue([...queue, taskId]);
     }
@@ -775,16 +816,16 @@ export default function Foco() {
         {/* Lista de tarefas */}
         {viewMode === 'spreadsheet' ? (
           <TasksSpreadsheetView
-            tasks={tasks}
+            tasks={visibleQueue}
             nodes={nodes}
             dependencyTasks={dependencyTasks}
             queue={queue}
             activeTaskId={activeTaskId}
             onSelectTask={handleSelectTask}
-            onAddToQueue={(id) => !queue.includes(id) && setQueue([...queue, id])}
+            onAddToQueue={(id) => !queue.includes(id) && queue.length < 3 && setQueue([...queue, id])}
             onRemoveFromQueue={handleRemoveFromQueue}
-            onComplete={async (id) => { setActiveTaskId(id); await handleCompleteTask(); }}
-            onMoveToPending={async (id) => { setActiveTaskId(id); await handleMoveToPending(); }}
+            onComplete={(id) => handleCompleteTask(id)}
+            onMoveToPending={(id) => handleMoveToPending(id)}
             onOpenEdit={(id) => window.open(`/task/${id}`, '_blank')}
           />
         ) : (
@@ -865,6 +906,20 @@ export default function Foco() {
         <DueDateBanner />
         <FollowUpBanner />
       </div>
+      <AlertDialog open={!!pendingSwitchTaskId} onOpenChange={(open) => !open && setPendingSwitchTaskId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Pausar e trocar de tarefa?</AlertDialogTitle>
+            <AlertDialogDescription>
+              O tempo atual será registrado. A nova tarefa ficará selecionada e só começará quando você clicar em Iniciar.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Continuar na atual</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void confirmTaskSwitch()}>Pausar e trocar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

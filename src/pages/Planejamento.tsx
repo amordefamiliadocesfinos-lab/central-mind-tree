@@ -360,7 +360,11 @@ const Planejamento = () => {
     });
   };
 
-  const handleSendToFocus = async () => {
+  const handleConfirmPlan = async () => {
+    if (currentPlan.prioritizedTaskIds.length === 0) {
+      toast.info("Escolha ao menos uma prioridade para iniciar o Foco.");
+      return;
+    }
     localStorage.setItem(
       "pc.focus.queue",
       JSON.stringify(currentPlan.prioritizedTaskIds)
@@ -372,8 +376,11 @@ const Planejamento = () => {
       );
     }
     try {
-      await persistPlan();
-      toast.success("Fila do Foco atualizada!");
+      localStorage.setItem("pc.plan.lastCompletedAt", Date.now().toString());
+      await persistPlan(new Date().toISOString());
+      toast.success("Top 3 confirmado e enviado ao Foco!", {
+        action: { label: "Abrir Foco", onClick: () => window.location.href = "/foco" },
+      });
     } catch {
       toast.error("A fila ficou salva neste aparelho, mas não sincronizou.");
     }
@@ -387,17 +394,6 @@ const Planejamento = () => {
     } catch {
       toast.error("Plano salvo apenas neste aparelho.");
     }
-  };
-
-  const handleCompletePlanning = async () => {
-    localStorage.setItem("pc.plan.lastCompletedAt", Date.now().toString());
-    try { await persistPlan(new Date().toISOString()); } catch { /* cache local preservado */ }
-    toast.success("Planejamento concluído!", {
-      action: {
-        label: "Ir para Foco",
-        onClick: () => window.location.href = "/foco",
-      },
-    });
   };
 
   // Quick closing handler
@@ -807,17 +803,13 @@ const Planejamento = () => {
             )}
 
             <div className="flex flex-col sm:flex-row gap-2 pt-2">
-              <Button onClick={handleSendToFocus} className="flex-1 h-11">
+              <Button onClick={handleConfirmPlan} className="flex-1 h-11">
                 <Star className="h-4 w-4 mr-2" />
-                Enviar ao Foco
+                Confirmar Top 3 e iniciar
               </Button>
               <Button onClick={handleSavePlan} variant="outline" className="flex-1 h-11">
                 <Save className="h-4 w-4 mr-2" />
-                Salvar
-              </Button>
-              <Button onClick={handleCompletePlanning} variant="secondary" className="flex-1 h-11">
-                <Check className="h-4 w-4 mr-2" />
-                Concluir
+                Salvar rascunho
               </Button>
             </div>
           </CardContent>
