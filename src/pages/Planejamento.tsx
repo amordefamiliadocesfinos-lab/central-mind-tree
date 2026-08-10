@@ -33,6 +33,8 @@ import { FollowUpBanner } from "@/components/FollowUpBanner";
 import { ReplanningBanner } from "@/components/ReplanningBanner";
 import { DueDateBanner } from "@/components/DueDateBanner";
 import { DueDatePill } from "@/components/DueDatePill";
+import { useActiveUser } from "@/hooks/useActiveUser";
+import { loadWorkflowPlan, saveWorkflowPlan } from "@/lib/workflowPlan";
 
 interface Task {
   id: string;
@@ -85,12 +87,14 @@ const STATUS_COLORS: Record<string, string> = {
 // Use centralized date utility for consistent timezone handling
 
 const Planejamento = () => {
+  const { activeUserId } = useActiveUser();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [nodes, setNodes] = useState<Node[]>([]);
   const [loading, setLoading] = useState(true);
   const [completedThisWeek, setCompletedThisWeek] = useState(0);
   const [closingTaskIds, setClosingTaskIds] = useState<string[]>([]);
   const [closingAction, setClosingAction] = useState<"keep" | "pending" | null>(null);
+  const [pendingCapturesCount, setPendingCapturesCount] = useState(0);
 
   // Template (customizable areas)
   const [template, setTemplate] = useState<PlanTemplate>(() => {
@@ -159,16 +163,30 @@ const Planejamento = () => {
     localStorage.setItem("pc.plan.current", JSON.stringify(currentPlan));
   }, [currentPlan]);
 
+  useEffect(() => {
+    if (!activeUserId) return;
+    loadWorkflowPlan(activeUserId, currentPlan.weekStartISO)
+      .then((plan) => {
+        if (!plan) return;
+        setCurrentPlan((prev) => ({
+          ...prev,
+          selectedTaskIds: plan.selected_task_ids || [],
+          prioritizedTaskIds: plan.priority_task_ids || [],
+        }));
+      })
+      .catch(() => toast.error("Não foi possível carregar o plano compartilhado."));
+  }, [activeUserId, currentPlan.weekStartISO]);
+
   // Load tasks and nodes
   useEffect(() => {
     loadData();
   }, []);
 
   const loadData = async () => {
-    const [tasksRes, completedRes, nodesRes] = await Promise.all([
+    const [tasksRes, completedRes, nodesRes, capturesRes] = await Promise.all([
       supabase
         .from("tasks")
-        .select("id, title, description, status, node_id, progress, updated_at")
+        .select("id, title, description, status, node_id, progress, updated_at, due_date, scheduled_date")
         .in("status", ["andamento", "pendente"]),
       supabase
         .from("tasks")
@@ -176,11 +194,13 @@ const Planejamento = () => {
         .eq("status", "concluído")
         .gte("updated_at", weekStart.toISOString()),
       supabase.from("nodes").select("id, title, color"),
+      supabase.from("inbox_entries").select("id", { count: "exact", head: true }).in("status", ["nova", "decidindo", "aguardando_selecao"]),
     ]);
 
     if (tasksRes.data) setTasks(tasksRes.data);
     if (completedRes.data) setCompletedThisWeek(completedRes.data.length);
     if (nodesRes.data) setNodes(nodesRes.data);
+    setPendingCapturesCount(capturesRes.count ?? 0);
     setLoading(false);
   };
 
@@ -261,6 +281,10 @@ const Planejamento = () => {
   const toggleTaskPrioritized = (taskId: string) => {
     setCurrentPlan((prev) => {
       const isPrioritized = prev.prioritizedTaskIds.includes(taskId);
+      if (!isPrioritized && prev.prioritizedTaskIds.length >= 3) {
+        toast.info("O Foco trabalha com no máximo 3 prioridades por vez.");
+        return prev;
+      }
       let newPrioritized = isPrioritized
         ? prev.prioritizedTaskIds.filter((id) => id !== taskId)
         : [...prev.prioritizedTaskIds, taskId];
@@ -325,7 +349,18 @@ const Planejamento = () => {
   };
 
   // Action handlers
-  const handleSendToFocus = () => {
+  const persistPlan = async (completedAt?: string | null) => {
+    if (!activeUserId) return;
+    await saveWorkflowPlan(activeUserId, currentPlan.weekStartISO, {
+      selected_task_ids: currentPlan.selectedTaskIds,
+      priority_task_ids: currentPlan.prioritizedTaskIds,
+      focus_queue_ids: currentPlan.prioritizedTaskIds,
+      current_task_id: currentPlan.prioritizedTaskIds[0] || null,
+      ...(completedAt !== undefined ? { completed_at: completedAt } : {}),
+    });
+  };
+
+  const handleSendToFocus = async () => {
     localStorage.setItem(
       "pc.focus.queue",
       JSON.stringify(currentPlan.prioritizedTaskIds)
@@ -336,16 +371,27 @@ const Planejamento = () => {
         currentPlan.prioritizedTaskIds[0]
       );
     }
-    toast.success("Fila do Foco atualizada!");
+    try {
+      await persistPlan();
+      toast.success("Fila do Foco atualizada!");
+    } catch {
+      toast.error("A fila ficou salva neste aparelho, mas não sincronizou.");
+    }
   };
 
-  const handleSavePlan = () => {
+  const handleSavePlan = async () => {
     localStorage.setItem("pc.plan.current", JSON.stringify(currentPlan));
-    toast.success("Plano salvo!");
+    try {
+      await persistPlan();
+      toast.success("Plano salvo!");
+    } catch {
+      toast.error("Plano salvo apenas neste aparelho.");
+    }
   };
 
-  const handleCompletePlanning = () => {
+  const handleCompletePlanning = async () => {
     localStorage.setItem("pc.plan.lastCompletedAt", Date.now().toString());
+    try { await persistPlan(new Date().toISOString()); } catch { /* cache local preservado */ }
     toast.success("Planejamento concluído!", {
       action: {
         label: "Ir para Foco",
@@ -503,6 +549,17 @@ const Planejamento = () => {
       </div>
 
       <div className="p-4 max-w-4xl mx-auto space-y-4">
+        {pendingCapturesCount > 0 && (
+          <Card className="border-amber-500/40 bg-amber-500/5 p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="font-medium">{pendingCapturesCount} captura{pendingCapturesCount === 1 ? "" : "s"} aguardando decisão</p>
+                <p className="text-xs text-muted-foreground">Decida antes de montar as 3 prioridades da semana.</p>
+              </div>
+              <Link to="/captura"><Button size="sm" variant="outline">Abrir caixa</Button></Link>
+            </div>
+          </Card>
+        )}
         <Card>
           <CardHeader>
             <CardTitle className="text-lg">Checklist de Áreas</CardTitle>
@@ -697,7 +754,7 @@ const Planejamento = () => {
                 </p>
               </div>
               <div className="p-3 rounded-lg border">
-                <p className="text-muted-foreground mb-1 text-xs sm:text-sm">Priorizadas</p>
+                <p className="text-muted-foreground mb-1 text-xs sm:text-sm">Top 3 para o Foco</p>
                 <p className="text-xl sm:text-2xl font-bold text-amber-500">
                   {currentPlan.prioritizedTaskIds.length}
                 </p>
@@ -707,7 +764,7 @@ const Planejamento = () => {
             {currentPlan.prioritizedTaskIds.length > 0 && (
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">
-                  Fila de prioridades (arraste para reordenar):
+                  Top 3 em ordem de execução (arraste para reordenar):
                 </p>
                 <SortableList
                   items={currentPlan.prioritizedTaskIds}

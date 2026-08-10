@@ -28,6 +28,9 @@ import { DueDateBanner } from "@/components/DueDateBanner";
 import { FollowUpBanner } from "@/components/FollowUpBanner";
 import { useTimeTracking } from "@/hooks/useTimeTracking";
 import { cn } from "@/lib/utils";
+import { useActiveUser } from "@/hooks/useActiveUser";
+import { getWeekStartISO } from "@/lib/dateUtils";
+import { loadWorkflowPlan, saveWorkflowPlan } from "@/lib/workflowPlan";
 
 interface Task {
   id: string;
@@ -188,6 +191,7 @@ function QueueList({ tasks, activeTaskId, queue, setQueue, onSelect, onRemove }:
 
 export default function Foco() {
   const navigate = useNavigate();
+  const { activeUserId } = useActiveUser();
   const [viewMode, setViewMode] = useState<'cards' | 'spreadsheet'>(() => {
     return (localStorage.getItem('pc.focus.viewMode') as 'cards' | 'spreadsheet') || 'cards';
   });
@@ -229,6 +233,17 @@ export default function Foco() {
 
   const isRunning = session.startedAt !== null && session.pausedAt === null;
   const isPaused = session.startedAt !== null && session.pausedAt !== null;
+
+  useEffect(() => {
+    if (!activeUserId) return;
+    loadWorkflowPlan(activeUserId, getWeekStartISO())
+      .then((plan) => {
+        if (!plan || plan.focus_queue_ids.length === 0) return;
+        setQueue(plan.focus_queue_ids.slice(0, 3));
+        setActiveTaskId(plan.current_task_id || plan.focus_queue_ids[0] || null);
+      })
+      .catch(() => toast.error("Não foi possível sincronizar a fila do Foco."));
+  }, [activeUserId]);
 
   // Verifica se é sexta ou segunda para mostrar lembrete
   const isReplanningDay = () => {
@@ -356,7 +371,13 @@ export default function Foco() {
   // Persist queue
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.queue, JSON.stringify(queue));
-  }, [queue]);
+    if (activeUserId) {
+      void saveWorkflowPlan(activeUserId, getWeekStartISO(), {
+        focus_queue_ids: queue.slice(0, 3),
+        current_task_id: activeTaskId,
+      }).catch(() => undefined);
+    }
+  }, [queue, activeTaskId, activeUserId]);
 
   const fetchTasks = useCallback(async () => {
     // Fetch tasks that are either in the queue OR have status 'andamento'
@@ -423,6 +444,8 @@ export default function Foco() {
     }
   }, []);
 
+  useEffect(() => { void fetchTasks(); }, [queue, fetchTasks]);
+
   const formatTime = (ms: number) => {
     const totalSeconds = Math.floor(ms / 1000);
     const m = Math.floor(totalSeconds / 60);
@@ -447,6 +470,7 @@ export default function Foco() {
     if (activeTaskId) {
       const activeTask = tasks.find(t => t.id === activeTaskId);
       await startTracking(activeTaskId, activeTask?.node_id, 'focus');
+      await (supabase as any).from('inbox_entries').update({ status: 'em_execucao' }).eq('linked_task_id', activeTaskId);
     }
     setSession({
       startedAt: Date.now(),
@@ -504,6 +528,7 @@ export default function Foco() {
       .from('tasks')
       .update({ status: 'concluído', progress: 100 })
       .eq('id', activeTaskId);
+    await (supabase as any).from('inbox_entries').update({ status: 'resolvida' }).eq('linked_task_id', activeTaskId);
     
     // Remove from queue and select next
     const currentIndex = queue.indexOf(activeTaskId);
@@ -536,6 +561,7 @@ export default function Foco() {
       .from('tasks')
       .update({ status: 'pendente' })
       .eq('id', activeTaskId);
+    await (supabase as any).from('inbox_entries').update({ status: 'planejada' }).eq('linked_task_id', activeTaskId);
     
     // Remove from queue and select next
     const currentIndex = queue.indexOf(activeTaskId);
@@ -576,6 +602,7 @@ export default function Foco() {
   const queuedTasks = queue
     .map(id => tasks.find(t => t.id === id))
     .filter((t): t is Task => t !== undefined);
+  const visibleQueue = queuedTasks.slice(0, 3);
 
   return (
     <div className="min-h-screen bg-background pb-safe-bottom">
@@ -734,11 +761,11 @@ export default function Foco() {
         </Card>
 
         {/* Fila ativa - horizontal drag & drop */}
-        {queuedTasks.length > 0 && (
+        {visibleQueue.length > 0 && (
           <QueueList
-            tasks={queuedTasks}
+            tasks={visibleQueue}
             activeTaskId={activeTaskId}
-            queue={queue}
+            queue={queue.slice(0, 3)}
             setQueue={setQueue}
             onSelect={handleSelectTask}
             onRemove={handleRemoveFromQueue}
@@ -762,12 +789,12 @@ export default function Foco() {
           />
         ) : (
         <div className="space-y-3">
-          {tasks.length === 0 ? (
+          {visibleQueue.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
               Nenhuma tarefa em andamento
             </p>
           ) : (
-            tasks.map(task => (
+            visibleQueue.map(task => (
               <Card
                 key={task.id}
                 className={cn(
