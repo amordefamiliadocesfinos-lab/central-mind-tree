@@ -1,4 +1,4 @@
-import { CapturaStateIndicator } from "@/components/captura/CapturaStateIndicator";
+import { CapturaStateIndicator, type CapturaState } from "@/components/captura/CapturaStateIndicator";
 import { useEffect, useRef, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -77,6 +77,8 @@ interface InboxEntry {
 }
 
 interface NodeOption { id: string; title: string; color: string | null }
+interface FocusOption { id: string; title: string }
+type EntryView = "decisao" | "planejadas" | "referencias" | "resolvidas" | "arquivadas";
 
 interface PendingAttachment {
   id: string;
@@ -150,6 +152,7 @@ export default function CapturaCentral() {
   const [entries, setEntries] = useState<InboxEntry[]>([]);
   const [loadingList, setLoadingList] = useState(true);
   const [workflowReady, setWorkflowReady] = useState(true);
+  const [entryView, setEntryView] = useState<EntryView>("decisao");
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
@@ -162,6 +165,8 @@ export default function CapturaCentral() {
   const [decisionMode, setDecisionMode] = useState<"fazer" | "planejar">("planejar");
   const [decisionSaving, setDecisionSaving] = useState(false);
   const [decisionForm, setDecisionForm] = useState({ title: "", nodeId: "", bucket: "semana", minutes: "30" });
+  const [focusOptions, setFocusOptions] = useState<FocusOption[]>([]);
+  const [replaceTaskId, setReplaceTaskId] = useState("");
 
   useEffect(() => {
     document.title = "Captura Central — Caixa de Entrada";
@@ -178,7 +183,7 @@ export default function CapturaCentral() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [entryView]);
 
   useEffect(() => {
     return () => {
@@ -189,10 +194,17 @@ export default function CapturaCentral() {
 
   async function fetchEntries() {
     setLoadingList(true);
+    const statusesByView: Record<EntryView, string[]> = {
+      decisao: ["nova", "decidindo", "aguardando_selecao"],
+      planejadas: ["planejada", "pronta_foco", "em_execucao", "pausada"],
+      referencias: ["referencia"],
+      resolvidas: ["resolvida"],
+      arquivadas: ["arquivada"],
+    };
     const primary = await supabase
       .from("inbox_entries")
       .select("id, content, entry_type, media_url, media_path, attachments, user_name, created_at, status, decision, linked_task_id, related_node_id, planned_bucket, estimated_minutes")
-      .in("status", ["nova", "decidindo", "aguardando_selecao"])
+      .in("status", statusesByView[entryView])
       .order("created_at", { ascending: false })
       .limit(200);
     if (!primary.error && primary.data) {
@@ -204,7 +216,7 @@ export default function CapturaCentral() {
       const legacy = await supabase
         .from("inbox_entries")
         .select("id, content, entry_type, media_url, media_path, attachments, user_name, created_at, status")
-        .eq("status", "aguardando_selecao")
+        .in("status", entryView === "decisao" ? ["aguardando_selecao"] : statusesByView[entryView])
         .order("created_at", { ascending: false })
         .limit(200);
       setWorkflowReady(false);
@@ -395,7 +407,7 @@ export default function CapturaCentral() {
     }
   }
 
-  function openDecision(entry: InboxEntry, mode: "fazer" | "planejar") {
+  async function openDecision(entry: InboxEntry, mode: "fazer" | "planejar") {
     if (!workflowReady) {
       toast({ title: "Capturas preservadas", description: "A decisão ficará disponível assim que a atualização do banco terminar." });
       return;
@@ -403,12 +415,27 @@ export default function CapturaCentral() {
     const raw = (entry.content || "Nova ação").trim().replace(/\s+/g, " ");
     setDecisionEntry(entry);
     setDecisionMode(mode);
+    setFocusOptions([]);
+    setReplaceTaskId("");
     setDecisionForm({
       title: raw.slice(0, 120),
       nodeId: entry.related_node_id || nodes[0]?.id || "",
       bucket: mode === "fazer" ? "hoje" : "semana",
       minutes: "30",
     });
+    if (mode === "fazer" && activeUser?.id) {
+      try {
+        const plan = await loadWorkflowPlan(activeUser.id, getWeekStartISO());
+        const ids = (plan?.focus_queue_ids || []).slice(0, 3);
+        if (ids.length > 0) {
+          const { data } = await supabase.from("tasks").select("id,title").in("id", ids);
+          const byId = new Map((data || []).map(item => [item.id, item.title]));
+          setFocusOptions(ids.map(id => ({ id, title: byId.get(id) || "Tarefa atual" })));
+        }
+      } catch {
+        toast({ title: "Não foi possível consultar o Top 3", variant: "destructive" });
+      }
+    }
   }
 
   async function resolveWithoutTask(entry: InboxEntry, decision: "referencia" | "arquivada") {
@@ -430,7 +457,14 @@ export default function CapturaCentral() {
       toast({ title: "Informe o título e a área da ação", variant: "destructive" });
       return;
     }
+    if (decisionMode === "fazer" && focusOptions.length >= 3 && !replaceTaskId) {
+      toast({ title: "Escolha qual prioridade será substituída", variant: "destructive" });
+      return;
+    }
     setDecisionSaving(true);
+    let createdTaskId: string | null = null;
+    let entryLinked = false;
+    let workflowWarning = false;
     try {
       const today = new Date().toISOString().slice(0, 10);
       const { data: task, error: taskError } = await supabase.from("tasks").insert({
@@ -445,8 +479,9 @@ export default function CapturaCentral() {
         media_urls: (decisionEntry.attachments || []).map(item => item.url),
       }).select("id").single();
       if (taskError || !task) throw taskError || new Error("Tarefa não criada");
+      createdTaskId = task.id;
 
-      const status = decisionMode === "fazer" ? "em_execucao" : "planejada";
+      const status = decisionMode === "fazer" ? "pronta_foco" : "planejada";
       const { error: entryError } = await supabase.from("inbox_entries").update({
         status,
         decision: decisionMode,
@@ -457,29 +492,54 @@ export default function CapturaCentral() {
         estimated_minutes: Number(decisionForm.minutes),
       }).eq("id", decisionEntry.id);
       if (entryError) throw entryError;
+      entryLinked = true;
 
       if (decisionMode === "fazer") {
         const queue = JSON.parse(localStorage.getItem("pc.focus.queue") || "[]") as string[];
-        const nextQueue = [task.id, ...queue.filter(id => id !== task.id)].slice(0, 3);
+        const nextQueue = [task.id, ...queue.filter(id => id !== task.id && id !== replaceTaskId)].slice(0, 3);
         localStorage.setItem("pc.focus.queue", JSON.stringify(nextQueue));
         localStorage.setItem("pc.focus.currentTaskId", task.id);
       }
       if (activeUser?.id) {
-        const weekStart = getWeekStartISO();
-        const plan = await loadWorkflowPlan(activeUser.id, weekStart);
-        if (decisionMode === "fazer") {
-          const nextQueue = [task.id, ...(plan?.focus_queue_ids || []).filter(id => id !== task.id)].slice(0, 3);
-          await saveWorkflowPlan(activeUser.id, weekStart, { focus_queue_ids: nextQueue, current_task_id: task.id });
-        } else {
-          const selected = [...new Set([...(plan?.selected_task_ids || []), task.id])];
-          await saveWorkflowPlan(activeUser.id, weekStart, { selected_task_ids: selected });
+        try {
+          const weekStart = getWeekStartISO();
+          const plan = await loadWorkflowPlan(activeUser.id, weekStart);
+          if (decisionMode === "fazer") {
+            const nextQueue = [task.id, ...(plan?.focus_queue_ids || []).filter(id => id !== task.id && id !== replaceTaskId)].slice(0, 3);
+            const selected = [...new Set([...(plan?.selected_task_ids || []), task.id])];
+            await saveWorkflowPlan(activeUser.id, weekStart, {
+              selected_task_ids: selected,
+              priority_task_ids: nextQueue,
+              focus_queue_ids: nextQueue,
+              current_task_id: task.id,
+            });
+            if (replaceTaskId) {
+              await supabase.from("tasks").update({ status: "pendente" }).eq("id", replaceTaskId);
+              await supabase.from("inbox_entries").update({ status: "planejada" }).eq("linked_task_id", replaceTaskId);
+            }
+          } else {
+            const selected = [...new Set([...(plan?.selected_task_ids || []), task.id])];
+            await saveWorkflowPlan(activeUser.id, weekStart, { selected_task_ids: selected });
+          }
+        } catch {
+          workflowWarning = true;
+          toast({
+            title: "Ação criada; sincronização pendente",
+            description: "Ela foi preservada e aparecerá no fluxo. Reabra o Planejamento para sincronizar o Top 3.",
+          });
         }
       }
       setEntries(prev => prev.filter(item => item.id !== decisionEntry.id));
       setDecisionEntry(null);
-      toast({ title: decisionMode === "fazer" ? "Ação enviada para o Foco" : "Ação enviada para o Planejamento" });
-    } catch (error: any) {
-      toast({ title: "Erro ao criar ação", description: error?.message || String(error), variant: "destructive" });
+      if (!workflowWarning) {
+        toast({ title: decisionMode === "fazer" ? "Ação enviada para o Foco" : "Ação enviada para o Planejamento" });
+      }
+    } catch (error: unknown) {
+      if (createdTaskId && !entryLinked) {
+        await supabase.from("tasks").delete().eq("id", createdTaskId);
+      }
+      const description = error instanceof Error ? error.message : String(error);
+      toast({ title: "Erro ao criar ação", description, variant: "destructive" });
     } finally {
       setDecisionSaving(false);
     }
@@ -794,9 +854,19 @@ export default function CapturaCentral() {
 
         {/* Pending list */}
         <section className="space-y-3">
+          <div className="flex gap-1 overflow-x-auto pb-1">
+            {([
+              ["decisao", "Caixa de decisão"], ["planejadas", "Em fluxo"],
+              ["referencias", "Referências"], ["resolvidas", "Resolvidas"], ["arquivadas", "Arquivadas"],
+            ] as Array<[EntryView, string]>).map(([value, label]) => (
+              <Button key={value} size="sm" variant={entryView === value ? "default" : "outline"} onClick={() => setEntryView(value)} className="whitespace-nowrap">
+                {label}
+              </Button>
+            ))}
+          </div>
           <div className="flex items-center justify-between px-1">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-              Capturas recentes
+              {entryView === "decisao" ? "Aguardando decisão" : "Histórico de capturas"}
             </h2>
             <Badge variant="outline" className="text-xs">
               {entries.length}
@@ -895,7 +965,7 @@ export default function CapturaCentral() {
 
                     {renderEntryAttachments(entry)}
 
-                    <div className="mt-3 flex flex-wrap gap-1.5 border-t border-border/50 pt-2">
+                    {entryView === "decisao" && <div className="mt-3 flex flex-wrap gap-1.5 border-t border-border/50 pt-2">
                       <Button size="sm" className="h-8 gap-1.5" disabled={!workflowReady} onClick={() => openDecision(entry, "fazer")}>
                         <PlayCircle className="h-3.5 w-3.5" /> Fazer
                       </Button>
@@ -908,10 +978,10 @@ export default function CapturaCentral() {
                       <Button size="sm" variant="ghost" className="h-8 gap-1.5 text-muted-foreground" disabled={!workflowReady} onClick={() => void resolveWithoutTask(entry, "arquivada")}>
                         <Archive className="h-3.5 w-3.5" /> Arquivar
                       </Button>
-                    </div>
+                    </div>}
                     <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
                       <span>{entry.user_name ?? "Sem usuário"}</span>
-                      <CapturaStateIndicator state={entry.status === "aguardando_selecao" ? "decidindo" : "nova"} />
+                      <CapturaStateIndicator state={(entry.status === "aguardando_selecao" ? "decidindo" : entry.status) as CapturaState} />
                     </div>
                   </Card>
                 );
@@ -952,6 +1022,16 @@ export default function CapturaCentral() {
                 </Select>
               </div>
             </div>
+            {decisionMode === "fazer" && focusOptions.length >= 3 && (
+              <div className="space-y-1 rounded-md border border-amber-500/40 bg-amber-500/5 p-3">
+                <Label>O Top 3 está cheio. Qual prioridade será substituída?</Label>
+                <Select value={replaceTaskId} onValueChange={setReplaceTaskId}>
+                  <SelectTrigger><SelectValue placeholder="Escolha uma tarefa" /></SelectTrigger>
+                  <SelectContent>{focusOptions.map(task => <SelectItem key={task.id} value={task.id}>{task.title}</SelectItem>)}</SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">A tarefa escolhida volta ao Planejamento; ela não será excluída.</p>
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDecisionEntry(null)}>Cancelar</Button>
