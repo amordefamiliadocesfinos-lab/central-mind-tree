@@ -149,6 +149,7 @@ export default function CapturaCentral() {
 
   const [entries, setEntries] = useState<InboxEntry[]>([]);
   const [loadingList, setLoadingList] = useState(true);
+  const [workflowReady, setWorkflowReady] = useState(true);
 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingText, setEditingText] = useState("");
@@ -188,13 +189,28 @@ export default function CapturaCentral() {
 
   async function fetchEntries() {
     setLoadingList(true);
-    const { data, error } = await supabase
+    const primary = await supabase
       .from("inbox_entries")
       .select("id, content, entry_type, media_url, media_path, attachments, user_name, created_at, status, decision, linked_task_id, related_node_id, planned_bucket, estimated_minutes")
       .in("status", ["nova", "decidindo", "aguardando_selecao"])
       .order("created_at", { ascending: false })
       .limit(200);
-    if (!error && data) setEntries(data as unknown as InboxEntry[]);
+    if (!primary.error && primary.data) {
+      setWorkflowReady(true);
+      setEntries(primary.data as unknown as InboxEntry[]);
+    } else {
+      // Compatibilidade enquanto a migração do novo fluxo ainda não foi aplicada.
+      // A consulta legada garante que nenhuma captura desapareça visualmente.
+      const legacy = await supabase
+        .from("inbox_entries")
+        .select("id, content, entry_type, media_url, media_path, attachments, user_name, created_at, status")
+        .eq("status", "aguardando_selecao")
+        .order("created_at", { ascending: false })
+        .limit(200);
+      setWorkflowReady(false);
+      if (!legacy.error && legacy.data) setEntries(legacy.data as unknown as InboxEntry[]);
+      else toast({ title: "Não foi possível carregar as capturas", description: legacy.error?.message, variant: "destructive" });
+    }
     setLoadingList(false);
   }
 
@@ -380,6 +396,10 @@ export default function CapturaCentral() {
   }
 
   function openDecision(entry: InboxEntry, mode: "fazer" | "planejar") {
+    if (!workflowReady) {
+      toast({ title: "Capturas preservadas", description: "A decisão ficará disponível assim que a atualização do banco terminar." });
+      return;
+    }
     const raw = (entry.content || "Nova ação").trim().replace(/\s+/g, " ");
     setDecisionEntry(entry);
     setDecisionMode(mode);
@@ -576,6 +596,12 @@ export default function CapturaCentral() {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-6 space-y-8">
+        {!workflowReady && (
+          <Card className="border-amber-500/40 bg-amber-500/5 p-3 text-sm">
+            <p className="font-medium">As capturas estão preservadas.</p>
+            <p className="text-muted-foreground">A caixa está em modo de compatibilidade até a atualização do fluxo ser concluída.</p>
+          </Card>
+        )}
         {/* Capture card */}
         <Card className="p-5 sm:p-6 space-y-4 shadow-sm">
           <Textarea
@@ -870,16 +896,16 @@ export default function CapturaCentral() {
                     {renderEntryAttachments(entry)}
 
                     <div className="mt-3 flex flex-wrap gap-1.5 border-t border-border/50 pt-2">
-                      <Button size="sm" className="h-8 gap-1.5" onClick={() => openDecision(entry, "fazer")}>
+                      <Button size="sm" className="h-8 gap-1.5" disabled={!workflowReady} onClick={() => openDecision(entry, "fazer")}>
                         <PlayCircle className="h-3.5 w-3.5" /> Fazer
                       </Button>
-                      <Button size="sm" variant="outline" className="h-8 gap-1.5" onClick={() => openDecision(entry, "planejar")}>
+                      <Button size="sm" variant="outline" className="h-8 gap-1.5" disabled={!workflowReady} onClick={() => openDecision(entry, "planejar")}>
                         <CalendarDays className="h-3.5 w-3.5" /> Planejar
                       </Button>
-                      <Button size="sm" variant="ghost" className="h-8 gap-1.5" onClick={() => void resolveWithoutTask(entry, "referencia")}>
+                      <Button size="sm" variant="ghost" className="h-8 gap-1.5" disabled={!workflowReady} onClick={() => void resolveWithoutTask(entry, "referencia")}>
                         <BookOpen className="h-3.5 w-3.5" /> Guardar
                       </Button>
-                      <Button size="sm" variant="ghost" className="h-8 gap-1.5 text-muted-foreground" onClick={() => void resolveWithoutTask(entry, "arquivada")}>
+                      <Button size="sm" variant="ghost" className="h-8 gap-1.5 text-muted-foreground" disabled={!workflowReady} onClick={() => void resolveWithoutTask(entry, "arquivada")}>
                         <Archive className="h-3.5 w-3.5" /> Arquivar
                       </Button>
                     </div>
