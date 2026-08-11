@@ -77,6 +77,8 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
   const [payInvoiceCardId, setPayInvoiceCardId] = useState<string>('');
   const [payInvoiceBankId, setPayInvoiceBankId] = useState<string>('');
   const [payInvoiceDate, setPayInvoiceDate] = useState<string>(format(new Date(), 'yyyy-MM-dd'));
+  const [payInvoiceStart, setPayInvoiceStart] = useState<string>(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
+  const [payInvoiceEnd, setPayInvoiceEnd] = useState<string>(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
   const [payInvoiceEntries, setPayInvoiceEntries] = useState<Array<{ id: string; description: string; due_date: string; value: number; value_paid: number; selected: boolean }>>([]);
   const [payInvoiceLoading, setPayInvoiceLoading] = useState(false);
   const [payInvoiceSubmitting, setPayInvoiceSubmitting] = useState(false);
@@ -199,6 +201,7 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
     competence_date: format(new Date(), 'yyyy-MM-dd'),
     category_id: '',
     account_id: '',
+    contact_id: '',
     contact_name: '',
     notes: '',
   });
@@ -459,6 +462,8 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
     setPayInvoiceCardId('');
     setPayInvoiceBankId('');
     setPayInvoiceDate(format(new Date(), 'yyyy-MM-dd'));
+    setPayInvoiceStart(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
+    setPayInvoiceEnd(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
     setPayInvoiceEntries([]);
     setPayInvoiceDialogOpen(true);
   };
@@ -473,6 +478,8 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
       .select('id, description, due_date, value, value_paid')
       .eq('account_id', cardId)
       .eq('type', 'pagar')
+      .gte('due_date', payInvoiceStart)
+      .lte('due_date', payInvoiceEnd)
       .order('due_date', { ascending: true });
     setPayInvoiceLoading(false);
     if (error) {
@@ -511,16 +518,20 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
         account_id: payInvoiceBankId,
         value: Number((s.value - s.value_paid).toFixed(10)),
         movement_date: payInvoiceDate,
-        notes: `Pagamento fatura ${cardName}`,
+        notes: `Pagamento fatura ${cardName} · compras ${payInvoiceStart} a ${payInvoiceEnd}`,
       }));
-      const { error: movErr } = await supabase.from('financial_movements').insert(movements);
+      const { data: createdMovements, error: movErr } = await supabase.from('financial_movements').insert(movements).select('id');
       if (movErr) throw movErr;
 
       // Marca payment_date nas entradas quitadas (o trigger atualiza value_paid)
-      await supabase
+      const { error: entryUpdateError } = await supabase
         .from('financial_entries')
         .update({ payment_date: payInvoiceDate })
         .in('id', selected.map(s => s.id));
+      if (entryUpdateError) {
+        if (createdMovements?.length) await supabase.from('financial_movements').delete().in('id', createdMovements.map(item => item.id));
+        throw entryUpdateError;
+      }
 
       toast({ title: `Fatura paga: ${selected.length} compra(s) quitada(s)` });
       setPayInvoiceDialogOpen(false);
@@ -614,6 +625,7 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
       competence_date: format(new Date(), 'yyyy-MM-dd'),
       category_id: '',
       account_id: accounts[0]?.id || '',
+      contact_id: '',
       contact_name: '',
       notes: '',
     });
@@ -638,6 +650,7 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
         due_date: entryForm.date,
         payment_date: entryForm.date,
         category_id: entryForm.category_id || null,
+        contact_id: entryForm.contact_id || null,
         notes: entryForm.notes || null,
       })
       .select()
@@ -654,7 +667,7 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
       account_id: entryForm.account_id,
       value,
       movement_date: entryForm.date,
-      notes: entryForm.contact_name ? `${entryForm.contact_name}` : null,
+        notes: entryForm.notes || null,
     });
 
     if (movError) {
@@ -1490,6 +1503,11 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
           </DialogHeader>
 
           <form onSubmit={handlePayInvoice} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4 rounded-lg border p-3">
+              <div className="space-y-2"><Label>Compras de</Label><Input type="date" value={payInvoiceStart} onChange={event => setPayInvoiceStart(event.target.value)} /></div>
+              <div className="space-y-2"><Label>Compras até</Label><Input type="date" value={payInvoiceEnd} onChange={event => setPayInvoiceEnd(event.target.value)} /></div>
+              <Button type="button" variant="outline" className="col-span-2" disabled={!payInvoiceCardId} onClick={() => loadInvoiceEntries(payInvoiceCardId)}>Atualizar período da fatura</Button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Cartão de crédito *</Label>
@@ -1841,12 +1859,16 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
                 <span className="text-blue-500 cursor-help">ℹ</span>
               </Label>
               <div className="flex gap-2">
-                <Input
-                  value={entryForm.contact_name}
-                  onChange={(e) => setEntryForm({ ...entryForm, contact_name: e.target.value })}
-                  placeholder=""
-                  className="flex-1"
-                />
+                <Select value={entryForm.contact_id || 'none'} onValueChange={(value) => {
+                  const selected = contacts.find(contact => contact.id === value);
+                  setEntryForm({ ...entryForm, contact_id: value === 'none' ? '' : value, contact_name: selected?.name || '' });
+                }}>
+                  <SelectTrigger className="flex-1"><SelectValue placeholder="Selecionar cliente/fornecedor" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Sem vínculo</SelectItem>
+                    {contacts.filter(contact => contact.is_active).map(contact => <SelectItem key={contact.id} value={contact.id}>{contact.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
                 <Button 
                   type="button" 
                   variant="outline" 
@@ -1878,10 +1900,10 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
         open={contactDialogOpen}
         onOpenChange={setContactDialogOpen}
         onSave={async (data) => {
-          await createContact(data);
+          const created = await createContact(data);
           setContactDialogOpen(false);
           if (data.name) {
-            setEntryForm({ ...entryForm, contact_name: data.name });
+            setEntryForm({ ...entryForm, contact_id: created.id, contact_name: data.name });
           }
         }}
       />

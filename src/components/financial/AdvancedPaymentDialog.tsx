@@ -20,7 +20,8 @@ interface AdvancedPaymentDialogProps {
   accounts: FinancialAccount[];
   categories: FinancialCategory[];
   isPartial: boolean;
-  onConfirm: (id: string, value: number, accountId?: string, notes?: string) => Promise<void>;
+  onConfirm: (id: string, value: number, accountId?: string, notes?: string, paymentDate?: string) => Promise<void>;
+  onUpdateEntry?: (id: string, updates: Partial<FinancialEntry>) => Promise<void>;
 }
 
 interface EntryPaymentData {
@@ -42,7 +43,8 @@ export function AdvancedPaymentDialog({
   accounts, 
   categories,
   isPartial,
-  onConfirm 
+  onConfirm,
+  onUpdateEntry,
 }: AdvancedPaymentDialogProps) {
   const [loading, setLoading] = useState(false);
   const [useGroupedPosting, setUseGroupedPosting] = useState(false);
@@ -104,8 +106,16 @@ export function AdvancedPaymentDialog({
     try {
       for (const data of entriesData) {
         if (data.receivedValue > 0) {
-          const accountId = useSingleCategory ? globalAccountId : data.accountId;
-          await onConfirm(data.id, data.receivedValue, accountId || undefined);
+          const currentEntry = entries.find(item => item.id === data.id)!;
+          const accountId = globalAccountId || data.accountId;
+          const categoryId = useSingleCategory ? globalCategoryId : data.categoryId;
+          if (!accountId) throw new Error('Selecione a conta financeira para todos os lançamentos.');
+          if (categoryId && categoryId !== currentEntry.category_id && onUpdateEntry) {
+            await onUpdateEntry(data.id, { category_id: categoryId });
+          }
+          const effectiveDate = useDueDateAsPayment ? currentEntry.due_date : paymentDate;
+          const notes = `Baixa avançada · juros ${data.interest.toFixed(2)} · desconto ${data.discount.toFixed(2)} · multa ${data.penalty.toFixed(2)} · taxa ${data.fee.toFixed(2)} · marketplace ${data.marketplaceFee.toFixed(2)}`;
+          await onConfirm(data.id, data.receivedValue, accountId, notes, effectiveDate);
         }
       }
       onOpenChange(false);

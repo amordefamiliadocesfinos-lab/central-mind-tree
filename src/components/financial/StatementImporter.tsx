@@ -12,11 +12,11 @@ import { Command, CommandEmpty, CommandGroup, CommandItem, CommandList, CommandI
 import { useToast } from '@/hooks/use-toast';
 import { FinancialAccount, FinancialCategory } from '@/hooks/useFinancial';
 import { supabase } from '@/integrations/supabase/client';
-import { Upload, FileText, Trash2, Loader2, AlertTriangle, CheckCircle2, XCircle, Sparkles, User, Package, X } from 'lucide-react';
+import { Upload, FileText, Trash2, Loader2, AlertTriangle, CheckCircle2, XCircle, Sparkles, User, Package, X, Info } from 'lucide-react';
 import { format, parse as parseDate, isValid } from 'date-fns';
 import * as XLSX from 'xlsx';
 
-export type RowStatus = 'nova' | 'duplicada' | 'ja_importada' | 'erro';
+export type RowStatus = 'nova' | 'duplicada' | 'ja_importada' | 'ignorada' | 'erro';
 
 export interface ParsedRow {
   id: string;
@@ -33,6 +33,7 @@ export interface ParsedRow {
   status: RowStatus;
   statusMessage?: string;
   hash: string;
+  externalId?: string;
 }
 
 interface StatementImporterProps {
@@ -149,8 +150,9 @@ function parseOFX(text: string): Omit<ParsedRow, 'hash' | 'status'>[] {
     const amt = normalizeNumber((s.match(/<TRNAMT>([^<\r\n]+)/i)?.[1] || '0'));
     const dt = (s.match(/<DTPOSTED>([^<\r\n]+)/i)?.[1] || '').slice(0, 8);
     const memo = (s.match(/<MEMO>([^<\r\n]+)/i)?.[1] || '') || (s.match(/<NAME>([^<\r\n]+)/i)?.[1] || '');
+    const externalId = (s.match(/<FITID>([^<\r\n]+)/i)?.[1] || '').trim();
     const date = dt.length === 8 ? `${dt.slice(0, 4)}-${dt.slice(4, 6)}-${dt.slice(6, 8)}` : tryParseDate(dt);
-    rows.push(makeRow(date, memo, amt));
+    rows.push({ ...makeRow(date, memo, amt), externalId });
   }
   return rows;
 }
@@ -212,7 +214,8 @@ function fileExtension(name: string): string {
   return dot >= 0 ? name.slice(dot + 1).toLowerCase() : '';
 }
 
-function computeHashKey(accountId: string, r: { date: string; value: number; type: 'entrada' | 'saida'; description: string }): string {
+function computeHashKey(accountId: string, r: { date: string; value: number; type: 'entrada' | 'saida'; description: string; externalId?: string }): string {
+  if (r.externalId) return [accountId, 'ofx', r.externalId].join('|');
   return [accountId, r.date, r.value.toFixed(2), r.type, normalizeDescription(r.description)].join('|');
 }
 
@@ -641,8 +644,12 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
       const classified = await classifyRows(parsed);
       // Ja importadas ficam desmarcadas por padrão; duplicadas com aviso mas selecionadas para decisão do usuário
       classified.forEach(r => {
-        if (r.status === 'duplicada') r.selected = false; // deixa o usuário decidir
-        if (isCreditCard) r.type = 'saida'; // toda linha do cartão é despesa
+        if (r.status === 'duplicada') r.selected = false;
+        if (isCreditCard && r.type === 'entrada') {
+          r.selected = false;
+          r.status = 'ignorada';
+          r.statusMessage = /estorno/i.test(r.description) ? 'Estorno/crédito: não é uma nova despesa' : 'Pagamento da fatura: não é uma nova despesa';
+        } else if (isCreditCard) r.type = 'saida';
       });
       setRows(classified);
     } catch (e: any) {
@@ -670,7 +677,7 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
         acc[r.status]++;
         return acc;
       },
-      { nova: 0, duplicada: 0, ja_importada: 0, erro: 0 } as Record<RowStatus, number>
+      { nova: 0, duplicada: 0, ja_importada: 0, ignorada: 0, erro: 0 } as Record<RowStatus, number>
     );
   }, [rows]);
 
@@ -715,6 +722,7 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
         imported_at: now,
         imported_by: 'usuario',
         import_hash: hash,
+        import_external_id: r.externalId || null,
       }));
 
       const { data: inserted, error } = await supabase
@@ -754,6 +762,8 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
         return <Badge variant="outline" className="gap-1 border-amber-500 text-amber-600" title={r.statusMessage}><AlertTriangle className="h-3 w-3" /> Possível duplicada</Badge>;
       case 'ja_importada':
         return <Badge variant="outline" className="gap-1 text-muted-foreground" title={r.statusMessage}><CheckCircle2 className="h-3 w-3" /> Já importada</Badge>;
+      case 'ignorada':
+        return <Badge variant="outline" className="gap-1 text-blue-600" title={r.statusMessage}><Info className="h-3 w-3" /> Crédito/pagamento</Badge>;
       case 'erro':
         return <Badge variant="destructive" className="gap-1" title={r.statusMessage}><XCircle className="h-3 w-3" /> Erro</Badge>;
     }
@@ -847,6 +857,7 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
               <Badge variant="secondary" className="gap-1"><CheckCircle2 className="h-3 w-3" /> {counters.nova} novas</Badge>
               <Badge variant="outline" className="gap-1 border-amber-500 text-amber-600"><AlertTriangle className="h-3 w-3" /> {counters.duplicada} possíveis duplicadas</Badge>
               <Badge variant="outline" className="gap-1 text-muted-foreground"><CheckCircle2 className="h-3 w-3" /> {counters.ja_importada} já importadas</Badge>
+              {counters.ignorada > 0 && <Badge variant="outline" className="gap-1 text-blue-600">{counters.ignorada} créditos/pagamentos ignorados</Badge>}
               {counters.erro > 0 && (
                 <Badge variant="destructive" className="gap-1"><XCircle className="h-3 w-3" /> {counters.erro} com erro</Badge>
               )}

@@ -27,6 +27,7 @@ import { PaymentDialog } from './PaymentDialog';
 import { AdvancedPaymentDialog } from './AdvancedPaymentDialog';
 import { AddToRoutineDialog } from '@/components/routine/AddToRoutineDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { FinancialEntryForm } from './FinancialEntryForm';
 
 interface FinancialEntriesListProps {
   entries: FinancialEntry[];
@@ -37,7 +38,7 @@ interface FinancialEntriesListProps {
   onCreateEntry: (data: any) => Promise<any>;
   onUpdateEntry: (id: string, data: any) => Promise<void>;
   onDeleteEntry: (id: string) => Promise<void>;
-  onRegisterPayment: (id: string, value: number, accountId?: string, notes?: string) => Promise<void>;
+  onRegisterPayment: (id: string, value: number, accountId?: string, notes?: string, paymentDate?: string) => Promise<void>;
   onConciliate: (id: string) => Promise<void>;
   onExport: () => void;
   statusFilter: EntryStatus | 'all';
@@ -299,6 +300,14 @@ export function FinancialEntriesList({
       }
     }
     setFormOpen(false);
+    setEditingEntry(undefined);
+  };
+
+  const handleUnifiedSave = async (data: any) => {
+    if (editingEntry) {
+      await onUpdateEntry(editingEntry.id, data);
+      if (data.saveAndPay) await onRegisterPayment(editingEntry.id, editingEntry.value - editingEntry.value_paid, data.account_id);
+    } else await onCreateEntry(data);
     setEditingEntry(undefined);
   };
 
@@ -797,8 +806,18 @@ export function FinancialEntriesList({
         )}
       </div>
 
-      {/* Form Dialog */}
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+      <FinancialEntryForm
+        open={formOpen}
+        onOpenChange={setFormOpen}
+        entry={editingEntry}
+        type={type}
+        categories={categories}
+        accounts={accounts}
+        onSave={handleUnifiedSave}
+      />
+
+      {/* Formulário legado mantido temporariamente fora da renderização. */}
+      <Dialog open={false} onOpenChange={() => undefined}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{type === 'pagar' ? 'Conta a pagar' : 'Conta a receber'}</DialogTitle>
@@ -1039,9 +1058,10 @@ export function FinancialEntriesList({
           accounts={accounts}
           categories={categories}
           isPartial={isPartialPayment}
-          onConfirm={async (id, value, accountId, notes) => {
-            await onRegisterPayment(id, value, accountId, notes);
+          onConfirm={async (id, value, accountId, notes, paymentDate) => {
+            await onRegisterPayment(id, value, accountId, notes, paymentDate);
           }}
+          onUpdateEntry={onUpdateEntry}
         />
       )}
 

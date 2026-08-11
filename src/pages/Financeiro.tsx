@@ -21,11 +21,13 @@ import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, LayoutDashboard, TrendingDown, TrendingUp, Wallet, Tag } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { UncategorizedReviewDialog } from '@/components/financial/UncategorizedReviewDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 export default function Financeiro() {
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [importerOpen, setImporterOpen] = useState(false);
+  const [reviewImportedOpen, setReviewImportedOpen] = useState(false);
   const [pagarStatus, setPagarStatus] = useState<EntryStatus | 'all'>('all');
   const [receberStatus, setReceberStatus] = useState<EntryStatus | 'all'>('all');
   const [pagarSearch, setPagarSearch] = useState('');
@@ -128,7 +130,8 @@ export default function Financeiro() {
             Este mês
           </Button>
 
-          <Button variant="outline" size="sm" onClick={() => setImporterOpen(true)} className="ml-auto gap-2">
+          <Button variant="outline" size="sm" onClick={() => setReviewImportedOpen(true)} className="ml-auto">Revisar importados</Button>
+          <Button variant="outline" size="sm" onClick={() => setImporterOpen(true)} className="gap-2">
             <Upload className="h-4 w-4" /> Importar Extrato
           </Button>
         </div>
@@ -140,6 +143,7 @@ export default function Financeiro() {
           categories={categories}
           onImported={() => fetchEntries()}
         />
+        <UncategorizedReviewDialog open={reviewImportedOpen} onOpenChange={setReviewImportedOpen} categories={categories} onChanged={() => fetchEntries()} />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className={cn("grid w-full", isMobile ? "grid-cols-3" : "grid-cols-8")}>

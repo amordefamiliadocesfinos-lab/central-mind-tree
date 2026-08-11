@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { startOfMonth, endOfMonth, format, isBefore, startOfDay, parseISO } from 'date-fns';
+import { startOfMonth, endOfMonth, format, isBefore, startOfDay, parseISO, addDays, addWeeks, addMonths, addYears, isWeekend } from 'date-fns';
 
 export interface FinancialCategory {
   id: string;
@@ -52,6 +52,8 @@ export interface FinancialEntry {
   original_due_date?: string;
   issue_date?: string;
   competence_date?: string;
+  recurrence_series_id?: string;
+  recurrence_sequence?: number;
 }
 
 export interface FinancialMovement {
@@ -198,6 +200,7 @@ export function useFinancial() {
   }, [filters]);
 
   const createEntry = async (entry: Omit<FinancialEntry, 'id' | 'value_paid' | 'is_conciliated' | 'created_at' | 'updated_at'> & { saveAndPay?: boolean }) => {
+    const recurrenceSeriesId = entry.recurrence_type ? crypto.randomUUID() : null;
     const { data, error } = await supabase
       .from('financial_entries')
       .insert({
@@ -219,7 +222,9 @@ export function useFinancial() {
         issue_date: entry.issue_date,
         competence_date: entry.competence_date,
         original_due_date: entry.due_date,
-      })
+        recurrence_series_id: recurrenceSeriesId,
+        recurrence_sequence: recurrenceSeriesId ? 0 : null,
+      } as any)
       .select()
       .single();
 
@@ -231,6 +236,42 @@ export function useFinancial() {
     // If saveAndPay is true, register a full payment
     if (entry.saveAndPay && data) {
       await registerPayment(data.id, entry.value, entry.account_id);
+    }
+
+    if (data && entry.recurrence_type && entry.recurrence_end_date && recurrenceSeriesId) {
+      const end = parseISO(entry.recurrence_end_date);
+      let cursor = parseISO(entry.due_date);
+      const occurrences: any[] = [];
+      for (let sequence = 1; sequence <= 120; sequence++) {
+        switch (entry.recurrence_type) {
+          case 'semanal': cursor = addWeeks(cursor, 1); break;
+          case 'quinzenal': cursor = addDays(cursor, 15); break;
+          case 'trimestral': cursor = addMonths(cursor, 3); break;
+          case 'semestral': cursor = addMonths(cursor, 6); break;
+          case 'anual': cursor = addYears(cursor, 1); break;
+          default: cursor = addMonths(cursor, 1);
+        }
+        if (cursor > end) break;
+        let due = cursor;
+        if (entry.recurrence_use_business_days) while (isWeekend(due)) due = addDays(due, 1);
+        occurrences.push({
+          type: entry.type, description: entry.description, value: entry.value,
+          due_date: format(due, 'yyyy-MM-dd'), original_due_date: format(due, 'yyyy-MM-dd'),
+          issue_date: entry.issue_date || null, competence_date: format(due, 'yyyy-MM-dd'),
+          category_id: entry.category_id || null, account_id: entry.account_id || null,
+          contact_id: entry.contact_id || null, order_id: entry.order_id || null,
+          document_number: entry.document_number || null, notes: entry.notes || null,
+          recurrence_type: entry.recurrence_type, recurrence_day: entry.recurrence_day || null,
+          recurrence_end_date: entry.recurrence_end_date,
+          recurrence_use_business_days: !!entry.recurrence_use_business_days,
+          recurrence_series_id: recurrenceSeriesId, recurrence_sequence: sequence,
+          parent_entry_id: data.id,
+        });
+      }
+      if (occurrences.length) {
+        const { error: recurrenceError } = await supabase.from('financial_entries').insert(occurrences as any);
+        if (recurrenceError) throw recurrenceError;
+      }
     }
 
     fetchEntries();
@@ -280,14 +321,21 @@ export function useFinancial() {
     fetchEntries();
   };
 
-  const registerPayment = async (entryId: string, value: number, accountId?: string, notes?: string) => {
+  const registerPayment = async (entryId: string, value: number, accountId?: string, notes?: string, paymentDate?: string) => {
+    if (!accountId) throw new Error('Selecione a conta financeira da baixa.');
+    const { data: current, error: currentError } = await supabase
+      .from('financial_entries').select('value,value_paid').eq('id', entryId).single();
+    if (currentError) throw currentError;
+    const remaining = Number(current.value) - Number(current.value_paid || 0);
+    if (value <= 0 || value > remaining + 0.005) throw new Error(`A baixa não pode superar o saldo de ${remaining.toFixed(2)}.`);
+    const movementDate = paymentDate || format(new Date(), 'yyyy-MM-dd');
     const { error } = await supabase
       .from('financial_movements')
       .insert({
         entry_id: entryId,
         account_id: accountId,
         value,
-        movement_date: format(new Date(), 'yyyy-MM-dd'),
+        movement_date: movementDate,
         notes,
       });
 
@@ -297,11 +345,10 @@ export function useFinancial() {
     }
 
     // Update payment_date if fully paid
-    const entry = entries.find(e => e.id === entryId);
-    if (entry && (entry.value_paid + value) >= entry.value) {
+    if (Number(current.value_paid || 0) + value >= Number(current.value) - 0.005) {
       await supabase
         .from('financial_entries')
-        .update({ payment_date: format(new Date(), 'yyyy-MM-dd') })
+        .update({ payment_date: movementDate })
         .eq('id', entryId);
     }
 
