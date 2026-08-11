@@ -3667,12 +3667,14 @@ export type Database = {
         Row: {
           actual_end: string | null
           actual_start: string | null
-          assigned_user_id: string | null
           alert_offset_minutes: number
+          assigned_user_id: string | null
           block_type: string
           checklist: Json
+          completion_criterion: string | null
           created_at: string
           date: string
+          destination_path: string | null
           duration_minutes: number
           focus: string | null
           generated_by_id: string | null
@@ -3680,20 +3682,18 @@ export type Database = {
           generated_instance_id: string | null
           id: string
           is_active: boolean
-          mt_id: string | null
           module_key: string | null
-          destination_path: string | null
-          source_type: string | null
-          source_id: string | null
-          completion_criterion: string | null
-          recurrence_series_id: string | null
+          mt_id: string | null
           node_id: string | null
           notes: string | null
           planned_end: string | null
           planned_start: string | null
           recurrence: string | null
           recurrence_parent_id: string | null
+          recurrence_series_id: string | null
           snooze_until: string | null
+          source_id: string | null
+          source_type: string | null
           status: string
           task_id: string | null
           template_id: string | null
@@ -3702,12 +3702,14 @@ export type Database = {
         Insert: {
           actual_end?: string | null
           actual_start?: string | null
-          assigned_user_id?: string | null
           alert_offset_minutes?: number
+          assigned_user_id?: string | null
           block_type?: string
           checklist?: Json
+          completion_criterion?: string | null
           created_at?: string
           date?: string
+          destination_path?: string | null
           duration_minutes?: number
           focus?: string | null
           generated_by_id?: string | null
@@ -3715,20 +3717,18 @@ export type Database = {
           generated_instance_id?: string | null
           id?: string
           is_active?: boolean
-          mt_id?: string | null
           module_key?: string | null
-          destination_path?: string | null
-          source_type?: string | null
-          source_id?: string | null
-          completion_criterion?: string | null
-          recurrence_series_id?: string | null
+          mt_id?: string | null
           node_id?: string | null
           notes?: string | null
           planned_end?: string | null
           planned_start?: string | null
           recurrence?: string | null
           recurrence_parent_id?: string | null
+          recurrence_series_id?: string | null
           snooze_until?: string | null
+          source_id?: string | null
+          source_type?: string | null
           status?: string
           task_id?: string | null
           template_id?: string | null
@@ -3737,12 +3737,14 @@ export type Database = {
         Update: {
           actual_end?: string | null
           actual_start?: string | null
-          assigned_user_id?: string | null
           alert_offset_minutes?: number
+          assigned_user_id?: string | null
           block_type?: string
           checklist?: Json
+          completion_criterion?: string | null
           created_at?: string
           date?: string
+          destination_path?: string | null
           duration_minutes?: number
           focus?: string | null
           generated_by_id?: string | null
@@ -3750,20 +3752,18 @@ export type Database = {
           generated_instance_id?: string | null
           id?: string
           is_active?: boolean
-          mt_id?: string | null
           module_key?: string | null
-          destination_path?: string | null
-          source_type?: string | null
-          source_id?: string | null
-          completion_criterion?: string | null
-          recurrence_series_id?: string | null
+          mt_id?: string | null
           node_id?: string | null
           notes?: string | null
           planned_end?: string | null
           planned_start?: string | null
           recurrence?: string | null
           recurrence_parent_id?: string | null
+          recurrence_series_id?: string | null
           snooze_until?: string | null
+          source_id?: string | null
+          source_type?: string | null
           status?: string
           task_id?: string | null
           template_id?: string | null
@@ -3775,6 +3775,13 @@ export type Database = {
             columns: ["assigned_user_id"]
             isOneToOne: false
             referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "routine_blocks_mt_id_fkey"
+            columns: ["mt_id"]
+            isOneToOne: false
+            referencedRelation: "routine_mts"
             referencedColumns: ["id"]
           },
           {
