@@ -23,6 +23,9 @@ interface MTBlock {
   duration_minutes: number;
   notes?: string;
   checklist?: { text: string; done: boolean }[];
+  module_key?: string;
+  destination_path?: string;
+  completion_criterion?: string;
 }
 
 interface MT {
@@ -75,6 +78,9 @@ const emptyBlock = (start = '08:00'): MTBlock => {
     duration_minutes: 25,
     notes: '',
     checklist: [],
+    module_key: 'rotina',
+    destination_path: '/rotina',
+    completion_criterion: '',
   };
 };
 
@@ -103,6 +109,9 @@ function normalizeMT(mt: any): MT {
       duration_minutes: b?.duration_minutes ?? minutesBetween(b?.start || '08:00', b?.end || '08:25') ?? 25,
       notes: b?.notes || '',
       checklist: Array.isArray(b?.checklist) ? b.checklist : [],
+      module_key: b?.module_key || 'rotina',
+      destination_path: b?.destination_path || '/rotina',
+      completion_criterion: b?.completion_criterion || '',
     })),
     is_active: mt?.is_active ?? true,
     is_default: mt?.is_default ?? false,
@@ -443,6 +452,27 @@ export function MTManagerDialog({ open, onOpenChange, onChanged }: Props) {
                                   ))}
                                 </SelectContent>
                               </Select>
+                            </div>
+                          </div>
+
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            <div>
+                              <Label className="text-[10px]">Módulo executor</Label>
+                              <Select value={b.module_key || 'rotina'} onValueChange={value => {
+                                const paths: Record<string, string> = { crm: '/contatos/inbox', financeiro: '/financeiro', digital: '/digital', operacoes: '/operacoes', foco: '/foco', rotina: '/rotina' };
+                                updBlock(i, { module_key: value, destination_path: paths[value] || '/rotina' });
+                              }}>
+                                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="rotina">Rotina</SelectItem><SelectItem value="crm">CRM</SelectItem>
+                                  <SelectItem value="financeiro">Financeiro</SelectItem><SelectItem value="digital">Digital</SelectItem>
+                                  <SelectItem value="operacoes">Operações</SelectItem><SelectItem value="foco">Foco</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div>
+                              <Label className="text-[10px]">Critério de conclusão</Label>
+                              <Input className="h-9" value={b.completion_criterion || ''} onChange={e => updBlock(i, { completion_criterion: e.target.value })} placeholder="Quando estará pronto?" />
                             </div>
                           </div>
 

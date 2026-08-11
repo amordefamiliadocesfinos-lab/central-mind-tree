@@ -32,6 +32,9 @@ export function BlockEditDialog({ open, onOpenChange, block, onSave, defaultDate
     planned_start: "",
     notes: "",
     recurrence: "" as RecurrenceType | "",
+    module_key: "rotina",
+    destination_path: "/rotina",
+    completion_criterion: "",
     checklist: [] as ChecklistItem[],
   });
   const [newItem, setNewItem] = useState("");
@@ -45,6 +48,9 @@ export function BlockEditDialog({ open, onOpenChange, block, onSave, defaultDate
         planned_start: block.planned_start || "",
         notes: block.notes || "",
         recurrence: (block.recurrence as RecurrenceType | null) || "",
+        module_key: block.module_key || "rotina",
+        destination_path: block.destination_path || "/rotina",
+        completion_criterion: block.completion_criterion || "",
         checklist: Array.isArray((block as any).checklist) ? (block as any).checklist : [],
       });
     } else {
@@ -61,6 +67,9 @@ export function BlockEditDialog({ open, onOpenChange, block, onSave, defaultDate
         planned_start: `${adjustedHours}:${adjustedMins}`,
         notes: "",
         recurrence: "",
+        module_key: "rotina",
+        destination_path: "/rotina",
+        completion_criterion: "",
         checklist: [],
       });
     }
@@ -191,6 +200,21 @@ export function BlockEditDialog({ open, onOpenChange, block, onSave, defaultDate
               Ao concluir, o próximo horário é agendado automaticamente.
             </p>
           )}
+        </div>
+
+        {/* Checklist */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <Label>Módulo executor</Label>
+            <Select value={formData.module_key} onValueChange={(module_key) => {
+              const paths: Record<string, string> = { crm: '/contatos/inbox', financeiro: '/financeiro', digital: '/digital', operacoes: '/operacoes', foco: '/foco', rotina: '/rotina' };
+              setFormData({ ...formData, module_key, destination_path: paths[module_key] || '/rotina' });
+            }}>
+              <SelectTrigger className="h-12"><SelectValue /></SelectTrigger>
+              <SelectContent><SelectItem value="crm">CRM</SelectItem><SelectItem value="financeiro">Financeiro</SelectItem><SelectItem value="digital">Digital</SelectItem><SelectItem value="operacoes">Operações</SelectItem><SelectItem value="foco">Foco</SelectItem><SelectItem value="rotina">Rotina</SelectItem></SelectContent>
+            </Select>
+          </div>
+          <div><Label>Critério de conclusão</Label><Input className="h-12" value={formData.completion_criterion} onChange={e => setFormData({ ...formData, completion_criterion: e.target.value })} placeholder="Ex.: fila Hoje tratada" /></div>
         </div>
 
         {/* Checklist */}

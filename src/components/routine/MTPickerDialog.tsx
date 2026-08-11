@@ -24,6 +24,9 @@ interface MTBlock {
   duration_minutes: number;
   notes?: string;
   checklist?: { text: string; done: boolean }[];
+  module_key?: string;
+  destination_path?: string;
+  completion_criterion?: string;
 }
 
 interface MT {
@@ -90,6 +93,17 @@ export function MTPickerDialog({ open, onOpenChange, selectedDate, onApplied }: 
 
   const applyToDate = async (mt: MT, date: Date, replace = true) => {
     const dateStr = format(date, 'yyyy-MM-dd');
+    let existingQuery = supabase.from('routine_blocks').select('planned_start,planned_end,duration_minutes,title')
+      .eq('date', dateStr).eq('is_active', true).neq('status', 'concluido');
+    existingQuery = activeUserId ? existingQuery.or(`assigned_user_id.eq.${activeUserId},assigned_user_id.is.null`) : existingQuery.is('assigned_user_id', null);
+    const { data: existingBlocks } = await existingQuery;
+    const conflicts = mt.blocks.filter(candidate => (existingBlocks || []).some(existing => {
+      const existingStart = existing.planned_start?.slice(0, 5);
+      if (!existingStart) return false;
+      const existingEnd = existing.planned_end?.slice(0, 5) || existingStart;
+      return candidate.start < existingEnd && candidate.end > existingStart;
+    }));
+    if (conflicts.length > 0) toast.warning(`${conflicts.length} bloco(s) do MT têm conflito de horário`, { description: 'Os blocos serão combinados. Ajuste os horários na linha do tempo.' });
     if (replace) {
       // Limpeza técnica: só remove blocos pendentes ativos originados de MT
       // (notes contém "MT:" e NÃO contém "origem:"). Preserva concluídos,
@@ -121,6 +135,9 @@ export function MTPickerDialog({ open, onOpenChange, selectedDate, onApplied }: 
       assigned_user_id: activeUserId,
       mt_id: mt.id,
       ...targetForBlock(mt.area, b.title),
+      ...(b.module_key ? { module_key: b.module_key } : {}),
+      ...(b.destination_path ? { destination_path: b.destination_path } : {}),
+      completion_criterion: b.completion_criterion || null,
       source_type: 'routine/mt',
       source_id: mt.id,
     }));

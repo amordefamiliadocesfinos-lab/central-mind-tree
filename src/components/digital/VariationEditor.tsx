@@ -30,6 +30,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { CustomFieldsDefinition } from './CustomFieldsDefinition';
 import { SlidersHorizontal } from 'lucide-react';
+import { AddToRoutineButton } from '@/components/routine/AddToRoutineButton';
 
 type AIFieldType = 'title' | 'description' | 'caption' | 'cta' | 'hashtags' | 'custom_field';
 
@@ -494,6 +495,14 @@ export function VariationEditor({
         </Button>
 
         <div className="flex items-center gap-2">
+          <AddToRoutineButton
+            source={{ kind: 'digital/variation', id: variation.id, label: idea.title }}
+            defaultTitle={`Revisar/publicar: ${variation.title || idea.title}`}
+            defaultFocus="criativo"
+            defaultDurationMin={30}
+            defaultNotes={`Origem: Digital · ${platformConfig?.name || 'plataforma'}`}
+            label="Reservar na Rotina"
+          />
           <Button
             variant="outline"
             size="icon"

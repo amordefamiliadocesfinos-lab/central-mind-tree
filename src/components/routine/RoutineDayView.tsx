@@ -6,7 +6,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { 
   Play, Check, SkipForward, Pencil, Trash2, 
-  GripVertical, Plus, Clock, Target, Sparkles, Pause, Repeat, AlertCircle, RotateCcw
+  GripVertical, Plus, Clock, Target, Sparkles, Pause, Repeat, AlertCircle, RotateCcw, ExternalLink
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
@@ -408,6 +408,7 @@ function BlockCardContent({
     '1h': '1h', '2h': '2h', '4h': '4h', '6h': '6h', '12h': '12h',
     daily: 'Diário', weekly: 'Semanal', monthly: 'Mensal',
   };
+  const moduleLabels: Record<string, string> = { crm: 'CRM', financeiro: 'Financeiro', digital: 'Digital', operacoes: 'Operações', foco: 'Foco', rotina: 'Rotina' };
 
   return (
     <Card
@@ -465,6 +466,8 @@ function BlockCardContent({
                   {recurrenceLabel[block.recurrence] || block.recurrence}
                 </Badge>
               )}
+              {block.module_key && <Badge variant="secondary" className="text-xs">{moduleLabels[block.module_key] || block.module_key}</Badge>}
+              {block.assigned_user?.name && <Badge variant="outline" className="text-xs">{block.assigned_user.name}</Badge>}
               {isOverdue && (
                 <Badge className="text-xs gap-1 bg-amber-500 text-white hover:bg-amber-600">
                   <AlertCircle className="h-3 w-3" />
@@ -490,10 +493,12 @@ function BlockCardContent({
             {block.notes && (
               <p className="text-xs text-muted-foreground mt-1 truncate">{block.notes}</p>
             )}
+            {block.completion_criterion && <p className="text-xs mt-1"><span className="text-muted-foreground">Concluir quando:</span> {block.completion_criterion}</p>}
           </div>
 
           {/* Actions */}
           <div className="flex gap-1 flex-shrink-0">
+            {block.destination_path && <Button size="sm" variant="ghost" className="h-9 w-9 p-0" title="Abrir módulo" onClick={() => { window.location.href = block.destination_path!; }}><ExternalLink className="h-4 w-4" /></Button>}
             {block.status === 'pendente' && (
               <>
                 <Button

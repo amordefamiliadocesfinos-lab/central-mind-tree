@@ -15,6 +15,7 @@ import {
   isToday,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { saveNextOperationalStep } from "@/lib/operationalContext";
 
 export type RecurrenceType = "1h" | "2h" | "4h" | "6h" | "12h" | "daily" | "weekly" | "monthly";
 
@@ -49,6 +50,7 @@ export interface RoutineBlock {
   recurrence: RecurrenceType | null;
   recurrence_parent_id: string | null;
   assigned_user_id?: string | null;
+  assigned_user?: { name: string } | null;
   mt_id?: string | null;
   module_key?: string | null;
   destination_path?: string | null;
@@ -157,10 +159,11 @@ export type ViewMode = "day" | "week" | "month";
 interface UseRoutineOptions {
   initialDate?: Date;
   initialView?: ViewMode;
+  scope?: 'mine' | 'company';
 }
 
 export function useRoutine(options: UseRoutineOptions = {}) {
-  const { initialDate = new Date(), initialView = "day" } = options;
+  const { initialDate = new Date(), initialView = "day", scope = 'mine' } = options;
 
   const [selectedDate, setSelectedDate] = useState<Date>(initialDate);
   const [viewMode, setViewMode] = useState<ViewMode>(initialView);
@@ -202,14 +205,14 @@ export function useRoutine(options: UseRoutineOptions = {}) {
 
     let q = supabase
       .from("routine_blocks")
-      .select("*")
+      .select("*, assigned_user:app_users!routine_blocks_assigned_user_id_fkey(name)")
       .eq("is_active", true)
       .gte("date", startStr)
       .lte("date", endStr)
       .order("date", { ascending: true })
       .order("planned_start", { ascending: true });
 
-    if (activeUserId) {
+    if (activeUserId && scope === 'mine') {
       q = q.or(`assigned_user_id.eq.${activeUserId},assigned_user_id.is.null`);
     }
 
@@ -229,7 +232,7 @@ export function useRoutine(options: UseRoutineOptions = {}) {
     // Mantém activeBlock somente se ainda existir e estiver "andamento"
     const active = list.find((b) => b.status === "andamento");
     setActiveBlock(active || null);
-  }, [dateRange, activeUserId]);
+  }, [dateRange, activeUserId, scope]);
 
   // Fetch templates
   const fetchTemplates = useCallback(async () => {
@@ -328,6 +331,13 @@ export function useRoutine(options: UseRoutineOptions = {}) {
       toast.success(`▶️ "${block.title}" em andamento`, {
         description: `Status: Pendente → Em andamento · Iniciado às ${startTime} · Duração prevista: ${block.duration_minutes} min`,
         duration: 4000,
+      });
+      saveNextOperationalStep({
+        module: "Rotina",
+        path: block.destination_path || "/rotina",
+        title: block.title,
+        status: "Agora",
+        updatedAt: new Date().toISOString(),
       });
       fetchBlocks();
       if (block.destination_path && window.location.pathname !== block.destination_path) {
@@ -450,6 +460,16 @@ export function useRoutine(options: UseRoutineOptions = {}) {
         description: `Status: Em andamento → Concluído · Finalizado às ${endTime} · ${actualMinutes} min trabalhados (${diffLabel})`,
         duration: 5000,
       });
+      const nextBlock = blocks
+        .filter((item) => item.id !== blockId && item.status === "pendente")
+        .sort((a, b) => `${a.date} ${a.planned_start || "23:59"}`.localeCompare(`${b.date} ${b.planned_start || "23:59"}`))[0];
+      saveNextOperationalStep(nextBlock ? {
+        module: "Rotina",
+        path: nextBlock.destination_path || "/rotina",
+        title: nextBlock.title,
+        status: nextBlock.date === format(new Date(), "yyyy-MM-dd") ? "Hoje" : "Aguardando",
+        updatedAt: new Date().toISOString(),
+      } : null);
       fetchBlocks();
       fetchStats();
     },

@@ -6,6 +6,7 @@ import { RoutineMonthView } from "@/components/routine/RoutineMonthView";
 import { CustomAlarmsPanel } from "@/components/routine/CustomAlarmsPanel";
 import { BlockEditDialog } from "@/components/routine/BlockEditDialog";
 import { MTPickerDialog } from "@/components/routine/MTPickerDialog";
+import { RoutineCompletionDialog } from "@/components/routine/RoutineCompletionDialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -25,6 +26,7 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 
 export default function Rotina() {
+  const [routineScope, setRoutineScope] = useState<'mine' | 'company'>('mine');
   const {
     selectedDate,
     setSelectedDate,
@@ -54,11 +56,12 @@ export default function Rotina() {
     getDayKPIs,
     weekSummary,
     focusTypes,
-  } = useRoutine();
+  } = useRoutine({ scope: routineScope });
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingBlock, setEditingBlock] = useState<RoutineBlock | null>(null);
   const [mtPickerOpen, setMtPickerOpen] = useState(false);
+  const [completingBlock, setCompletingBlock] = useState<RoutineBlock | null>(null);
 
   // Navigation
   const navigateDate = (direction: "prev" | "next") => {
@@ -133,6 +136,27 @@ export default function Rotina() {
     setEditingBlock(null);
   };
 
+  const handleCloseDay = async () => {
+    const pending = currentDayBlocks.filter((block) => block.status === "pendente" || block.status === "andamento");
+    if (pending.length === 0) return;
+    if (!window.confirm(`Encerrar o dia e levar ${pending.length} bloco(s) pendente(s) para amanhã?`)) return;
+    const tomorrow = format(addDays(selectedDate, 1), "yyyy-MM-dd");
+    for (const block of pending) {
+      await addBlock({
+        ...block,
+        date: tomorrow,
+        status: "pendente",
+        actual_start: null,
+        actual_end: null,
+        recurrence: null,
+        recurrence_parent_id: null,
+        notes: `${block.notes || ""}\nRetomado do fechamento de ${format(selectedDate, "dd/MM")}`.trim(),
+      });
+      await skipBlock(block.id);
+    }
+    setSelectedDate(addDays(selectedDate, 1));
+  };
+
   const currentDayBlocks = getBlocksByDay(selectedDate);
   const currentDayKPIs = getDayKPIs(selectedDate);
 
@@ -169,6 +193,10 @@ export default function Rotina() {
           </div>
 
           <div className="flex gap-1">
+            <div className="hidden sm:flex rounded-md border p-0.5">
+              <Button size="sm" variant={routineScope === 'mine' ? 'secondary' : 'ghost'} className="h-8 text-xs" onClick={() => setRoutineScope('mine')}>Minha Rotina</Button>
+              <Button size="sm" variant={routineScope === 'company' ? 'secondary' : 'ghost'} className="h-8 text-xs" onClick={() => setRoutineScope('company')}>Empresa</Button>
+            </div>
             <Button
               variant="default"
               size="sm"
@@ -194,6 +222,9 @@ export default function Rotina() {
               >
                 <RotateCcw className="h-4 w-4" />
               </Button>
+            )}
+            {viewMode === "day" && currentDayBlocks.some((block) => block.status === "pendente" || block.status === "andamento") && (
+              <Button variant="outline" size="sm" className="h-10 text-xs" onClick={handleCloseDay}>Encerrar dia</Button>
             )}
           </div>
         </div>
@@ -238,7 +269,7 @@ export default function Rotina() {
             blocks={currentDayBlocks}
             activeBlock={activeBlock}
             onStartBlock={startBlock}
-            onCompleteBlock={completeBlock}
+            onCompleteBlock={(id) => setCompletingBlock(currentDayBlocks.find(block => block.id === id) || null)}
             onSkipBlock={skipBlock}
             onPauseBlock={pauseBlock}
             onEditBlock={handleEditBlock}
@@ -278,6 +309,19 @@ export default function Rotina() {
           />
         )}
       </div>
+      <RoutineCompletionDialog
+        block={completingBlock}
+        open={!!completingBlock}
+        onOpenChange={(open) => !open && setCompletingBlock(null)}
+        onConfirm={async ({ notes, partial, carryTo }) => {
+          if (!completingBlock) return;
+          const resultLine = notes ? `\nResultado: ${notes}` : '';
+          await updateBlock(completingBlock.id, { notes: `${completingBlock.notes || ''}${resultLine}`.trim() });
+          if (partial && carryTo) await addBlock({ ...completingBlock, id: undefined as any, date: carryTo, status: 'pendente', actual_start: null, actual_end: null, recurrence: null, recurrence_parent_id: null, notes: `Saldo de ${completingBlock.title}${notes ? `\nResultado anterior: ${notes}` : ''}` } as any);
+          await completeBlock(completingBlock.id);
+          setCompletingBlock(null);
+        }}
+      />
 
       {/* Block Edit Dialog */}
       <BlockEditDialog
