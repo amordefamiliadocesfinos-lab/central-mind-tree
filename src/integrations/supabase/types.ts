@@ -1898,6 +1898,7 @@ export type Database = {
           document_number: string | null
           due_date: string
           id: string
+          import_external_id: string | null
           import_file_name: string | null
           import_file_type: string | null
           import_hash: string | null
@@ -1913,6 +1914,8 @@ export type Database = {
           payment_date: string | null
           recurrence_day: number | null
           recurrence_end_date: string | null
+          recurrence_sequence: number | null
+          recurrence_series_id: string | null
           recurrence_type: string | null
           recurrence_use_business_days: boolean | null
           type: string
@@ -1931,6 +1934,7 @@ export type Database = {
           document_number?: string | null
           due_date: string
           id?: string
+          import_external_id?: string | null
           import_file_name?: string | null
           import_file_type?: string | null
           import_hash?: string | null
@@ -1946,6 +1950,8 @@ export type Database = {
           payment_date?: string | null
           recurrence_day?: number | null
           recurrence_end_date?: string | null
+          recurrence_sequence?: number | null
+          recurrence_series_id?: string | null
           recurrence_type?: string | null
           recurrence_use_business_days?: boolean | null
           type: string
@@ -1964,6 +1970,7 @@ export type Database = {
           document_number?: string | null
           due_date?: string
           id?: string
+          import_external_id?: string | null
           import_file_name?: string | null
           import_file_type?: string | null
           import_hash?: string | null
@@ -1979,6 +1986,8 @@ export type Database = {
           payment_date?: string | null
           recurrence_day?: number | null
           recurrence_end_date?: string | null
+          recurrence_sequence?: number | null
+          recurrence_series_id?: string | null
           recurrence_type?: string | null
           recurrence_use_business_days?: boolean | null
           type?: string
