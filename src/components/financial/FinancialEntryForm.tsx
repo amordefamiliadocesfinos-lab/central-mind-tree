@@ -17,6 +17,7 @@ import { Loader2, CalendarIcon, CreditCard, RefreshCw, Paperclip, Info, User, X 
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface FinancialEntryFormProps {
   open: boolean;
@@ -130,6 +131,11 @@ export function FinancialEntryForm({
   const handleSubmit = async (e: React.FormEvent, saveAndPay = false) => {
     e.preventDefault();
     if (!form.description || !form.value) return;
+    if (form.recurrence_type && !form.recurrence_end_date) {
+      setActiveTab('ocorrencia');
+      toast.error('Informe a data final para gerar a recorrência.');
+      return;
+    }
 
     setLoading(true);
     try {
@@ -300,7 +306,7 @@ export function FinancialEntryForm({
             />
           </div>
 
-          {/* Tabs: Pagamento, Ocorrência, Anexos */}
+          {/* Tabs: Pagamento, Recorrência, Anexos */}
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="pagamento" className="gap-2">
@@ -309,7 +315,7 @@ export function FinancialEntryForm({
               </TabsTrigger>
               <TabsTrigger value="ocorrencia" className="gap-2">
                 <RefreshCw className="h-4 w-4" />
-                Ocorrência
+                Recorrência
               </TabsTrigger>
               <TabsTrigger value="anexos" className="gap-2">
                 <Paperclip className="h-4 w-4" />
@@ -362,7 +368,7 @@ export function FinancialEntryForm({
               </div>
             </TabsContent>
 
-            {/* Ocorrência Tab */}
+            {/* Recorrência Tab */}
             <TabsContent value="ocorrencia" className="space-y-4 mt-4">
               <div className="space-y-2">
                 <div className="flex items-center gap-2">

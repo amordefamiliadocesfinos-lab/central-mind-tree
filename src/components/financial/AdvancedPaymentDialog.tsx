@@ -107,9 +107,11 @@ export function AdvancedPaymentDialog({
       for (const data of entriesData) {
         if (data.receivedValue > 0) {
           const currentEntry = entries.find(item => item.id === data.id)!;
-          const accountId = globalAccountId || data.accountId;
+          const accountId = useGroupedPosting ? globalAccountId : data.accountId;
           const categoryId = useSingleCategory ? globalCategoryId : data.categoryId;
-          if (!accountId) throw new Error('Selecione a conta financeira para todos os lançamentos.');
+          if (!accountId) throw new Error(useGroupedPosting
+            ? 'Selecione a conta financeira que será aplicada em todos os lançamentos.'
+            : 'Selecione a conta financeira de cada lançamento.');
           if (categoryId && categoryId !== currentEntry.category_id && onUpdateEntry) {
             await onUpdateEntry(data.id, { category_id: categoryId });
           }
@@ -148,7 +150,7 @@ export function AdvancedPaymentDialog({
                 checked={useGroupedPosting} 
                 onCheckedChange={setUseGroupedPosting}
               />
-              <Label className="text-sm">Lançamento agrupado</Label>
+              <Label className="text-sm">Aplicar a mesma conta em todos</Label>
             </div>
             <div className="flex items-center gap-2">
               <Switch 
@@ -170,7 +172,7 @@ export function AdvancedPaymentDialog({
           <div className="grid grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label>Destino</Label>
-              <Select value={globalAccountId} onValueChange={setGlobalAccountId}>
+              <Select value={globalAccountId} onValueChange={setGlobalAccountId} disabled={!useGroupedPosting}>
                 <SelectTrigger>
                   <SelectValue placeholder="-" />
                 </SelectTrigger>
