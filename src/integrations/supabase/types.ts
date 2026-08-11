@@ -3668,6 +3668,7 @@ export type Database = {
           actual_end: string | null
           actual_start: string | null
           assigned_user_id: string | null
+          alert_offset_minutes: number
           block_type: string
           checklist: Json
           created_at: string
@@ -3679,6 +3680,13 @@ export type Database = {
           generated_instance_id: string | null
           id: string
           is_active: boolean
+          mt_id: string | null
+          module_key: string | null
+          destination_path: string | null
+          source_type: string | null
+          source_id: string | null
+          completion_criterion: string | null
+          recurrence_series_id: string | null
           node_id: string | null
           notes: string | null
           planned_end: string | null
@@ -3695,6 +3703,7 @@ export type Database = {
           actual_end?: string | null
           actual_start?: string | null
           assigned_user_id?: string | null
+          alert_offset_minutes?: number
           block_type?: string
           checklist?: Json
           created_at?: string
@@ -3706,6 +3715,13 @@ export type Database = {
           generated_instance_id?: string | null
           id?: string
           is_active?: boolean
+          mt_id?: string | null
+          module_key?: string | null
+          destination_path?: string | null
+          source_type?: string | null
+          source_id?: string | null
+          completion_criterion?: string | null
+          recurrence_series_id?: string | null
           node_id?: string | null
           notes?: string | null
           planned_end?: string | null
@@ -3722,6 +3738,7 @@ export type Database = {
           actual_end?: string | null
           actual_start?: string | null
           assigned_user_id?: string | null
+          alert_offset_minutes?: number
           block_type?: string
           checklist?: Json
           created_at?: string
@@ -3733,6 +3750,13 @@ export type Database = {
           generated_instance_id?: string | null
           id?: string
           is_active?: boolean
+          mt_id?: string | null
+          module_key?: string | null
+          destination_path?: string | null
+          source_type?: string | null
+          source_id?: string | null
+          completion_criterion?: string | null
+          recurrence_series_id?: string | null
           node_id?: string | null
           notes?: string | null
           planned_end?: string | null

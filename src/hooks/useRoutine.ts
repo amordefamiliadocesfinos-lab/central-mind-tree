@@ -49,6 +49,14 @@ export interface RoutineBlock {
   recurrence: RecurrenceType | null;
   recurrence_parent_id: string | null;
   assigned_user_id?: string | null;
+  mt_id?: string | null;
+  module_key?: string | null;
+  destination_path?: string | null;
+  source_type?: string | null;
+  source_id?: string | null;
+  completion_criterion?: string | null;
+  recurrence_series_id?: string | null;
+  alert_offset_minutes?: number;
   created_at: string;
 }
 
@@ -322,6 +330,9 @@ export function useRoutine(options: UseRoutineOptions = {}) {
         duration: 4000,
       });
       fetchBlocks();
+      if (block.destination_path && window.location.pathname !== block.destination_path) {
+        window.location.href = block.destination_path;
+      }
     },
     [blocks, fetchBlocks, requestPermission, scheduleNotification],
   );
@@ -381,7 +392,18 @@ export function useRoutine(options: UseRoutineOptions = {}) {
       // Auto-schedule next recurrence
       if (block?.recurrence) {
         const next = getNextRecurrence(block.date, block.planned_start, block.recurrence);
-        const { error: recErr } = await supabase.from("routine_blocks").insert({
+        const seriesId = block.recurrence_series_id || block.recurrence_parent_id || block.id;
+        const duplicateQuery = supabase
+          .from("routine_blocks")
+          .select("id")
+          .eq("recurrence_series_id", seriesId)
+          .eq("date", next.date)
+          .eq("planned_start", next.time)
+          .eq("is_active", true);
+        const { data: existingOccurrence } = block.assigned_user_id
+          ? await duplicateQuery.eq("assigned_user_id", block.assigned_user_id).maybeSingle()
+          : await duplicateQuery.is("assigned_user_id", null).maybeSingle();
+        const { error: recErr } = existingOccurrence ? { error: null } : await supabase.from("routine_blocks").insert({
           date: next.date,
           title: block.title,
           block_type: block.block_type,
@@ -394,6 +416,14 @@ export function useRoutine(options: UseRoutineOptions = {}) {
           notes: block.notes,
           recurrence: block.recurrence,
           assigned_user_id: block.assigned_user_id ?? null,
+          mt_id: block.mt_id ?? null,
+          module_key: block.module_key ?? null,
+          destination_path: block.destination_path ?? null,
+          source_type: block.source_type ?? null,
+          source_id: block.source_id ?? null,
+          completion_criterion: block.completion_criterion ?? null,
+          alert_offset_minutes: block.alert_offset_minutes ?? 0,
+          recurrence_series_id: seriesId,
           recurrence_parent_id: block.recurrence_parent_id || block.id,
           status: "pendente",
         });
@@ -468,6 +498,14 @@ export function useRoutine(options: UseRoutineOptions = {}) {
         checklist: (block.checklist as any) || [],
         recurrence: block.recurrence || null,
         recurrence_parent_id: block.recurrence_parent_id || null,
+        recurrence_series_id: block.recurrence ? (block.recurrence_series_id || crypto.randomUUID()) : null,
+        mt_id: block.mt_id || null,
+        module_key: block.module_key || null,
+        destination_path: block.destination_path || null,
+        source_type: block.source_type || null,
+        source_id: block.source_id || null,
+        completion_criterion: block.completion_criterion || null,
+        alert_offset_minutes: block.alert_offset_minutes || 0,
         status: "pendente",
         assigned_user_id: block.assigned_user_id !== undefined ? block.assigned_user_id : activeUserId,
       };

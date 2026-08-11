@@ -51,7 +51,9 @@ interface DigitalVariation {
   status: string;
   idea_id: string;
   idea_title?: string;
+  additional_dates?: Array<{ date: string; time?: string; posted?: boolean }> | null;
 }
+interface ExternalCalendarEvent { id: string; date: string; title: string; type: string; time?: string | null; status?: string; path?: string; }
 
 const MONTHS = [
   "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -76,6 +78,7 @@ const DIGITAL_COLOR = "#EC4899"; // Pink for digital content
 const Calendario = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [digitalVariations, setDigitalVariations] = useState<DigitalVariation[]>([]);
+  const [externalEvents, setExternalEvents] = useState<ExternalCalendarEvent[]>([]);
   const [nodes, setNodes] = useState<Node[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -159,7 +162,7 @@ const Calendario = () => {
   }, []);
 
   const loadData = async () => {
-    const [tasksRes, nodesRes, digitalRes] = await Promise.all([
+    const [tasksRes, nodesRes, digitalRes, blocksRes, ordersRes, financeRes, campaignRes] = await Promise.all([
       supabase
         .from("tasks")
         .select("id, title, scheduled_date, status, node_id")
@@ -167,8 +170,12 @@ const Calendario = () => {
       supabase.from("nodes").select("id, title, color"),
       supabase
         .from("digital_variations")
-        .select("id, title, platform, scheduled_date, scheduled_time, status, idea_id, digital_ideas!inner(title)")
+        .select("id, title, platform, scheduled_date, scheduled_time, status, idea_id, additional_dates, digital_ideas!inner(title)")
         .not("scheduled_date", "is", null),
+      supabase.from('routine_blocks').select('id,title,date,planned_start,status,destination_path').eq('is_active', true),
+      supabase.from('orders').select('id,order_number,customer_name,due_date,status').not('due_date', 'is', null),
+      supabase.from('financial_entries').select('id,description,due_date,type,payment_date').not('due_date', 'is', null),
+      supabase.from('campaign_executions').select('id,title,planned_at,status').not('planned_at', 'is', null),
     ]);
 
     if (tasksRes.data) setTasks(tasksRes.data);
@@ -179,6 +186,13 @@ const Calendario = () => {
         idea_title: (v as any).digital_ideas?.title,
       })));
     }
+    setExternalEvents([
+      ...(blocksRes.data || []).map(b => ({ id: b.id, date: b.date, title: b.title, type: 'Rotina', time: b.planned_start, status: b.status, path: b.destination_path || '/rotina' })),
+      ...(ordersRes.data || []).map(o => ({ id: o.id, date: o.due_date!, title: `Pedido ${o.order_number || o.customer_name || ''}`, type: 'Operações', status: o.status, path: '/operacoes' })),
+      ...(financeRes.data || []).filter(f => !f.payment_date).map(f => ({ id: f.id, date: f.due_date!, title: f.description || (f.type === 'receber' ? 'Valor a receber' : 'Conta a pagar'), type: 'Financeiro', path: '/financeiro' })),
+      ...(campaignRes.data || []).map(c => ({ id: c.id, date: c.planned_at!.slice(0, 10), title: c.title, type: 'Campanha', time: c.planned_at!.slice(11, 16), status: c.status, path: '/digital' })),
+      ...((digitalRes.data || []).flatMap(v => (Array.isArray(v.additional_dates) ? v.additional_dates : []).map((extra: any, index: number) => ({ id: `${v.id}-${index}`, date: extra.date, title: v.title || 'Publicação adicional', type: 'Digital', time: extra.time || null, status: extra.posted ? 'publicado' : v.status, path: '/digital' })))),
+    ]);
     setLoading(false);
   };
 
@@ -186,8 +200,9 @@ const Calendario = () => {
     const dayTasks = tasksByDate[dateKey] || [];
     const dayMeetings = meetingsByDate[dateKey] || [];
     const dayDigital = digitalByDate[dateKey] || [];
+    const dayExternal = externalByDate[dateKey] || [];
     
-    if (dayTasks.length > 0 || dayMeetings.length > 0 || dayDigital.length > 0) {
+    if (dayTasks.length > 0 || dayMeetings.length > 0 || dayDigital.length > 0 || dayExternal.length > 0) {
       setDayTasksModalDate(dateKey);
       setDayTasksModalOpen(true);
     } else {
@@ -313,6 +328,12 @@ const Calendario = () => {
     });
     return map;
   }, [digitalVariations]);
+
+  const externalByDate = useMemo(() => {
+    const map: Record<string, ExternalCalendarEvent[]> = {};
+    externalEvents.forEach(event => { (map[event.date] ||= []).push(event); });
+    return map;
+  }, [externalEvents]);
 
   // Seasonal occurrences by date for quick lookup
   const seasonalOccurrences = useMemo(() => {
@@ -543,10 +564,12 @@ const Calendario = () => {
                     const dayTasks = tasksByDate[dateKey] || [];
                     const dayMeetings = meetingsByDate[dateKey] || [];
                     const dayDigital = digitalByDate[dateKey] || [];
+                    const dayExternal = externalByDate[dateKey] || [];
                     const daySeasonal = seasonalByDate[dateKey] || [];
                     const hasScheduledTasks = dayTasks.length > 0;
                     const hasMeetings = dayMeetings.length > 0;
                     const hasDigital = dayDigital.length > 0;
+                    const hasExternal = dayExternal.length > 0;
                     const hasSeasonal = daySeasonal.length > 0;
                     const todayHighlight = isToday(dateKey);
                     
@@ -642,8 +665,8 @@ const Calendario = () => {
                     }
                     
                     // Modo normal: mostra tarefas, reuniões e digital
-                    const hasContent = hasScheduledTasks || hasMeetings || hasDigital;
-                    const totalItems = dayTasks.length + dayMeetings.length + dayDigital.length;
+                    const hasContent = hasScheduledTasks || hasMeetings || hasDigital || hasExternal;
+                    const totalItems = dayTasks.length + dayMeetings.length + dayDigital.length + dayExternal.length;
 
                     const dominantColor = hasDigital
                       ? DIGITAL_COLOR
@@ -651,7 +674,7 @@ const Calendario = () => {
                         ? MEETING_COLOR 
                         : hasScheduledTasks
                           ? STATUS_COLORS[dayTasks[0].status] || "#6B7280"
-                          : undefined;
+                          : hasExternal ? "#6366F1" : undefined;
 
                     return (
                       <button
@@ -966,6 +989,7 @@ const Calendario = () => {
         tasks={tasksByDate[dayTasksModalDate] || []}
         meetings={meetingsByDate[dayTasksModalDate] || []}
         digitalVariations={digitalByDate[dayTasksModalDate] || []}
+        externalEvents={externalByDate[dayTasksModalDate] || []}
         nodesMap={nodesMap}
         onTaskUpdated={loadData}
         onCreateTask={() => {

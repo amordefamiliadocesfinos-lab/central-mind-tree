@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { getNextRecurrence, type RecurrenceType } from '@/hooks/useRoutine';
 import { toast } from 'sonner';
+import { useActiveUser } from '@/hooks/useActiveUser';
 
 interface ChecklistItem { id: string; text: string; done: boolean }
 
@@ -26,6 +27,15 @@ interface PendingBlock {
   node_id: string | null;
   task_id: string | null;
   template_id: string | null;
+  assigned_user_id: string | null;
+  alert_offset_minutes: number;
+  mt_id: string | null;
+  module_key: string | null;
+  destination_path: string | null;
+  source_type: string | null;
+  source_id: string | null;
+  completion_criterion: string | null;
+  recurrence_series_id: string | null;
 }
 
 const SOUND_KEY = 'pc.routine.sound.enabled';
@@ -61,6 +71,7 @@ function playBeep() {
 }
 
 export function RoutineAlertOverlay() {
+  const { activeUserId, loading: userLoading } = useActiveUser();
   const [pending, setPending] = useState<PendingBlock[]>([]);
   const [soundEnabled, setSoundEnabled] = useState<boolean>(() => {
     const v = localStorage.getItem(SOUND_KEY);
@@ -104,7 +115,8 @@ export function RoutineAlertOverlay() {
       .order('planned_start', { ascending: true });
     if (error || !data) return;
 
-    const nowHHMM = format(new Date(), 'HH:mm');
+    if (userLoading) return;
+    const now = new Date();
     const dismissed = getDismissed();
     // cleanup old dismissals (>1 day)
     const cutoff = Date.now() - 86400_000;
@@ -114,12 +126,14 @@ export function RoutineAlertOverlay() {
     });
     if (dirty) setDismissed(dismissed);
 
-    const activeUserId = localStorage.getItem('pc.activeUserId');
     const due = (data as any[]).filter(b => {
       if (!b.planned_start) return false;
-      if (b.planned_start > nowHHMM) return false;
+      const planned = new Date(`${today}T${b.planned_start}:00`);
+      const alertAt = planned.getTime() - (b.alert_offset_minutes || 0) * 60_000;
+      if (now.getTime() < alertAt) return false;
       if (b.snooze_until && b.snooze_until > nowIso) return false;
       if (activeUserId && b.assigned_user_id && b.assigned_user_id !== activeUserId) return false;
+      if (!activeUserId && b.assigned_user_id) return false;
       const dismissKey = `${b.id}:${b.planned_start}`;
       if (dismissed[dismissKey]) return false;
       return true;
@@ -140,7 +154,7 @@ export function RoutineAlertOverlay() {
         }
       });
     }
-  }, [soundEnabled, getDismissed]);
+  }, [soundEnabled, getDismissed, activeUserId, userLoading]);
 
   useEffect(() => {
     fetchPending();
@@ -172,7 +186,14 @@ export function RoutineAlertOverlay() {
 
     if (block.recurrence) {
       const next = getNextRecurrence(block.date, block.planned_start, block.recurrence);
-      await supabase.from('routine_blocks').insert({
+      const seriesId = block.recurrence_series_id || block.recurrence_parent_id || block.id;
+      let occurrenceQuery = supabase.from('routine_blocks').select('id')
+        .eq('recurrence_series_id', seriesId).eq('date', next.date).eq('planned_start', next.time).eq('is_active', true);
+      occurrenceQuery = block.assigned_user_id
+        ? occurrenceQuery.eq('assigned_user_id', block.assigned_user_id)
+        : occurrenceQuery.is('assigned_user_id', null);
+      const { data: existingOccurrence } = await occurrenceQuery.maybeSingle();
+      if (!existingOccurrence) await supabase.from('routine_blocks').insert({
         date: next.date,
         title: block.title,
         block_type: block.block_type,
@@ -185,6 +206,15 @@ export function RoutineAlertOverlay() {
         notes: block.notes,
         checklist: block.checklist.map(c => ({ ...c, done: false })) as any,
         recurrence: block.recurrence,
+        assigned_user_id: block.assigned_user_id,
+        alert_offset_minutes: block.alert_offset_minutes || 0,
+        mt_id: block.mt_id,
+        module_key: block.module_key,
+        destination_path: block.destination_path,
+        source_type: block.source_type,
+        source_id: block.source_id,
+        completion_criterion: block.completion_criterion,
+        recurrence_series_id: seriesId,
         recurrence_parent_id: block.recurrence_parent_id || block.id,
         status: 'pendente',
       });

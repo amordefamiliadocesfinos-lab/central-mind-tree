@@ -46,6 +46,15 @@ const AREAS = [
   { value: 'operacional', label: 'Operacional', icon: '🏭' },
 ];
 
+function targetForBlock(area: string, title: string) {
+  const normalized = title.toLowerCase();
+  if (/conteúdo|mídia|publica/.test(normalized)) return { module_key: 'digital', destination_path: '/digital' };
+  if (/cliente|prospec|orçamento|follow-up|whatsapp|crm/.test(normalized)) return { module_key: 'crm', destination_path: '/contatos/inbox' };
+  if (/finance|resultado|estratég/.test(normalized)) return { module_key: 'financeiro', destination_path: '/financeiro' };
+  if (area === 'operacional') return { module_key: 'operacoes', destination_path: '/operacoes' };
+  return { module_key: 'rotina', destination_path: '/rotina' };
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -110,6 +119,10 @@ export function MTPickerDialog({ open, onOpenChange, selectedDate, onApplied }: 
       checklist: b.checklist || [],
       status: 'pendente',
       assigned_user_id: activeUserId,
+      mt_id: mt.id,
+      ...targetForBlock(mt.area, b.title),
+      source_type: 'routine/mt',
+      source_id: mt.id,
     }));
     const { error } = await supabase.from('routine_blocks').insert(rows as any);
     if (error) throw error;
@@ -120,7 +133,7 @@ export function MTPickerDialog({ open, onOpenChange, selectedDate, onApplied }: 
     if (!selectedMT) return;
     setApplying(true);
     try {
-      await applyToDate(selectedMT, selectedDate, true);
+      await applyToDate(selectedMT, selectedDate, false);
       toast.success(`MT aplicada em ${format(selectedDate, "dd/MM/yyyy", { locale: ptBR })}`);
       onApplied?.();
       onOpenChange(false);
@@ -137,7 +150,7 @@ export function MTPickerDialog({ open, onOpenChange, selectedDate, onApplied }: 
     try {
       const start = startOfWeek(selectedDate, { weekStartsOn: 1 });
       for (let i = 0; i < 7; i++) {
-        await applyToDate(selectedMT, addDays(start, i), true);
+        await applyToDate(selectedMT, addDays(start, i), false);
       }
       toast.success('MT aplicada à semana inteira (Seg → Dom)');
       onApplied?.();
@@ -266,7 +279,7 @@ export function MTPickerDialog({ open, onOpenChange, selectedDate, onApplied }: 
         <div className="border-t p-3 bg-muted/30 space-y-2">
           {selectedMT && (
             <p className="text-xs text-center text-muted-foreground">
-              ⚠️ Aplicar substitui os blocos existentes do(s) dia(s).
+              A MT será combinada com os blocos e outros MTs já existentes.
             </p>
           )}
           <div className="flex gap-2">

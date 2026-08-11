@@ -39,7 +39,7 @@ export function useActiveMT() {
 
       let q = supabase
         .from('routine_blocks')
-        .select('title, notes, status')
+        .select('title, notes, status, mt_id')
         .eq('date', today);
       if (activeUserId) q = q.or(`assigned_user_id.eq.${activeUserId},assigned_user_id.is.null`);
       const { data: blocks } = await q;
@@ -54,13 +54,13 @@ export function useActiveMT() {
 
       // 1) Bloco em andamento
       const running = (blocks || []).find((b: any) => b.status === 'andamento');
-      let picked = running ? findByNotes(running.notes) : null;
+      let picked = running ? list.find((x: any) => x.id === running.mt_id) || findByNotes(running.notes) : null;
 
       // 2) MT mais frequente hoje
       if (!picked) {
         const counts = new Map<string, number>();
         (blocks || []).forEach((b: any) => {
-          const found = findByNotes(b.notes);
+          const found = list.find((x: any) => x.id === b.mt_id) || findByNotes(b.notes);
           if (found) counts.set(found.id, (counts.get(found.id) || 0) + 1);
         });
         let best: string | null = null; let bestC = 0;

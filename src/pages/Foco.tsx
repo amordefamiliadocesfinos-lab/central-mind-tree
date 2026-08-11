@@ -36,6 +36,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { AddToRoutineDialog } from '@/components/routine/AddToRoutineDialog';
 
 interface Task {
   id: string;
@@ -195,6 +196,7 @@ function QueueList({ tasks, activeTaskId, queue, setQueue, onSelect, onRemove }:
 }
 
 export default function Foco() {
+  const [routineDialogOpen, setRoutineDialogOpen] = useState(false);
   const navigate = useNavigate();
   const { activeUserId } = useActiveUser();
   const [viewMode, setViewMode] = useState<'cards' | 'spreadsheet'>(() => {
@@ -770,6 +772,7 @@ export default function Foco() {
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => void handleMoveToPending()}><Clock className="mr-2 h-4 w-4" />Devolver ao Planejamento</DropdownMenuItem>
                   <DropdownMenuItem onClick={handleOpenEdit}><ExternalLink className="mr-2 h-4 w-4" />Abrir detalhes</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setRoutineDialogOpen(true)}><CalendarCheck className="mr-2 h-4 w-4" />Reservar na Rotina</DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => void handleReset()}><RotateCcw className="mr-2 h-4 w-4" />Zerar cronômetro</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleRemoveFromQueue(activeTaskId)}>Remover do Top 3</DropdownMenuItem>
@@ -778,6 +781,10 @@ export default function Foco() {
             </div>
           )}
         </Card>
+        {activeTaskId && (() => {
+          const activeTask = tasks.find(task => task.id === activeTaskId);
+          return activeTask ? <AddToRoutineDialog open={routineDialogOpen} onOpenChange={setRoutineDialogOpen} source={{ kind: 'foco', id: activeTask.id, label: activeTask.title }} defaultTitle={activeTask.title} defaultFocus="trabalho_profundo" defaultDurationMin={50} /> : null;
+        })()}
 
         {/* Fila ativa - horizontal drag & drop */}
         {false && visibleQueue.length > 0 && (

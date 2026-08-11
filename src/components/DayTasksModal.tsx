@@ -33,6 +33,7 @@ interface DigitalVariation {
   idea_id: string;
   idea_title?: string;
 }
+interface ExternalCalendarEvent { id: string; title: string; type: string; time?: string | null; status?: string; path?: string; }
 
 interface DayTasksModalProps {
   isOpen: boolean;
@@ -41,6 +42,7 @@ interface DayTasksModalProps {
   tasks: Task[];
   meetings?: Meeting[];
   digitalVariations?: DigitalVariation[];
+  externalEvents?: ExternalCalendarEvent[];
   nodesMap: Record<string, Node>;
   onTaskUpdated: () => void;
   onCreateTask?: () => void;
@@ -82,6 +84,7 @@ export function DayTasksModal({
   tasks, 
   meetings = [],
   digitalVariations = [],
+  externalEvents = [],
   nodesMap, 
   onTaskUpdated,
   onCreateTask,
@@ -142,7 +145,7 @@ export function DayTasksModal({
   const formatTime = (time: string) => time.slice(0, 5);
 
   const pendingCount = tasks.filter(t => t.status !== "andamento" && t.status !== "concluído").length;
-  const totalItems = tasks.length + meetings.length + digitalVariations.length;
+  const totalItems = tasks.length + meetings.length + digitalVariations.length + externalEvents.length;
 
   const handleOpenDigital = () => {
     onClose();
@@ -156,6 +159,17 @@ export function DayTasksModal({
       title={`${formatDate(date)} • ${totalItems} item(s)`}
     >
       <div className="space-y-4">
+        {externalEvents.length > 0 && (
+          <div className="space-y-2">
+            <h4 className="text-sm font-medium text-muted-foreground px-1">Agenda integrada ({externalEvents.length})</h4>
+            {externalEvents.map(event => (
+              <button key={`${event.type}-${event.id}`} className="w-full text-left flex items-center justify-between p-4 rounded-xl border bg-card hover:bg-accent/50" onClick={() => event.path && navigate(event.path)}>
+                <div><div className="font-medium">{event.title}</div><div className="text-xs text-muted-foreground">{event.type}{event.time ? ` · ${event.time.slice(0, 5)}` : ''}</div></div>
+                {event.path && <ExternalLink className="h-4 w-4 text-muted-foreground" />}
+              </button>
+            ))}
+          </div>
+        )}
         {/* Meetings Section */}
         {meetings.length > 0 && (
           <div className="space-y-2">

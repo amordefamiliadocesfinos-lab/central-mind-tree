@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CalendarPlus, Loader2 } from 'lucide-react';
-import { format, addDays, addWeeks, addMonths, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { FOCUS_TYPES, RECURRENCE_OPTIONS, RecurrenceType } from '@/hooks/useRoutine';
 import { useActiveUser } from '@/hooks/useActiveUser';
@@ -41,6 +41,15 @@ const ALERT_OPTIONS = [
   { value: '30', label: '30 min antes' },
   { value: '60', label: '1h antes' },
 ];
+
+function executionTarget(kind: string) {
+  if (kind.startsWith('crm')) return { module_key: 'crm', destination_path: '/contatos/inbox' };
+  if (kind.startsWith('financial')) return { module_key: 'financeiro', destination_path: '/financeiro' };
+  if (kind.startsWith('production') || kind.startsWith('order')) return { module_key: 'operacoes', destination_path: '/operacoes' };
+  if (kind.startsWith('digital')) return { module_key: 'digital', destination_path: '/digital' };
+  if (kind === 'task' || kind === 'foco') return { module_key: 'foco', destination_path: '/foco' };
+  return { module_key: 'rotina', destination_path: '/rotina' };
+}
 
 export function AddToRoutineDialog({
   open, onOpenChange, source,
@@ -101,46 +110,19 @@ export function AddToRoutineDialog({
         notes: composedNotes,
         status: 'pendente',
         assigned_user_id: userId ?? null,
+        mt_id: mtId ?? null,
+        ...executionTarget(source.kind),
+        source_type: source.kind,
+        source_id: source.id != null ? String(source.id) : null,
         recurrence: recurrence || null,
+        recurrence_series_id: recurrence ? crypto.randomUUID() : null,
+        alert_offset_minutes: alertMin === 'none' ? 0 : parseInt(alertMin),
       };
 
       // Occurrences
-      const occurrences: { date: string }[] = [{ date }];
-      if (recurrence) {
-        const base = parseISO(`${date}T${time}:00`);
-        for (let i = 1; i <= 11; i++) {
-          let next: Date;
-          switch (recurrence) {
-            case 'daily': next = addDays(base, i); break;
-            case 'weekly': next = addWeeks(base, i); break;
-            case 'monthly': next = addMonths(base, i); break;
-            case '1h': next = new Date(base.getTime() + i * 3600 * 1000); break;
-            case '2h': next = new Date(base.getTime() + i * 2 * 3600 * 1000); break;
-            case '4h': next = new Date(base.getTime() + i * 4 * 3600 * 1000); break;
-            case '6h': next = new Date(base.getTime() + i * 6 * 3600 * 1000); break;
-            case '12h': next = new Date(base.getTime() + i * 12 * 3600 * 1000); break;
-            default: next = base;
-          }
-          occurrences.push({ date: format(next, 'yyyy-MM-dd') });
-        }
-      }
-
-      const rows = occurrences.map(o => ({ ...baseRow, date: o.date }));
-      const { error } = await supabase.from('routine_blocks').insert(rows as any);
+      const occurrences = [{ date }];
+      const { error } = await supabase.from('routine_blocks').insert({ ...baseRow, date } as any);
       if (error) throw error;
-
-      // Schedule alert(s) for the first occurrence via Notification API
-      if (alertMin !== 'none' && 'Notification' in window) {
-        try {
-          if (Notification.permission === 'default') await Notification.requestPermission();
-          const alertMs = parseISO(`${date}T${time}:00`).getTime() - Date.now() - parseInt(alertMin) * 60000;
-          if (alertMs > 0 && alertMs < 24 * 3600 * 1000 * 7) {
-            setTimeout(() => {
-              try { new Notification('⏰ Rotina', { body: `${title} — em ${alertMin === '0' ? 'agora' : alertMin + ' min'}` }); } catch {}
-            }, alertMs);
-          }
-        } catch {}
-      }
 
       toast.success(`✅ Enviado para a Rotina${occurrences.length > 1 ? ` (${occurrences.length} ocorrências)` : ''}`);
       onCreated?.();
