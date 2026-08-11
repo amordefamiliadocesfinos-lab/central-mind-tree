@@ -55,9 +55,9 @@ const NAV_ITEMS = [
   { path: "/captura", label: "Captura Central", shortLabel: "Captura", icon: Inbox },
 ] as const;
 
-const MOBILE_PRIMARY_PATHS = ["/", "/dashboard", "/foco", "/operacoes", "/rotas"] as const;
-const MOBILE_FALLBACK_PATH = "/calendario";
-const DESKTOP_PRIMARY_PATHS = ["/", "/dashboard", "/foco", "/operacoes", "/contatos", "/rotas", "/financeiro"] as const;
+const MOBILE_PRIMARY_PATHS = ["/dashboard", "/foco", "/contatos", "/operacoes", "/captura"] as const;
+const MOBILE_FALLBACK_PATH = "/financeiro";
+const DESKTOP_PRIMARY_PATHS = ["/dashboard", "/foco", "/contatos", "/operacoes", "/rotina", "/digital", "/financeiro", "/captura"] as const;
 const FOOTER_NAV_LABEL_CLASS = "text-[11px] font-medium leading-none";
 const FOOTER_MOBILE_LABEL_CLASS = "block w-full max-w-[3.75rem] overflow-hidden truncate text-center";
 

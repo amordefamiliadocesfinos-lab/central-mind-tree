@@ -8,6 +8,7 @@ import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Login from "./pages/Login";
 import { GlobalSearchBar } from "@/components/GlobalSearchBar";
 import { GlobalFooterBar } from "@/components/GlobalFooterBar";
+import { OperationalContextTracker } from "@/components/OperationalContextTracker";
 import { LightboxProvider, LightboxRoot } from "@/components/lightbox";
 import { UndoRedoProvider } from "@/contexts/UndoRedoContext";
 import { LinesModeProvider } from "@/contexts/LinesModeContext";
@@ -135,6 +136,7 @@ function AuthenticatedShell() {
         <AssistantPanel />
       </div>
       <GlobalSearchBar />
+      <OperationalContextTracker />
       <SwipeNavigationWrapper>
         <AnimatedRoutes />
       </SwipeNavigationWrapper>

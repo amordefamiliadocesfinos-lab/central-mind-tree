@@ -38,7 +38,7 @@ import { QuickFinance } from '@/components/dashboard/QuickFinance';
 import { CampaignResults } from '@/components/dashboard/CampaignResults';
 import { CompanyStatus } from '@/components/dashboard/CompanyStatus';
 import { BottleneckCard } from '@/components/dashboard/BottleneckCard';
-import { NextActionsCard } from '@/components/dashboard/NextActionsCard';
+import { OperationalStart } from '@/components/dashboard/OperationalStart';
 import { MTWorkspaceBar } from '@/components/routine/MTWorkspaceBar';
 
 
@@ -361,12 +361,15 @@ export default function Dashboard() {
         </div>
 
         {/* Área de Trabalho do MT ativo — destaca módulos prioritários do papel do momento */}
-        <MTWorkspaceBar />
+        <OperationalStart
+          focusOverdue={data.focusTasksAtrasadas}
+          ordersPending={data.ordersPending}
+          lowStock={data.lowStockCount}
+          receivableOverdue={data.receberAtrasado}
+          payableOverdue={data.pagarAtrasado}
+        />
 
         {/* Situação da Empresa - status geral em tempo real */}
-        <CompanyStatus />
-        <BottleneckCard />
-        <NextActionsCard />
 
 
         {/* Resumo do Dia - Sticky no topo */}
@@ -378,6 +381,14 @@ export default function Dashboard() {
         <DailyPriorities />
 
         {/* Performance de Hoje */}
+        <details className="rounded-lg border bg-card">
+          <summary className="cursor-pointer list-none px-4 py-3 font-medium">
+            Visão gerencial <span className="text-sm font-normal text-muted-foreground">· indicadores e módulos</span>
+          </summary>
+          <div className="space-y-4 border-t p-4">
+        <MTWorkspaceBar />
+        <CompanyStatus />
+        <BottleneckCard />
         <DailyPerformance />
 
         {/* Financeiro Rápido */}
@@ -529,8 +540,11 @@ export default function Dashboard() {
 
         </div>
 
-        {/* Shortcuts section */}
-        <Card>
+          </div>
+        </details>
+
+        {/* Atalhos redundantes permanecem disponíveis pelo rodapé */}
+        {false && <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base flex items-center gap-2">
               <Zap className="h-5 w-5 text-amber-500" />
@@ -577,7 +591,7 @@ export default function Dashboard() {
               </Link>
             </div>
           </CardContent>
-        </Card>
+        </Card>}
       </div>
     </div>
   );
