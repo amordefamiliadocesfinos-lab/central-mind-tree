@@ -183,8 +183,9 @@ const Calendario = () => {
     if (digitalRes.data) {
       setDigitalVariations(digitalRes.data.map(v => ({
         ...v,
+        additional_dates: ((v as any).additional_dates ?? []) as DigitalVariation["additional_dates"],
         idea_title: (v as any).digital_ideas?.title,
-      })));
+      })) as DigitalVariation[]);
     }
     setExternalEvents([
       ...(blocksRes.data || []).map(b => ({ id: b.id, date: b.date, title: b.title, type: 'Rotina', time: b.planned_start, status: b.status, path: b.destination_path || '/rotina' })),
