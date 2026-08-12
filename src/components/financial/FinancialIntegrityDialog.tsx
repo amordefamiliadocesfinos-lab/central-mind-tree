@@ -8,10 +8,14 @@ import { AlertTriangle, CheckCircle2, Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { SALES_CHANNELS, channelNeedsAccount } from '@/lib/salesChannels';
 
 interface Props { open: boolean; onOpenChange: (open: boolean) => void; onChanged?: () => void }
-interface OrderRow { id: string; order_number: string | null; customer_name: string | null; contact_id: string | null; total_value: number | null; due_date: string | null; financial_due_date?: string | null }
-interface EntryRow { id: string; order_id: string | null; value: number; value_paid: number }
+interface OrderRow { id: string; order_number: string | null; customer_name: string | null; contact_id: string | null; total_value: number | null; due_date: string | null; financial_due_date?: string | null; channel?: string | null; marketplace_account?: string | null }
+interface EntryRow { id: string; order_id: string | null; value: number; value_paid: number; description?: string; payment_date?: string | null; sales_channel?: string | null; marketplace_account?: string | null }
 
 export function FinancialIntegrityDialog({ open, onOpenChange, onChanged }: Props) {
   const [orders, setOrders] = useState<OrderRow[]>([]);
@@ -20,23 +24,31 @@ export function FinancialIntegrityDialog({ open, onOpenChange, onChanged }: Prop
   const [shopeeContacts, setShopeeContacts] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [fixing, setFixing] = useState<string | null>(null);
+  const [links, setLinks] = useState<any[]>([]);
+  const [linkingOrder, setLinkingOrder] = useState<OrderRow | null>(null);
+  const [entryId, setEntryId] = useState('');
+  const [channel, setChannel] = useState('whatsapp');
+  const [channelAccount, setChannelAccount] = useState('');
 
   const load = async () => {
     setLoading(true);
-    const [ordersRes, entriesRes, categoriesRes, contactsRes] = await Promise.all([
-      supabase.from('orders').select('id,order_number,customer_name,contact_id,total_value,due_date,financial_due_date').is('deleted_at', null),
-      supabase.from('financial_entries').select('id,order_id,value,value_paid').eq('type', 'receber').not('order_id', 'is', null),
+    const [ordersRes, entriesRes, linksRes, categoriesRes, contactsRes] = await Promise.all([
+      supabase.from('orders').select('id,order_number,customer_name,contact_id,total_value,due_date,financial_due_date,channel,marketplace_account').is('deleted_at', null),
+      supabase.from('financial_entries').select('id,order_id,value,value_paid,description,payment_date,sales_channel,marketplace_account').eq('type', 'receber'),
+      (supabase.from as any)('financial_order_links').select('order_id,financial_entry_id,allocated_value'),
       supabase.from('financial_categories').select('id,name,type,is_active').ilike('name', '%shopee%'),
       supabase.from('contacts').select('id,name,type,is_active').ilike('name', '%shopee%'),
     ]);
     setOrders((ordersRes.data as any) || []); setEntries((entriesRes.data as any) || []);
+    setLinks((linksRes.data as any) || []);
     setShopeeCategories(categoriesRes.data || []); setShopeeContacts(contactsRes.data || []);
     setLoading(false);
   };
   useEffect(() => { if (open) load(); }, [open]);
 
   const byOrder = useMemo(() => new Map(entries.map(e => [e.order_id, e])), [entries]);
-  const missing = orders.filter(o => Number(o.total_value) > 0 && !byOrder.has(o.id));
+  const linkedOrders = useMemo(() => new Set(links.map(link => link.order_id)), [links]);
+  const missing = orders.filter(o => Number(o.total_value) > 0 && !byOrder.has(o.id) && !linkedOrders.has(o.id));
   const divergent = orders.filter(o => {
     const e = byOrder.get(o.id); return e && Math.abs(Number(o.total_value) - Number(e.value)) > .01;
   });
@@ -59,6 +71,32 @@ export function FinancialIntegrityDialog({ open, onOpenChange, onChanged }: Prop
     finally { setFixing(null); }
   };
 
+  const availableEntries = useMemo(() => entries
+    .filter(entry => !entry.order_id)
+    .map(entry => ({ ...entry, available: Number(entry.value) - links.filter(link => link.financial_entry_id === entry.id).reduce((sum, link) => sum + Number(link.allocated_value), 0) }))
+    .filter(entry => entry.available > 0.009)
+    .sort((a, b) => Math.abs(a.available - Number(linkingOrder?.total_value || 0)) - Math.abs(b.available - Number(linkingOrder?.total_value || 0))), [entries, links, linkingOrder]);
+
+  const openLink = (order: OrderRow) => {
+    setLinkingOrder(order); setEntryId('');
+    setChannel(order.channel === 'marketplace' ? 'shopee' : order.channel || 'whatsapp');
+    setChannelAccount(order.marketplace_account || '');
+  };
+
+  const linkExisting = async () => {
+    if (!linkingOrder || !entryId) return toast.error('Selecione a entrada bancária.');
+    if (channelNeedsAccount(channel) && !channelAccount.trim()) return toast.error('Informe qual conta/loja recebeu a venda.');
+    setFixing(linkingOrder.id);
+    const { error } = await (supabase.rpc as any)('link_order_to_existing_financial_entry', {
+      p_order_id: linkingOrder.id, p_entry_id: entryId, p_allocated_value: Number(linkingOrder.total_value),
+      p_sales_channel: channel, p_marketplace_account: channelAccount.trim() || null,
+    });
+    setFixing(null);
+    if (error) return toast.error(error.message);
+    toast.success('Pedido vinculado à entrada existente sem duplicar a receita.');
+    setLinkingOrder(null); await load(); onChanged?.();
+  };
+
   return <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent className="max-w-4xl max-h-[90vh]">
       <DialogHeader><DialogTitle>Revisão de integração financeira</DialogTitle></DialogHeader>
@@ -73,7 +111,7 @@ export function FinancialIntegrityDialog({ open, onOpenChange, onChanged }: Prop
           <ScrollArea className="h-[420px] rounded-md border">
             {loading ? <div className="p-8 text-center"><Loader2 className="mx-auto animate-spin" /></div> : missing.map(order => <div key={order.id} className="flex items-center gap-3 border-b p-3">
               <AlertTriangle className="h-4 w-4 text-amber-500" /><div className="min-w-0 flex-1"><div className="font-medium">{order.order_number} · {order.customer_name}</div><div className="text-xs text-muted-foreground">{formatCurrency(Number(order.total_value))} · sem conta a receber vinculada</div></div>
-              <Button size="sm" variant="outline" disabled={fixing === order.id} onClick={() => createReceivable(order)}>{fixing === order.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Gerar a receber'}</Button>
+              <div className="flex gap-2"><Button size="sm" onClick={() => openLink(order)}>Vincular entrada</Button><Button size="sm" variant="outline" disabled={fixing === order.id} onClick={() => createReceivable(order)}>{fixing === order.id ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Gerar a receber'}</Button></div>
             </div>)}
             {!loading && !missing.length && <div className="p-8 text-center text-sm text-muted-foreground"><CheckCircle2 className="mx-auto mb-2 text-emerald-500" />Todos os pedidos com valor possuem financeiro.</div>}
           </ScrollArea>
@@ -85,6 +123,15 @@ export function FinancialIntegrityDialog({ open, onOpenChange, onChanged }: Prop
           <p className="text-xs text-muted-foreground">Esta tela não apaga o histórico. A consolidação será feita depois, com substituição dos vínculos e confirmação do usuário.</p>
         </TabsContent>
       </Tabs>
+      <Dialog open={!!linkingOrder} onOpenChange={open => !open && setLinkingOrder(null)}>
+        <DialogContent className="max-w-xl"><DialogHeader><DialogTitle>Vincular recebimento existente</DialogTitle></DialogHeader>
+          <div className="rounded-md bg-muted p-3 text-sm"><strong>{linkingOrder?.order_number}</strong> · {formatCurrency(Number(linkingOrder?.total_value || 0))}<br/><span className="text-muted-foreground">Não cria outra receita. Apenas relaciona o pedido à entrada importada.</span></div>
+          <div className="space-y-2"><Label>Entrada bancária</Label><Select value={entryId} onValueChange={setEntryId}><SelectTrigger><SelectValue placeholder="Selecione pela descrição e valor" /></SelectTrigger><SelectContent>{availableEntries.map(entry => <SelectItem key={entry.id} value={entry.id}>{entry.description} · disponível {formatCurrency(entry.available)}</SelectItem>)}</SelectContent></Select></div>
+          <div className="grid grid-cols-2 gap-3"><div className="space-y-2"><Label>Canal</Label><Select value={channel} onValueChange={setChannel}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{SALES_CHANNELS.map(item => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent></Select></div>
+          <div className="space-y-2"><Label>Conta do canal</Label><Input value={channelAccount} onChange={e => setChannelAccount(e.target.value)} placeholder="Ex.: Shopee Viviane" /></div></div>
+          <div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setLinkingOrder(null)}>Cancelar</Button><Button onClick={linkExisting} disabled={!!fixing}>{fixing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}Confirmar vínculo</Button></div>
+        </DialogContent>
+      </Dialog>
     </DialogContent>
   </Dialog>;
 }

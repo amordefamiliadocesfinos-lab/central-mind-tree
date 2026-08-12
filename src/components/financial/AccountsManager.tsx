@@ -28,6 +28,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { ContactFormDialog } from './ContactFormDialog';
 import { useContacts } from '@/hooks/useContacts';
+import { SALES_CHANNELS, salesChannelLabel } from '@/lib/salesChannels';
 
 interface AccountsManagerProps {
   accounts: FinancialAccount[];
@@ -52,6 +53,8 @@ interface MovementWithDetails {
     category_id: string | null;
     contact_id: string | null;
     is_conciliated: boolean;
+    sales_channel?: string | null;
+    marketplace_account?: string | null;
     category?: { id: string; name: string; color: string } | null;
     contact?: { id: string; name: string } | null;
   };
@@ -114,6 +117,8 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
     type: 'pagar' as 'pagar' | 'receber',
     account_id: '',
     contact_id: '',
+    sales_channel: '',
+    marketplace_account: '',
   });
 
 
@@ -121,6 +126,7 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [situationFilter, setSituationFilter] = useState('all');
   const [conciliationFilter, setConciliationFilter] = useState('all');
+  const [channelFilter, setChannelFilter] = useState('all');
   const [categories, setCategories] = useState<{ id: string; name: string; type: string }[]>([]);
 
   // Period picker (controls the global period via onPeriodChange)
@@ -204,6 +210,8 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
     contact_id: '',
     contact_name: '',
     notes: '',
+    sales_channel: '',
+    marketplace_account: '',
   });
   
   const [showFiltersSidebar, setShowFiltersSidebar] = useState(true);
@@ -217,7 +225,7 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
       .select(`
         *,
         entry:financial_entries(
-          id, type, description, category_id, contact_id, is_conciliated,
+          id, type, description, category_id, contact_id, is_conciliated, sales_channel, marketplace_account,
           category:financial_categories(id, name, color),
           contact:contacts(id, name)
         ),
@@ -237,7 +245,7 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
     const { data, error } = await query;
 
     if (!error && data) {
-      setMovements(data as MovementWithDetails[]);
+      setMovements(data as unknown as MovementWithDetails[]);
     }
     setLoading(false);
   };
@@ -293,6 +301,7 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
     if (categoryFilter !== 'all') {
       filtered = filtered.filter(m => m.entry?.category_id === categoryFilter);
     }
+    if (channelFilter !== 'all') filtered = filtered.filter(m => m.entry?.sales_channel === channelFilter);
 
     // Filter by conciliation
     if (conciliationFilter === 'conciliado') {
@@ -302,7 +311,7 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
     }
 
     return filtered;
-  }, [movements, selectedAccount, activeTab, searchQuery, categoryFilter, conciliationFilter]);
+  }, [movements, selectedAccount, activeTab, searchQuery, categoryFilter, channelFilter, conciliationFilter]);
 
   // Toggle movement selection
   const toggleMovementSelect = (id: string) => {
@@ -611,6 +620,7 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
 
   const clearFilters = () => {
     setCategoryFilter('all');
+    setChannelFilter('all');
     setSituationFilter('all');
     setConciliationFilter('all');
     setSearchQuery('');
@@ -628,6 +638,8 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
       contact_id: '',
       contact_name: '',
       notes: '',
+      sales_channel: '',
+      marketplace_account: '',
     });
     setEntryDialogOpen(true);
   };
@@ -652,6 +664,8 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
         category_id: entryForm.category_id || null,
         contact_id: entryForm.contact_id || null,
         notes: entryForm.notes || null,
+        sales_channel: entryForm.sales_channel || null,
+        marketplace_account: entryForm.marketplace_account || null,
       })
       .select()
       .single();
@@ -699,6 +713,8 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
       type: (movement.entry?.type === 'receber' ? 'receber' : 'pagar'),
       account_id: movement.account_id || '',
       contact_id: movement.entry?.contact_id || '',
+      sales_channel: movement.entry?.sales_channel || '',
+      marketplace_account: movement.entry?.marketplace_account || '',
     });
     setEditMovementDialogOpen(true);
   };
@@ -725,6 +741,8 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
         type: editMovementForm.type,
         due_date: editMovementForm.movement_date,
         payment_date: editMovementForm.movement_date,
+        sales_channel: editMovementForm.sales_channel || null,
+        marketplace_account: editMovementForm.marketplace_account || null,
       })
       .eq('id', editingMovement.entry_id);
 
@@ -881,6 +899,14 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
                       <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
                     ))}
                   </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-xs">Canal de venda</Label>
+                <Select value={channelFilter} onValueChange={setChannelFilter}>
+                  <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent><SelectItem value="all">Todos os canais</SelectItem>{SALES_CHANNELS.map(item => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
 
@@ -1137,6 +1163,7 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
                       <TableHead>Categoria</TableHead>
                       <TableHead>Histórico</TableHead>
                       <TableHead>Cliente/Fornecedor</TableHead>
+                      <TableHead>Canal / loja</TableHead>
                       <TableHead>Conta</TableHead>
                       <TableHead className="text-right">Valor</TableHead>
                       <TableHead className="w-10"></TableHead>
@@ -1179,6 +1206,7 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
                           <TableCell>
                             <span className="text-sm">{mov.entry?.contact?.name || '-'}</span>
                           </TableCell>
+                          <TableCell><div className="text-sm">{salesChannelLabel(mov.entry?.sales_channel)}</div><div className="text-xs text-muted-foreground">{mov.entry?.marketplace_account || ''}</div></TableCell>
                           <TableCell>
                             <Badge variant="outline" className="text-xs">
                               {mov.account?.name || '-'}
@@ -1840,6 +1868,11 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
               </div>
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2"><Label>Canal de venda</Label><Select value={entryForm.sales_channel || 'none'} onValueChange={v => setEntryForm({ ...entryForm, sales_channel: v === 'none' ? '' : v })}><SelectTrigger><SelectValue placeholder="Não informado" /></SelectTrigger><SelectContent><SelectItem value="none">Não se aplica</SelectItem>{SALES_CHANNELS.map(item => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent></Select></div>
+              <div className="space-y-2"><Label>Conta do canal</Label><Input value={entryForm.marketplace_account} onChange={e => setEntryForm({ ...entryForm, marketplace_account: e.target.value })} placeholder="Ex.: Shopee Viviane" /></div>
+            </div>
+
             {/* Histórico */}
             <div className="space-y-2">
               <Label>Histórico *</Label>
@@ -1983,6 +2016,8 @@ export function AccountsManager({ accounts, onSave, startDate, endDate, onPeriod
                 </Select>
               </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-4"><div className="space-y-2"><Label>Canal de venda</Label><Select value={editMovementForm.sales_channel || 'none'} onValueChange={v => setEditMovementForm({ ...editMovementForm, sales_channel: v === 'none' ? '' : v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Não se aplica</SelectItem>{SALES_CHANNELS.map(item => <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>)}</SelectContent></Select></div><div className="space-y-2"><Label>Conta do canal</Label><Input value={editMovementForm.marketplace_account} onChange={e => setEditMovementForm({ ...editMovementForm, marketplace_account: e.target.value })} /></div></div>
 
             <div className="space-y-2">
               <Label>Categoria</Label>
