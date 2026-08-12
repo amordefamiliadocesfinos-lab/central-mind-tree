@@ -21,6 +21,8 @@ import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, LayoutDashboard, TrendingDown, TrendingUp, Wallet, Tag } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SALES_CHANNELS } from '@/lib/salesChannels';
 import { UncategorizedReviewDialog } from '@/components/financial/UncategorizedReviewDialog';
 import { FinancialIntegrityDialog } from '@/components/financial/FinancialIntegrityDialog';
 import { MarketplaceSettlementDialog } from '@/components/financial/MarketplaceSettlementDialog';
@@ -66,6 +68,12 @@ export default function Financeiro() {
     setFilters(newFilters);
     fetchEntries(newFilters);
   };
+
+  const applyGlobalFilter = (updates: Partial<typeof filters>) => {
+    const next = { ...filters, ...updates };
+    setFilters(next); fetchEntries(next);
+  };
+  const channelAccounts = Array.from(new Set(entries.map(e => e.marketplace_account).filter(Boolean))) as string[];
 
   if (isMobile) {
     return (
@@ -133,6 +141,9 @@ export default function Financeiro() {
           >
             Este mês
           </Button>
+          <Select value={filters.dateBasis || 'due_date'} onValueChange={v => applyGlobalFilter({ dateBasis: v as any })}><SelectTrigger className="w-[190px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="due_date">Por vencimento</SelectItem><SelectItem value="competence_date">Por competência</SelectItem><SelectItem value="payment_date">Por caixa realizado</SelectItem></SelectContent></Select>
+          <Select value={filters.salesChannel || 'all'} onValueChange={v => applyGlobalFilter({ salesChannel: v === 'all' ? undefined : v, marketplaceAccount: undefined })}><SelectTrigger className="w-[190px]"><SelectValue placeholder="Todos os canais" /></SelectTrigger><SelectContent><SelectItem value="all">Todos os canais</SelectItem>{SALES_CHANNELS.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent></Select>
+          <Select value={filters.marketplaceAccount || 'all'} onValueChange={v => applyGlobalFilter({ marketplaceAccount: v === 'all' ? undefined : v })}><SelectTrigger className="w-[190px]"><SelectValue placeholder="Todas as lojas" /></SelectTrigger><SelectContent><SelectItem value="all">Todas as contas do canal</SelectItem>{channelAccounts.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent></Select>
 
           <Button variant="outline" size="sm" onClick={() => setIntegrityOpen(true)} className="ml-auto">Revisar integrações</Button>
           <Button variant="outline" size="sm" onClick={() => setSettlementOpen(true)}>Conciliar repasse</Button>
@@ -211,7 +222,7 @@ export default function Financeiro() {
           )}
 
           <TabsContent value="dashboard">
-            <FinancialDashboard entries={entries} accounts={accounts} summary={getDashboardSummary()} />
+            <FinancialDashboard entries={entries} accounts={accounts} summary={getDashboardSummary()} filters={filters} />
           </TabsContent>
 
 

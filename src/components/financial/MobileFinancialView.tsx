@@ -25,6 +25,7 @@ import { PaymentDialog } from './PaymentDialog';
 import {
   FinancialDashboard, AccountsManager, CategoriesManager, ContactsManager, InvoicesManager,
 } from './index';
+import { SALES_CHANNELS, salesChannelLabel } from '@/lib/salesChannels';
 
 interface Props {
   entries: FinancialEntry[];
@@ -67,6 +68,8 @@ export function MobileFinancialView({
   const [subSection, setSubSection] = useState<SubSection | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<EntryStatus | 'all'>('all');
+  const [channelFilter, setChannelFilter] = useState('all');
+  const [channelAccountFilter, setChannelAccountFilter] = useState('all');
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<FinancialEntry | null>(null);
   const [paymentEntry, setPaymentEntry] = useState<FinancialEntry | null>(null);
@@ -81,6 +84,7 @@ export function MobileFinancialView({
     category_id: '',
     account_id: '',
     notes: '',
+    sales_channel: '', marketplace_account: '',
   });
 
   const resetForm = () => {
@@ -92,6 +96,7 @@ export function MobileFinancialView({
       category_id: '',
       account_id: '',
       notes: '',
+      sales_channel: '', marketplace_account: '',
     });
     setEditing(null);
   };
@@ -113,6 +118,7 @@ export function MobileFinancialView({
       category_id: entry.category_id || '',
       account_id: entry.account_id || '',
       notes: entry.notes || '',
+      sales_channel: entry.sales_channel || '', marketplace_account: entry.marketplace_account || '',
     });
     setFormOpen(true);
   };
@@ -130,6 +136,7 @@ export function MobileFinancialView({
       category_id: form.category_id || null,
       account_id: form.account_id || null,
       notes: form.notes || null,
+      sales_channel: form.sales_channel || null, marketplace_account: form.marketplace_account || null,
     };
     if (editing) {
       await onUpdateEntry(editing.id, payload);
@@ -146,6 +153,8 @@ export function MobileFinancialView({
     if (section === 'receber') list = list.filter(e => e.type === 'receber');
     if (section === 'pagar') list = list.filter(e => e.type === 'pagar');
     if (statusFilter !== 'all') list = list.filter(e => getEntryStatus(e) === statusFilter);
+    if (channelFilter !== 'all') list = list.filter(e => e.sales_channel === channelFilter);
+    if (channelAccountFilter !== 'all') list = list.filter(e => e.marketplace_account === channelAccountFilter);
     if (search.trim()) {
       const q = search.toLowerCase();
       list = list.filter(e =>
@@ -155,7 +164,8 @@ export function MobileFinancialView({
       );
     }
     return [...list].sort((a, b) => (a.due_date < b.due_date ? -1 : 1));
-  }, [entries, section, statusFilter, search]);
+  }, [entries, section, statusFilter, channelFilter, channelAccountFilter, search]);
+  const channelAccounts = Array.from(new Set(entries.map(e => e.marketplace_account).filter(Boolean))) as string[];
 
   // Totals
   const totals = useMemo(() => {
@@ -313,6 +323,7 @@ export function MobileFinancialView({
                   </button>
                 ))}
               </div>
+              <div className="grid grid-cols-2 gap-2"><Select value={channelFilter} onValueChange={setChannelFilter}><SelectTrigger className="h-10"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos os canais</SelectItem>{SALES_CHANNELS.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent></Select><Select value={channelAccountFilter} onValueChange={setChannelAccountFilter}><SelectTrigger className="h-10"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todas as lojas</SelectItem>{channelAccounts.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent></Select></div>
             </div>
           )}
 
@@ -455,6 +466,8 @@ export function MobileFinancialView({
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="grid grid-cols-2 gap-2"><div className="space-y-1.5"><Label className="text-xs">Canal</Label><Select value={form.sales_channel || 'none'} onValueChange={v => setForm(f => ({ ...f, sales_channel: v === 'none' ? '' : v }))}><SelectTrigger className="h-11"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="none">Não se aplica</SelectItem>{SALES_CHANNELS.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent></Select></div><div className="space-y-1.5"><Label className="text-xs">Conta do canal</Label><Input className="h-11" value={form.marketplace_account} onChange={e => setForm(f => ({ ...f, marketplace_account: e.target.value }))} placeholder="Ex.: Shopee Viviane" /></div></div>
 
             <div className="space-y-1.5">
               <Label className="text-xs">Observações</Label>
@@ -627,6 +640,7 @@ function EntryCard({
           {entry.contact?.name && (
             <div className="text-xs text-muted-foreground truncate">{entry.contact.name}</div>
           )}
+          {(entry.sales_channel || entry.marketplace_account) && <div className="text-[11px] text-muted-foreground">{salesChannelLabel(entry.sales_channel)}{entry.marketplace_account ? ` · ${entry.marketplace_account}` : ''}</div>}
           <div className={cn(
             'text-lg font-bold tabular-nums mt-1',
             isReceber ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400',

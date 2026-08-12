@@ -28,6 +28,7 @@ import { AdvancedPaymentDialog } from './AdvancedPaymentDialog';
 import { AddToRoutineDialog } from '@/components/routine/AddToRoutineDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { FinancialEntryForm } from './FinancialEntryForm';
+import { SALES_CHANNELS } from '@/lib/salesChannels';
 
 interface FinancialEntriesListProps {
   entries: FinancialEntry[];
@@ -89,6 +90,8 @@ export function FinancialEntriesList({
   const [showFilters, setShowFilters] = useState(!isMobile);
   const [selectedAccount, setSelectedAccount] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [channelFilter, setChannelFilter] = useState<string>('all');
+  const [channelAccountFilter, setChannelAccountFilter] = useState<string>('all');
   const [formTab, setFormTab] = useState('pagamento');
   
   // Period picker state
@@ -196,9 +199,11 @@ export function FinancialEntriesList({
     if (selectedAccount !== 'all') {
       filtered = filtered.filter(e => e.account_id === selectedAccount);
     }
+    if (channelFilter !== 'all') filtered = filtered.filter(e => e.sales_channel === channelFilter);
+    if (channelAccountFilter !== 'all') filtered = filtered.filter(e => e.marketplace_account === channelAccountFilter);
 
     return filtered;
-  }, [typeEntries, statusFilter, searchQuery, categoryFilter, selectedAccount, periodStart, periodEnd]);
+  }, [typeEntries, statusFilter, searchQuery, categoryFilter, selectedAccount, channelFilter, channelAccountFilter, periodStart, periodEnd]);
 
   // Summary
   const summary = useMemo(() => {
@@ -315,6 +320,7 @@ export function FinancialEntriesList({
     onStatusFilterChange('all');
     setCategoryFilter('all');
     setSelectedAccount('all');
+    setChannelFilter('all'); setChannelAccountFilter('all');
     onSearchChange('');
   };
 
@@ -326,6 +332,7 @@ export function FinancialEntriesList({
   };
 
   const filteredCategories = categories.filter(c => c.type === type || c.type === 'ambos');
+  const channelAccounts = Array.from(new Set(typeEntries.map(e => e.marketplace_account).filter(Boolean))) as string[];
 
   return (
     <div className="space-y-4">
@@ -407,6 +414,8 @@ export function FinancialEntriesList({
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-1"><Label className="text-xs">Canal de venda</Label><Select value={channelFilter} onValueChange={setChannelFilter}><SelectTrigger className="h-9"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todos os canais</SelectItem>{SALES_CHANNELS.map(c => <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>)}</SelectContent></Select></div>
+              <div className="space-y-1"><Label className="text-xs">Conta do canal</Label><Select value={channelAccountFilter} onValueChange={setChannelAccountFilter}><SelectTrigger className="h-9"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">Todas as lojas</SelectItem>{channelAccounts.map(a => <SelectItem key={a} value={a}>{a}</SelectItem>)}</SelectContent></Select></div>
 
               <div className="space-y-1">
                 <Label className="text-xs">Forma de pagamento</Label>
