@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -13,6 +13,8 @@ import {
   BarChart3, PieChart as PieIcon, Search, CheckSquare, Square,
 } from 'lucide-react';
 import { useFinancial, FinancialSummary, FinancialEntry, getEntryStatus } from '@/hooks/useFinancial';
+import { salesChannelLabel } from '@/lib/salesChannels';
+import { supabase } from '@/integrations/supabase/client';
 import { format, parseISO } from 'date-fns';
 import {
   ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend,
@@ -101,7 +103,7 @@ function TypeSummary({ title, summary, type }: { title: string; summary: Financi
 }
 
 
-type GroupBy = 'category' | 'contact' | 'account' | 'type' | 'status';
+type GroupBy = 'category' | 'contact' | 'account' | 'channel' | 'channel_account' | 'type' | 'status';
 type ChartKind = 'pie' | 'bar';
 type ValueMode = 'value' | 'value_paid' | 'value_open';
 
@@ -128,6 +130,8 @@ function InteractiveBreakdown({ entries }: { entries: FinancialEntry[] }) {
         e.description?.toLowerCase().includes(s) ||
         e.category?.name?.toLowerCase().includes(s) ||
         e.contact?.name?.toLowerCase().includes(s)
+        || e.sales_channel?.toLowerCase().includes(s)
+        || e.marketplace_account?.toLowerCase().includes(s)
       );
     });
   }, [entries, search, typeFilter]);
@@ -148,6 +152,8 @@ function InteractiveBreakdown({ entries }: { entries: FinancialEntry[] }) {
       case 'category': return e.category?.name || 'Sem categoria';
       case 'contact': return e.contact?.name || 'Sem contato';
       case 'account': return e.account?.name || 'Sem conta';
+      case 'channel': return salesChannelLabel(e.sales_channel);
+      case 'channel_account': return e.marketplace_account || 'Sem conta do canal';
       case 'type': return e.type === 'pagar' ? 'A Pagar' : 'A Receber';
       case 'status': return getEntryStatus(e);
     }
@@ -233,6 +239,8 @@ function InteractiveBreakdown({ entries }: { entries: FinancialEntry[] }) {
               <TabsTrigger value="category">Categoria</TabsTrigger>
               <TabsTrigger value="contact">Contato</TabsTrigger>
               <TabsTrigger value="account">Conta</TabsTrigger>
+              <TabsTrigger value="channel">Canal</TabsTrigger>
+              <TabsTrigger value="channel_account">Loja</TabsTrigger>
               <TabsTrigger value="type">Tipo</TabsTrigger>
               <TabsTrigger value="status">Status</TabsTrigger>
             </TabsList>
@@ -334,6 +342,8 @@ function InteractiveBreakdown({ entries }: { entries: FinancialEntry[] }) {
                             <span>{format(parseISO(e.due_date), 'dd/MM/yyyy')}</span>
                             {e.category?.name && <span>· {e.category.name}</span>}
                             {e.contact?.name && <span>· {e.contact.name}</span>}
+                            {e.sales_channel && <span>· {salesChannelLabel(e.sales_channel)}</span>}
+                            {e.marketplace_account && <span>· {e.marketplace_account}</span>}
                             <span>· {status}</span>
                           </div>
                         </div>
@@ -385,6 +395,7 @@ interface FinancialDashboardProps {
   entries?: FinancialEntry[];
   accounts?: ReturnType<typeof useFinancial>['accounts'];
   summary?: ReturnType<ReturnType<typeof useFinancial>['getDashboardSummary']>;
+  filters?: ReturnType<typeof useFinancial>['filters'];
 }
 
 export function FinancialDashboard(props: FinancialDashboardProps = {}) {
@@ -392,6 +403,23 @@ export function FinancialDashboard(props: FinancialDashboardProps = {}) {
   const entries = props.entries ?? hook.entries;
   const accounts = props.accounts ?? hook.accounts;
   const summary = props.summary ?? hook.getDashboardSummary();
+  const [settlementTotals, setSettlementTotals] = useState({ gross: 0, fees: 0, net: 0 });
+  const sales = entries.filter(e => e.type === 'receber');
+  const withoutChannel = sales.filter(e => !e.sales_channel).length;
+  const marketplace = sales.filter(e => ['shopee', 'mercado_livre', 'marketplace', 'ecommerce'].includes(e.sales_channel || ''));
+  const marketplaceGross = marketplace.reduce((sum, e) => sum + Number(e.value || 0), 0);
+  useEffect(() => {
+    if (props.filters?.salesChannel && !['shopee', 'mercado_livre', 'marketplace', 'ecommerce'].includes(props.filters.salesChannel)) {
+      setSettlementTotals({ gross: 0, fees: 0, net: 0 }); return;
+    }
+    let query = supabase.from('marketplace_settlements').select('gross_value,fee_value,net_value,settlement_date,marketplace,marketplace_account').eq('status', 'conciliado');
+    if (props.filters?.startDate) query = query.gte('settlement_date', format(props.filters.startDate, 'yyyy-MM-dd'));
+    if (props.filters?.endDate) query = query.lte('settlement_date', format(props.filters.endDate, 'yyyy-MM-dd'));
+    if (props.filters?.salesChannel === 'shopee') query = query.ilike('marketplace', '%shopee%');
+    if (props.filters?.salesChannel === 'mercado_livre') query = query.ilike('marketplace', '%mercado%');
+    if (props.filters?.marketplaceAccount) query = query.eq('marketplace_account', props.filters.marketplaceAccount);
+    query.then(({ data }) => setSettlementTotals((data || []).reduce((acc, row) => ({ gross: acc.gross + Number(row.gross_value), fees: acc.fees + Number(row.fee_value), net: acc.net + Number(row.net_value) }), { gross: 0, fees: 0, net: 0 })));
+  }, [props.filters?.startDate, props.filters?.endDate, props.filters?.salesChannel, props.filters?.marketplaceAccount]);
 
 
   return (
@@ -404,6 +432,12 @@ export function FinancialDashboard(props: FinancialDashboardProps = {}) {
         <SummaryCard title="Saldo do Período" value={summary.saldo}
           icon={<Wallet />} variant={summary.saldo >= 0 ? 'success' : 'danger'} />
       </div>
+      <div className="grid gap-2 grid-cols-3">
+        <SummaryCard title="Marketplace bruto" value={settlementTotals.gross || marketplaceGross} icon={<TrendingUp />} />
+        <SummaryCard title="Taxas de marketplace" value={settlementTotals.fees} icon={<TrendingDown />} variant="danger" />
+        <SummaryCard title="Marketplace líquido" value={settlementTotals.net} icon={<CheckCircle />} variant="success" />
+      </div>
+      <div className={`rounded-md border px-3 py-2 text-xs ${withoutChannel ? 'border-amber-400 bg-amber-500/10' : 'text-muted-foreground'}`}>{withoutChannel ? `${withoutChannel} venda(s) sem canal precisam de classificação.` : 'Todas as vendas do período possuem canal informado.'}</div>
 
       <div className="grid gap-2 md:grid-cols-2">
         <TypeSummary title="Contas a Receber" summary={summary.receber} type="receber" />

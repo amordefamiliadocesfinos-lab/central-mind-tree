@@ -92,6 +92,7 @@ export interface FinancialFilters {
   accountId?: string;
   salesChannel?: string;
   marketplaceAccount?: string;
+  dateBasis?: 'due_date' | 'competence_date' | 'payment_date';
   search?: string;
 }
 
@@ -165,12 +166,13 @@ export function useFinancial() {
       query = query.eq('type', activeFilters.type);
     }
 
+    const dateColumn = activeFilters.dateBasis || 'due_date';
     if (activeFilters.startDate) {
-      query = query.gte('due_date', format(activeFilters.startDate, 'yyyy-MM-dd'));
+      query = query.gte(dateColumn, format(activeFilters.startDate, 'yyyy-MM-dd'));
     }
 
     if (activeFilters.endDate) {
-      query = query.lte('due_date', format(activeFilters.endDate, 'yyyy-MM-dd'));
+      query = query.lte(dateColumn, format(activeFilters.endDate, 'yyyy-MM-dd'));
     }
 
     if (activeFilters.categoryId) {
