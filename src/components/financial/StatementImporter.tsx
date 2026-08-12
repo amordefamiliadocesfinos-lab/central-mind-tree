@@ -215,7 +215,9 @@ function fileExtension(name: string): string {
 }
 
 function computeHashKey(accountId: string, r: { date: string; value: number; type: 'entrada' | 'saida'; description: string; externalId?: string }): string {
-  if (r.externalId) return [accountId, 'ofx', r.externalId].join('|');
+  // O Nubank reutiliza FITID para lançamentos diferentes (ex.: compra e IOF).
+  // O identificador bancário continua sendo usado, mas junto aos dados que distinguem a transação.
+  if (r.externalId) return [accountId, 'ofx', r.externalId, r.date, r.value.toFixed(2), r.type, normalizeDescription(r.description)].join('|');
   return [accountId, r.date, r.value.toFixed(2), r.type, normalizeDescription(r.description)].join('|');
 }
 
@@ -722,7 +724,8 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
         imported_at: now,
         imported_by: 'usuario',
         import_hash: hash,
-        import_external_id: r.externalId || null,
+        // Hash estável e específico da conta: evita colisões de FITID sem perder a proteção contra reimportação.
+        import_external_id: r.externalId ? hash : null,
       }));
 
       const { data: inserted, error } = await supabase

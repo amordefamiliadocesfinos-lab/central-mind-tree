@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useProductsList } from '@/hooks/useProductsList';
 import { formatCurrency } from '@/lib/utils';
 import { toast } from 'sonner';
+import { createUnifiedSale, SalePaymentStatus } from '@/lib/unifiedSales';
 
 interface SaleItem {
   product_id: string;
@@ -40,13 +41,25 @@ export function InboxSaleDialog({ open, onOpenChange, contactId, contactName, co
   const [channel, setChannel] = useState('whatsapp');
   const [orderType, setOrderType] = useState<'stock' | 'production'>('stock');
   const [dueDate, setDueDate] = useState('');
+  const [financialDueDate, setFinancialDueDate] = useState(new Date().toISOString().slice(0, 10));
+  const [paymentStatus, setPaymentStatus] = useState<SalePaymentStatus>('pendente');
+  const [paymentMethod, setPaymentMethod] = useState('');
+  const [accountId, setAccountId] = useState('');
+  const [discount, setDiscount] = useState(0);
+  const [shipping, setShipping] = useState(0);
+  const [marketplaceAccount, setMarketplaceAccount] = useState('');
+  const [accounts, setAccounts] = useState<Array<{ id: string; name: string }>>([]);
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
 
-  const total = useMemo(
-    () => items.reduce((acc, item) => acc + (item.quantity || 0) * (item.unit_price || 0), 0),
-    [items],
-  );
+  const subtotal = useMemo(() => items.reduce((acc, item) => acc + (item.quantity || 0) * (item.unit_price || 0), 0), [items]);
+  const total = Math.max(0, subtotal - discount + shipping);
+
+  useEffect(() => {
+    if (!open) return;
+    supabase.from('financial_accounts').select('id,name').eq('is_active', true).order('name')
+      .then(({ data }) => setAccounts(data || []));
+  }, [open]);
 
   const addItem = () => setItems((current) => [...current, { product_id: '', quantity: 1, unit_price: 0 }]);
 
@@ -59,7 +72,7 @@ export function InboxSaleDialog({ open, onOpenChange, contactId, contactName, co
     updateItem(index, { product_id: productId, unit_price: product?.price ?? 0 });
   };
 
-  const handleSave = async () => {
+  const legacyHandleSave = async () => {
     const validItems = items.filter((item) => item.product_id && item.quantity > 0);
     if (validItems.length === 0) {
       toast.error('Adicione ao menos um produto para registrar a venda.');
@@ -119,6 +132,39 @@ export function InboxSaleDialog({ open, onOpenChange, contactId, contactName, co
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleSave = async () => {
+    const validItems = items.filter(item => item.product_id && item.quantity > 0);
+    if (!validItems.length) return toast.error('Adicione ao menos um produto para registrar a venda.');
+    if (paymentStatus === 'pago' && !accountId) return toast.error('Selecione a conta que recebeu o pagamento.');
+    setSaving(true);
+    try {
+      const result = await createUnifiedSale({
+        customer_name: contactName, customer_contact: contactHandle || null, contact_id: contactId,
+        channel, order_type: orderType, delivery_date: dueDate || null,
+        financial_due_date: financialDueDate, notes: notes || null,
+        discount_amount: discount, shipping_amount: shipping, payment_status: paymentStatus,
+        payment_method: paymentMethod || null, financial_account_id: accountId || null,
+        payment_date: paymentStatus === 'pago' ? new Date().toISOString().slice(0, 10) : null,
+        marketplace_account: marketplaceAccount || null,
+      }, validItems);
+      await supabase.from('contact_history').insert({
+        contact_id: contactId, event_type: 'sale_won', interaction_type: 'venda', event_code: 'sale_won',
+        description: `Venda registrada — pedido ${result.order_number} · ${formatCurrency(total)}`,
+        interaction_date: new Date().toISOString(),
+      });
+      await supabase.from('contacts').update({ funnel_status: 'fechado', updated_at: new Date().toISOString() }).eq('id', contactId);
+      toast.success(`Venda, operação e financeiro registrados · ${result.order_number}`);
+      setItems([]); setNotes(''); setDueDate('');
+      setFinancialDueDate(new Date().toISOString().slice(0, 10));
+      setPaymentStatus('pendente'); setPaymentMethod(''); setAccountId('');
+      setDiscount(0); setShipping(0); setMarketplaceAccount('');
+      onOpenChange(false); onCreated?.();
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error?.message || 'Não foi possível registrar a venda completa.');
+    } finally { setSaving(false); }
   };
 
   return (
@@ -195,13 +241,59 @@ export function InboxSaleDialog({ open, onOpenChange, contactId, contactName, co
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
+              <Label className="text-[11px] text-muted-foreground">Desconto</Label>
+              <Input type="number" min="0" step="0.01" className="h-9" value={discount} onChange={e => setDiscount(Number(e.target.value))} />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[11px] text-muted-foreground">Frete cobrado</Label>
+              <Input type="number" min="0" step="0.01" className="h-9" value={shipping} onChange={e => setShipping(Number(e.target.value))} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
               <Label className="text-[11px] text-muted-foreground">Entrega prevista</Label>
               <Input type="date" className="h-9" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
             </div>
             <div className="space-y-1">
-              <Label className="text-[11px] text-muted-foreground">Total</Label>
-              <div className="flex h-9 items-center rounded-md border bg-muted/30 px-3 text-sm font-semibold">{formatCurrency(total)}</div>
+              <Label className="text-[11px] text-muted-foreground">Vencimento financeiro</Label>
+              <Input type="date" className="h-9" value={financialDueDate} onChange={e => setFinancialDueDate(e.target.value)} />
             </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label className="text-[11px] text-muted-foreground">Situação do pagamento</Label>
+              <Select value={paymentStatus} onValueChange={v => setPaymentStatus(v as SalePaymentStatus)}>
+                <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="pendente">A receber</SelectItem><SelectItem value="pago">Já recebido</SelectItem></SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[11px] text-muted-foreground">Forma de pagamento</Label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger className="h-9"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                <SelectContent><SelectItem value="pix">PIX</SelectItem><SelectItem value="dinheiro">Dinheiro</SelectItem><SelectItem value="cartao">Cartão</SelectItem><SelectItem value="boleto">Boleto</SelectItem><SelectItem value="marketplace">Marketplace</SelectItem></SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {paymentStatus === 'pago' && <div className="space-y-1">
+            <Label className="text-[11px] text-muted-foreground">Conta que recebeu</Label>
+            <Select value={accountId} onValueChange={setAccountId}>
+              <SelectTrigger className="h-9"><SelectValue placeholder="Selecione a conta" /></SelectTrigger>
+              <SelectContent>{accounts.map(account => <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>}
+
+          {(channel === 'marketplace' || paymentMethod === 'marketplace') && <div className="space-y-1">
+            <Label className="text-[11px] text-muted-foreground">Conta do marketplace</Label>
+            <Input className="h-9" value={marketplaceAccount} onChange={e => setMarketplaceAccount(e.target.value)} placeholder="Ex.: Shopee Viviane" />
+          </div>}
+
+          <div className="flex items-center justify-between rounded-md border bg-muted/30 px-3 py-2 text-sm">
+            <span>Subtotal {formatCurrency(subtotal)} · desconto {formatCurrency(discount)} · frete {formatCurrency(shipping)}</span>
+            <strong>{formatCurrency(total)}</strong>
           </div>
 
           <div className="space-y-1">

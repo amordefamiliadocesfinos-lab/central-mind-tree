@@ -62,6 +62,7 @@ import {
 import { useStockCheckStore } from '@/stores/stockCheckStore';
 import { useKPIsSelector, useFilteredOrders, useFilteredProducts, useSearchFilters, useStockValueSelector } from '@/stores/selectors';
 import type { Order, OrderItem, Product } from '@/hooks/useOrders';
+import { supabase } from '@/integrations/supabase/client';
 
 const VALID_TABS: OperationsTab[] = ['overview', 'orders', 'products', 'inventory', 'production', 'mrp', 'calendar'];
 
@@ -256,12 +257,23 @@ export default function Operacoes() {
     contact_id: null as string | null,
     channel: 'direto',
     due_date: '',
+    financial_due_date: new Date().toISOString().slice(0, 10),
+    payment_status: 'pendente' as 'pendente' | 'pago',
+    payment_method: '',
+    financial_account_id: '',
+    marketplace_account: '',
     discount_amount: 0,
     shipping_amount: 0,
     discount_text: '',
     shipping_text: '',
     items: [] as { product_id: string; quantity: number; unit_price: number; _unit_price_text?: string }[],
   });
+  const [financialAccounts, setFinancialAccounts] = useState<Array<{ id: string; name: string }>>([]);
+
+  useEffect(() => {
+    supabase.from('financial_accounts').select('id,name').eq('is_active', true).order('name')
+      .then(({ data }) => setFinancialAccounts(data || []));
+  }, []);
 
   const [editingCostText, setEditingCostText] = useState('');
   const [editingPriceText, setEditingPriceText] = useState('');
@@ -348,6 +360,11 @@ export default function Operacoes() {
       contact_id: null,
       channel: 'direto',
       due_date: '',
+      financial_due_date: new Date().toISOString().slice(0, 10),
+      payment_status: 'pendente',
+      payment_method: '',
+      financial_account_id: '',
+      marketplace_account: '',
       discount_amount: 0,
       shipping_amount: 0,
       discount_text: '',
@@ -785,6 +802,45 @@ export default function Operacoes() {
                       onChange={(e) => setNewSale({ ...newSale, due_date: e.target.value })}
                     />
                   </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Vencimento Financeiro</Label>
+                      <Input type="date" className="h-12" value={newSale.financial_due_date}
+                        onChange={e => setNewSale({ ...newSale, financial_due_date: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label>Situação</Label>
+                      <Select value={newSale.payment_status} onValueChange={v => setNewSale({ ...newSale, payment_status: v as 'pendente' | 'pago' })}>
+                        <SelectTrigger className="h-12"><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectItem value="pendente">A receber</SelectItem><SelectItem value="pago">Já recebido</SelectItem></SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label>Forma de Pagamento</Label>
+                      <Select value={newSale.payment_method} onValueChange={v => setNewSale({ ...newSale, payment_method: v })}>
+                        <SelectTrigger className="h-12"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent><SelectItem value="pix">PIX</SelectItem><SelectItem value="dinheiro">Dinheiro</SelectItem><SelectItem value="cartao">Cartão</SelectItem><SelectItem value="boleto">Boleto</SelectItem><SelectItem value="marketplace">Marketplace</SelectItem></SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label>{newSale.payment_status === 'pago' ? 'Conta que recebeu' : 'Conta prevista'}</Label>
+                      <Select value={newSale.financial_account_id} onValueChange={v => setNewSale({ ...newSale, financial_account_id: v })}>
+                        <SelectTrigger className="h-12"><SelectValue placeholder="Selecione" /></SelectTrigger>
+                        <SelectContent>{financialAccounts.map(account => <SelectItem key={account.id} value={account.id}>{account.name}</SelectItem>)}</SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {(newSale.channel === 'marketplace' || newSale.payment_method === 'marketplace') && <div>
+                    <Label>Conta do Marketplace</Label>
+                    <Input className="h-12" value={newSale.marketplace_account}
+                      onChange={e => setNewSale({ ...newSale, marketplace_account: e.target.value })}
+                      placeholder="Ex.: Shopee Viviane" />
+                  </div>}
 
                   <div>
                     <div className="flex justify-between items-center mb-2">

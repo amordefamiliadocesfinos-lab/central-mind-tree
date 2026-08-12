@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { createUnifiedSale } from '@/lib/unifiedSales';
 
 export interface Product {
   id: string;
@@ -57,6 +58,14 @@ export interface Order {
   total_value: number | null;
   order_date: string;
   due_date: string | null;
+  delivery_date?: string | null;
+  financial_due_date?: string | null;
+  payment_status?: 'pendente' | 'pago' | 'parcial';
+  payment_method?: string | null;
+  financial_account_id?: string | null;
+  discount_amount?: number;
+  shipping_amount?: number;
+  marketplace_account?: string | null;
   notes: string | null;
   order_type: OrderType;
   created_at: string;
@@ -251,7 +260,7 @@ export function useOrders() {
     fetchInventory();
   }, [fetchInventory]);
 
-  const createOrder = useCallback(async (order: Partial<Order>, items: Partial<OrderItem>[]) => {
+  const legacyCreateOrder = useCallback(async (order: Partial<Order>, items: Partial<OrderItem>[]) => {
     const pricingData = order as Partial<Order> & {
       discount_amount?: number;
       shipping_amount?: number;
@@ -429,6 +438,43 @@ export function useOrders() {
 
     fetchOrders();
     return newOrder as Order;
+  }, [fetchOrders]);
+
+  const createOrder = useCallback(async (order: Partial<Order>, items: Partial<OrderItem>[]) => {
+    const pricingData = order as Partial<Order> & { discount_amount?: number; shipping_amount?: number };
+    const orderType = order.order_type || 'production';
+    try {
+      const result = await createUnifiedSale({
+        order_number: order.order_number,
+        customer_name: order.customer_name,
+        customer_contact: order.customer_contact,
+        contact_id: order.contact_id,
+        channel: order.channel || 'direto',
+        order_type: orderType,
+        order_date: order.order_date,
+        delivery_date: order.delivery_date || order.due_date,
+        financial_due_date: order.financial_due_date || order.due_date,
+        notes: order.notes,
+        discount_amount: pricingData.discount_amount || 0,
+        shipping_amount: pricingData.shipping_amount || 0,
+        payment_status: order.payment_status || 'pendente',
+        payment_method: order.payment_method,
+        financial_account_id: order.financial_account_id,
+        marketplace_account: order.marketplace_account,
+      }, items.map(item => ({
+        product_id: item.product_id || '', quantity: item.quantity || 1,
+        unit_price: item.unit_price || 0, notes: item.notes,
+      })));
+      toast.success(orderType === 'stock'
+        ? 'Venda, estoque e financeiro registrados!'
+        : 'Pedido, produção e financeiro registrados!');
+      fetchOrders();
+      return { ...order, id: result.order_id, order_number: result.order_number, total_value: result.total_value } as Order;
+    } catch (error: any) {
+      console.error('Error creating unified sale:', error);
+      toast.error(error?.message || 'Erro ao criar pedido e financeiro');
+      return null;
+    }
   }, [fetchOrders]);
 
   const updateOrderStatus = useCallback(async (orderId: string, status: string) => {
