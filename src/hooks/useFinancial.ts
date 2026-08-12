@@ -43,6 +43,9 @@ export interface FinancialEntry {
   category?: FinancialCategory;
   account?: FinancialAccount;
   contact?: { id: string; name: string };
+  sales_channel?: string;
+  marketplace_account?: string;
+  payment_method?: string;
   // Recurrence fields
   recurrence_type?: string;
   recurrence_day?: number;
@@ -87,6 +90,8 @@ export interface FinancialFilters {
   endDate?: Date;
   categoryId?: string;
   accountId?: string;
+  salesChannel?: string;
+  marketplaceAccount?: string;
   search?: string;
 }
 
@@ -175,6 +180,8 @@ export function useFinancial() {
     if (activeFilters.accountId) {
       query = query.eq('account_id', activeFilters.accountId);
     }
+    if (activeFilters.salesChannel) query = query.eq('sales_channel', activeFilters.salesChannel);
+    if (activeFilters.marketplaceAccount) query = query.eq('marketplace_account', activeFilters.marketplaceAccount);
 
     if (activeFilters.search) {
       query = query.ilike('description', `%${activeFilters.search}%`);
@@ -215,6 +222,9 @@ export function useFinancial() {
         order_id: entry.order_id,
         document_number: entry.document_number,
         notes: entry.notes,
+        sales_channel: entry.sales_channel,
+        marketplace_account: entry.marketplace_account,
+        payment_method: entry.payment_method,
         recurrence_type: entry.recurrence_type,
         recurrence_day: entry.recurrence_day,
         recurrence_end_date: entry.recurrence_end_date,
@@ -287,6 +297,7 @@ export function useFinancial() {
       'type', 'description', 'value', 'due_date', 'payment_date',
       'category_id', 'account_id', 'contact_id', 'order_id',
       'document_number', 'notes',
+      'sales_channel', 'marketplace_account', 'payment_method',
       'recurrence_type', 'recurrence_day', 'recurrence_end_date', 'recurrence_use_business_days',
       'issue_date', 'competence_date',
     ];
@@ -296,7 +307,7 @@ export function useFinancial() {
 
     const { error } = await supabase
       .from('financial_entries')
-      .update(payload)
+      .update(payload as any)
       .eq('id', id);
 
     if (error) {

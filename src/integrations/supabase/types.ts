@@ -1912,6 +1912,9 @@ export type Database = {
           original_due_date: string | null
           parent_entry_id: string | null
           payment_date: string | null
+          payment_method: string | null
+          sales_channel: string | null
+          marketplace_account: string | null
           recurrence_day: number | null
           recurrence_end_date: string | null
           recurrence_sequence: number | null
@@ -1948,6 +1951,9 @@ export type Database = {
           original_due_date?: string | null
           parent_entry_id?: string | null
           payment_date?: string | null
+          payment_method?: string | null
+          sales_channel?: string | null
+          marketplace_account?: string | null
           recurrence_day?: number | null
           recurrence_end_date?: string | null
           recurrence_sequence?: number | null
@@ -1984,6 +1990,9 @@ export type Database = {
           original_due_date?: string | null
           parent_entry_id?: string | null
           payment_date?: string | null
+          payment_method?: string | null
+          sales_channel?: string | null
+          marketplace_account?: string | null
           recurrence_day?: number | null
           recurrence_end_date?: string | null
           recurrence_sequence?: number | null
