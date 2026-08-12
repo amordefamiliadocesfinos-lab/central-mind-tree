@@ -1,0 +1,54 @@
+import { supabase } from '@/integrations/supabase/client';
+
+export type SalePaymentStatus = 'pendente' | 'pago' | 'parcial';
+
+export interface UnifiedSaleItem {
+  product_id: string;
+  quantity: number;
+  unit_price: number;
+  notes?: string | null;
+}
+
+export interface UnifiedSaleInput {
+  order_number?: string | null;
+  customer_name?: string | null;
+  customer_contact?: string | null;
+  contact_id?: string | null;
+  channel?: string;
+  order_type?: 'stock' | 'production';
+  order_date?: string;
+  delivery_date?: string | null;
+  financial_due_date?: string | null;
+  notes?: string | null;
+  discount_amount?: number;
+  shipping_amount?: number;
+  payment_status?: SalePaymentStatus;
+  payment_method?: string | null;
+  financial_account_id?: string | null;
+  payment_date?: string | null;
+  marketplace_account?: string | null;
+}
+
+export interface UnifiedSaleResult {
+  order_id: string;
+  order_number: string;
+  financial_entry_id: string;
+  total_value: number;
+}
+
+export async function createUnifiedSale(order: UnifiedSaleInput, items: UnifiedSaleItem[]) {
+  const validItems = items.filter(item => item.product_id && item.quantity > 0);
+  if (!validItems.length) throw new Error('Adicione ao menos um produto à venda.');
+
+  const { data, error } = await (supabase.rpc as any)('create_unified_sale', {
+    p_order: {
+      ...order,
+      delivery_date: order.delivery_date || null,
+      financial_due_date: order.financial_due_date || new Date().toISOString().slice(0, 10),
+      payment_status: order.payment_status || 'pendente',
+    },
+    p_items: validItems,
+  });
+  if (error) throw error;
+  return data as UnifiedSaleResult;
+}

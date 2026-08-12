@@ -22,12 +22,16 @@ import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, LayoutDashboard, TrendingDown, TrendingUp, Wallet, Tag } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { UncategorizedReviewDialog } from '@/components/financial/UncategorizedReviewDialog';
+import { FinancialIntegrityDialog } from '@/components/financial/FinancialIntegrityDialog';
+import { MarketplaceSettlementDialog } from '@/components/financial/MarketplaceSettlementDialog';
 import { useIsMobile } from '@/hooks/use-mobile';
 export default function Financeiro() {
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [importerOpen, setImporterOpen] = useState(false);
   const [reviewImportedOpen, setReviewImportedOpen] = useState(false);
+  const [integrityOpen, setIntegrityOpen] = useState(false);
+  const [settlementOpen, setSettlementOpen] = useState(false);
   const [pagarStatus, setPagarStatus] = useState<EntryStatus | 'all'>('all');
   const [receberStatus, setReceberStatus] = useState<EntryStatus | 'all'>('all');
   const [pagarSearch, setPagarSearch] = useState('');
@@ -130,7 +134,9 @@ export default function Financeiro() {
             Este mês
           </Button>
 
-          <Button variant="outline" size="sm" onClick={() => setReviewImportedOpen(true)} className="ml-auto">Revisar importados</Button>
+          <Button variant="outline" size="sm" onClick={() => setIntegrityOpen(true)} className="ml-auto">Revisar integrações</Button>
+          <Button variant="outline" size="sm" onClick={() => setSettlementOpen(true)}>Conciliar repasse</Button>
+          <Button variant="outline" size="sm" onClick={() => setReviewImportedOpen(true)}>Revisar importados</Button>
           <Button variant="outline" size="sm" onClick={() => setImporterOpen(true)} className="gap-2">
             <Upload className="h-4 w-4" /> Importar Extrato
           </Button>
@@ -144,6 +150,8 @@ export default function Financeiro() {
           onImported={() => fetchEntries()}
         />
         <UncategorizedReviewDialog open={reviewImportedOpen} onOpenChange={setReviewImportedOpen} categories={categories} onChanged={() => fetchEntries()} />
+        <FinancialIntegrityDialog open={integrityOpen} onOpenChange={setIntegrityOpen} onChanged={() => fetchEntries()} />
+        <MarketplaceSettlementDialog open={settlementOpen} onOpenChange={setSettlementOpen} onChanged={() => fetchEntries()} />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
           <TabsList className={cn("grid w-full", isMobile ? "grid-cols-3" : "grid-cols-8")}>
