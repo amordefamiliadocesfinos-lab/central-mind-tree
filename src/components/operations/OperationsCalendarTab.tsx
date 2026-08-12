@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ChevronLeft, ChevronRight, Calendar, Package } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
+import { getOrderCustomerName, getOrderReference } from './orderPresentation';
 
 interface OperationsCalendarTabProps {
   orders: Order[];
@@ -194,7 +195,7 @@ export function OperationsCalendarTab({
                             onOrderClick(order);
                           }}
                         >
-                          {order.customer_name || order.order_number}
+                          {getOrderCustomerName(order)}
                         </div>
                       ))}
                       {dayOrdersList.length > 2 && (
@@ -237,9 +238,10 @@ export function OperationsCalendarTab({
                   >
                     <div>
                       <p className="font-medium">
-                        {order.customer_name || `Pedido #${order.order_number || order.id.slice(0, 8)}`}
+                        {getOrderCustomerName(order)}
                       </p>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span>Pedido {getOrderReference(order)}</span>
                         <Package className="h-3 w-3" />
                         <span>{order.items?.length || 0} itens</span>
                         {order.total_value && (

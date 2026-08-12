@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { OrderPriorityBadge } from './OrderPriorityBadge';
 import { LateProductionBadge } from './LateProductionBadge';
+import { getOrderCustomerName, getOrderReference } from './orderPresentation';
 
 const formatDate = (dateStr: string | null | undefined): string => {
   if (!dateStr) return '';
@@ -55,6 +56,9 @@ export function OrderGridCard({ order, orderStatus, orderChannels, onStatusChang
   const statusInfo = orderStatus[order.status as keyof typeof orderStatus];
   const isStockOrder = order.order_type === 'stock';
   const borderColor = STATUS_BORDER_COLORS[order.status] || 'border-l-muted';
+  const customerName = getOrderCustomerName(order);
+  const orderReference = getOrderReference(order);
+  const channelLabel = order.channel ? orderChannels[order.channel] : undefined;
 
   return (
     <Card
@@ -65,9 +69,9 @@ export function OrderGridCard({ order, orderStatus, orderChannels, onStatusChang
       onClick={() => onClick?.(order)}
     >
       <CardContent className="p-4 space-y-3">
-        {/* Line 1 - Title */}
+        {/* Line 1 - Customer */}
         <h3 className="font-semibold text-base truncate">
-          {order.customer_name || order.order_number || `#${order.id.slice(0, 6)}`}
+          {customerName}
         </h3>
 
         {/* Line 2 - Status + type (consolidated) */}
@@ -86,10 +90,13 @@ export function OrderGridCard({ order, orderStatus, orderChannels, onStatusChang
           </span>
         </div>
 
-        {/* Line 3 - Info + Priority */}
+        {/* Line 3 - Fixed order reference + useful context */}
         <div className="text-xs text-muted-foreground space-y-0.5">
-          <p><span className="font-medium">Cliente:</span> {order.customer_name || '—'}</p>
-          <p><span className="font-medium">Pedido:</span> {formatDate(order.order_date)}</p>
+          <p><span className="font-medium">Pedido:</span> {orderReference}</p>
+          <p>
+            {channelLabel && <><span className="font-medium">Canal:</span> {channelLabel} · </>}
+            {formatDate(order.order_date)}
+          </p>
           {order.due_date && (
             <div className="flex items-center gap-1.5">
               <span><span className="font-medium text-amber-600">Entrega:</span> {formatDate(order.due_date)}</span>

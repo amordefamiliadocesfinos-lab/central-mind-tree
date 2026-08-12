@@ -10,6 +10,7 @@ import { differenceInDays, startOfDay, parseISO, format } from 'date-fns';
 import { getNowSaoPaulo } from '@/lib/dateUtils';
 import { OrderPriorityBadge } from './OrderPriorityBadge';
 import { LateProductionBadge } from './LateProductionBadge';
+import { getOrderCustomerName, getOrderReference } from './orderPresentation';
 
 interface OrderItem {
   quantity: number;
@@ -191,6 +192,8 @@ export function ProductionPlanningView({
                 const mainProduct = order.items?.[0];
                 const totalQty = order.items?.reduce((s, i) => s + i.quantity, 0) || 0;
                 const isProduced = order.status === 'produzido';
+                const customerName = getOrderCustomerName(order);
+                const orderReference = getOrderReference(order);
                 const dueFormatted = order.due_date
                   ? (() => {
                       try { return format(parseISO(order.due_date), 'dd/MM'); } catch { return ''; }
@@ -212,7 +215,7 @@ export function ProductionPlanningView({
                       <div className="flex-1 min-w-0 space-y-1">
                         <div className="flex items-center gap-2">
                           <p className="font-semibold text-sm leading-tight truncate">
-                            {order.customer_name || order.order_number || 'Pedido'}
+                            {customerName}
                           </p>
                           {isProduced && (
                             <Badge className="bg-emerald-600 text-white border-0 text-[10px] h-5 px-1.5 gap-1">
@@ -221,6 +224,7 @@ export function ProductionPlanningView({
                             </Badge>
                           )}
                         </div>
+                        <p className="text-[11px] text-muted-foreground">Pedido {orderReference}</p>
                         {mainProduct?.product?.name && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
                             <Package className="h-3 w-3 shrink-0" />

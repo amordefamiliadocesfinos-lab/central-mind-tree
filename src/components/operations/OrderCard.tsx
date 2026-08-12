@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { format, parseISO } from 'date-fns';
 import { OrderPriorityBadge } from './OrderPriorityBadge';
 import { LateProductionBadge } from './LateProductionBadge';
+import { getOrderCustomerName, getOrderReference } from './orderPresentation';
 
 const formatDate = (dateStr: string | null | undefined): string => {
   if (!dateStr) return '';
@@ -48,6 +49,9 @@ interface OrderCardProps {
 export function OrderCard({ order, orderStatus, orderChannels, onStatusChange, onDelete, onClick }: OrderCardProps) {
   const statusInfo = orderStatus[order.status as keyof typeof orderStatus];
   const isStockOrder = order.order_type === 'stock';
+  const customerName = getOrderCustomerName(order);
+  const orderReference = getOrderReference(order);
+  const channelLabel = order.channel ? orderChannels[order.channel] : undefined;
 
   return (
     <Card
@@ -55,13 +59,11 @@ export function OrderCard({ order, orderStatus, orderChannels, onStatusChange, o
       onClick={() => onClick?.(order)}
     >
       <CardContent className="p-3 md:p-4">
-        {/* Header row: number + price */}
+        {/* Header row: customer + price */}
         <div className="flex items-start justify-between gap-2 mb-2">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 flex-wrap">
-              <h3 className="font-semibold text-sm md:text-base">
-                {order.order_number || `#${order.id.slice(0, 6)}`}
-              </h3>
+              <h3 className="font-semibold text-sm md:text-base truncate">{customerName}</h3>
               <Badge className={cn('text-[10px] md:text-xs px-1.5 py-0', statusInfo?.color)}>
                 {statusInfo?.label || order.status}
               </Badge>
@@ -77,7 +79,7 @@ export function OrderCard({ order, orderStatus, orderChannels, onStatusChange, o
               </span>
             </div>
             <p className="text-xs md:text-sm text-muted-foreground mt-0.5 truncate">
-              {order.customer_name || 'Cliente não informado'}
+              Pedido {orderReference}{channelLabel ? ` · ${channelLabel}` : ''}
             </p>
           </div>
           <div className="text-right shrink-0">
