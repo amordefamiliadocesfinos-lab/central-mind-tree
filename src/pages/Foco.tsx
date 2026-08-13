@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Play, Pause, RotateCcw, ArrowLeft, CalendarCheck, Plus, X, Check, Clock, ExternalLink, AlertTriangle, Timer, GripVertical, LayoutGrid, Table as TableIcon, MoreHorizontal } from "lucide-react";
 import { TasksSpreadsheetView } from "@/components/foco/TasksSpreadsheetView";
+import { TaskContextPanel } from "@/components/foco/TaskContextPanel";
 import { 
   DndContext, 
   closestCenter, 
@@ -204,6 +205,7 @@ export default function Foco() {
   });
   useEffect(() => { localStorage.setItem('pc.focus.viewMode', viewMode); }, [viewMode]);
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [detailsTaskId, setDetailsTaskId] = useState<string | null>(null);
   const [nodes, setNodes] = useState<Record<string, Node>>({});
   const [dependencyTasks, setDependencyTasks] = useState<Record<string, { id: string; title: string; status: string }>>({});
   const [activeTaskId, setActiveTaskId] = useState<string | null>(() => {
@@ -625,7 +627,7 @@ export default function Foco() {
 
   const handleOpenEdit = () => {
     if (!activeTaskId) return;
-    window.open(`/task/${activeTaskId}`, '_blank');
+    setDetailsTaskId(activeTaskId);
   };
 
   const handleAddToQueue = (taskId: string, e: React.MouseEvent) => {
@@ -681,7 +683,7 @@ export default function Foco() {
 
       <div className="p-4 space-y-4 max-w-3xl mx-auto">
         <Card className="p-4 mb-6 bg-destructive/10 border-destructive/30">
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-destructive">Agora</p>
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-destructive">Fila de execução · Agora</p>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="text-3xl font-mono font-bold text-destructive">
@@ -736,6 +738,13 @@ export default function Foco() {
                 <p className="text-sm text-muted-foreground">
                   {activeTask?.title}
                 </p>
+                {activeTask && (
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                    <Badge variant="outline">Área: {nodes[activeTask.node_id]?.title || "Não informada"}</Badge>
+                    <Badge variant="secondary">Status: {activeTask.status}</Badge>
+                    <Badge variant="outline">Fila: {Math.max(1, queue.indexOf(activeTask.id) + 1)} de {visibleQueue.length}</Badge>
+                  </div>
+                )}
                 {dep && (
                   <Badge
                     variant="outline"
@@ -746,7 +755,7 @@ export default function Foco() {
                     }`}
                     onClick={(e) => {
                       e.stopPropagation();
-                      window.open(`/task/${dep.id}`, '_blank');
+                      setDetailsTaskId(dep.id);
                     }}
                   >
                     {dep.status !== 'concluído' && <AlertTriangle className="h-3 w-3 mr-1" />}
@@ -771,7 +780,7 @@ export default function Foco() {
                 <DropdownMenuTrigger asChild><Button size="sm" variant="ghost" className="h-11 w-11 p-0" aria-label="Mais ações"><MoreHorizontal className="h-5 w-5" /></Button></DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={() => void handleMoveToPending()}><Clock className="mr-2 h-4 w-4" />Devolver ao Planejamento</DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleOpenEdit}><ExternalLink className="mr-2 h-4 w-4" />Abrir detalhes</DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleOpenEdit}><ExternalLink className="mr-2 h-4 w-4" />Ver e editar detalhes</DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setRoutineDialogOpen(true)}><CalendarCheck className="mr-2 h-4 w-4" />Reservar na Rotina</DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => void handleReset()}><RotateCcw className="mr-2 h-4 w-4" />Zerar cronômetro</DropdownMenuItem>
@@ -801,8 +810,8 @@ export default function Foco() {
         {visibleQueue.filter(task => task.id !== activeTaskId).length > 0 && (
           <section className="space-y-2">
             <div className="flex items-center justify-between">
-              <h2 className="font-semibold">Depois</h2>
-              <span className="text-xs text-muted-foreground">Próximas prioridades</span>
+              <h2 className="font-semibold">Fila de execução · Depois</h2>
+              <span className="text-xs text-muted-foreground">Próximas prioridades pessoais</span>
             </div>
             <Card className="divide-y">
               {visibleQueue.filter(task => task.id !== activeTaskId).map(task => (
@@ -830,7 +839,7 @@ export default function Foco() {
             onRemoveFromQueue={handleRemoveFromQueue}
             onComplete={(id) => handleCompleteTask(id)}
             onMoveToPending={(id) => handleMoveToPending(id)}
-            onOpenEdit={(id) => window.open(`/task/${id}`, '_blank')}
+            onOpenEdit={(id) => setDetailsTaskId(id)}
           />
         ) : (
         <div className="space-y-3">
@@ -906,6 +915,13 @@ export default function Foco() {
         </div>
         )}
         </div>
+        <TaskContextPanel
+          taskId={detailsTaskId}
+          open={detailsTaskId !== null}
+          onOpenChange={(open) => { if (!open) setDetailsTaskId(null); }}
+          onSaved={fetchTasks}
+          areaName={detailsTaskId ? nodes[tasks.find((task) => task.id === detailsTaskId)?.node_id || ""]?.title : undefined}
+        />
 
         {isReplanningDay() && <ReplanningBanner />}
         <DueDateBanner />

@@ -30,6 +30,7 @@ import { MediaUploader, MediaItem, uploadMedia, loadMediaFromUrls } from "@/comp
 import { OnHoldBadge } from "@/components/OnHoldBadge";
 import { OnHoldDialog } from "@/components/OnHoldDialog";
 import { useOnHold, OnHoldFormData } from "@/hooks/useOnHold";
+import { saveTask } from "@/lib/tasks/saveTask";
 
 interface ChecklistItem {
   id: string;
@@ -223,9 +224,7 @@ const TaskEdit = () => {
       // Upload new media files
       const mediaUrls = await uploadMedia(media, "task", id);
 
-      const { error } = await supabase
-        .from("tasks")
-        .update({
+      const { error } = await saveTask(id, {
           title: formData.title,
           description: formData.description || null,
           status: formData.status,
@@ -237,8 +236,7 @@ const TaskEdit = () => {
           scheduled_date: formData.scheduled_date ? format(formData.scheduled_date, "yyyy-MM-dd") : null,
           media_urls: mediaUrls,
           assigned_to: formData.assigned_to,
-        })
-        .eq("id", id);
+        });
 
       if (error) throw error;
 
