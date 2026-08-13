@@ -25,6 +25,7 @@ interface InboxSaleDialogProps {
   contactName: string;
   contactHandle?: string | null;
   onCreated?: () => void;
+  onSaleCreated?: () => void;
 }
 
 const CHANNELS: Array<[string, string]> = [
@@ -35,7 +36,7 @@ const CHANNELS: Array<[string, string]> = [
   ['social', 'Redes Sociais'],
 ];
 
-export function InboxSaleDialog({ open, onOpenChange, contactId, contactName, contactHandle, onCreated }: InboxSaleDialogProps) {
+export function InboxSaleDialog({ open, onOpenChange, contactId, contactName, contactHandle, onCreated, onSaleCreated }: InboxSaleDialogProps) {
   const { products } = useProductsList();
   const [items, setItems] = useState<SaleItem[]>([]);
   const [channel, setChannel] = useState('whatsapp');
@@ -160,7 +161,7 @@ export function InboxSaleDialog({ open, onOpenChange, contactId, contactName, co
       setFinancialDueDate(new Date().toISOString().slice(0, 10));
       setPaymentStatus('pendente'); setPaymentMethod(''); setAccountId('');
       setDiscount(0); setShipping(0); setMarketplaceAccount('');
-      onOpenChange(false); onCreated?.();
+      onOpenChange(false); onCreated?.(); onSaleCreated?.();
     } catch (error: any) {
       console.error(error);
       toast.error(error?.message || 'Não foi possível registrar a venda completa.');

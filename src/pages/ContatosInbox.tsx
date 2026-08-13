@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { ContactTimeline } from '@/components/crm/ContactTimeline';
 import { ContactChatPanel } from '@/components/crm/ContactChatPanel';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -13,12 +14,13 @@ import { ContactAvatar } from '@/components/crm/ContactAvatar';
 import { MergeDuplicatesDialog } from '@/components/crm/MergeDuplicatesDialog';
 import { format, parseISO, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { ArrowLeft, Search, Zap, MessageCircle, Phone, ExternalLink, Sparkles, Loader2, Merge, Clock, UserCheck, UserMinus, CheckCircle2, RotateCcw, ArrowRight, PanelRight, Trash2, X, Tag, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, Search, Zap, MessageCircle, Phone, ExternalLink, Sparkles, Loader2, Merge, Clock, UserCheck, UserMinus, CheckCircle2, RotateCcw, ArrowRight, PanelRight, Archive, X, Tag, ShoppingCart, Pencil } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useContactTags } from '@/hooks/useContactTags';
 import { InboxNoteBlock } from '@/components/crm/InboxNoteBlock';
 import { InboxSaleDialog } from '@/components/crm/InboxSaleDialog';
-import { useContacts, type Contact } from '@/hooks/useContacts';
+import type { Contact } from '@/hooks/useContacts';
+import { LeadDetailDrawer } from '@/components/crm/LeadDetailDrawer';
 
 import { openWhatsApp } from '@/lib/whatsapp';
 import { cn } from '@/lib/utils';
@@ -72,24 +74,26 @@ export default function ContatosInbox() {
   const [attendanceBusy, setAttendanceBusy] = useState(false);
   const [sendConfirmation, setSendConfirmation] = useState(false);
   const [leadPanelOpen, setLeadPanelOpen] = useState(false);
+  const [leadEditOpen, setLeadEditOpen] = useState(false);
   const [leadContact, setLeadContact] = useState<Contact | null>(null);
   const [tagFilter, setTagFilter] = useState<string>('all');
   const [saleOpen, setSaleOpen] = useState(false);
+  const [saleDecisionOpen, setSaleDecisionOpen] = useState(false);
+  const [saleDecisionBusy, setSaleDecisionBusy] = useState(false);
   const { tags, assignments } = useContactTags();
-  const { fetchContactFull } = useContacts();
 
   // Carrega a ficha do lead para a barra lateral (somente quando visível).
   useEffect(() => {
 
-    if (!leadPanelOpen || !selectedId) return;
+    if ((!leadPanelOpen && !leadEditOpen) || !selectedId) return;
     let cancelled = false;
     setLeadContact(null);
-    void fetchContactFull(selectedId).then((c) => {
-      if (!cancelled) setLeadContact(c);
+    void supabase.from('contacts').select('*').eq('id', selectedId).maybeSingle().then(({ data }) => {
+      if (!cancelled) setLeadContact(data as Contact | null);
     });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [leadPanelOpen, selectedId]);
+  }, [leadPanelOpen, leadEditOpen, selectedId]);
 
 
   const load = useCallback(async () => {
@@ -260,6 +264,9 @@ export default function ContatosInbox() {
         (i.last_summary || '').toLowerCase().includes(q);
       if (!matchesSearch) return false;
       if (taggedContactIds && !taggedContactIds.has(i.id)) return false;
+      // Resolvidas não fazem parte da fila operacional; retornos legítimos
+      // continuam acessíveis em "Hoje" enquanto tiverem return_at.
+      if (inboxFilter !== 'today' && i.status === 'resolved') return false;
       if (inboxFilter === 'today') {
         if (!i.return_at) return false;
         const due = new Date(i.return_at);
@@ -312,25 +319,45 @@ export default function ContatosInbox() {
     }
   };
 
-  const removeSelectedLead = async () => {
+  const updateLeadContextually = async (contactId: string, updates: Partial<Contact>) => {
+    const { error } = await supabase.from('contacts').update({
+      ...updates,
+      updated_at: new Date().toISOString(),
+    } as any).eq('id', contactId);
+    if (error) throw error;
+    setLeadContact(current => current?.id === contactId ? { ...current, ...updates } : current);
+    setItems(current => current.map(item => item.id === contactId ? {
+      ...item,
+      ...(updates.name !== undefined ? { name: updates.name } : {}),
+      ...(updates.whatsapp !== undefined ? { whatsapp: updates.whatsapp || null } : {}),
+      ...(updates.phone !== undefined ? { phone: updates.phone || null } : {}),
+    } : item));
+  };
+
+  const archiveSelectedConversation = async () => {
     if (!selected) return;
-    const confirmed = window.confirm(`Remover "${selected.name}" da fila e desativar este lead? O histórico será preservado.`);
+    const confirmed = window.confirm(`Arquivar a conversa de "${selected.name}"? O contato, histórico e demais vínculos serão preservados.`);
     if (!confirmed) return;
     setAttendanceBusy(true);
     try {
       const now = new Date().toISOString();
-      const [{ error: contactError }, { error: conversationError }] = await Promise.all([
-        supabase.from('contacts').update({ is_active: false, updated_at: now }).eq('id', selected.id),
-        supabase.from('service_conversations').update({ status: 'resolved', resolved_at: now, attendance_state: 'concluido', needs_reply: false, unread_count: 0 }).eq('contact_id', selected.id),
-      ]);
-      if (contactError || conversationError) throw contactError || conversationError;
-      setItems(current => current.filter(item => item.id !== selected.id));
+      const { error } = await supabase.from('service_conversations').update({
+        status: 'resolved',
+        resolved_at: now,
+        attendance_state: 'concluido',
+        needs_reply: false,
+        unread_count: 0,
+        return_at: null,
+      }).eq('id', selected.conversation_id);
+      if (error) throw error;
       setSelectedId(null);
       setLeadPanelOpen(false);
-      toast.success('Lead removido da fila. O histórico foi preservado.');
+      setLeadEditOpen(false);
+      await load();
+      toast.success('Conversa arquivada. O contato e o histórico foram preservados.');
     } catch (error) {
       console.error(error);
-      toast.error('Não foi possível remover o lead.');
+      toast.error('Não foi possível arquivar a conversa.');
     } finally { setAttendanceBusy(false); }
   };
 
@@ -381,6 +408,28 @@ export default function ContatosInbox() {
       console.error(error);
       toast.error('Não foi possível adiar o atendimento.');
     } finally { setAttendanceBusy(false); }
+  };
+
+  const concludeSaleAttendance = async () => {
+    if (!selected) return;
+    setSaleDecisionBusy(true);
+    try {
+      const result = await applyAttendanceOutcome({
+        contactId: selected.id,
+        conversationId: selected.conversation_id,
+        outcome: 'sale_closed',
+        saleAlreadyRecorded: true,
+      });
+      toast.success(`${result.label} · pós-venda agendado.`);
+      setSendConfirmation(false);
+      setSaleDecisionOpen(false);
+      await load();
+    } catch (error) {
+      console.error(error);
+      toast.error('A venda foi registrada, mas não foi possível concluir o atendimento. Tente novamente ou mantenha a conversa aberta.');
+    } finally {
+      setSaleDecisionBusy(false);
+    }
   };
 
   const handleSummarize = async (contactId: string) => {
@@ -617,9 +666,8 @@ export default function ContatosInbox() {
                   <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setSaleOpen(true)} title="Registrar venda deste contato">
                     <ShoppingCart className="h-4 w-4 text-emerald-600" />
                   </Button>
-                  <Button size="icon" variant="ghost" className="h-8 w-8" disabled={attendanceBusy} onClick={() => void removeSelectedLead()} title="Remover lead da fila">
-
-                    <Trash2 className="h-4 w-4 text-destructive" />
+                  <Button size="icon" variant="ghost" className="h-8 w-8" disabled={attendanceBusy} onClick={() => void archiveSelectedConversation()} title="Arquivar conversa">
+                    <Archive className="h-4 w-4 text-muted-foreground" />
                   </Button>
                   <Button
                     size="icon"
@@ -639,6 +687,15 @@ export default function ContatosInbox() {
                     title={leadPanelOpen ? 'Ocultar detalhes do lead' : 'Mostrar detalhes do lead'}
                   >
                     <PanelRight className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8"
+                    onClick={() => setLeadEditOpen(true)}
+                    title="Editar dados do contato sem sair da conversa"
+                  >
+                    <Pencil className="h-4 w-4" />
                   </Button>
                   <Link to={`/contatos?contact=${selected.id}`}>
                     <Button size="icon" variant="ghost" className="h-8 w-8" title="Abrir ficha completa">
@@ -713,9 +770,12 @@ export default function ContatosInbox() {
                 <div className="rounded-md border p-2"><span className="text-muted-foreground">Estado do atendimento</span><div className="mt-0.5 font-medium">{selected.attendance_state ? ATTENDANCE_STATE_LABELS[selected.attendance_state] || selected.attendance_state : 'Sem estado'}</div></div>
                 <div className="rounded-md border p-2"><span className="text-muted-foreground">Última interação</span><div className="mt-0.5 font-medium">{formatLastDate(selected.last_date)}</div></div>
               </div>
-              <InboxNoteBlock contactId={selected.id} onSaved={load} onRegisterSale={() => setSaleOpen(true)} />
+              <InboxNoteBlock contactId={selected.id} conversationId={selected.conversation_id} onSaved={load} onRegisterSale={() => setSaleOpen(true)} />
               {leadContact && <p className="text-xs text-muted-foreground whitespace-pre-wrap line-clamp-6">{leadContact.notes || 'Nenhuma observação cadastrada.'}</p>}
 
+              <Button variant="outline" size="sm" className="w-full gap-2" onClick={() => setLeadEditOpen(true)}>
+                <Pencil className="h-3.5 w-3.5" /> Editar dados
+              </Button>
               <Link to={`/contatos?contact=${selected.id}`} className="block"><Button variant="outline" size="sm" className="w-full gap-2"><ExternalLink className="h-3.5 w-3.5" /> Abrir cadastro completo</Button></Link>
             </div>
           </aside>
@@ -732,8 +792,35 @@ export default function ContatosInbox() {
           contactName={selected.name}
           contactHandle={selected.whatsapp || selected.phone}
           onCreated={load}
+          onSaleCreated={() => setSaleDecisionOpen(true)}
         />
       )}
+      <AlertDialog open={saleDecisionOpen} onOpenChange={setSaleDecisionOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Venda registrada com sucesso</AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja concluir este atendimento comercial e agendar o pós-venda, ou manter a conversa aberta?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel disabled={saleDecisionBusy}>Manter conversa aberta</AlertDialogCancel>
+            <AlertDialogAction disabled={saleDecisionBusy} onClick={(event) => {
+              event.preventDefault();
+              void concludeSaleAttendance();
+            }}>
+              {saleDecisionBusy ? 'Agendando pós-venda...' : 'Concluir atendimento e agendar pós-venda'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <LeadDetailDrawer
+        contact={leadContact}
+        open={leadEditOpen}
+        onOpenChange={setLeadEditOpen}
+        onSave={updateLeadContextually}
+        onOpenFull={() => window.open(`/contatos?contact=${selected?.id}`, '_blank', 'noopener,noreferrer')}
+      />
       <MergeDuplicatesDialog open={mergeOpen} onOpenChange={setMergeOpen} onMerged={load} />
 
       <QuickConversationDialog

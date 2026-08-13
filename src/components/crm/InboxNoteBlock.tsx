@@ -6,14 +6,16 @@ import { Label } from '@/components/ui/label';
 import { Loader2, NotebookPen, ShoppingCart } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { snoozeAttendance } from '@/lib/crm/attendance';
 
 interface InboxNoteBlockProps {
   contactId: string;
+  conversationId?: string | null;
   onSaved?: () => void;
   onRegisterSale?: () => void;
 }
 
-export function InboxNoteBlock({ contactId, onSaved, onRegisterSale }: InboxNoteBlockProps) {
+export function InboxNoteBlock({ contactId, conversationId, onSaved, onRegisterSale }: InboxNoteBlockProps) {
   const [note, setNote] = useState('');
   const [scheduleDate, setScheduleDate] = useState('');
   const [saving, setSaving] = useState(false);
@@ -36,16 +38,8 @@ export function InboxNoteBlock({ contactId, onSaved, onRegisterSale }: InboxNote
       if (error) throw error;
 
       if (scheduleDate) {
-        const { error: contactError } = await supabase
-          .from('contacts')
-          .update({
-            next_action_text: text,
-            next_action_date: scheduleDate,
-            next_contact_date: scheduleDate,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', contactId);
-        if (contactError) throw contactError;
+        // A nota continua sendo o registro descritivo; o retorno usa a regra única do CRM.
+        await snoozeAttendance({ contactId, conversationId, when: scheduleDate });
       }
 
       toast.success(scheduleDate ? 'Anotação salva e retorno agendado.' : 'Anotação salva no histórico.');
