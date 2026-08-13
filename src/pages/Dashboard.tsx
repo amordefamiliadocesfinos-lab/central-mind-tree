@@ -40,6 +40,7 @@ import { CompanyStatus } from '@/components/dashboard/CompanyStatus';
 import { BottleneckCard } from '@/components/dashboard/BottleneckCard';
 import { OperationalStart } from '@/components/dashboard/OperationalStart';
 import { MTWorkspaceBar } from '@/components/routine/MTWorkspaceBar';
+import { getInboxPriority } from '@/lib/crm/inboxPriority';
 
 
 interface DashboardData {
@@ -61,6 +62,7 @@ interface DashboardData {
   // Operações
   ordersThisMonth: number;
   ordersPending: number;
+  overdueOrders: number;
   ordersValue: number;
   lowStockCount: number;
   // Digital
@@ -72,6 +74,8 @@ interface DashboardData {
   receberAtrasado: number;
   pagarAberto: number;
   pagarAtrasado: number;
+  financialOverdueCount: number;
+  crmAttentionCount: number;
   saldoContas: number;
 }
 
@@ -181,6 +185,7 @@ export default function Dashboard() {
     activeBlock: null,
     ordersThisMonth: 0,
     ordersPending: 0,
+    overdueOrders: 0,
     ordersValue: 0,
     lowStockCount: 0,
     ideasInProgress: 0,
@@ -190,6 +195,8 @@ export default function Dashboard() {
     receberAtrasado: 0,
     pagarAberto: 0,
     pagarAtrasado: 0,
+    financialOverdueCount: 0,
+    crmAttentionCount: 0,
     saldoContas: 0,
   });
 
@@ -215,10 +222,12 @@ export default function Dashboard() {
       routineResult,
       statsResult,
       ordersResult,
+      overdueOrdersResult,
       ideasResult,
       variationsResult,
       entriesResult,
       accountsResult,
+      conversationsResult,
     ] = await Promise.all([
       // Tasks
       supabase.from('tasks').select('id, status, due_date').is('deleted_at', null),
@@ -228,6 +237,8 @@ export default function Dashboard() {
       supabase.from('routine_stats').select('planned_min, done_min').eq('date', today).maybeSingle(),
       // Orders this month
       supabase.from('orders').select('id, status, total_value').gte('order_date', monthStart).lte('order_date', monthEnd).is('deleted_at', null),
+      // The order itself is overdue only when its deadline passed and it is not finished or cancelled.
+      supabase.from('orders').select('id, status, due_date').is('deleted_at', null).not('due_date', 'is', null).lt('due_date', today).neq('status', 'concluído').neq('status', 'cancelado'),
       // Digital ideas
       supabase.from('digital_ideas').select('id, status'),
       // Variations scheduled
@@ -236,16 +247,20 @@ export default function Dashboard() {
       supabase.from('financial_entries').select('id, type, value, value_paid, due_date, payment_date'),
       // Accounts
       supabase.from('financial_accounts').select('id, current_balance').eq('is_active', true),
+      // Reuse the Inbox priority rule instead of creating a Dashboard-specific CRM score.
+      supabase.from('service_conversations').select('contact_id, status, needs_reply, return_at, last_inbound_at, last_message_at, attendance_state').not('contact_id', 'is', null),
     ]);
 
     const tasks = tasksResult.data || [];
     const routineBlocks = routineResult.data || [];
     const stats = statsResult.data;
     const orders = ordersResult.data || [];
+    const overdueOrders = overdueOrdersResult.data || [];
     const ideas = ideasResult.data || [];
     const variations = variationsResult.data || [];
     const entries = entriesResult.data || [];
     const accounts = accountsResult.data || [];
+    const conversations = conversationsResult.data || [];
 
     // Calculate task stats
     const focusTasksAndamento = tasks.filter(t => t.status === 'andamento').length;
@@ -285,7 +300,27 @@ export default function Dashboard() {
     const pagarAtrasado = pagarEntries
       .filter(e => !e.payment_date && e.due_date < today)
       .reduce((sum, e) => sum + (e.value - (e.value_paid || 0)), 0);
+    const financialOverdueCount = entries.filter(e => !e.payment_date && e.due_date < today).length;
     const saldoContas = accounts.reduce((sum, a) => sum + (a.current_balance || 0), 0);
+
+    // The Inbox filters inactive contacts and keeps one conversation per contact. Mirror that
+    // eligibility while delegating the actual operational reason to getInboxPriority().
+    const contactIds = Array.from(new Set(conversations.map(c => c.contact_id).filter(Boolean))) as string[];
+    const activeContactIds = new Set<string>();
+    if (contactIds.length > 0) {
+      const { data: activeContacts } = await supabase
+        .from('contacts')
+        .select('id')
+        .in('id', contactIds)
+        .eq('is_active', true);
+      (activeContacts || []).forEach(contact => activeContactIds.add(contact.id));
+    }
+    const seenAttentionContacts = new Set<string>();
+    const crmAttentionCount = conversations.reduce((count, conversation) => {
+      if (!conversation.contact_id || !activeContactIds.has(conversation.contact_id) || seenAttentionContacts.has(conversation.contact_id)) return count;
+      seenAttentionContacts.add(conversation.contact_id);
+      return getInboxPriority(conversation).reason ? count + 1 : count;
+    }, 0);
 
     setData({
       focusTasksAndamento,
@@ -302,6 +337,7 @@ export default function Dashboard() {
       activeBlock: activeBlock ? { title: activeBlock.title, focus: activeBlock.focus } : null,
       ordersThisMonth: orders.length,
       ordersPending,
+      overdueOrders: overdueOrders.length,
       ordersValue,
       lowStockCount: kpis.lowStock.length,
       ideasInProgress,
@@ -311,6 +347,8 @@ export default function Dashboard() {
       receberAtrasado,
       pagarAberto,
       pagarAtrasado,
+      financialOverdueCount,
+      crmAttentionCount,
       saldoContas,
     });
 
@@ -362,11 +400,9 @@ export default function Dashboard() {
 
         {/* Área de Trabalho do MT ativo — destaca módulos prioritários do papel do momento */}
         <OperationalStart
-          focusOverdue={data.focusTasksAtrasadas}
-          ordersPending={data.ordersPending}
-          lowStock={data.lowStockCount}
-          receivableOverdue={data.receberAtrasado}
-          payableOverdue={data.pagarAtrasado}
+          crmAttentionCount={data.crmAttentionCount}
+          financialOverdueCount={data.financialOverdueCount}
+          overdueOrders={data.overdueOrders}
         />
 
         {/* Situação da Empresa - status geral em tempo real */}
