@@ -1,5 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { useDigital, DIGITAL_STATUS } from '@/hooks/useDigital';
+import { useCampaigns } from '@/hooks/useCampaigns';
 import { useIdeaTypes } from '@/hooks/useIdeaTypes';
 import { useProductsList } from '@/hooks/useProductsList';
 import { IdeaCard } from '@/components/digital/IdeaCard';
@@ -32,6 +33,7 @@ const MediaLibrary = lazy(() => import('@/components/digital/MediaLibrary').then
 const MetricsChart = lazy(() => import('@/components/digital/MetricsChart').then(m => ({ default: m.MetricsChart })));
 const PlatformsManager = lazy(() => import('@/components/digital/PlatformsManager').then(m => ({ default: m.PlatformsManager })));
 const DigitalCalendar = lazy(() => import('@/components/digital/DigitalCalendar').then(m => ({ default: m.DigitalCalendar })));
+const DigitalWeeklyPlan = lazy(() => import('@/components/digital/DigitalWeeklyPlan').then(m => ({ default: m.DigitalWeeklyPlan })));
 const TrendsPanel = lazy(() => import('@/components/digital/TrendsPanel').then(m => ({ default: m.TrendsPanel })));
 const InteractionsPanel = lazy(() => import('@/components/digital/InteractionsPanel').then(m => ({ default: m.InteractionsPanel })));
 const ServicePanel = lazy(() => import('@/components/digital/ServicePanel').then(m => ({ default: m.ServicePanel })));
@@ -88,6 +90,7 @@ export default function Digital() {
     GROUP_LABELS,
     GROUP_ICONS,
   } = useDigital();
+  const { campaigns } = useCampaigns();
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [selectedIdea, setSelectedIdea] = useState<string | null>(null);
@@ -968,14 +971,25 @@ export default function Digital() {
               </div>
             )
           ) : activeTab === 'calendario' ? (
-            <DigitalCalendar 
-              variations={allVariationsWithTitle} 
-              onSelectVariation={(v) => {
-                if (v.idea_id) openIdeaWithVariation(v.idea_id, v.id);
-              }}
-              platforms={activePlatforms}
-              ideas={ideas.map(i => ({ id: i.id, title: i.title }))}
-            />
+            <div className="space-y-4">
+              <DigitalWeeklyPlan
+                variations={allVariationsWithTitle}
+                platforms={activePlatforms}
+                ideas={ideas.map(i => ({ id: i.id, title: i.title }))}
+                campaigns={campaigns}
+                onOpenVariation={(v) => {
+                  if (v.idea_id) openIdeaWithVariation(v.idea_id, v.id);
+                }}
+              />
+              <DigitalCalendar
+                variations={allVariationsWithTitle}
+                onSelectVariation={(v) => {
+                  if (v.idea_id) openIdeaWithVariation(v.idea_id, v.id);
+                }}
+                platforms={activePlatforms}
+                ideas={ideas.map(i => ({ id: i.id, title: i.title }))}
+              />
+            </div>
           ) : activeTab === 'campanhas' ? (
             <CampaignsPanel ideas={ideas.map(i => ({ id: i.id, title: i.title }))} />
           ) : activeTab === 'tendencias' ? (
