@@ -18,6 +18,7 @@ export interface CampaignApplication {
   approved_at: string | null;
   completed_at: string | null;
   created_at: string;
+  owner_name?: string | null;
 }
 
 export interface CampaignExecution {
@@ -75,13 +76,18 @@ export function useCampaigns() {
     }
     setLoading(true);
     const [c, e, ev, m, l] = await Promise.all([
-      asAny.from('campaign_applications').select('*').order('created_at', { ascending: false }),
+      asAny.from('campaign_applications').select('*, owner:app_users!campaign_applications_owner_user_id_fkey(name)').order('created_at', { ascending: false }),
       asAny.from('campaign_executions').select('*').order('created_at', { ascending: true }),
       asAny.from('campaign_evidence').select('*').order('created_at', { ascending: true }),
       asAny.from('campaign_metrics').select('*').order('measured_at', { ascending: false }),
       asAny.from('campaign_learnings').select('*').order('created_at', { ascending: false }),
     ]);
-    if (c.data) setCampaigns(c.data);
+    if (c.data) {
+      setCampaigns(c.data.map((campaign: any) => ({
+        ...campaign,
+        owner_name: campaign.owner?.name || null,
+      })));
+    }
     if (e.data) setExecutions(e.data);
     if (ev.data) setEvidence(ev.data);
     if (m.data) setMetrics(m.data);
