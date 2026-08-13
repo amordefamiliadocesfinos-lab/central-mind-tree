@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { FinancialAccount, FinancialCategory } from '@/hooks/useFinancial';
 import { supabase } from '@/integrations/supabase/client';
 import { Upload, FileText, Trash2, Loader2, AlertTriangle, CheckCircle2, XCircle, Sparkles, User, Package, X, Info } from 'lucide-react';
-import { format, parse as parseDate, isValid } from 'date-fns';
+import { addDays, format, parse as parseDate, isValid, parseISO } from 'date-fns';
 import * as XLSX from 'xlsx';
 
 export type RowStatus = 'nova' | 'duplicada' | 'ja_importada' | 'ignorada' | 'erro';
@@ -34,6 +34,10 @@ export interface ParsedRow {
   statusMessage?: string;
   hash: string;
   externalId?: string;
+  reconciliationMode?: 'new' | 'entry' | 'movement';
+  candidateCount?: number;
+  candidateEntry?: { id: string; description: string; remaining: number; dueDate: string };
+  candidateMovement?: { id: string; description: string; notes?: string | null; movementDate: string };
 }
 
 interface StatementImporterProps {
@@ -478,17 +482,32 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
       return { ...r, hash: h };
     }));
 
-    const [existingByRange, existingByHash, historyRes] = await Promise.all([
+    const rangeStart = minDate ? format(addDays(parseISO(minDate), -7), 'yyyy-MM-dd') : null;
+    const rangeEnd = maxDate ? format(addDays(parseISO(maxDate), 7), 'yyyy-MM-dd') : null;
+    const [existingByRange, existingByHash, movementByRange, movementByHash, historyRes] = await Promise.all([
       minDate && maxDate
         ? supabase
             .from('financial_entries')
-            .select('id, type, value, due_date, description, import_hash')
-            .eq('account_id', accountId)
-            .gte('due_date', minDate)
-            .lte('due_date', maxDate)
+            .select('id, type, value, value_paid, due_date, description, import_hash, account_id')
+            .or(`account_id.eq.${accountId},account_id.is.null`)
+            .gte('due_date', rangeStart!)
+            .lte('due_date', rangeEnd!)
         : Promise.resolve({ data: [] as any[], error: null }),
       supabase
         .from('financial_entries')
+        .select('id, import_hash')
+        .in('import_hash', hashes.length ? hashes : ['__none__']),
+      minDate && maxDate && !isCreditCard
+        ? supabase
+            .from('financial_movements')
+            .select('id, account_id, value, movement_date, notes, import_hash, entry:financial_entries!inner(type, description)')
+            .eq('account_id', accountId)
+            .is('import_hash', null)
+            .gte('movement_date', rangeStart!)
+            .lte('movement_date', rangeEnd!)
+        : Promise.resolve({ data: [] as any[], error: null }),
+      supabase
+        .from('financial_movements')
         .select('id, import_hash')
         .in('import_hash', hashes.length ? hashes : ['__none__']),
       supabase
@@ -580,14 +599,19 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
       return out;
     };
 
-    const importedHashSet = new Set(
-      (existingByHash.data || []).map((e: any) => e.import_hash).filter(Boolean)
-    );
+    const importedHashSet = new Set([
+      ...(existingByHash.data || []).map((e: any) => e.import_hash),
+      ...(movementByHash.data || []).map((e: any) => e.import_hash),
+    ].filter(Boolean));
     const existingList = (existingByRange.data || []) as any[];
+    const movementList = (movementByRange.data || []) as any[];
 
     return rowsWithHash.map(r => {
       let status: RowStatus = 'nova';
       let statusMessage: string | undefined;
+      let candidateCount = 0;
+      let possible: any;
+      let possibleMovement: any;
 
       if (!r.date || !r.value || r.value <= 0) {
         status = 'erro';
@@ -597,17 +621,43 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
         statusMessage = 'Já importada anteriormente';
       } else {
         const dbType = r.type === 'entrada' ? 'receber' : 'pagar';
-        const normDesc = normalizeDescription(r.description);
-        const possible = existingList.find(e =>
+        const entryCandidates = existingList.filter(e =>
           e.type === dbType &&
-          e.due_date === r.date &&
-          Math.abs(Number(e.value) - r.value) < 0.005 &&
-          normalizeDescription(e.description || '') === normDesc
+          Number(e.value) - Number(e.value_paid || 0) + 0.005 >= r.value &&
+          Math.abs(parseISO(e.due_date).getTime() - parseISO(r.date).getTime()) <= 7 * 24 * 60 * 60 * 1000
         );
-        if (possible) {
+        const movementCandidates = movementList.filter(m => {
+          const entry = Array.isArray(m.entry) ? m.entry[0] : m.entry;
+          return entry?.type === dbType &&
+            Math.abs(Number(m.value) - r.value) < 0.005 &&
+            Math.abs(parseISO(m.movement_date).getTime() - parseISO(r.date).getTime()) <= 7 * 24 * 60 * 60 * 1000;
+        });
+        candidateCount = entryCandidates.length + movementCandidates.length;
+        possible = candidateCount === 1 ? entryCandidates[0] : undefined;
+        possibleMovement = candidateCount === 1 ? movementCandidates[0] : undefined;
+        if (candidateCount > 0) {
           status = 'duplicada';
-          statusMessage = 'Movimentação semelhante já existe';
+          statusMessage = candidateCount > 1 ? 'Existem múltiplas correspondências possíveis' : 'Possível lançamento correspondente';
         }
+      }
+
+      if (possible) {
+        r.candidateEntry = {
+          id: possible.id,
+          description: possible.description || 'Lançamento existente',
+          remaining: Number(possible.value) - Number(possible.value_paid || 0),
+          dueDate: possible.due_date,
+        };
+      } else if (possibleMovement) {
+        const entry = Array.isArray(possibleMovement.entry) ? possibleMovement.entry[0] : possibleMovement.entry;
+        status = 'duplicada';
+        statusMessage = 'Possível movimento correspondente';
+        r.candidateMovement = {
+          id: possibleMovement.id,
+          description: entry?.description || 'Movimento existente',
+          notes: possibleMovement.notes,
+          movementDate: possibleMovement.movement_date,
+        };
       }
 
       const historical = suggestFor(r.description, r.type);
@@ -617,10 +667,12 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
         ...r,
         status,
         statusMessage,
+        candidateCount,
         categoryId,
         contactId: historical.contactId,
         contactName: historical.contactName,
         selected: status === 'nova' || status === 'duplicada',
+        reconciliationMode: 'new',
         ...(status === 'ja_importada' || status === 'erro' ? { selected: false } : {}),
       };
     });
@@ -705,7 +757,32 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
         return { r, hash };
       }));
 
-      const payload = enriched.map(({ r, hash }) => ({
+      const linkedRows = enriched.filter(({ r }) => r.reconciliationMode === 'entry' || r.reconciliationMode === 'movement');
+      for (const { r, hash } of linkedRows) {
+        if (r.reconciliationMode === 'entry' && !r.candidateEntry) {
+          throw new Error('O lançamento escolhido para conciliação não está mais disponível. Leia o extrato novamente.');
+        }
+        if (r.reconciliationMode === 'movement' && !r.candidateMovement) {
+          throw new Error('O movimento escolhido para conciliação não está mais disponível. Leia o extrato novamente.');
+        }
+
+        const { error } = await supabase.rpc('reconcile_imported_financial_line', {
+          p_mode: r.reconciliationMode,
+          p_entry_id: r.candidateEntry?.id || null,
+          p_movement_id: r.candidateMovement?.id || null,
+          p_account_id: accountId,
+          p_type: r.type === 'entrada' ? 'receber' : 'pagar',
+          p_value: r.value,
+          p_movement_date: r.date,
+          p_import_hash: hash,
+          p_import_source: 'extrato_arquivo',
+          p_import_external_id: r.externalId || null,
+        });
+        if (error) throw error;
+      }
+
+      const newRows = enriched.filter(({ r }) => r.reconciliationMode !== 'entry' && r.reconciliationMode !== 'movement');
+      const payload = newRows.map(({ r, hash }) => ({
         type: isCreditCard ? 'pagar' : (r.type === 'entrada' ? 'receber' : 'pagar'),
         description: r.description || 'Importado do extrato',
         value: r.value,
@@ -728,21 +805,29 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
         import_external_id: r.externalId ? hash : null,
       }));
 
-      const { data: inserted, error } = await supabase
-        .from('financial_entries')
-        .insert(payload)
-        .select('id, value, account_id, payment_date, due_date');
-      if (error) throw error;
+      let inserted: Array<{ id: string; value: number; account_id: string | null; payment_date: string | null; due_date: string }> = [];
+      if (payload.length) {
+        const { data, error } = await supabase
+          .from('financial_entries')
+          .insert(payload)
+          .select('id, value, account_id, payment_date, due_date');
+        if (error) throw error;
+        inserted = data || [];
+      }
 
       // Para conta bancária, gera movimentação imediata (mesma data). Para cartão,
       // não gera movimento — as compras ficarão em aberto até o pagamento da fatura.
       if (!isCreditCard && inserted?.length) {
-        const movements = inserted.map(e => ({
+        const movements = inserted.map((e, index) => ({
           entry_id: e.id,
           account_id: e.account_id,
           value: e.value,
           movement_date: e.payment_date || e.due_date,
           notes: 'Importado via extrato',
+          import_hash: newRows[index]?.hash,
+          import_source: 'extrato_arquivo',
+          import_external_id: newRows[index]?.r.externalId || null,
+          imported_at: now,
         }));
         await supabase.from('financial_movements').insert(movements);
       }
@@ -882,6 +967,7 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
                     <TableHead>Categoria</TableHead>
                     <TableHead className="min-w-[200px]">Cliente / Fornecedor</TableHead>
                     <TableHead className="min-w-[180px]">Pedido</TableHead>
+                    <TableHead className="min-w-[250px]">Conciliação</TableHead>
                     <TableHead>Situação</TableHead>
                     <TableHead className="w-10"></TableHead>
                   </TableRow>
@@ -951,6 +1037,35 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
                           contactId={r.contactId}
                           onChange={(o) => updateRow(r.id, { orderId: o?.id, orderNumber: o?.number })}
                         />
+                      </TableCell>
+                      <TableCell>
+                        {r.candidateCount && r.candidateCount > 1 ? (
+                          <div className="space-y-1">
+                            <p className="text-xs font-medium text-amber-700 dark:text-amber-400">Existem múltiplas correspondências possíveis</p>
+                            <span className="text-xs text-muted-foreground">Crie um novo lançamento ou revise o extrato.</span>
+                          </div>
+                        ) : r.candidateEntry || r.candidateMovement ? (
+                          <div className="space-y-1">
+                            <Select
+                              value={r.reconciliationMode || 'new'}
+                              onValueChange={(v: 'new' | 'entry' | 'movement') => updateRow(r.id, { reconciliationMode: v })}
+                            >
+                              <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="new">Criar novo lançamento</SelectItem>
+                                {r.candidateEntry && <SelectItem value="entry">Vincular ao existente</SelectItem>}
+                                {r.candidateMovement && <SelectItem value="movement">Confirmar movimento existente</SelectItem>}
+                              </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground">
+                              {r.candidateEntry
+                                ? `${r.candidateEntry.description} · saldo ${r.candidateEntry.remaining.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} · ${format(parseISO(r.candidateEntry.dueDate), 'dd/MM/yyyy')}`
+                                : `${r.candidateMovement?.description} · ${format(parseISO(r.candidateMovement!.movementDate), 'dd/MM/yyyy')}`}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Criar novo lançamento</span>
+                        )}
                       </TableCell>
                       <TableCell>{statusBadge(r)}</TableCell>
                       <TableCell>

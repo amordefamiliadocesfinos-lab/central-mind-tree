@@ -2049,6 +2049,10 @@ export type Database = {
           created_by: string | null
           entry_id: string
           id: string
+          import_external_id: string | null
+          import_hash: string | null
+          import_source: string | null
+          imported_at: string | null
           movement_date: string
           notes: string | null
           value: number
@@ -2059,6 +2063,10 @@ export type Database = {
           created_by?: string | null
           entry_id: string
           id?: string
+          import_external_id?: string | null
+          import_hash?: string | null
+          import_source?: string | null
+          imported_at?: string | null
           movement_date?: string
           notes?: string | null
           value: number
@@ -2069,6 +2077,10 @@ export type Database = {
           created_by?: string | null
           entry_id?: string
           id?: string
+          import_external_id?: string | null
+          import_hash?: string | null
+          import_source?: string | null
+          imported_at?: string | null
           movement_date?: string
           notes?: string | null
           value?: number
@@ -4914,6 +4926,21 @@ export type Database = {
         }
       }
       current_app_user_id: { Args: never; Returns: string }
+      reconcile_imported_financial_line: {
+        Args: {
+          p_account_id: string
+          p_entry_id: string | null
+          p_import_external_id?: string | null
+          p_import_hash: string
+          p_import_source: string
+          p_mode: string
+          p_movement_date: string
+          p_movement_id: string | null
+          p_type: string
+          p_value: number
+        }
+        Returns: Json
+      }
       map_contact_to_conv_funnel: { Args: { _status: string }; Returns: string }
       map_conv_to_contact_funnel: { Args: { _stage: string }; Returns: string }
       merge_contacts: {
