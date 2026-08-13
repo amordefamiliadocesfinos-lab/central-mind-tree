@@ -69,6 +69,8 @@ export async function applyAttendanceOutcome(input: {
   contactId: string;
   conversationId?: string | null;
   outcome: AttendanceOutcome;
+  /** A venda já foi registrada pelo fluxo de pedidos; evita repetir o mesmo fato no histórico. */
+  saleAlreadyRecorded?: boolean;
 }) {
   const now = new Date().toISOString();
   const config = CONFIG[input.outcome];
@@ -96,16 +98,18 @@ export async function applyAttendanceOutcome(input: {
   }).eq('id', input.contactId);
   if (updateError) throw updateError;
 
-  const { error: historyError } = await supabase.from('contact_history').insert({
-    contact_id: input.contactId,
-    event_type: 'contact',
-    interaction_type: 'contact',
-    event_code: config.eventCode,
-    event_metadata: { source: 'unified_inbox', outcome: input.outcome, next_stage: nextStage, return_at: returnAt },
-    description: config.label,
-    interaction_date: now,
-  });
-  if (historyError) throw historyError;
+  if (!(input.outcome === 'sale_closed' && input.saleAlreadyRecorded)) {
+    const { error: historyError } = await supabase.from('contact_history').insert({
+      contact_id: input.contactId,
+      event_type: 'contact',
+      interaction_type: 'contact',
+      event_code: config.eventCode,
+      event_metadata: { source: 'unified_inbox', outcome: input.outcome, next_stage: nextStage, return_at: returnAt },
+      description: config.label,
+      interaction_date: now,
+    });
+    if (historyError) throw historyError;
+  }
 
   let conversationId = input.conversationId ?? null;
   if (!conversationId) {
