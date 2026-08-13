@@ -31,6 +31,7 @@ import { useActiveUser } from '@/hooks/useActiveUser';
 import { MetaWindowBadge } from '@/components/crm/MetaWindowBadge';
 import { AttendanceActionBar } from '@/components/crm/AttendanceActionBar';
 import { applyAttendanceOutcome, snoozeAttendance, ATTENDANCE_STATE_LABELS, type AttendanceOutcome } from '@/lib/crm/attendance';
+import { compareInboxPriority, getInboxPriority } from '@/lib/crm/inboxPriority';
 
 interface InboxItem {
   id: string;
@@ -280,6 +281,15 @@ export default function ContatosInbox() {
       return true;
     });
   }, [items, search, inboxFilter, taggedContactIds]);
+
+  // A prioridade Ã© somente uma camada de apresentaÃ§Ã£o: os filtros continuam
+  // definindo quem entra na fila e a regra pura explica a ordem resultante.
+  const prioritized = useMemo(() => {
+    const now = new Date();
+    return [...filtered]
+      .map((item) => ({ item, priority: getInboxPriority(item, now) }))
+      .sort((a, b) => compareInboxPriority(a.item, b.item, now));
+  }, [filtered]);
 
 
   const selected = items.find((i) => i.id === selectedId) || null;
@@ -539,7 +549,7 @@ export default function ContatosInbox() {
         <div className={cn('min-h-0 overflow-y-auto md:border md:rounded-l-lg md:bg-card', selected && 'hidden md:block')}>
           {loading ? (
             <div className="p-6 text-center text-sm text-muted-foreground">Carregando...</div>
-          ) : filtered.length === 0 ? (
+          ) : prioritized.length === 0 ? (
             <div className="p-6 text-center text-sm text-muted-foreground">
               {search ? 'Nenhum resultado' : 'Nenhuma conversa registrada ainda.'}
               <br />
@@ -549,7 +559,7 @@ export default function ContatosInbox() {
             </div>
           ) : (
             <div className="divide-y">
-              {filtered.map((item) => (
+              {prioritized.map(({ item, priority }) => (
                 <button
                   key={item.id}
                   onClick={() => void openConversation(item)}
@@ -578,9 +588,9 @@ export default function ContatosInbox() {
                           {ATTENDANCE_STATE_LABELS[item.attendance_state] || item.attendance_state}
                         </Badge>
                       )}
-                      {item.needs_reply && (
-                        <Badge variant="destructive" className="text-[9px] h-4 px-1.5">
-                          Responder
+                      {priority.reason && (
+                        <Badge variant={priority.reason === 'Precisa responder' ? 'destructive' : 'secondary'} className="text-[9px] h-4 px-1.5">
+                          {priority.reason}
                         </Badge>
                       )}
                       {item.unread_count > 0 && (
