@@ -52,6 +52,7 @@ interface InboxItem {
   assigned_to: string | null;
   status: string;
   last_inbound_at: string | null;
+  last_message_at: string | null;
   return_at: string | null;
 }
 
@@ -90,7 +91,7 @@ export default function ContatosInbox() {
     let cancelled = false;
     setLeadContact(null);
     void supabase.from('contacts').select('*').eq('id', selectedId).maybeSingle().then(({ data }) => {
-      if (!cancelled) setLeadContact(data as Contact | null);
+      if (!cancelled) setLeadContact((data as unknown as Contact) ?? null);
     });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -160,6 +161,7 @@ export default function ContatosInbox() {
         assigned_to: conversation.assigned_to,
         status: conversation.status || 'open',
         last_inbound_at: conversation.last_inbound_at,
+        last_message_at: conversation.last_message_at ?? null,
         return_at: conversation.return_at,
       });
     }

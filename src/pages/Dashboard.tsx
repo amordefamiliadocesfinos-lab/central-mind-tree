@@ -285,22 +285,24 @@ export default function Dashboard() {
     const variationsPublished = variations.filter(v => v.status === 'publicado').length;
 
     // Financial
+    const isOpen = (e: any) => !e.payment_date && (e.value - (e.value_paid || 0)) > 0.009;
     const receberEntries = entries.filter(e => e.type === 'receber');
     const pagarEntries = entries.filter(e => e.type === 'pagar');
     
     const receberAberto = receberEntries
-      .filter(e => !e.payment_date)
+      .filter(isOpen)
       .reduce((sum, e) => sum + (e.value - (e.value_paid || 0)), 0);
     const receberAtrasado = receberEntries
-      .filter(e => !e.payment_date && e.due_date < today)
+      .filter(e => isOpen(e) && e.due_date < today)
       .reduce((sum, e) => sum + (e.value - (e.value_paid || 0)), 0);
     const pagarAberto = pagarEntries
-      .filter(e => !e.payment_date)
+      .filter(isOpen)
       .reduce((sum, e) => sum + (e.value - (e.value_paid || 0)), 0);
     const pagarAtrasado = pagarEntries
-      .filter(e => !e.payment_date && e.due_date < today)
+      .filter(e => isOpen(e) && e.due_date < today)
       .reduce((sum, e) => sum + (e.value - (e.value_paid || 0)), 0);
-    const financialOverdueCount = entries.filter(e => !e.payment_date && e.due_date < today).length;
+    const financialOverdueCount = entries.filter(e => isOpen(e) && e.due_date < today).length;
+
     const saldoContas = accounts.reduce((sum, a) => sum + (a.current_balance || 0), 0);
 
     // The Inbox filters inactive contacts and keeps one conversation per contact. Mirror that

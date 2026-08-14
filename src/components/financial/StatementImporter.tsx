@@ -484,7 +484,7 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
 
     const rangeStart = minDate ? format(addDays(parseISO(minDate), -7), 'yyyy-MM-dd') : null;
     const rangeEnd = maxDate ? format(addDays(parseISO(maxDate), 7), 'yyyy-MM-dd') : null;
-    const [existingByRange, existingByHash, movementByRange, movementByHash, historyRes] = await Promise.all([
+    const [existingByRange, existingByHash, movementByRange, movementByHash, historyRes] = await (Promise.all([
       minDate && maxDate
         ? supabase
             .from('financial_entries')
@@ -493,12 +493,12 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
             .gte('due_date', rangeStart!)
             .lte('due_date', rangeEnd!)
         : Promise.resolve({ data: [] as any[], error: null }),
-      supabase
+      (supabase as any)
         .from('financial_entries')
         .select('id, import_hash')
         .in('import_hash', hashes.length ? hashes : ['__none__']),
       minDate && maxDate && !isCreditCard
-        ? supabase
+        ? (supabase as any)
             .from('financial_movements')
             .select('id, account_id, value, movement_date, notes, import_hash, entry:financial_entries!inner(type, description)')
             .eq('account_id', accountId)
@@ -506,7 +506,7 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
             .gte('movement_date', rangeStart!)
             .lte('movement_date', rangeEnd!)
         : Promise.resolve({ data: [] as any[], error: null }),
-      supabase
+      (supabase as any)
         .from('financial_movements')
         .select('id, import_hash')
         .in('import_hash', hashes.length ? hashes : ['__none__']),
@@ -516,7 +516,7 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
         .not('description', 'is', null)
         .order('updated_at', { ascending: false })
         .limit(2000),
-    ]);
+    ]) as Promise<any[]>);
 
     // Build suggestion maps from history
     const catFreq = new Map<string, Map<string, number>>();
@@ -766,7 +766,7 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
           throw new Error('O movimento escolhido para conciliação não está mais disponível. Leia o extrato novamente.');
         }
 
-        const { error } = await supabase.rpc('reconcile_imported_financial_line', {
+        const { error } = await (supabase.rpc as any)('reconcile_imported_financial_line', {
           p_mode: r.reconciliationMode,
           p_entry_id: r.candidateEntry?.id || null,
           p_movement_id: r.candidateMovement?.id || null,
