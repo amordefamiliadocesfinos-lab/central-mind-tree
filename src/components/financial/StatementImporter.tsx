@@ -493,7 +493,7 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
             .gte('due_date', rangeStart!)
             .lte('due_date', rangeEnd!)
         : Promise.resolve({ data: [] as any[], error: null }),
-      supabase
+      (supabase as any)
         .from('financial_entries')
         .select('id, import_hash')
         .in('import_hash', hashes.length ? hashes : ['__none__']),
@@ -506,7 +506,7 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
             .gte('movement_date', rangeStart!)
             .lte('movement_date', rangeEnd!)
         : Promise.resolve({ data: [] as any[], error: null }),
-      supabase
+      (supabase as any)
         .from('financial_movements')
         .select('id, import_hash')
         .in('import_hash', hashes.length ? hashes : ['__none__']),
