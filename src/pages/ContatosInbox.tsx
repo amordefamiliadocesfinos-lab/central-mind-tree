@@ -31,13 +31,13 @@ import { useActiveUser } from '@/hooks/useActiveUser';
 import { MetaWindowBadge } from '@/components/crm/MetaWindowBadge';
 import { AttendanceActionBar } from '@/components/crm/AttendanceActionBar';
 import { applyAttendanceOutcome, snoozeAttendance, ATTENDANCE_STATE_LABELS, type AttendanceOutcome } from '@/lib/crm/attendance';
-import { compareInboxPriority, getInboxPriority } from '@/lib/crm/inboxPriority';
 import { compareCrmPriority, getCrmPriority, type CrmPriorityInput } from '@/lib/crm/priority';
 
 interface InboxItem {
   id: string;
   conversation_id: string;
   name: string;
+  type: string | null;
   whatsapp: string | null;
   phone: string | null;
   photo_url: string | null;
@@ -59,7 +59,9 @@ interface InboxItem {
   next_contact_date: string | null;
 }
 
-type InboxFilter = 'all' | 'today' | 'needs_reply' | 'waiting_customer' | 'overdue' | 'unassigned';
+type InboxFilter = 'priority' | 'needs_reply' | 'today' | 'overdue' | 'cooling';
+type ConversationScope = 'commercial' | 'suppliers';
+type AssignmentFilter = 'all' | 'assigned' | 'unassigned';
 
 function readAttendanceQueueScope(): string[] {
   try {
@@ -85,6 +87,10 @@ function toCrmPriorityInput(item: InboxItem): CrmPriorityInput {
   };
 }
 
+function isPureSupplier(item: InboxItem) {
+  return item.type === 'fornecedor';
+}
+
 export default function ContatosInbox() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { activeUserId, isLinked } = useActiveUser();
@@ -92,7 +98,11 @@ export default function ContatosInbox() {
   const [items, setItems] = useState<InboxItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [inboxFilter, setInboxFilter] = useState<InboxFilter>('all');
+  const [inboxFilter, setInboxFilter] = useState<InboxFilter>('priority');
+  const [conversationScope, setConversationScope] = useState<ConversationScope>('commercial');
+  const [assignmentFilter, setAssignmentFilter] = useState<AssignmentFilter>('all');
+  const [stageFilter, setStageFilter] = useState('all');
+  const [waitingCustomerOnly, setWaitingCustomerOnly] = useState(false);
   const [loadLimit, setLoadLimit] = useState(200);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [attendanceQueueScope, setAttendanceQueueScope] = useState<string[]>(readAttendanceQueueScope);
@@ -154,7 +164,7 @@ export default function ContatosInbox() {
     const ids = Array.from(new Set(conversations.map((c) => c.contact_id).filter(Boolean))) as string[];
     const { data: contacts } = await supabase
       .from('contacts')
-      .select('id,name,whatsapp,phone,photo_url,funnel_status,temperatura_lead,ultimo_contato,next_action_date,next_contact_date,is_active')
+      .select('id,name,type,whatsapp,phone,photo_url,funnel_status,temperatura_lead,ultimo_contato,next_action_date,next_contact_date,is_active')
       .in('id', ids);
     const contactsById = new Map((contacts || []).map((contact) => [contact.id, contact]));
 
@@ -174,6 +184,7 @@ export default function ContatosInbox() {
         id: conversation.contact_id,
         conversation_id: conversation.id,
         name: contact?.name || conversation.contact_name || 'Sem nome',
+        type: contact?.type || null,
         whatsapp: contact?.whatsapp || conversation.contact_handle,
         phone: contact?.phone || null,
         photo_url: contact?.photo_url || conversation.contact_avatar_url,
@@ -290,6 +301,7 @@ export default function ContatosInbox() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
+    const now = new Date();
     return items.filter((i) => {
       const matchesSearch = !q ||
         i.name.toLowerCase().includes(q) ||
@@ -298,30 +310,35 @@ export default function ContatosInbox() {
         (i.last_summary || '').toLowerCase().includes(q);
       if (!matchesSearch) return false;
       if (taggedContactIds && !taggedContactIds.has(i.id)) return false;
+      if (stageFilter !== 'all' && i.funnel_status !== stageFilter) return false;
+      if (assignmentFilter === 'unassigned' && i.assigned_to) return false;
+      if (assignmentFilter === 'assigned' && !i.assigned_to) return false;
+      if (waitingCustomerOnly && i.attendance_state !== 'aguardando_cliente') return false;
       // Resolvidas não fazem parte da fila operacional; retornos legítimos
       // continuam acessíveis em "Hoje" enquanto tiverem return_at.
-      if (inboxFilter !== 'today' && i.status === 'resolved') return false;
-      if (inboxFilter === 'today') {
-        if (!i.return_at) return false;
-        const due = new Date(i.return_at);
-        const end = new Date(); end.setHours(23, 59, 59, 999);
-        return due <= end;
+      const priority = getCrmPriority(toCrmPriorityInput(i), now);
+      const supplier = isPureSupplier(i);
+      if (conversationScope === 'commercial') {
+        if (supplier && !['P0', 'P1'].includes(priority.level)) return false;
+      } else if (!supplier) {
+        return false;
       }
-      if (inboxFilter === 'needs_reply') return i.needs_reply;
-      if (inboxFilter === 'waiting_customer') return i.attendance_state === 'aguardando_cliente';
-      if (inboxFilter === 'overdue') return i.needs_reply && i.unread_days >= 2;
-      if (inboxFilter === 'unassigned') return !i.assigned_to;
-      return true;
+
+      if (inboxFilter === 'priority') return priority.operational;
+      if (inboxFilter === 'needs_reply') return priority.reason === 'needs_reply';
+      if (inboxFilter === 'today') return ['return_today', 'next_action_today'].includes(priority.reason);
+      if (inboxFilter === 'overdue') return ['return_overdue', 'next_action_overdue'].includes(priority.reason);
+      return priority.reason === 'cooling';
     });
-  }, [items, search, inboxFilter, taggedContactIds]);
+  }, [items, search, inboxFilter, taggedContactIds, stageFilter, assignmentFilter, waitingCustomerOnly, conversationScope]);
 
   // A prioridade Ã© somente uma camada de apresentaÃ§Ã£o: os filtros continuam
   // definindo quem entra na fila e a regra pura explica a ordem resultante.
   const prioritized = useMemo(() => {
     const now = new Date();
     return [...filtered]
-      .map((item) => ({ item, priority: getInboxPriority(item, now) }))
-      .sort((a, b) => compareInboxPriority(a.item, b.item, now));
+      .map((item) => ({ item, priority: getCrmPriority(toCrmPriorityInput(item), now) }))
+      .sort((a, b) => compareCrmPriority(toCrmPriorityInput(a.item), toCrmPriorityInput(b.item), now));
   }, [filtered]);
 
 
@@ -557,17 +574,46 @@ export default function ContatosInbox() {
           </div>
           <div className="mt-2 flex items-center gap-1.5 overflow-x-auto pb-0.5">
             {([
-              ['all', 'Todas'],
-              ['today', 'Hoje'],
+              ['priority', 'Prioridade'],
               ['needs_reply', 'Responder'],
-              ['waiting_customer', 'Aguardando resposta'],
-              ['overdue', 'Atrasadas'],
-              ['unassigned', 'Sem responsável'],
+              ['today', 'Hoje'],
+              ['overdue', 'Atrasados'],
+              ['cooling', 'Esfriando'],
             ] as Array<[InboxFilter, string]>).map(([key, label]) => (
               <Button key={key} size="sm" variant={inboxFilter === key ? 'default' : 'outline'} className="h-7 shrink-0 text-[11px]" onClick={() => setInboxFilter(key)}>
                 {label}
               </Button>
             ))}
+            <Select value={conversationScope} onValueChange={(value) => setConversationScope(value as ConversationScope)}>
+              <SelectTrigger className="h-7 w-[150px] shrink-0 text-[11px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="commercial" className="text-xs">Comercial</SelectItem>
+                <SelectItem value="suppliers" className="text-xs">Fornecedores / outras</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={stageFilter} onValueChange={setStageFilter}>
+              <SelectTrigger className="h-7 w-[145px] shrink-0 text-[11px]"><SelectValue placeholder="Etapa comercial" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-xs">Todas as etapas</SelectItem>
+                {[
+                  ['novo_lead', 'Novo Lead'], ['contato_realizado', 'Contato Realizado'],
+                  ['proposta_enviada', 'Proposta Enviada'], ['negociacao', 'Negociação'],
+                  ['fechado', 'Fechado'], ['pos_venda', 'Pós-Venda'],
+                  ['cadencia', 'Cadência'], ['perdido', 'Perdido'],
+                ].map(([value, label]) => <SelectItem key={value} value={value} className="text-xs">{label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={assignmentFilter} onValueChange={(value) => setAssignmentFilter(value as AssignmentFilter)}>
+              <SelectTrigger className="h-7 w-[140px] shrink-0 text-[11px]"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-xs">Responsável: todos</SelectItem>
+                <SelectItem value="assigned" className="text-xs">Com responsável</SelectItem>
+                <SelectItem value="unassigned" className="text-xs">Sem responsável</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button size="sm" variant={waitingCustomerOnly ? 'secondary' : 'outline'} className="h-7 shrink-0 text-[11px]" onClick={() => setWaitingCustomerOnly((value) => !value)}>
+              Aguardando cliente
+            </Button>
             <Select value={tagFilter} onValueChange={setTagFilter}>
               <SelectTrigger className="h-7 w-[132px] shrink-0 text-[11px]">
                 <div className="flex items-center gap-1 truncate">
@@ -631,14 +677,19 @@ export default function ContatosInbox() {
                       <Badge variant="outline" className="text-[9px] h-4 px-1.5">
                         {getCrmStageLabel(item.funnel_status)}
                       </Badge>
+                      {isPureSupplier(item) && (
+                        <Badge variant="outline" className="text-[9px] h-4 px-1.5">
+                          Fornecedor
+                        </Badge>
+                      )}
                       {item.attendance_state && (
                         <Badge variant="secondary" className="text-[9px] h-4 px-1.5">
                           {ATTENDANCE_STATE_LABELS[item.attendance_state] || item.attendance_state}
                         </Badge>
                       )}
                       {priority.reason && (
-                        <Badge variant={priority.reason === 'Precisa responder' ? 'destructive' : 'secondary'} className="text-[9px] h-4 px-1.5">
-                          {priority.reason}
+                        <Badge variant={priority.level === 'P0' ? 'destructive' : 'secondary'} className="text-[9px] h-4 px-1.5">
+                          {priority.label}
                         </Badge>
                       )}
                       {item.unread_count > 0 && (
