@@ -351,7 +351,8 @@ export default function Contatos() {
   const [originFilter, setOriginFilter] = useState<string>('all');
   const [attentionFilter, setAttentionFilter] = useState<AttentionKey>('all');
   const [qualityOnly, setQualityOnly] = useState(false);
-  const [viewMode, setViewMode] = useState<'today' | 'kanban' | 'funnel' | 'list' | 'sales_funnel'>('today');
+  // FRENTE 7A — a operação diária é a Caixa de Entrada; o CRM abre em gestão (Kanban).
+  const [viewMode, setViewMode] = useState<'today' | 'kanban' | 'funnel' | 'list' | 'sales_funnel'>('kanban');
   const [formOpen, setFormOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | undefined>();
   const [detailOpen, setDetailOpen] = useState(false);
