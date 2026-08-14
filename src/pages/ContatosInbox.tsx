@@ -32,6 +32,7 @@ import { MetaWindowBadge } from '@/components/crm/MetaWindowBadge';
 import { AttendanceActionBar } from '@/components/crm/AttendanceActionBar';
 import { applyAttendanceOutcome, snoozeAttendance, ATTENDANCE_STATE_LABELS, type AttendanceOutcome } from '@/lib/crm/attendance';
 import { compareInboxPriority, getInboxPriority } from '@/lib/crm/inboxPriority';
+import { compareCrmPriority, getCrmPriority, type CrmPriorityInput } from '@/lib/crm/priority';
 
 interface InboxItem {
   id: string;
@@ -53,9 +54,35 @@ interface InboxItem {
   status: string;
   last_inbound_at: string | null;
   return_at: string | null;
+  next_action_date: string | null;
+  next_contact_date: string | null;
 }
 
 type InboxFilter = 'all' | 'today' | 'needs_reply' | 'waiting_customer' | 'overdue' | 'unassigned';
+
+function readAttendanceQueueScope(): string[] {
+  try {
+    const stored = JSON.parse(sessionStorage.getItem('crm-attendance-queue') || 'null');
+    return stored?.source === 'today' && Array.isArray(stored.ids) ? stored.ids : [];
+  } catch {
+    return [];
+  }
+}
+
+function toCrmPriorityInput(item: InboxItem): CrmPriorityInput {
+  return {
+    needs_reply: item.needs_reply,
+    status: item.status,
+    attendance_state: item.attendance_state,
+    return_at: item.return_at,
+    next_action_date: item.next_action_date,
+    next_contact_date: item.next_contact_date,
+    ultimo_contato: item.ultimo_contato,
+    last_inbound_at: item.last_inbound_at,
+    last_message_at: item.last_date,
+    is_lead_or_quote: ['novo_lead', 'contato_realizado', 'proposta_enviada', 'negociacao'].includes(item.funnel_status),
+  };
+}
 
 export default function ContatosInbox() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -67,6 +94,7 @@ export default function ContatosInbox() {
   const [inboxFilter, setInboxFilter] = useState<InboxFilter>('all');
   const [loadLimit, setLoadLimit] = useState(200);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [attendanceQueueScope, setAttendanceQueueScope] = useState<string[]>(readAttendanceQueueScope);
   const [quickOpen, setQuickOpen] = useState(false);
   const [mergeOpen, setMergeOpen] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
@@ -97,7 +125,7 @@ export default function ContatosInbox() {
   }, [leadPanelOpen, leadEditOpen, selectedId]);
 
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (): Promise<InboxItem[] | null> => {
     setLoading(true);
     // A Caixa de Entrada tem uma única fonte: conversas reais do Atendimento.
     // Contatos sem conversa continuam no CRM, mas não poluem esta fila operacional.
@@ -113,19 +141,19 @@ export default function ContatosInbox() {
       toast.error('Não foi possível carregar as conversas.');
       setItems([]);
       setLoading(false);
-      return;
+      return null;
     }
 
     if (!conversations?.length) {
       setItems([]);
       setLoading(false);
-      return;
+      return [];
     }
 
     const ids = Array.from(new Set(conversations.map((c) => c.contact_id).filter(Boolean))) as string[];
     const { data: contacts } = await supabase
       .from('contacts')
-      .select('id,name,whatsapp,phone,photo_url,funnel_status,temperatura_lead,ultimo_contato,is_active')
+      .select('id,name,whatsapp,phone,photo_url,funnel_status,temperatura_lead,ultimo_contato,next_action_date,next_contact_date,is_active')
       .in('id', ids);
     const contactsById = new Map((contacts || []).map((contact) => [contact.id, contact]));
 
@@ -161,11 +189,14 @@ export default function ContatosInbox() {
         status: conversation.status || 'open',
         last_inbound_at: conversation.last_inbound_at,
         return_at: conversation.return_at,
+        next_action_date: contact?.next_action_date || null,
+        next_contact_date: contact?.next_contact_date || null,
       });
     }
 
     setItems(merged);
     setLoading(false);
+    return merged;
   }, [loadLimit]);
 
   useEffect(() => {
@@ -372,22 +403,39 @@ export default function ContatosInbox() {
   };
 
   const attendanceQueue = useMemo(() => {
-    try {
-      const stored = JSON.parse(sessionStorage.getItem('crm-attendance-queue') || 'null');
-      return stored?.source === 'today' && Array.isArray(stored.ids) ? stored.ids as string[] : [];
-    } catch { return []; }
-  }, [selectedId]);
+    if (attendanceQueueScope.length === 0) return [];
+    const scope = new Set(attendanceQueueScope);
+    const now = new Date();
+    return items
+      .filter((item) => scope.has(item.id) && getCrmPriority(toCrmPriorityInput(item), now).operational)
+      .sort((a, b) => compareCrmPriority(toCrmPriorityInput(a), toCrmPriorityInput(b), now));
+  }, [attendanceQueueScope, items]);
 
-  const nextAttendance = () => {
-    if (!selected || attendanceQueue.length === 0) return;
-    const nextId = attendanceQueue[attendanceQueue.indexOf(selected.id) + 1];
-    if (!nextId) {
-      toast.success('Fila de hoje concluída.');
-      sessionStorage.removeItem('crm-attendance-queue');
+  const concludeAttendanceQueue = () => {
+    setAttendanceQueueScope([]);
+    sessionStorage.removeItem('crm-attendance-queue');
+    toast.success('Fila de hoje concluída.');
+  };
+
+  const nextAttendance = async () => {
+    if (!selected || attendanceQueueScope.length === 0) return;
+
+    // A lista salva apenas delimita o escopo inicial. A decisão é feita com os
+    // dados recém-carregados, para não reabrir atendimento já concluído ou adiado.
+    const refreshedItems = await load();
+    if (refreshedItems === null) return;
+    const scope = new Set(attendanceQueueScope);
+    const now = new Date();
+    const next = refreshedItems
+      .filter((item) => scope.has(item.id) && item.id !== selected.id && getCrmPriority(toCrmPriorityInput(item), now).operational)
+      .sort((a, b) => compareCrmPriority(toCrmPriorityInput(a), toCrmPriorityInput(b), now))[0];
+
+    if (!next) {
+      concludeAttendanceQueue();
       return;
     }
-    const next = items.find(item => item.id === nextId);
-    if (next) void openConversation(next);
+
+    await openConversation(next);
   };
 
   const registerOutcome = async (outcome: AttendanceOutcome) => {
@@ -397,8 +445,7 @@ export default function ContatosInbox() {
       const result = await applyAttendanceOutcome({ contactId: selected.id, conversationId: selected.conversation_id, outcome });
       toast.success(`${result.label}${result.returnAt ? ' · retorno agendado' : ''}`);
       setSendConfirmation(false);
-      await load();
-      nextAttendance();
+      await nextAttendance();
     } catch (error) {
       console.error(error);
       toast.error('Não foi possível registrar o resultado do atendimento.');
@@ -412,8 +459,7 @@ export default function ContatosInbox() {
       await snoozeAttendance({ contactId: selected.id, conversationId: selected.conversation_id, when });
       toast.success('Atendimento adiado e próxima ação atualizada.');
       setSendConfirmation(false);
-      await load();
-      nextAttendance();
+      await nextAttendance();
     } catch (error) {
       console.error(error);
       toast.error('Não foi possível adiar o atendimento.');
