@@ -498,7 +498,7 @@ export function StatementImporter({ open, onOpenChange, accounts, categories, on
         .select('id, import_hash')
         .in('import_hash', hashes.length ? hashes : ['__none__']),
       minDate && maxDate && !isCreditCard
-        ? supabase
+        ? (supabase as any)
             .from('financial_movements')
             .select('id, account_id, value, movement_date, notes, import_hash, entry:financial_entries!inner(type, description)')
             .eq('account_id', accountId)
