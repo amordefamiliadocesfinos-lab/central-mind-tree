@@ -351,7 +351,8 @@ export default function Contatos() {
   const [originFilter, setOriginFilter] = useState<string>('all');
   const [attentionFilter, setAttentionFilter] = useState<AttentionKey>('all');
   const [qualityOnly, setQualityOnly] = useState(false);
-  const [viewMode, setViewMode] = useState<'today' | 'kanban' | 'funnel' | 'list' | 'sales_funnel'>('today');
+  // FRENTE 7A — a operação diária é a Caixa de Entrada; o CRM abre em gestão (Kanban).
+  const [viewMode, setViewMode] = useState<'today' | 'kanban' | 'funnel' | 'list' | 'sales_funnel'>('kanban');
   const [formOpen, setFormOpen] = useState(false);
   const [editingContact, setEditingContact] = useState<Contact | undefined>();
   const [detailOpen, setDetailOpen] = useState(false);
@@ -1409,16 +1410,12 @@ export default function Contatos() {
           </Button>
 
           <div className="flex border rounded-lg overflow-hidden">
-            <Button variant={viewMode === 'today' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8 rounded-none border-r" onClick={() => setViewMode('today')} title="Hoje no CRM">
-              <CalendarClock className="h-4 w-4" />
-            </Button>
+            {/* FRENTE 7A — "Hoje no CRM" e o funil legado por contact_type saíram da barra
+                para não duplicar a Caixa de Entrada nem a etapa comercial oficial. */}
             <Button variant={viewMode === 'kanban' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8 rounded-none" onClick={() => setViewMode('kanban')} title="Kanban">
               <LayoutGrid className="h-4 w-4" />
             </Button>
-            <Button variant={viewMode === 'sales_funnel' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8 rounded-none border-x" onClick={() => setViewMode('sales_funnel')} title="Funil de Vendas">
-              <Filter className="h-4 w-4" />
-            </Button>
-            <Button variant={viewMode === 'funnel' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8 rounded-none border-r" onClick={() => setViewMode('funnel')} title="Análise Funil">
+            <Button variant={viewMode === 'funnel' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8 rounded-none border-x" onClick={() => setViewMode('funnel')} title="Análise Funil">
               <Triangle className="h-4 w-4" />
             </Button>
             <Button variant={viewMode === 'list' ? 'secondary' : 'ghost'} size="icon" className="h-8 w-8 rounded-none" onClick={() => setViewMode('list')} title="Lista">

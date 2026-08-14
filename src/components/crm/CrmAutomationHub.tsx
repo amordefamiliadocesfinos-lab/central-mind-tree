@@ -105,6 +105,11 @@ export function CrmAutomationHub({
     setAttentionFilter(attentionFilter === key ? 'all' : key);
   };
 
+  // FRENTE 7A — a fila operacional vive na Caixa de Entrada.
+  // Aqui ficam apenas os filtros de gestão; chips/fila/painel em lote foram ocultados
+  // (a lógica permanece disponível via props para compatibilidade).
+  void applyChip; void CHIP_DEFS; void CHIP_LABEL; void counts; void queue; void onStartQueue; void leadsPanelSlot;
+
   return (
     <Card className="p-2 border-border/60 bg-gradient-to-br from-primary/5 via-background to-background">
       {/* Header */}
@@ -113,13 +118,19 @@ export function CrmAutomationHub({
           <div className="h-6 w-6 rounded-md bg-primary/10 flex items-center justify-center">
             <Zap className="h-3.5 w-3.5 text-primary" />
           </div>
-          <h3 className="text-sm font-semibold">Centro de Automação do CRM</h3>
+          <h3 className="text-sm font-semibold">Gestão de Contatos</h3>
         </div>
         {totalAttention > 0 && (
           <Badge variant="secondary" className="text-[10px] h-5">
             {totalAttention} exigem atenção
           </Badge>
         )}
+        <Button asChild variant="outline" size="sm" className="h-7 px-2 text-[11px] gap-1">
+          <a href="/contatos/inbox">
+            <PlayCircle className="h-3.5 w-3.5" />
+            Operar na Caixa de Entrada
+          </a>
+        </Button>
         {(activeFilterCount > 0 || attentionFilter !== 'all') && (
           <Button
             variant="ghost"
@@ -133,96 +144,31 @@ export function CrmAutomationHub({
         )}
       </div>
 
-      <div className="grid gap-1.5 lg:grid-cols-[minmax(0,1fr)_minmax(420px,0.72fr)] lg:gap-2">
-        <div className="min-w-0">
-          {/* PASSO 1 — Diagnóstico */}
-          <div className="flex items-center gap-1.5 overflow-x-auto -mx-1 px-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground shrink-0 mr-1">
-              Passo 1
-            </span>
-            {CHIP_DEFS.map((chip) => {
-              const isActive = attentionFilter === chip.key;
-              const count = counts[chip.key];
-              const Icon = chip.Icon;
-              return (
-                <Button
-                  key={chip.key}
-                  variant="outline"
-                  size="sm"
-                  onClick={() => applyChip(chip.key)}
-                  className={cn(
-                    'h-7 shrink-0 gap-1 text-[11px] font-semibold border transition-all',
-                    isActive ? chip.toneActive : chip.tone,
-                    count === 0 && !isActive && 'opacity-50',
-                  )}
-                >
-                  <Icon className="h-3.5 w-3.5" />
-                  {chip.label}
-                  <span
-                    className={cn(
-                      'inline-flex items-center justify-center min-w-[18px] h-[18px] rounded-full text-[10px] font-bold px-1',
-                      isActive ? 'bg-white/25 text-white' : 'bg-background/70',
-                    )}
-                  >
-                    {count}
-                  </span>
-                </Button>
-              );
-            })}
-            {onStartQueue && queue.length > 0 && (
-              <Button
-                size="sm"
-                className="h-7 shrink-0 gap-1.5 px-2.5 text-[11px] font-semibold"
-                onClick={() => onStartQueue(queue)}
-              >
-                <PlayCircle className="h-3.5 w-3.5" />
-                Tratar fila ({queue.length})
-              </Button>
-            )}
-          </div>
+      {attentionFilter !== 'all' && (
+        <p className="mb-1 text-[10px] text-muted-foreground">
+          Mostrando <span className="font-semibold text-foreground">{resultCount}</span> registro{resultCount === 1 ? '' : 's'} filtrado{resultCount === 1 ? '' : 's'}.
+        </p>
+      )}
 
-          {/* Resultado unificado — o filtro rege todas as visões */}
-          {attentionFilter !== 'all' && (
-            <p className="mt-1 text-[10px] text-muted-foreground">
-              Mostrando <span className="font-semibold text-foreground">{resultCount}</span> lead{resultCount === 1 ? '' : 's'} de{' '}
-              <span className="font-semibold text-foreground">{CHIP_LABEL[attentionFilter as AutomationChipKey]}</span>.
-            </p>
+      <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen}>
+        <div className="flex items-center gap-1.5">
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-[11px] gap-1">
+              <SlidersHorizontal className="h-3 w-3" />
+              {filtersOpen ? 'Ocultar filtros' : 'Filtros'}
+              {filtersOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+            </Button>
+          </CollapsibleTrigger>
+          {activeFilterCount > 0 && !filtersOpen && (
+            <Badge variant="secondary" className="text-[10px] h-5">
+              {activeFilterCount} ativo{activeFilterCount > 1 ? 's' : ''}
+            </Badge>
           )}
-
-          {/* PASSO 2 — Refinar (collapsible) */}
-          <Collapsible open={filtersOpen} onOpenChange={setFiltersOpen} className="mt-1">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground shrink-0">
-                Passo 2
-              </span>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-7 px-2 text-[11px] gap-1">
-                  <SlidersHorizontal className="h-3 w-3" />
-                  {filtersOpen ? 'Ocultar filtros avançados' : 'Refinar (filtros avançados)'}
-                  {filtersOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                </Button>
-              </CollapsibleTrigger>
-              {activeFilterCount > 0 && !filtersOpen && (
-                <Badge variant="secondary" className="text-[10px] h-5">
-                  {activeFilterCount} ativo{activeFilterCount > 1 ? 's' : ''}
-                </Badge>
-              )}
-            </div>
-            <CollapsibleContent className="pt-1.5">
-              {filtersSlot}
-            </CollapsibleContent>
-          </Collapsible>
         </div>
-
-        {/* PASSO 3 — Agir em lote (sempre sobre o mesmo resultado filtrado) */}
-        <div className="min-w-0 border-t border-border/50 pt-1.5 lg:border-l lg:border-t-0 lg:pl-2 lg:pt-0" id="crm-leads-need-contact">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            Passo 3 — Aja em lote
-          </span>
-          <div className="mt-0.5" />
-          {leadsPanelSlot}
-        </div>
-      </div>
+        <CollapsibleContent className="pt-1.5">
+          {filtersSlot}
+        </CollapsibleContent>
+      </Collapsible>
     </Card>
   );
 }
