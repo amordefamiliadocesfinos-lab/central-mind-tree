@@ -1907,20 +1907,20 @@ export type Database = {
           imported_by: string | null
           is_conciliated: boolean
           issue_date: string | null
+          marketplace_account: string | null
           notes: string | null
           order_id: string | null
           original_due_date: string | null
           parent_entry_id: string | null
           payment_date: string | null
           payment_method: string | null
-          sales_channel: string | null
-          marketplace_account: string | null
           recurrence_day: number | null
           recurrence_end_date: string | null
           recurrence_sequence: number | null
           recurrence_series_id: string | null
           recurrence_type: string | null
           recurrence_use_business_days: boolean | null
+          sales_channel: string | null
           type: string
           updated_at: string
           value: number
@@ -1946,20 +1946,20 @@ export type Database = {
           imported_by?: string | null
           is_conciliated?: boolean
           issue_date?: string | null
+          marketplace_account?: string | null
           notes?: string | null
           order_id?: string | null
           original_due_date?: string | null
           parent_entry_id?: string | null
           payment_date?: string | null
           payment_method?: string | null
-          sales_channel?: string | null
-          marketplace_account?: string | null
           recurrence_day?: number | null
           recurrence_end_date?: string | null
           recurrence_sequence?: number | null
           recurrence_series_id?: string | null
           recurrence_type?: string | null
           recurrence_use_business_days?: boolean | null
+          sales_channel?: string | null
           type: string
           updated_at?: string
           value: number
@@ -1985,20 +1985,20 @@ export type Database = {
           imported_by?: string | null
           is_conciliated?: boolean
           issue_date?: string | null
+          marketplace_account?: string | null
           notes?: string | null
           order_id?: string | null
           original_due_date?: string | null
           parent_entry_id?: string | null
           payment_date?: string | null
           payment_method?: string | null
-          sales_channel?: string | null
-          marketplace_account?: string | null
           recurrence_day?: number | null
           recurrence_end_date?: string | null
           recurrence_sequence?: number | null
           recurrence_series_id?: string | null
           recurrence_type?: string | null
           recurrence_use_business_days?: boolean | null
+          sales_channel?: string | null
           type?: string
           updated_at?: string
           value?: number
@@ -2049,10 +2049,6 @@ export type Database = {
           created_by: string | null
           entry_id: string
           id: string
-          import_external_id: string | null
-          import_hash: string | null
-          import_source: string | null
-          imported_at: string | null
           movement_date: string
           notes: string | null
           value: number
@@ -2063,10 +2059,6 @@ export type Database = {
           created_by?: string | null
           entry_id: string
           id?: string
-          import_external_id?: string | null
-          import_hash?: string | null
-          import_source?: string | null
-          imported_at?: string | null
           movement_date?: string
           notes?: string | null
           value: number
@@ -2077,10 +2069,6 @@ export type Database = {
           created_by?: string | null
           entry_id?: string
           id?: string
-          import_external_id?: string | null
-          import_hash?: string | null
-          import_source?: string | null
-          imported_at?: string | null
           movement_date?: string
           notes?: string | null
           value?: number
@@ -2098,6 +2086,45 @@ export type Database = {
             columns: ["entry_id"]
             isOneToOne: false
             referencedRelation: "financial_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_order_links: {
+        Row: {
+          allocated_value: number
+          created_at: string
+          financial_entry_id: string
+          id: string
+          order_id: string
+        }
+        Insert: {
+          allocated_value: number
+          created_at?: string
+          financial_entry_id: string
+          id?: string
+          order_id: string
+        }
+        Update: {
+          allocated_value?: number
+          created_at?: string
+          financial_entry_id?: string
+          id?: string
+          order_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_order_links_financial_entry_id_fkey"
+            columns: ["financial_entry_id"]
+            isOneToOne: false
+            referencedRelation: "financial_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_order_links_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: true
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
         ]
@@ -2398,6 +2425,104 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_settlement_orders: {
+        Row: {
+          created_at: string
+          fee_value: number
+          gross_value: number
+          id: string
+          net_value: number
+          order_id: string
+          settlement_id: string
+        }
+        Insert: {
+          created_at?: string
+          fee_value?: number
+          gross_value?: number
+          id?: string
+          net_value?: number
+          order_id: string
+          settlement_id: string
+        }
+        Update: {
+          created_at?: string
+          fee_value?: number
+          gross_value?: number
+          id?: string
+          net_value?: number
+          order_id?: string
+          settlement_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_settlement_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_settlement_orders_settlement_id_fkey"
+            columns: ["settlement_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_settlements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_settlements: {
+        Row: {
+          created_at: string
+          fee_value: number
+          financial_account_id: string | null
+          gross_value: number
+          id: string
+          marketplace: string
+          marketplace_account: string | null
+          net_value: number
+          notes: string | null
+          settlement_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          fee_value?: number
+          financial_account_id?: string | null
+          gross_value?: number
+          id?: string
+          marketplace: string
+          marketplace_account?: string | null
+          net_value?: number
+          notes?: string | null
+          settlement_date: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          fee_value?: number
+          financial_account_id?: string | null
+          gross_value?: number
+          id?: string
+          marketplace?: string
+          marketplace_account?: string | null
+          net_value?: number
+          notes?: string | null
+          settlement_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_settlements_financial_account_id_fkey"
+            columns: ["financial_account_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -2740,14 +2865,21 @@ export type Database = {
           customer_name: string | null
           deleted_at: string | null
           delivery_date: string | null
+          discount_amount: number
           due_date: string | null
+          financial_account_id: string | null
+          financial_due_date: string | null
           id: string
+          marketplace_account: string | null
           notes: string | null
           order_date: string
           order_number: string | null
           order_type: string
+          payment_method: string | null
+          payment_status: string
           production_date: string | null
           production_notes: string | null
+          shipping_amount: number
           status: string
           total_value: number | null
           updated_at: string
@@ -2760,14 +2892,21 @@ export type Database = {
           customer_name?: string | null
           deleted_at?: string | null
           delivery_date?: string | null
+          discount_amount?: number
           due_date?: string | null
+          financial_account_id?: string | null
+          financial_due_date?: string | null
           id?: string
+          marketplace_account?: string | null
           notes?: string | null
           order_date?: string
           order_number?: string | null
           order_type?: string
+          payment_method?: string | null
+          payment_status?: string
           production_date?: string | null
           production_notes?: string | null
+          shipping_amount?: number
           status?: string
           total_value?: number | null
           updated_at?: string
@@ -2780,14 +2919,21 @@ export type Database = {
           customer_name?: string | null
           deleted_at?: string | null
           delivery_date?: string | null
+          discount_amount?: number
           due_date?: string | null
+          financial_account_id?: string | null
+          financial_due_date?: string | null
           id?: string
+          marketplace_account?: string | null
           notes?: string | null
           order_date?: string
           order_number?: string | null
           order_type?: string
+          payment_method?: string | null
+          payment_status?: string
           production_date?: string | null
           production_notes?: string | null
+          shipping_amount?: number
           status?: string
           total_value?: number | null
           updated_at?: string
@@ -2798,6 +2944,13 @@ export type Database = {
             columns: ["contact_id"]
             isOneToOne: false
             referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_financial_account_id_fkey"
+            columns: ["financial_account_id"]
+            isOneToOne: false
+            referencedRelation: "financial_accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -4925,21 +5078,20 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      current_app_user_id: { Args: never; Returns: string }
-      reconcile_imported_financial_line: {
-        Args: {
-          p_account_id: string
-          p_entry_id: string | null
-          p_import_external_id?: string | null
-          p_import_hash: string
-          p_import_source: string
-          p_mode: string
-          p_movement_date: string
-          p_movement_id: string | null
-          p_type: string
-          p_value: number
-        }
+      create_unified_sale: {
+        Args: { p_items: Json; p_order: Json }
         Returns: Json
+      }
+      current_app_user_id: { Args: never; Returns: string }
+      link_order_to_existing_financial_entry: {
+        Args: {
+          p_allocated_value: number
+          p_entry_id: string
+          p_marketplace_account?: string
+          p_order_id: string
+          p_sales_channel: string
+        }
+        Returns: string
       }
       map_contact_to_conv_funnel: { Args: { _status: string }; Returns: string }
       map_conv_to_contact_funnel: { Args: { _stage: string }; Returns: string }
@@ -4949,6 +5101,10 @@ export type Database = {
       }
       normalize_br_phone: { Args: { _raw: string }; Returns: string }
       owns_campaign: { Args: { _campaign_id: string }; Returns: boolean }
+      reconcile_marketplace_settlement: {
+        Args: { p_entry_ids: string[]; p_payload: Json }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
