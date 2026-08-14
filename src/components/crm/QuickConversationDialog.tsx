@@ -11,7 +11,7 @@ import { useContactHistory, INTERACTION_TYPES } from '@/hooks/useContactHistory'
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Send, Zap, UserPlus } from 'lucide-react';
-import { syncCrmNextActionTask } from '@/lib/crm/nextAction';
+import { setCrmNextAction } from '@/lib/crm/nextAction';
 
 interface Props {
   open: boolean;
@@ -104,17 +104,11 @@ export function QuickConversationDialog({ open, onOpenChange, initialContactId, 
         const days = Math.max(1, parseInt(followUpDays) || 3);
         const next = new Date();
         next.setDate(next.getDate() + days);
-        await supabase
-          .from('contacts')
-          .update({
-            next_contact_date: next.toISOString(),
-            next_action_text: `Retornar conversa: ${summary.trim().slice(0, 80)}`,
-            next_action_date: next.toISOString(),
-          })
-          .eq('id', finalContactId);
-        await syncCrmNextActionTask(finalContactId, {
+        await setCrmNextAction({
+          contactId: finalContactId,
           title: `Retornar conversa: ${summary.trim().slice(0, 80)}`,
           dueAt: next.toISOString(),
+          syncConversationReturn: false,
         });
         toast.success(`Follow-up agendado para ${days} dia(s)`);
       }

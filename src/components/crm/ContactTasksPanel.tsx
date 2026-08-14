@@ -12,6 +12,7 @@ import { format, parseISO, isBefore, startOfDay, addDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { completeCrmNextAction, CRM_TASK_SOURCE } from '@/lib/crm/nextAction';
 
 interface Task {
   id: string;
@@ -22,6 +23,7 @@ interface Task {
   due_date: string | null;
   assigned_to: string | null;
   contact_id: string | null;
+  source: string | null;
   created_at: string;
 }
 
@@ -52,7 +54,7 @@ export function ContactTasksPanel({ contactId }: { contactId: string }) {
     setLoading(true);
     const { data } = await supabase
       .from('tasks')
-      .select('id, title, status, scheduled_date, scheduled_time, due_date, assigned_to, contact_id, created_at')
+      .select('id, title, status, scheduled_date, scheduled_time, due_date, assigned_to, contact_id, source, created_at')
       .eq('contact_id', contactId)
       .is('deleted_at', null)
       .order('scheduled_date', { ascending: true, nullsFirst: false })
@@ -99,6 +101,11 @@ export function ContactTasksPanel({ contactId }: { contactId: string }) {
   };
 
   const toggleDone = async (task: Task) => {
+    if (task.source === CRM_TASK_SOURCE && !task.status.includes('concl')) {
+      await completeCrmNextAction(contactId);
+      fetchTasks();
+      return;
+    }
     const newStatus = task.status === 'concluído' ? 'pendente' : 'concluído';
     await supabase.from('tasks').update({ status: newStatus }).eq('id', task.id);
     fetchTasks();

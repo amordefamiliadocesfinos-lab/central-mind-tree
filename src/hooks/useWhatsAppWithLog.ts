@@ -4,7 +4,7 @@ import { toast } from 'sonner';
 import { openWhatsApp } from '@/lib/whatsapp';
 import { getTodayISO } from '@/lib/dateUtils';
 import { CRM_EVENT_CODES, normalizeCrmStage } from '@/lib/crm/model';
-import { syncCrmNextActionTask } from '@/lib/crm/nextAction';
+import { setCrmNextAction } from '@/lib/crm/nextAction';
 
 export interface WhatsAppLogOptions {
   contactId: string;
@@ -111,25 +111,12 @@ export function useWhatsAppWithLog() {
       .update({
         ultimo_contato: getTodayISO(),
         funnel_status: nextStage,
-        next_action_text: 'Verificar resposta do cliente',
-        next_action_date: followUpAt,
-        next_contact_date: followUpAt,
         updated_at: now,
       })
       .eq('id', contactId);
     if (contactUpdateError) {
       toast.error('Mensagem aberta, mas o CRM não conseguiu atualizar o contato');
       return false;
-    }
-
-    try {
-      await syncCrmNextActionTask(contactId, {
-        title: 'Verificar resposta do cliente',
-        dueAt: followUpAt,
-      });
-    } catch (error) {
-      console.error('Contato atualizado, mas a tarefa de follow-up falhou:', error);
-      toast.warning('Contato atualizado, mas revise a tarefa de follow-up');
     }
 
     const { data: existingConv } = await supabase
@@ -170,6 +157,18 @@ export function useWhatsAppWithLog() {
     }
 
     if (conversationId) {
+      try {
+        await setCrmNextAction({
+          contactId,
+          title: 'Verificar resposta do cliente',
+          dueAt: followUpAt,
+          conversationId,
+          syncConversationReturn: true,
+        });
+      } catch (error) {
+        console.error('Contato atualizado, mas a tarefa de follow-up falhou:', error);
+        toast.warning('Contato atualizado, mas revise a tarefa de follow-up');
+      }
       await supabase.from('service_messages').insert({
         conversation_id: conversationId,
         sender: 'agent',
