@@ -16,7 +16,7 @@ export interface InboxPriority {
   sortAt: number;
 }
 
-/** Compatibilidade visual da Inbox, agora delegada ao motor Ãºnico do CRM. */
+/** Compatibilidade visual da Inbox, agora delegada ao motor único do CRM. */
 export function getInboxPriority(item: InboxPriorityInput, now = new Date()): InboxPriority {
   const priority = getCrmPriority(item, now);
   if (priority.reason === 'needs_reply') return { level: 0, reason: 'Precisa responder', sortAt: priority.sortAt };
@@ -26,7 +26,7 @@ export function getInboxPriority(item: InboxPriorityInput, now = new Date()): In
 }
 
 export function compareInboxPriority(a: InboxPriorityInput, b: InboxPriorityInput, now = new Date()) {
-  // MantÃ©m a ordem conhecida da Inbox para nÃ£o alterar a experiÃªncia nesta frente.
+  // Mantém a ordem conhecida da Inbox para não alterar a experiência nesta frente.
   const priorityA = getInboxPriority(a, now);
   const priorityB = getInboxPriority(b, now);
   if (priorityA.level !== priorityB.level) return priorityA.level - priorityB.level;

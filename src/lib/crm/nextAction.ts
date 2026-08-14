@@ -13,20 +13,20 @@ export interface SetCrmNextActionInput {
   contactId: string;
   title: string;
   dueAt: string;
-  /** Use somente quando a aÃ§Ã£o Ã© um retorno operacional desta conversa. */
+  /** Use somente quando a ação é um retorno operacional desta conversa. */
   conversationId?: string | null;
   syncConversationReturn?: boolean;
 }
 
 function requireValidAction(action: CrmNextAction) {
   const title = action.title?.trim();
-  if (!title || !action.dueAt) throw new Error('PrÃ³xima aÃ§Ã£o e data sÃ£o obrigatÃ³rias');
+  if (!title || !action.dueAt) throw new Error('Próxima ação e data são obrigatórias');
   const due = new Date(action.dueAt);
-  if (Number.isNaN(due.getTime())) throw new Error('Data invÃ¡lida para a prÃ³xima aÃ§Ã£o do CRM');
+  if (Number.isNaN(due.getTime())) throw new Error('Data inválida para a próxima ação do CRM');
   return { title, dueAt: action.dueAt, due };
 }
 
-/** MantÃ©m no mÃ¡ximo uma tarefa oficial pendente por contato. */
+/** Mantém no máximo uma tarefa oficial pendente por contato. */
 export async function syncCrmNextActionTask(contactId: string, action: CrmNextAction) {
   const { data: pending, error: findError } = await supabase
     .from('tasks')
@@ -34,14 +34,14 @@ export async function syncCrmNextActionTask(contactId: string, action: CrmNextAc
     .eq('contact_id', contactId)
     .eq('source', CRM_TASK_SOURCE)
     .is('deleted_at', null)
-    .neq('status', 'concluÃ­do')
+    .neq('status', 'concluído')
     .order('created_at', { ascending: false });
   if (findError) throw findError;
 
   const [existing, ...duplicates] = pending || [];
   if (duplicates.length > 0) {
     const { error } = await supabase.from('tasks')
-      .update({ status: 'concluÃ­do', updated_at: new Date().toISOString() })
+      .update({ status: 'concluído', updated_at: new Date().toISOString() })
       .in('id', duplicates.map(task => task.id));
     if (error) throw error;
   }
@@ -49,7 +49,7 @@ export async function syncCrmNextActionTask(contactId: string, action: CrmNextAc
   if (!action.title || !action.dueAt) {
     if (existing?.id) {
       const { error } = await supabase.from('tasks')
-        .update({ status: 'concluÃ­do', updated_at: new Date().toISOString() })
+        .update({ status: 'concluído', updated_at: new Date().toISOString() })
         .eq('id', existing.id);
       if (error) throw error;
     }
@@ -79,13 +79,13 @@ export async function syncCrmNextActionTask(contactId: string, action: CrmNextAc
   if (error) throw error;
 }
 
-/** Define a intenÃ§Ã£o comercial canÃ´nica e sua representaÃ§Ã£o executÃ¡vel. */
+/** Define a intenção comercial canônica e sua representação executável. */
 export async function setCrmNextAction(input: SetCrmNextActionInput) {
   const { title, dueAt } = requireValidAction(input);
   const { error: contactError } = await supabase.from('contacts').update({
     next_action_text: title,
     next_action_date: dueAt,
-    // Compatibilidade temporÃ¡ria com os filtros e cartÃµes legados.
+    // Compatibilidade temporária com os filtros e cartões legados.
     next_contact_date: dueAt,
     updated_at: new Date().toISOString(),
   }).eq('id', input.contactId);
@@ -99,7 +99,7 @@ export async function setCrmNextAction(input: SetCrmNextActionInput) {
   }
 }
 
-/** Limpa apenas a prÃ³xima aÃ§Ã£o oficial; histÃ³rico e tarefas manuais permanecem. */
+/** Limpa apenas a próxima ação oficial; histórico e tarefas manuais permanecem. */
 export async function clearCrmNextAction(contactId: string) {
   const { error: contactError } = await supabase.from('contacts').update({
     next_action_text: null,
@@ -111,7 +111,7 @@ export async function clearCrmNextAction(contactId: string) {
   await syncCrmNextActionTask(contactId, { title: null, dueAt: null });
 }
 
-/** A conclusÃ£o da tarefa oficial encerra tambÃ©m a intenÃ§Ã£o que ela representa. */
+/** A conclusão da tarefa oficial encerra também a intenção que ela representa. */
 export async function completeCrmNextAction(contactId: string) {
   await clearCrmNextAction(contactId);
 }

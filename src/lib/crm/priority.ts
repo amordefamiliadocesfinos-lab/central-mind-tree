@@ -18,7 +18,7 @@ export interface CrmPriorityInput {
   attendance_state?: string | null;
   return_at?: string | null;
   next_action_date?: string | null;
-  /** Compatibilidade temporÃ¡ria: nunca vence a data canÃ´nica quando ela existe. */
+  /** Compatibilidade temporária: nunca vence a data canônica quando ela existe. */
   next_contact_date?: string | null;
   ultimo_contato?: string | null;
   last_inbound_at?: string | null;
@@ -32,20 +32,20 @@ export interface CrmPriority {
   reason: CrmPriorityReason;
   label: string;
   sortAt: number;
-  /** Conversas resolvidas e aÃ§Ãµes futuras nÃ£o pertencem Ã  fila imediata. */
+  /** Conversas resolvidas e ações futuras não pertencem à fila imediata. */
   operational: boolean;
 }
 
 const LABELS: Record<CrmPriorityReason, string> = {
   needs_reply: 'Precisa responder',
   return_overdue: 'Retorno vencido',
-  next_action_overdue: 'AÃ§Ã£o atrasada',
+  next_action_overdue: 'Ação atrasada',
   return_today: 'Retorno hoje',
-  next_action_today: 'AÃ§Ã£o hoje',
+  next_action_today: 'Ação hoje',
   follow_up_urgent: 'Follow-up urgente',
   cooling: 'Esfriando',
   normal: 'Fila normal',
-  future: 'AÃ§Ã£o futura',
+  future: 'Ação futura',
   resolved: 'Conversa resolvida',
 };
 
@@ -66,8 +66,8 @@ function result(level: CrmPriorityLevel, reason: CrmPriorityReason, sortAt: numb
 }
 
 /**
- * Motor Ãºnico, puro e determinÃ­stico para prioridade do CRM.
- * NÃ£o grava dados e nÃ£o escolhe responsÃ¡vel; apenas explica a prÃ³xima atenÃ§Ã£o.
+ * Motor único, puro e determinístico para prioridade do CRM.
+ * Não grava dados e não escolhe responsável; apenas explica a próxima atenção.
  */
 export function getCrmPriority(input: CrmPriorityInput, now = new Date()): CrmPriority {
   const lastMessageAt = asTime(input.last_message_at) ?? 0;
@@ -82,7 +82,7 @@ export function getCrmPriority(input: CrmPriorityInput, now = new Date()): CrmPr
   const validReturn = returnAt !== null && (lastInboundAt === null || lastInboundAt <= returnAt);
   if (validReturn && returnAt < start) return result('P0', 'return_overdue', returnAt);
 
-  // A data canÃ´nica tem precedÃªncia; a legada serve somente como fallback.
+  // A data canônica tem precedência; a legada serve somente como fallback.
   const nextActionAt = asTime(input.next_action_date) ?? asTime(input.next_contact_date);
   if (nextActionAt !== null && nextActionAt < start) return result('P0', 'next_action_overdue', nextActionAt);
 
