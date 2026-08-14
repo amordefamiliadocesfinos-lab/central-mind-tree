@@ -104,7 +104,7 @@ import { openWhatsApp } from '@/lib/whatsapp';
 import { useWhatsAppWithLog, type WhatsAppOperationalResult } from '@/hooks/useWhatsAppWithLog';
 import { getTodayISO } from '@/lib/dateUtils';
 import { CRM_EVENT_CODES, normalizeCrmStage } from '@/lib/crm/model';
-import { syncCrmNextActionTask } from '@/lib/crm/nextAction';
+import { clearCrmNextAction, setCrmNextAction } from '@/lib/crm/nextAction';
 import { CrmTodayView } from '@/components/crm/CrmTodayView';
 import { applyAttendanceOutcome, snoozeAttendance, type AttendanceOutcome } from '@/lib/crm/attendance';
 
@@ -679,13 +679,19 @@ export default function Contatos() {
       const oldContact = editingContact.next_contact_date || '';
       const newContact2 = (data.next_contact_date as string) || '';
 
-      await updateContact(editingContact.id, data);
+      const actionChanged = ['next_action_text', 'next_action_date', 'next_contact_date']
+        .some((key) => Object.prototype.hasOwnProperty.call(data, key));
+      const { next_action_text, next_action_date, next_contact_date, ...contactUpdates } = data;
+      await updateContact(editingContact.id, actionChanged ? contactUpdates : data);
 
-      if (newAction !== oldAction || newContact2 !== oldContact) {
-        await syncCrmNextActionTask(editingContact.id, {
-          title: data.next_action_text,
-          dueAt: newAction || newContact2,
-        });
+      if (actionChanged) {
+        const title = next_action_text || editingContact.next_action_text;
+        const dueAt = next_action_date || next_contact_date;
+        if (title && dueAt) {
+          await setCrmNextAction({ contactId: editingContact.id, title, dueAt });
+        } else {
+          await clearCrmNextAction(editingContact.id);
+        }
       }
 
       // Log next_action_date changes
@@ -737,11 +743,13 @@ export default function Contatos() {
         { old_stage: contact.funnel_status, new_stage: newStatus },
       );
     }
-    await updateContact(contact.id, updates);
-    await syncCrmNextActionTask(contact.id, {
-      title: updates.next_action_text,
-      dueAt: updates.next_action_date || updates.next_contact_date,
-    });
+    const { next_action_text, next_action_date, next_contact_date, ...contactUpdates } = updates;
+    await updateContact(contact.id, contactUpdates);
+    if (next_action_text && (next_action_date || next_contact_date)) {
+      await setCrmNextAction({ contactId: contact.id, title: next_action_text, dueAt: next_action_date || next_contact_date });
+    } else {
+      await clearCrmNextAction(contact.id);
+    }
     if (suggestedAction.next_action_text) {
       toast.success(`Próxima ação criada: ${suggestedAction.next_action_text}`);
     }
