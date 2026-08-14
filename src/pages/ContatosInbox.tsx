@@ -332,7 +332,7 @@ export default function ContatosInbox() {
     });
   }, [items, search, inboxFilter, taggedContactIds, stageFilter, assignmentFilter, waitingCustomerOnly, conversationScope]);
 
-  // A prioridade Ã© somente uma camada de apresentaÃ§Ã£o: os filtros continuam
+  // A prioridade é somente uma camada de apresentação: os filtros continuam
   // definindo quem entra na fila e a regra pura explica a ordem resultante.
   const prioritized = useMemo(() => {
     const now = new Date();

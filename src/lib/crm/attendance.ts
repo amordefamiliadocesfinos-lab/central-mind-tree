@@ -9,15 +9,15 @@ export type AttendanceOutcome =
 
 export const ATTENDANCE_OUTCOMES: Array<{ key: AttendanceOutcome; label: string }> = [
   { key: 'awaiting_response', label: 'Aguardando resposta' }, { key: 'proposal_sent', label: 'Proposta enviada' },
-  { key: 'negotiation', label: 'Em negociaÃ§Ã£o' }, { key: 'client_replied', label: 'Cliente respondeu' },
-  { key: 'waiting_internal_quote', label: 'Aguardando orÃ§amento interno' }, { key: 'sale_closed', label: 'Venda fechada' },
-  { key: 'post_sale_done', label: 'PÃ³s-venda realizado' }, { key: 'invalid_phone', label: 'Telefone invÃ¡lido' },
+  { key: 'negotiation', label: 'Em negociação' }, { key: 'client_replied', label: 'Cliente respondeu' },
+  { key: 'waiting_internal_quote', label: 'Aguardando orçamento interno' }, { key: 'sale_closed', label: 'Venda fechada' },
+  { key: 'post_sale_done', label: 'Pós-venda realizado' }, { key: 'invalid_phone', label: 'Telefone inválido' },
   { key: 'no_interest', label: 'Sem interesse' }, { key: 'record_only', label: 'Apenas registrar' },
 ];
 
 export const ATTENDANCE_STATE_LABELS: Record<string, string> = {
   responder: 'Responder', em_atendimento: 'Em atendimento', aguardando_cliente: 'Aguardando resposta',
-  retornar_em: 'Retomar emâ€¦', concluido: 'ConcluÃ­do', resolvido: 'ConcluÃ­do',
+  retornar_em: 'Retomar emâ€¦', concluido: 'Concluído', resolvido: 'Concluído',
 };
 
 const CONFIG: Record<AttendanceOutcome, {
@@ -27,12 +27,12 @@ const CONFIG: Record<AttendanceOutcome, {
 }> = {
   awaiting_response: { label: 'Atendimento realizado â€” aguardando resposta', stage: 'contato_realizado', action: 'Verificar resposta do cliente', days: 2, attendanceState: 'aguardando_cliente', eventCode: CRM_EVENT_CODES.CONTACT_ATTEMPTED, conversationReturn: true },
   proposal_sent: { label: 'Proposta enviada', stage: 'proposta_enviada', action: 'Fazer follow-up da proposta', days: 2, attendanceState: 'aguardando_cliente', eventCode: CRM_EVENT_CODES.PROPOSAL_SENT, conversationReturn: true },
-  negotiation: { label: 'Cliente em negociaÃ§Ã£o', stage: 'negociacao', action: 'Retomar negociaÃ§Ã£o', days: 1, attendanceState: 'aguardando_cliente', eventCode: CRM_EVENT_CODES.NEGOTIATION_STARTED, conversationReturn: true },
-  sale_closed: { label: 'Venda fechada', stage: 'fechado', action: 'Realizar pÃ³s-venda', days: 3, attendanceState: 'concluido', eventCode: CRM_EVENT_CODES.SALE_WON, resolved: true },
-  post_sale_done: { label: 'PÃ³s-venda realizado', stage: 'cadencia', action: 'Reativar relacionamento com o cliente', days: 30, attendanceState: 'concluido', eventCode: CRM_EVENT_CODES.POST_SALE_COMPLETED, resolved: true },
-  client_replied: { label: 'Cliente respondeu', stage: 'contato_realizado', action: 'Definir prÃ³ximo passo comercial', days: 1, attendanceState: 'em_atendimento', eventCode: CRM_EVENT_CODES.CUSTOMER_REPLIED },
-  invalid_phone: { label: 'Telefone invÃ¡lido ou ausente', action: 'Corrigir telefone do contato', days: 1, attendanceState: 'retornar_em', eventCode: CRM_EVENT_CODES.CONTACT_ATTEMPTED },
-  waiting_internal_quote: { label: 'Aguardando orÃ§amento interno', stage: 'contato_realizado', action: 'Concluir orÃ§amento interno', days: 1, attendanceState: 'retornar_em', eventCode: CRM_EVENT_CODES.FOLLOW_UP_SCHEDULED },
+  negotiation: { label: 'Cliente em negociação', stage: 'negociacao', action: 'Retomar negociação', days: 1, attendanceState: 'aguardando_cliente', eventCode: CRM_EVENT_CODES.NEGOTIATION_STARTED, conversationReturn: true },
+  sale_closed: { label: 'Venda fechada', stage: 'fechado', action: 'Realizar pós-venda', days: 3, attendanceState: 'concluido', eventCode: CRM_EVENT_CODES.SALE_WON, resolved: true },
+  post_sale_done: { label: 'Pós-venda realizado', stage: 'cadencia', action: 'Reativar relacionamento com o cliente', days: 30, attendanceState: 'concluido', eventCode: CRM_EVENT_CODES.POST_SALE_COMPLETED, resolved: true },
+  client_replied: { label: 'Cliente respondeu', stage: 'contato_realizado', action: 'Definir próximo passo comercial', days: 1, attendanceState: 'em_atendimento', eventCode: CRM_EVENT_CODES.CUSTOMER_REPLIED },
+  invalid_phone: { label: 'Telefone inválido ou ausente', action: 'Corrigir telefone do contato', days: 1, attendanceState: 'retornar_em', eventCode: CRM_EVENT_CODES.CONTACT_ATTEMPTED },
+  waiting_internal_quote: { label: 'Aguardando orçamento interno', stage: 'contato_realizado', action: 'Concluir orçamento interno', days: 1, attendanceState: 'retornar_em', eventCode: CRM_EVENT_CODES.FOLLOW_UP_SCHEDULED },
   no_interest: { label: 'Sem interesse', stage: 'perdido', action: null, attendanceState: 'concluido', eventCode: CRM_EVENT_CODES.SALE_LOST, resolved: true },
   record_only: { label: 'Atendimento registrado', action: null, attendanceState: 'concluido', eventCode: CRM_EVENT_CODES.CONTACT_ATTEMPTED, resolved: true },
 };
@@ -47,7 +47,7 @@ export async function applyAttendanceOutcome(input: { contactId: string; convers
   const now = new Date().toISOString();
   const config = CONFIG[input.outcome];
   const { data: contact, error: contactError } = await supabase.from('contacts').select('funnel_status').eq('id', input.contactId).maybeSingle();
-  if (contactError || !contact) throw contactError || new Error('Contato nÃ£o encontrado');
+  if (contactError || !contact) throw contactError || new Error('Contato não encontrado');
 
   const currentStage = normalizeCrmStage(contact.funnel_status);
   const requestedStage = config.stage ? normalizeCrmStage(config.stage) : currentStage;
@@ -89,7 +89,7 @@ export async function applyAttendanceOutcome(input: { contactId: string; convers
 export async function snoozeAttendance(input: { contactId: string; conversationId?: string | null; when: number | string }) {
   const target = typeof input.when === 'number' ? new Date() : new Date(`${input.when}T09:00:00`);
   if (typeof input.when === 'number') { target.setDate(target.getDate() + input.when); target.setHours(9, 0, 0, 0); }
-  if (Number.isNaN(target.getTime())) throw new Error('Data invÃ¡lida');
+  if (Number.isNaN(target.getTime())) throw new Error('Data inválida');
   const returnAt = target.toISOString();
   await setCrmNextAction({ contactId: input.contactId, title: 'Retomar atendimento', dueAt: returnAt, conversationId: input.conversationId, syncConversationReturn: true });
   if (input.conversationId) {
