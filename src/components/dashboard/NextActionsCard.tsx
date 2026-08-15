@@ -42,19 +42,23 @@ export function NextActionsCard() {
       supabase.from('products').select('id, name, current_stock, min_stock').eq('is_active', true),
     ]);
 
+    const inPeriod = (d?: string | null) => !!d && !isBeforeOperationalStart(d);
+    const isDone = (s?: string | null) => ['concluido', 'concluído', 'entregue', 'cancelado'].includes(String(s || ''));
+
     const saldo = (accountsR.data || []).reduce((s, a: any) => s + (a.current_balance || 0), 0);
     const entries = entriesR.data || [];
+    const isOpen = (e: any) => !e.payment_date && (e.value - (e.value_paid || 0)) > 0.009;
     const receberAtrasado = entries
-      .filter((e: any) => e.type === 'receber' && !e.payment_date && e.due_date < today)
+      .filter((e: any) => e.type === 'receber' && isOpen(e) && inPeriod(e.due_date) && e.due_date < today)
       .reduce((s, e: any) => s + (e.value - (e.value_paid || 0)), 0);
     const pagarAtrasado = entries
-      .filter((e: any) => e.type === 'pagar' && !e.payment_date && e.due_date < today)
+      .filter((e: any) => e.type === 'pagar' && isOpen(e) && inPeriod(e.due_date) && e.due_date < today)
       .reduce((s, e: any) => s + (e.value - (e.value_paid || 0)), 0);
 
     const orders = ordersR.data || [];
     const pendentes = orders.filter((o: any) => ['rascunho', 'pendente', 'aguardando'].includes(o.status)).length;
     const producaoAtrasada = orders.filter((o: any) =>
-      ['producao', 'em_producao', 'production'].includes(o.status) && o.due_date && o.due_date < today
+      ['producao', 'em_producao', 'production'].includes(o.status) && inPeriod(o.due_date) && o.due_date < today
     ).length;
 
     const monthOrders = monthOrdersR.data || [];
@@ -62,7 +66,7 @@ export function NextActionsCard() {
 
     const tasks = tasksR.data || [];
     const tarefasAtrasadas = tasks.filter((t: any) =>
-      t.due_date && t.status !== 'concluído' && t.due_date < today
+      inPeriod(t.due_date) && !isDone(t.status) && t.due_date < today
     ).length;
 
     const lowStock = (productsR.data || []).filter((p: any) =>
