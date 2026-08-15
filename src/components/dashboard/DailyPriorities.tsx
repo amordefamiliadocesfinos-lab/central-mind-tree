@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { differenceInDays, format, parseISO } from 'date-fns';
+import { OPERATIONAL_START_DATE } from '@/lib/operationalStart';
 
 type PriorityType = 'lead_silencio' | 'producao_atrasada' | 'cobranca_pendente' | 'campanha_parada';
 
@@ -78,6 +79,7 @@ export function DailyPriorities() {
         .select('id, name, ultimo_contato, temperatura_lead, funnel_status')
         .eq('is_active', true)
         .not('ultimo_contato', 'is', null)
+        .gte('ultimo_contato', OPERATIONAL_START_DATE)
         .neq('funnel_status', 'ganho')
         .neq('funnel_status', 'perdido')
         .order('ultimo_contato', { ascending: true })
@@ -106,6 +108,7 @@ export function DailyPriorities() {
         .is('deleted_at', null)
         .neq('status', 'concluído')
         .neq('status', 'cancelado')
+        .gte('due_date', OPERATIONAL_START_DATE)
         .lt('due_date', todayStr)
         .order('due_date', { ascending: true })
         .limit(20);
@@ -130,6 +133,7 @@ export function DailyPriorities() {
         .from('financial_entries')
         .select('id, description, due_date, value, value_paid, contact_id')
         .eq('type', 'receber')
+        .gte('due_date', OPERATIONAL_START_DATE)
         .lt('due_date', todayStr)
         .is('payment_date', null)
         .order('due_date', { ascending: true })
@@ -170,6 +174,7 @@ export function DailyPriorities() {
         .select('id, title, status, updated_at')
         .in('status', ['andamento', 'pendente', 'estrutural'])
         .or('idea_type.eq.campanha,objective.ilike.%campanha%,objective.ilike.%vender%')
+        .gte('updated_at', OPERATIONAL_START_DATE)
         .order('updated_at', { ascending: true })
         .limit(10);
 

@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Flame, Package, DollarSign, Recycle, Megaphone, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, subDays } from 'date-fns';
+import { OPERATIONAL_START_DATE } from '@/lib/operationalStart';
 
 interface SummaryData {
   urgentLeads: number;
@@ -105,6 +106,7 @@ export function DailySummary() {
             .from('financial_entries')
             .select('id', { count: 'exact', head: true })
             .eq('type', 'receber')
+            .gte('due_date', OPERATIONAL_START_DATE)
             .lte('due_date', today)
             .is('payment_date', null),
 
@@ -113,6 +115,7 @@ export function DailySummary() {
             .from('contacts')
             .select('id', { count: 'exact', head: true })
             .eq('is_active', true)
+            .gte('ultimo_contato', OPERATIONAL_START_DATE)
             .lt('ultimo_contato', cutoff15),
 
           // 📣 Campanhas ativas: ideias com tipo campanha em andamento
