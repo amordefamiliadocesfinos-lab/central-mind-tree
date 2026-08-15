@@ -16,6 +16,7 @@ import {
   Wrench,
   Boxes,
 } from 'lucide-react';
+import { isBeforeOperationalStart } from '@/lib/operationalStart';
 import { cn, formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { ChevronDown, CheckCircle2, AlertTriangle, AlertOctagon, Activity } from 'lucide-react';
+import { isBeforeOperationalStart } from '@/lib/operationalStart';
 import { cn, formatCurrency } from '@/lib/utils';
 import { format } from 'date-fns';
 
