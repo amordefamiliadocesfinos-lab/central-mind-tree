@@ -209,14 +209,14 @@ export function DailyPerformance() {
           .from('orders')
           .select('id, total_value')
           .is('deleted_at', null)
-          .eq('status', 'concluído')
+          .in('status', ['concluido','concluído','entregue'])
           .gte('updated_at', todayStart)
           .lte('updated_at', todayEnd),
         supabase
           .from('orders')
           .select('id, total_value')
           .is('deleted_at', null)
-          .eq('status', 'concluído')
+          .in('status', ['concluido','concluído','entregue'])
           .gte('updated_at', yStart)
           .lte('updated_at', yEnd),
         // Produção concluída: production_date
@@ -225,14 +225,14 @@ export function DailyPerformance() {
           .select('id', { count: 'exact', head: true })
           .is('deleted_at', null)
           .eq('order_type', 'production')
-          .eq('status', 'concluído')
+          .in('status', ['concluido','concluído','entregue'])
           .eq('production_date', todayDate),
         supabase
           .from('orders')
           .select('id', { count: 'exact', head: true })
           .is('deleted_at', null)
           .eq('order_type', 'production')
-          .eq('status', 'concluído')
+          .in('status', ['concluido','concluído','entregue'])
           .eq('production_date', yDate),
       ]);
 
