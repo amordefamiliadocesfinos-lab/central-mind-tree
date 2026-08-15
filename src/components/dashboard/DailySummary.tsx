@@ -97,8 +97,7 @@ export function DailySummary() {
             .from('orders')
             .select('id', { count: 'exact', head: true })
             .is('deleted_at', null)
-            .neq('status', 'concluído')
-            .neq('status', 'cancelado')
+            .not('status', 'in', '("concluido","concluído","entregue","cancelado")')
             .or(`production_date.eq.${today},due_date.eq.${today}`),
 
           // 💰 Pagamento pendente: receber em aberto vencido (não totalmente pago)
