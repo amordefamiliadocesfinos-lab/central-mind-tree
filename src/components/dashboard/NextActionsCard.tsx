@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { ListChecks, ArrowRight, RefreshCw } from 'lucide-react';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { isBeforeOperationalStart } from '@/lib/operationalStart';
 
 interface NextAction {
   title: string;
