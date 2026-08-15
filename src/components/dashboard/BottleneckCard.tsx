@@ -224,12 +224,15 @@ export function BottleneckCard() {
       ['rascunho', 'pendente', 'aguardando'].includes(o.status)
     ).length;
 
+    const inPeriod = (d?: string | null) => !!d && !isBeforeOperationalStart(d);
+
     const tasksLate = (tasks.data || []).filter(
-      (t: any) => t.due_date && t.due_date < today && t.status !== 'concluído' && t.status !== 'concluido'
+      (t: any) => inPeriod(t.due_date) && t.due_date < today && t.status !== 'concluído' && t.status !== 'concluido'
     ).length;
 
     const receivablesLate = (entries.data || [])
-      .filter((e: any) => e.type === 'receber' && !e.payment_date && e.due_date && e.due_date < today)
+      .filter((e: any) => e.type === 'receber' && !e.payment_date && inPeriod(e.due_date) && e.due_date < today
+        && ((Number(e.value) || 0) - (Number(e.value_paid) || 0)) > 0.009)
       .reduce((s, e: any) => s + ((Number(e.value) || 0) - (Number(e.value_paid) || 0)), 0);
 
     const lowStockCount = (kpiRes.data || []).length;
