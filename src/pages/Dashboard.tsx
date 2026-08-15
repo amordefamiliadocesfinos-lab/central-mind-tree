@@ -40,6 +40,7 @@ import { CompanyStatus } from '@/components/dashboard/CompanyStatus';
 import { BottleneckCard } from '@/components/dashboard/BottleneckCard';
 import { OperationalStart } from '@/components/dashboard/OperationalStart';
 import { MTWorkspaceBar } from '@/components/routine/MTWorkspaceBar';
+import { OPERATIONAL_START_DATE, isBeforeOperationalStart } from '@/lib/operationalStart';
 import { getInboxPriority } from '@/lib/crm/inboxPriority';
 
 
@@ -238,13 +239,13 @@ export default function Dashboard() {
       // Orders this month
       supabase.from('orders').select('id, status, total_value').gte('order_date', monthStart).lte('order_date', monthEnd).is('deleted_at', null),
       // The order itself is overdue only when its deadline passed and it is not finished or cancelled.
-      supabase.from('orders').select('id, status, due_date').is('deleted_at', null).not('due_date', 'is', null).lt('due_date', today).not('status', 'in', '("concluido","concluído","entregue","cancelado")'),
+      supabase.from('orders').select('id, status, due_date').is('deleted_at', null).not('due_date', 'is', null).gte('due_date', OPERATIONAL_START_DATE).lt('due_date', today).not('status', 'in', '("concluido","concluído","entregue","cancelado")'),
       // Digital ideas
       supabase.from('digital_ideas').select('id, status'),
       // Variations scheduled
       supabase.from('digital_variations').select('id, status, scheduled_date'),
       // Financial entries
-      supabase.from('financial_entries').select('id, type, value, value_paid, due_date, payment_date'),
+      supabase.from('financial_entries').select('id, type, value, value_paid, due_date, payment_date').gte('due_date', OPERATIONAL_START_DATE),
       // Accounts
       supabase.from('financial_accounts').select('id, current_balance').eq('is_active', true),
       // Reuse the Inbox priority rule instead of creating a Dashboard-specific CRM score.
@@ -268,6 +269,7 @@ export default function Dashboard() {
     const focusTasksConcluidas = tasks.filter(t => t.status === 'concluído').length;
     const focusTasksAtrasadas = tasks.filter(t => {
       if (!t.due_date || t.status === 'concluído') return false;
+      if (isBeforeOperationalStart(t.due_date)) return false;
       return t.due_date < today;
     }).length;
 
