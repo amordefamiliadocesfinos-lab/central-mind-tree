@@ -238,7 +238,7 @@ export default function Dashboard() {
       // Orders this month
       supabase.from('orders').select('id, status, total_value').gte('order_date', monthStart).lte('order_date', monthEnd).is('deleted_at', null),
       // The order itself is overdue only when its deadline passed and it is not finished or cancelled.
-      supabase.from('orders').select('id, status, due_date').is('deleted_at', null).not('due_date', 'is', null).lt('due_date', today).neq('status', 'concluído').neq('status', 'cancelado'),
+      supabase.from('orders').select('id, status, due_date').is('deleted_at', null).not('due_date', 'is', null).lt('due_date', today).not('status', 'in', '("concluido","concluído","entregue","cancelado")'),
       // Digital ideas
       supabase.from('digital_ideas').select('id, status'),
       // Variations scheduled
