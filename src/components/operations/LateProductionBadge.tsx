@@ -11,7 +11,7 @@ interface LateProductionBadgeProps {
 
 export function isProductionLate(dueDate: string | null | undefined, status: string): boolean {
   if (!dueDate) return false;
-  if (status === 'produzido' || status === 'concluido' || status === 'cancelado' || status === 'enviado') return false;
+  if (status === 'produzido' || status === 'concluido' || status === 'cancelado' || status === 'enviado' || status === 'entregue' || status === 'faturado') return false;
   const today = startOfDay(getNowSaoPaulo());
   const due = startOfDay(parseISO(dueDate));
   return differenceInDays(due, today) <= 0;
