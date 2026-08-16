@@ -88,6 +88,7 @@ const ORDER_STATUS = {
   pronto: { label: 'Pronto', color: 'bg-green-500' },
   enviado: { label: 'Enviado', color: 'bg-blue-500' },
   faturado: { label: 'Faturado', color: 'bg-indigo-600' },
+  entregue: { label: 'Entregue', color: 'bg-teal-600' },
   concluido: { label: 'Concluído', color: 'bg-gray-500' },
   cancelado: { label: 'Cancelado', color: 'bg-gray-400' },
 };

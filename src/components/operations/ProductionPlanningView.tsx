@@ -133,7 +133,7 @@ export function ProductionPlanningView({
 
   const productionOrders = useMemo(
     () => orders.filter((o) => {
-      if (o.status === 'concluido' || o.status === 'cancelado') return false;
+      if (['concluido', 'entregue', 'cancelado'].includes(o.status)) return false;
       if (prodFilter === 'produzido') return o.status === 'produzido';
       if (prodFilter === 'nao_produzido') return o.status !== 'produzido';
       return true;
