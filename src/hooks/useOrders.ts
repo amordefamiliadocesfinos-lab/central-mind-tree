@@ -663,14 +663,37 @@ export function useOrders() {
   }, [fetchOrders]);
 
   const deleteOrder = useCallback(async (orderId: string) => {
+    // Soft delete: mantém histórico e evita órfãos em produção/financeiro
     const { error } = await supabase
       .from('orders')
-      .delete()
+      .update({
+        deleted_at: new Date().toISOString(),
+        status: 'cancelado',
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', orderId);
 
     if (error) {
       toast.error('Erro ao excluir pedido');
       return;
+    }
+
+    // Cancela OPs vinculadas ainda abertas
+    await supabase
+      .from('production_orders')
+      .update({ status: 'cancelado', updated_at: new Date().toISOString() })
+      .eq('source_order_id', orderId)
+      .not('status', 'in', '("concluido","cancelado")');
+
+    // Remove cobrança gerada automaticamente se ainda não houve recebimento
+    const { data: entry } = await supabase
+      .from('financial_entries')
+      .select('id, value_paid')
+      .eq('order_id', orderId)
+      .maybeSingle();
+
+    if (entry && (entry.value_paid || 0) === 0) {
+      await supabase.from('financial_entries').delete().eq('id', entry.id);
     }
 
     toast.success('Pedido excluído!');
