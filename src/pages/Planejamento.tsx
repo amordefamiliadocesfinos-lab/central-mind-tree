@@ -147,6 +147,7 @@ const Planejamento = () => {
   // Task form state
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [taskForm, setTaskForm] = useState({
     title: "",
     description: "",
