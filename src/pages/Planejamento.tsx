@@ -771,6 +771,14 @@ const Planejamento = () => {
                             <Pencil className="h-3 w-3" />
                           </Button>
                           <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setTaskToDelete(task)}
+                            className="h-9 w-9 p-0 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                          <Button
                             variant={currentPlan.selectedTaskIds.includes(task.id) ? "default" : "outline"}
                             size="sm"
                             onClick={() => toggleTaskSelected(task.id)}
