@@ -135,6 +135,15 @@ export default function ContatosInbox() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leadPanelOpen, leadEditOpen, selectedId]);
 
+  // Busca com debounce: dispara consulta ao banco, não filtra só a página.
+  const [deferredSearch, setDeferredSearch] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setDeferredSearch(search), 350);
+    return () => clearTimeout(t);
+  }, [search]);
+
+
+
 
   const load = useCallback(async (): Promise<InboxItem[] | null> => {
     setLoading(true);
