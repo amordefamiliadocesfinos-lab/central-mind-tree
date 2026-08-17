@@ -48,6 +48,7 @@ import { QuickConversationFAB } from "@/components/crm/QuickConversationFAB";
 import { CapturaCentralFAB } from "@/components/CapturaCentralFAB";
 import { RoutineAlertOverlay } from "@/components/routine/RoutineAlertOverlay";
 import { RoutineAlertsToggleButton } from "@/components/routine/RoutineAlertsToggleButton";
+import { CustomAlarmsRuntime } from "@/components/routine/CustomAlarmsRuntime";
 import { ActiveUserPicker } from "@/components/ActiveUserPicker";
 import { useScheduledTaskPromotion } from "./hooks/useScheduledTaskPromotion";
 import { useKeyboardAware } from "./hooks/useKeyboardAware";
@@ -146,6 +147,7 @@ function AuthenticatedShell() {
       {/* <StockCheckAlert /> desativado a pedido do usuário */}
       <StockCheckWizard />
       <RoutineAlertOverlay />
+      <CustomAlarmsRuntime />
     </>
   );
 }

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,66 +11,11 @@ import { Card } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Bell, Plus, Pencil, Trash2, Volume2, Clock, X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import { AlarmRingOverlay } from './AlarmRingOverlay';
+import { useCustomAlarms } from '@/hooks/useCustomAlarms';
+import { CustomAlarm, RECURRENCE_LABEL, Recurrence } from '@/lib/customAlarms';
 import { unlockAlarmAudio } from '@/lib/alarmSound';
 
-type Recurrence = 'once' | 'daily' | 'weekdays' | 'weekly';
-
-export type CustomAlarm = {
-  id: string;
-  name: string;
-  times: string[];           // HH:MM list
-  message: string;
-  recurrence: Recurrence;
-  enabled: boolean;
-};
-
-const STORAGE_KEY = 'pc.routine.customAlarms.v2';
-const FIRED_KEY = 'pc.routine.customAlarms.fired'; // map alarmId|HH:MM|YYYY-MM-DD => true
-const PENDING_KEY = 'pc.routine.customAlarms.pending'; // alarmes não dispensados
-
-export type PendingAlarm = {
-  id: string;         // alarm.id
-  name: string;
-  message: string;
-  time: string;       // HH:MM
-  date: string;       // YYYY-MM-DD
-};
-
-function loadAlarms(): CustomAlarm[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-    // migração leve do formato antigo (se existir) — ignora durações
-    const legacy = localStorage.getItem('pc.routine.customAlarms');
-    if (legacy) {
-      const arr = JSON.parse(legacy) as any[];
-      return arr.map(a => ({
-        id: a.id, name: a.name, times: [], message: a.message,
-        recurrence: 'daily' as Recurrence, enabled: true,
-      }));
-    }
-    return [];
-  } catch { return []; }
-}
-
-function saveAlarms(list: CustomAlarm[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
-}
-
-function loadFired(): Record<string, boolean> {
-  try { return JSON.parse(localStorage.getItem(FIRED_KEY) || '{}'); } catch { return {}; }
-}
-function saveFired(v: Record<string, boolean>) {
-  localStorage.setItem(FIRED_KEY, JSON.stringify(v));
-}
-
-function loadPending(): PendingAlarm[] {
-  try { return JSON.parse(localStorage.getItem(PENDING_KEY) || '[]'); } catch { return []; }
-}
-function savePending(v: PendingAlarm[]) {
-  localStorage.setItem(PENDING_KEY, JSON.stringify(v));
-}
+export type { CustomAlarm, PendingAlarm } from '@/lib/customAlarms';
 
 function speak(text: string) {
   if (!('speechSynthesis' in window)) return;
@@ -80,121 +25,17 @@ function speak(text: string) {
   window.speechSynthesis.speak(utter);
 }
 
-function shouldRunToday(rec: Recurrence, lastDate: string | null): boolean {
-  const today = new Date();
-  const dow = today.getDay(); // 0=dom
-  if (rec === 'once') return lastDate !== today.toISOString().slice(0, 10) ? true : true; // dispara uma vez (controle por fired)
-  if (rec === 'daily') return true;
-  if (rec === 'weekdays') return dow >= 1 && dow <= 5;
-  if (rec === 'weekly') {
-    // toda mesma semana — simplificação: roda no mesmo dia da semana da criação? Usamos dom=domingo
-    return true; // toca todo dia da semana correspondente — checado por fired (apenas 1x/semana via key sem data)
-  }
-  return false;
-}
-
-const RECURRENCE_LABEL: Record<Recurrence, string> = {
-  once: 'Uma vez',
-  daily: 'Diário',
-  weekdays: 'Dias úteis (Seg–Sex)',
-  weekly: 'Semanal',
-};
-
 export function CustomAlarmsPanel() {
-  const [alarms, setAlarms] = useState<CustomAlarm[]>([]);
+  const { alarms, pending, updateAlarms, dismissPending } = useCustomAlarms();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<CustomAlarm | null>(null);
   const [form, setForm] = useState<Omit<CustomAlarm, 'id'>>({
     name: '', times: [], message: '', recurrence: 'daily', enabled: true,
   });
   const [newTime, setNewTime] = useState('08:00');
-  const firedRef = useRef<Record<string, boolean>>({});
-  const [pending, setPending] = useState<PendingAlarm[]>([]);
-
-  useEffect(() => {
-    setAlarms(loadAlarms());
-    firedRef.current = loadFired();
-    setPending(loadPending());
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission().catch(() => {});
-    }
-    // Libera o áudio no primeiro gesto do usuário (exigência dos navegadores)
-    const unlock = () => unlockAlarmAudio();
-    window.addEventListener('pointerdown', unlock);
-    window.addEventListener('keydown', unlock);
-    return () => {
-      window.removeEventListener('pointerdown', unlock);
-      window.removeEventListener('keydown', unlock);
-    };
-  }, []);
-
-  // Poller: verifica horários (com recuperação de minutos perdidos em segundo plano)
-  useEffect(() => {
-    const lastCheck = { ms: Date.now() };
-
-    const fireFor = (a: CustomAlarm, hhmm: string, date: string, weekKeyDate: Date) => {
-      const key = a.recurrence === 'weekly'
-        ? `${a.id}|${hhmm}|${date.slice(0, 7)}-w${Math.ceil(weekKeyDate.getDate() / 7)}`
-        : `${a.id}|${hhmm}|${date}`;
-
-      if (firedRef.current[key]) return false;
-      firedRef.current[key] = true;
-
-      setPending(prev => {
-        const already = prev.some(p => p.id === a.id && p.time === hhmm && p.date === date);
-        if (already) return prev;
-        const next = [...prev, { id: a.id, name: a.name, message: a.message, time: hhmm, date }];
-        savePending(next);
-        return next;
-      });
-
-      if (a.recurrence === 'once') {
-        setAlarms(prev => {
-          const next = prev.map(x => x.id === a.id ? { ...x, enabled: false } : x);
-          saveAlarms(next);
-          return next;
-        });
-      }
-      return true;
-    };
-
-    const tick = () => {
-      const now = new Date();
-      // recupera minutos que passaram enquanto a aba estava suspensa (máx. 120)
-      const missedMinutes = Math.min(
-        120,
-        Math.max(0, Math.floor((now.getTime() - lastCheck.ms) / 60_000))
-      );
-      lastCheck.ms = now.getTime();
-
-      let changed = false;
-      for (let back = missedMinutes; back >= 0; back--) {
-        const d = new Date(now.getTime() - back * 60_000);
-        const hhmm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
-        const date = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-
-        for (const a of alarms) {
-          if (!a.enabled) continue;
-          if (!a.times.includes(hhmm)) continue;
-          if (!shouldRunToday(a.recurrence, null)) continue;
-          if (fireFor(a, hhmm, date, d)) changed = true;
-        }
-      }
-      if (changed) saveFired(firedRef.current);
-    };
-
-    tick();
-    const i = setInterval(tick, 10_000);
-    const onVisible = () => { if (!document.hidden) tick(); };
-    document.addEventListener('visibilitychange', onVisible);
-    return () => {
-      clearInterval(i);
-      document.removeEventListener('visibilitychange', onVisible);
-    };
-  }, [alarms]);
-
 
   function openCreate() {
+    unlockAlarmAudio();
     setEditing(null);
     setForm({ name: '', times: [], message: '', recurrence: 'daily', enabled: true });
     setNewTime('08:00');
@@ -222,61 +63,26 @@ export function CustomAlarmsPanel() {
       toast({ title: 'Preencha nome e pelo menos um horário' });
       return;
     }
+    unlockAlarmAudio();
     const next = editing
       ? alarms.map(a => a.id === editing.id ? { ...editing, ...form } : a)
       : [...alarms, { ...form, id: crypto.randomUUID() }];
-    setAlarms(next);
-    saveAlarms(next);
+    updateAlarms(next);
     setOpen(false);
   }
 
   function remove(id: string) {
-    const next = alarms.filter(a => a.id !== id);
-    setAlarms(next);
-    saveAlarms(next);
+    updateAlarms(alarms.filter(a => a.id !== id));
   }
 
   function toggle(id: string, enabled: boolean) {
-    const next = alarms.map(a => a.id === id ? { ...a, enabled } : a);
-    setAlarms(next);
-    saveAlarms(next);
-  }
-
-  function dismissPending(id: string, time: string, date: string) {
-    setPending(prev => {
-      const next = prev.filter(p => !(p.id === id && p.time === time && p.date === date));
-      savePending(next);
-      return next;
-    });
-  }
-
-  const ringing = pending[0] || null;
-
-  function snoozeRinging() {
-    if (!ringing) return;
-    const target = ringing;
-    dismissPending(target.id, target.time, target.date);
-    window.setTimeout(() => {
-      setPending(prev => {
-        const next = [...prev, { ...target, time: `${target.time} (soneca)` }];
-        savePending(next);
-        return next;
-      });
-    }, 5 * 60_000);
-    toast({ title: 'Soneca de 5 minutos', description: target.name });
+    unlockAlarmAudio();
+    updateAlarms(alarms.map(a => a.id === id ? { ...a, enabled } : a));
   }
 
   return (
     <Card className="p-4 space-y-3">
-      <AlarmRingOverlay
-        alarm={ringing}
-        queued={Math.max(0, pending.length - 1)}
-        onStop={() => ringing && dismissPending(ringing.id, ringing.time, ringing.date)}
-        onSnooze={snoozeRinging}
-      />
-
       {/* Alarmes pendentes — visíveis até serem dispensados */}
-
       {pending.length > 0 && (
         <div className="space-y-2">
           {pending.map(p => (
@@ -381,7 +187,7 @@ export function CustomAlarmsPanel() {
 
       {alarms.length === 0 ? (
         <p className="text-xs text-muted-foreground">
-          Nenhum alarme criado. Crie alarmes por horário (independentes dos blocos da rotina) — eles disparam notificação e voz no horário definido.
+          Nenhum alarme criado. Crie alarmes por horário (independentes dos blocos da rotina) — eles disparam em qualquer página do painel, com som, voz e notificação.
         </p>
       ) : (
         <ul className="space-y-2">
