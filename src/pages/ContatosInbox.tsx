@@ -246,7 +246,7 @@ export default function ContatosInbox() {
     setItems(merged);
     setLoading(false);
     return merged;
-  }, [loadLimit]);
+  }, [loadLimit, deferredSearch, stageFilter]);
 
   useEffect(() => {
     load();
