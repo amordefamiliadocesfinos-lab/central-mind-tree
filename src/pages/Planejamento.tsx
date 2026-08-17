@@ -1148,6 +1148,15 @@ const Planejamento = () => {
               />
             </div>
             <div className="flex gap-3 pt-4">
+              {editingTask && (
+                <Button
+                  variant="outline"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => setTaskToDelete(editingTask)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
               <Button
                 variant="outline"
                 className="flex-1"
@@ -1162,7 +1171,27 @@ const Planejamento = () => {
             </div>
           </div>
       </ResponsiveDialog>
+      <AlertDialog open={!!taskToDelete} onOpenChange={(open) => !open && setTaskToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir tarefa?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A tarefa "{taskToDelete?.title}" será removida definitivamente do planejamento.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteTask}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <DueDateBanner />
+
     </div>
   );
 };
