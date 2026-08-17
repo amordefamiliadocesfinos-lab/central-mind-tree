@@ -338,13 +338,14 @@ export default function ContatosInbox() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     const now = new Date();
+    const searching = q.length > 0 || stageFilter !== 'all';
     return items.filter((i) => {
       const matchesSearch = !q ||
         i.name.toLowerCase().includes(q) ||
         (i.whatsapp || '').includes(q) ||
         (i.phone || '').includes(q) ||
         (i.last_summary || '').toLowerCase().includes(q);
-      if (!matchesSearch) return false;
+      if (!matchesSearch && !searching) return false;
       if (taggedContactIds && !taggedContactIds.has(i.id)) return false;
       if (stageFilter !== 'all' && i.funnel_status !== stageFilter) return false;
       if (assignmentFilter === 'unassigned' && i.assigned_to) return false;
@@ -360,11 +361,15 @@ export default function ContatosInbox() {
         return false;
       }
 
+      // Buscando por nome/estágio, o lead sempre aparece: os chips de
+      // prioridade organizam a fila, mas não podem esconder um lead existente.
+      if (searching) return true;
       if (inboxFilter === 'priority') return priority.operational;
       if (inboxFilter === 'needs_reply') return priority.reason === 'needs_reply';
       if (inboxFilter === 'today') return ['return_today', 'next_action_today'].includes(priority.reason);
       if (inboxFilter === 'overdue') return ['return_overdue', 'next_action_overdue'].includes(priority.reason);
       return priority.reason === 'cooling';
+
     });
   }, [items, search, inboxFilter, taggedContactIds, stageFilter, assignmentFilter, waitingCustomerOnly, conversationScope]);
 
