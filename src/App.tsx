@@ -146,6 +146,7 @@ function AuthenticatedShell() {
       {/* <StockCheckAlert /> desativado a pedido do usuário */}
       <StockCheckWizard />
       <RoutineAlertOverlay />
+      <CustomAlarmsRuntime />
     </>
   );
 }
