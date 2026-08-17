@@ -138,14 +138,41 @@ export default function ContatosInbox() {
 
   const load = useCallback(async (): Promise<InboxItem[] | null> => {
     setLoading(true);
-    // A Caixa de Entrada tem uma única fonte: conversas reais do Atendimento.
-    // Contatos sem conversa continuam no CRM, mas não poluem esta fila operacional.
-    const { data: conversations, error } = await supabase
+    const CONVERSATION_FIELDS = 'id,contact_id,contact_name,contact_handle,contact_avatar_url,last_message_preview,last_message_at,last_inbound_at,return_at,unread_count,needs_reply,attendance_state,assigned_to,funnel_stage,status';
+    const term = deferredSearch.trim();
+
+    // Busca/estágio consultam o banco inteiro: leads antigos do Kanban não
+    // podem ficar invisíveis só porque estão fora da janela recente da fila.
+    let scopedContactIds: string[] | null = null;
+    if (term || stageFilter !== 'all') {
+      let contactQuery = supabase.from('contacts').select('id').eq('is_active', true).limit(500);
+      if (stageFilter !== 'all') contactQuery = contactQuery.eq('funnel_status', stageFilter);
+      if (term) {
+        const like = `%${term}%`;
+        contactQuery = contactQuery.or(`name.ilike.${like},fantasy_name.ilike.${like},phone.ilike.${like},whatsapp.ilike.${like},email.ilike.${like}`);
+      }
+      const { data: matches } = await contactQuery;
+      scopedContactIds = (matches || []).map((m) => m.id as string);
+    }
+
+    let query = supabase
       .from('service_conversations')
-      .select('id,contact_id,contact_name,contact_handle,contact_avatar_url,last_message_preview,last_message_at,last_inbound_at,return_at,unread_count,needs_reply,attendance_state,assigned_to,funnel_stage,status')
+      .select(CONVERSATION_FIELDS)
       .not('contact_id', 'is', null)
       .order('last_message_at', { ascending: false })
       .limit(loadLimit);
+
+    if (scopedContactIds) {
+      if (scopedContactIds.length === 0) {
+        setItems([]);
+        setLoading(false);
+        return [];
+      }
+      query = query.in('contact_id', scopedContactIds);
+    }
+
+    const { data: conversations, error } = await query;
+
 
     if (error) {
       console.error('Erro ao carregar caixa de entrada:', error);
