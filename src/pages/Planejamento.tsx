@@ -15,6 +15,16 @@ import {
 } from "@/components/ui/popover";
 import { ResponsiveDialog } from "@/components/ui/responsive-dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -147,6 +157,7 @@ const Planejamento = () => {
   // Task form state
   const [isTaskFormOpen, setIsTaskFormOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [taskForm, setTaskForm] = useState({
     title: "",
     description: "",
@@ -529,6 +540,26 @@ const Planejamento = () => {
     loadData();
   };
 
+  const handleDeleteTask = async () => {
+    if (!taskToDelete) return;
+    const { error } = await supabase.from("tasks").delete().eq("id", taskToDelete.id);
+    if (error) {
+      toast.error("Erro ao excluir tarefa");
+      return;
+    }
+    setCurrentPlan((prev) => ({
+      ...prev,
+      selectedTaskIds: prev.selectedTaskIds.filter((id) => id !== taskToDelete.id),
+      prioritizedTaskIds: prev.prioritizedTaskIds.filter((id) => id !== taskToDelete.id),
+    }));
+    setTaskToDelete(null);
+    setIsTaskFormOpen(false);
+    toast.success("Tarefa excluída!");
+    loadData();
+  };
+
+
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -738,6 +769,14 @@ const Planejamento = () => {
                             className="h-9 w-9 p-0"
                           >
                             <Pencil className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setTaskToDelete(task)}
+                            className="h-9 w-9 p-0 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-3 w-3" />
                           </Button>
                           <Button
                             variant={currentPlan.selectedTaskIds.includes(task.id) ? "default" : "outline"}
@@ -1127,6 +1166,15 @@ const Planejamento = () => {
               />
             </div>
             <div className="flex gap-3 pt-4">
+              {editingTask && (
+                <Button
+                  variant="outline"
+                  className="text-destructive hover:text-destructive"
+                  onClick={() => setTaskToDelete(editingTask)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              )}
               <Button
                 variant="outline"
                 className="flex-1"
@@ -1141,7 +1189,27 @@ const Planejamento = () => {
             </div>
           </div>
       </ResponsiveDialog>
+      <AlertDialog open={!!taskToDelete} onOpenChange={(open) => !open && setTaskToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir tarefa?</AlertDialogTitle>
+            <AlertDialogDescription>
+              A tarefa "{taskToDelete?.title}" será removida definitivamente do planejamento.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteTask}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <DueDateBanner />
+
     </div>
   );
 };
