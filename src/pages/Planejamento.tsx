@@ -529,6 +529,26 @@ const Planejamento = () => {
     loadData();
   };
 
+  const handleDeleteTask = async () => {
+    if (!taskToDelete) return;
+    const { error } = await supabase.from("tasks").delete().eq("id", taskToDelete.id);
+    if (error) {
+      toast.error("Erro ao excluir tarefa");
+      return;
+    }
+    setCurrentPlan((prev) => ({
+      ...prev,
+      selectedTaskIds: prev.selectedTaskIds.filter((id) => id !== taskToDelete.id),
+      prioritizedTaskIds: prev.prioritizedTaskIds.filter((id) => id !== taskToDelete.id),
+    }));
+    setTaskToDelete(null);
+    setIsTaskFormOpen(false);
+    toast.success("Tarefa excluída!");
+    loadData();
+  };
+
+
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
