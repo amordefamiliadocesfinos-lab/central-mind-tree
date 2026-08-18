@@ -29,6 +29,7 @@ import { format, startOfMonth, endOfMonth, isToday, isTomorrow, addDays } from '
 import { ptBR } from 'date-fns/locale';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useKPIsSelector, useStockValueSelector } from '@/stores/selectors';
+import { useInventorySync } from '@/hooks/useInventorySync';
 import { useAppStore } from '@/stores/appStore';
 import { FOCUS_TYPES, FocusType } from '@/hooks/useRoutine';
 import { DailySummary } from '@/components/dashboard/DailySummary';
@@ -201,7 +202,8 @@ export default function Dashboard() {
     saldoContas: 0,
   });
 
-  // Operations data from store
+  // Operations data from store (carrega produtos + saldos reais de estoque)
+  useInventorySync({ loadProducts: true });
   const kpis = useKPIsSelector();
   const stockValue = useStockValueSelector();
 
