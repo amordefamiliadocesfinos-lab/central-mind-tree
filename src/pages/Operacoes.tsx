@@ -63,6 +63,7 @@ import { useStockCheckStore } from '@/stores/stockCheckStore';
 import { useKPIsSelector, useFilteredOrders, useFilteredProducts, useSearchFilters, useStockValueSelector } from '@/stores/selectors';
 import type { Order, OrderItem, Product } from '@/hooks/useOrders';
 import { supabase } from '@/integrations/supabase/client';
+import { useInventorySync } from '@/hooks/useInventorySync';
 
 const VALID_TABS: OperationsTab[] = ['overview', 'orders', 'products', 'inventory', 'production', 'mrp', 'calendar'];
 
@@ -106,30 +107,8 @@ export default function Operacoes() {
     setProducts(rawProducts as StoreProduct[]);
   }, [rawProducts, setProducts]);
 
-  useEffect(() => {
-    setInventory(inventory.map(i => ({
-      id: i.id,
-      product_id: i.product_id,
-      quantity: i.quantity,
-      location: i.location,
-      location_id: null,
-      updated_at: i.updated_at,
-    })));
-  }, [inventory, setInventory]);
-
-  // Load product balances
-  useEffect(() => {
-    const loadBalances = async () => {
-      const balances: Record<string, number> = {};
-      for (const product of rawProducts) {
-        balances[product.id] = await getTotalBalance(product.id);
-      }
-      setProductBalances(balances);
-    };
-    if (rawProducts.length > 0) {
-      loadBalances();
-    }
-  }, [rawProducts, getTotalBalance, setProductBalances]);
+  // Fonte única de saldos (recarrega automaticamente após qualquer movimento)
+  useInventorySync();
 
   // Tab from querystring (stable)
   const tabParam = searchParams.get('tab') as OperationsTab | null;

@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { applyStockDelta, resolveStockLocation } from '@/lib/inventoryOps';
+import { notifyInventoryChanged } from '@/hooks/useInventorySync';
 import { toast } from 'sonner';
 import { createUnifiedSale } from '@/lib/unifiedSales';
 
@@ -240,13 +242,14 @@ export function useOrders() {
   }, [fetchProducts]);
 
   const updateInventory = useCallback(async (productId: string, quantity: number, location?: string) => {
+    const loc = location && location.trim() !== '' ? location : await resolveStockLocation(productId);
     // Upsert inventory
     const { error } = await supabase
       .from('inventory')
       .upsert({
         product_id: productId,
         quantity,
-        location: location || null,
+        location: loc,
         updated_at: new Date().toISOString(),
       }, {
         onConflict: 'product_id,location',
@@ -257,6 +260,7 @@ export function useOrders() {
       return;
     }
 
+    notifyInventoryChanged();
     toast.success('Estoque atualizado!');
     fetchInventory();
   }, [fetchInventory]);
@@ -326,42 +330,17 @@ export function useOrders() {
 
       // Handle based on order type
       if (orderType === 'stock') {
-        // STOCK SALE: Consume from finished goods inventory directly
+        // STOCK SALE: Consume from finished goods inventory directly (location-aware)
         for (const item of items) {
           if (!item.product_id) continue;
-
-          // Get current balance
-          const { data: inv } = await supabase
-            .from('inventory')
-            .select('quantity')
-            .eq('product_id', item.product_id)
-            .maybeSingle();
-
-          const prevBalance = inv?.quantity || 0;
-          const newBalance = Math.max(0, prevBalance - (item.quantity || 1));
-
-          // Create inventory movement
-          await supabase
-            .from('inventory_movements')
-            .insert({
-              product_id: item.product_id,
-              quantity: -(item.quantity || 1),
-              previous_balance: prevBalance,
-              new_balance: newBalance,
-              movement_type: 'out',
-              reference_type: 'order',
-              reference_id: newOrder.id,
-              notes: `Venda ${newOrder.order_number}`,
-            });
-
-          // Update inventory balance
-          await supabase
-            .from('inventory')
-            .upsert({
-              product_id: item.product_id,
-              quantity: newBalance,
-              updated_at: new Date().toISOString(),
-            }, { onConflict: 'product_id' });
+          await applyStockDelta({
+            productId: item.product_id,
+            delta: -(item.quantity || 1),
+            movementType: 'out',
+            referenceType: 'order',
+            referenceId: newOrder.id,
+            notes: `Venda ${newOrder.order_number}`,
+          });
         }
 
         toast.success('Pedido criado! Estoque atualizado.');

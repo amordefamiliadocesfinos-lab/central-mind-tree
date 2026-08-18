@@ -29,6 +29,7 @@ import { format, startOfMonth, endOfMonth, isToday, isTomorrow, addDays } from '
 import { ptBR } from 'date-fns/locale';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useKPIsSelector, useStockValueSelector } from '@/stores/selectors';
+import { useInventorySync } from '@/hooks/useInventorySync';
 import { useAppStore } from '@/stores/appStore';
 import { FOCUS_TYPES, FocusType } from '@/hooks/useRoutine';
 import { DailySummary } from '@/components/dashboard/DailySummary';
@@ -201,7 +202,8 @@ export default function Dashboard() {
     saldoContas: 0,
   });
 
-  // Operations data from store
+  // Operations data from store (carrega produtos + saldos reais de estoque)
+  useInventorySync({ loadProducts: true });
   const kpis = useKPIsSelector();
   const stockValue = useStockValueSelector();
 
@@ -513,9 +515,9 @@ export default function Dashboard() {
             />
             <StatItem 
               label="Estoque baixo" 
-              value={data.lowStockCount} 
+              value={kpis.lowStock.length} 
               icon={AlertTriangle}
-              variant={data.lowStockCount > 0 ? 'warning' : 'default'} 
+              variant={kpis.lowStock.length > 0 ? 'warning' : 'default'} 
             />
             {stockValue.totalStockValue > 0 && (
               <StatItem 

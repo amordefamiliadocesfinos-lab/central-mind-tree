@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { notifyInventoryChanged } from '@/hooks/useInventorySync';
 
 export type MovementType = 'in' | 'out' | 'transfer' | 'adjust' | 'reserve' | 'consume';
 
@@ -136,6 +137,7 @@ export function useMultiLocationInventory() {
       return false;
     }
 
+    notifyInventoryChanged();
     toast.success('Entrada registrada!');
     setLoading(false);
     return true;
@@ -197,6 +199,7 @@ export function useMultiLocationInventory() {
       return false;
     }
 
+    notifyInventoryChanged();
     toast.success('Saída registrada!');
     setLoading(false);
     return true;
@@ -281,6 +284,7 @@ export function useMultiLocationInventory() {
       return false;
     }
 
+    notifyInventoryChanged();
     toast.success('Transferência realizada!');
     setLoading(false);
     return true;
@@ -335,6 +339,7 @@ export function useMultiLocationInventory() {
       return false;
     }
 
+    notifyInventoryChanged();
     toast.success('Estoque ajustado!');
     setLoading(false);
     return true;
