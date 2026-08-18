@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { notifyInventoryChanged } from '@/hooks/useInventorySync';
 
 export type MovementType = 'in' | 'out' | 'reserve' | 'consume' | 'adjust';
 
@@ -137,6 +138,7 @@ export function useInventoryMovements() {
       console.error('Inventory update error:', inventoryError);
     }
 
+    notifyInventoryChanged();
     toast.success(`Movimento registrado: ${MOVEMENT_LABELS[type].label}`);
     return movement as InventoryMovement;
   }, [getCurrentBalance]);
