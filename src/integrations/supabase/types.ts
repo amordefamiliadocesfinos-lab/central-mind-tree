@@ -2253,7 +2253,7 @@ export type Database = {
       inventory: {
         Row: {
           id: string
-          location: string | null
+          location: string
           location_id: string | null
           product_id: string
           quantity: number
@@ -2261,7 +2261,7 @@ export type Database = {
         }
         Insert: {
           id?: string
-          location?: string | null
+          location?: string
           location_id?: string | null
           product_id: string
           quantity?: number
@@ -2269,7 +2269,7 @@ export type Database = {
         }
         Update: {
           id?: string
-          location?: string | null
+          location?: string
           location_id?: string | null
           product_id?: string
           quantity?: number
