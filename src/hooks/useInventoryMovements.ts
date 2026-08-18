@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { notifyInventoryChanged } from '@/hooks/useInventorySync';
+import { applyStockDelta, resolveStockLocation } from '@/lib/inventoryOps';
 
 export type MovementType = 'in' | 'out' | 'reserve' | 'consume' | 'adjust';
 
@@ -59,15 +60,14 @@ export function useInventoryMovements() {
     const { data, error } = await supabase
       .from('inventory')
       .select('quantity')
-      .eq('product_id', productId)
-      .maybeSingle();
+      .eq('product_id', productId);
 
     if (error) {
       console.error('Error getting balance:', error);
       return 0;
     }
 
-    return data?.quantity || 0;
+    return (data || []).reduce((sum, inv: any) => sum + (Number(inv.quantity) || 0), 0);
   }, []);
 
   const createMovement = useCallback(async (
@@ -77,71 +77,59 @@ export function useInventoryMovements() {
     notes?: string,
     referenceType?: string,
     referenceId?: string
-  ): Promise<InventoryMovement | null> => {
-    // Get current balance
-    const previousBalance = await getCurrentBalance(productId);
-    
-    // Calculate new balance based on movement type
-    let newBalance = previousBalance;
+  ): Promise<boolean> => {
+    const location = await resolveStockLocation(productId);
+
+    const { data: current } = await supabase
+      .from('inventory')
+      .select('quantity')
+      .eq('product_id', productId)
+      .eq('location', location)
+      .maybeSingle();
+
+    const previousBalance = Number(current?.quantity) || 0;
+
+    let delta = 0;
     switch (type) {
       case 'in':
-        newBalance = previousBalance + quantity;
+        delta = quantity;
         break;
       case 'out':
       case 'consume':
-        newBalance = Math.max(0, previousBalance - quantity);
+        delta = -Math.min(quantity, previousBalance);
         break;
       case 'reserve':
-        // Reserve doesn't change balance but marks items as reserved
-        newBalance = previousBalance;
+        delta = 0;
         break;
       case 'adjust':
-        // Adjust sets the balance directly (quantity is the new balance)
-        newBalance = quantity;
+        delta = quantity - previousBalance;
         break;
     }
 
-    // Create movement record
-    const { data: movement, error: movementError } = await supabase
-      .from('inventory_movements')
-      .insert({
-        product_id: productId,
-        movement_type: type,
-        quantity: type === 'adjust' ? quantity - previousBalance : quantity,
-        previous_balance: previousBalance,
-        new_balance: newBalance,
-        reference_type: referenceType || null,
-        reference_id: referenceId || null,
-        notes: notes || null,
-      })
-      .select()
-      .single();
-
-    if (movementError) {
-      toast.error('Erro ao registrar movimento');
-      console.error('Movement error:', movementError);
-      return null;
+    if (delta === 0 && type !== 'reserve') {
+      toast.info('Nenhuma alteração de saldo');
+      return true;
     }
 
-    // Update inventory balance (upsert)
-    const { error: inventoryError } = await supabase
-      .from('inventory')
-      .upsert({
-        product_id: productId,
-        quantity: newBalance,
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'product_id',
-      });
+    const ok = delta === 0 ? true : await applyStockDelta({
+      productId,
+      delta,
+      movementType: type === 'adjust' ? 'adjust' : type,
+      location,
+      referenceType,
+      referenceId,
+      notes,
+    });
 
-    if (inventoryError) {
-      console.error('Inventory update error:', inventoryError);
+    if (!ok) {
+      toast.error('Erro ao registrar movimento');
+      return false;
     }
 
     notifyInventoryChanged();
     toast.success(`Movimento registrado: ${MOVEMENT_LABELS[type].label}`);
-    return movement as InventoryMovement;
-  }, [getCurrentBalance]);
+    return true;
+  }, []);
 
   const getProductHistory = useCallback(async (productId: string): Promise<InventoryMovement[]> => {
     const { data, error } = await supabase
