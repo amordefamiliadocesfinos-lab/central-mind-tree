@@ -515,9 +515,9 @@ export default function Dashboard() {
             />
             <StatItem 
               label="Estoque baixo" 
-              value={data.lowStockCount} 
+              value={kpis.lowStock.length} 
               icon={AlertTriangle}
-              variant={data.lowStockCount > 0 ? 'warning' : 'default'} 
+              variant={kpis.lowStock.length > 0 ? 'warning' : 'default'} 
             />
             {stockValue.totalStockValue > 0 && (
               <StatItem 
