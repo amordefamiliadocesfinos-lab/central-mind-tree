@@ -90,6 +90,7 @@ import { useContactNextTasks } from '@/hooks/useContactNextTasks';
 import { useAllConversationsSummary } from '@/hooks/useAllConversationsSummary';
 import { LeadsNeedContactPanel } from '@/components/crm/LeadsNeedContactPanel';
 import { CrmAutomationHub } from '@/components/crm/CrmAutomationHub';
+import { CrmIndicatorsPanel } from '@/components/crm/CrmIndicatorsPanel';
 import { computeAttention, getUrgencyReason, matchesAttention, ATTENTION_LABELS, type AttentionKey } from '@/lib/crm/attentionFilters';
 import { CrmFocusQueue, type QueueOutcome } from '@/components/crm/CrmFocusQueue';
 import { cn } from '@/lib/utils';
