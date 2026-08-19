@@ -1178,41 +1178,9 @@ export default function Contatos() {
           </Select>
         </div>
 
-        {/* Indicadores — faixa única compacta */}
-        <Collapsible open={metricsOpen} onOpenChange={setMetricsOpen}>
-          <div className="flex items-center gap-x-2.5 gap-y-1 flex-wrap rounded-md border border-border/60 bg-muted/30 px-2 py-1" aria-busy={loading}>
-            {[
-              { label: 'Contatos', value: metrics.total, tone: 'text-foreground' },
-              { label: 'Clientes', value: metrics.clientesAtivos, tone: 'text-green-600 dark:text-green-400' },
-              { label: 'Orçamentos', value: metrics.orcamentos, tone: 'text-yellow-600 dark:text-yellow-400' },
-              { label: 'Follow-up hoje', value: metrics.followUpHoje, tone: metrics.followUpHoje > 0 ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground' },
-              { label: 'Atendidos', value: dailyMetrics.contactsAttended, tone: 'text-blue-600 dark:text-blue-400', today: true },
-              { label: 'Msgs', value: dailyMetrics.messagesSent, tone: 'text-green-600 dark:text-green-400', today: true },
-              { label: 'Respostas', value: dailyMetrics.responsesReceived, tone: 'text-purple-600 dark:text-purple-400', today: true },
-              { label: 'Pedidos', value: dailyMetrics.ordersGenerated, tone: 'text-emerald-600 dark:text-emerald-400', today: true },
-            ].map((m, i) => (
-              <div key={m.label} className="flex items-center gap-1.5">
-                {i === 4 && <span className="h-3.5 w-px bg-border mr-1.5" aria-hidden />}
-                <span className={cn('text-xs font-bold leading-none tabular-nums', m.tone)}>{loading ? '…' : m.value}</span>
-                <span className="text-[9px] text-muted-foreground leading-none">
-                  {m.label}
-                  {m.today && <span className="opacity-60"> hoje</span>}
-                </span>
-              </div>
-            ))}
-            <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-6 px-2 ml-auto text-[10px] gap-1 text-muted-foreground">
-                {metricsOpen ? 'Ocultar painel' : 'Painel comercial'}
-                {metricsOpen ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-              </Button>
-            </CollapsibleTrigger>
-          </div>
-          <CollapsibleContent className="pt-2">
-            <Suspense fallback={<div className="h-20" />}>
-              <CommercialDashboard />
-            </Suspense>
-          </CollapsibleContent>
-        </Collapsible>
+        {/* Indicadores — painel único do CRM */}
+        <CrmIndicatorsPanel dailyMetrics={dailyMetrics} followUpHoje={metrics.followUpHoje} />
+
 
 
 
