@@ -123,7 +123,6 @@ const KommoFunnelView = lazy(() => import('@/components/crm/KommoFunnelView').th
 const LeadDetailDrawer = lazy(() => import('@/components/crm/LeadDetailDrawer').then(m => ({ default: m.LeadDetailDrawer })));
 const FunnelAutomationsPanel = lazy(() => import('@/components/crm/FunnelAutomationsPanel').then(m => ({ default: m.FunnelAutomationsPanel })));
 const PosVendaPanel = lazy(() => import('@/components/crm/PosVendaPanel').then(m => ({ default: m.PosVendaPanel })));
-const CommercialDashboard = lazy(() => import('@/components/dashboard/CommercialDashboard').then(m => ({ default: m.CommercialDashboard })));
 
 
 const FUNNEL_STAGES = [
@@ -367,7 +366,6 @@ export default function Contatos() {
   const [timelineOpen, setTimelineOpen] = useState(false);
   const [timelineContact, setTimelineContact] = useState<Contact | null>(null);
   const [tagsManagerOpen, setTagsManagerOpen] = useState(false);
-  const [metricsOpen, setMetricsOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [activitiesOpen, setActivitiesOpen] = useState(false);
   const [activitiesContact, setActivitiesContact] = useState<Contact | null>(null);
