@@ -76,6 +76,7 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
     batch_code: '',
     target_quantity: 0,
     notes: '',
+    scheduled_date: new Date().toISOString().split('T')[0],
     selectedProcesses: [] as { process_id: string; is_required: boolean }[],
   });
 
@@ -98,6 +99,7 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
         batch_code: newOrder.batch_code || null,
         target_quantity: newOrder.target_quantity,
         notes: newOrder.notes || null,
+        scheduled_date: newOrder.scheduled_date || null,
       },
       newOrder.selectedProcesses
     );
@@ -108,9 +110,11 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
       batch_code: '',
       target_quantity: 0,
       notes: '',
+      scheduled_date: new Date().toISOString().split('T')[0],
       selectedProcesses: [],
     });
   };
+
 
   // Sync selectedOrder when orders change
   useEffect(() => {
