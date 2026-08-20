@@ -76,6 +76,7 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
     batch_code: '',
     target_quantity: 0,
     notes: '',
+    scheduled_date: new Date().toISOString().split('T')[0],
     selectedProcesses: [] as { process_id: string; is_required: boolean }[],
   });
 
@@ -98,6 +99,7 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
         batch_code: newOrder.batch_code || null,
         target_quantity: newOrder.target_quantity,
         notes: newOrder.notes || null,
+        scheduled_date: newOrder.scheduled_date || null,
       },
       newOrder.selectedProcesses
     );
@@ -108,9 +110,11 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
       batch_code: '',
       target_quantity: 0,
       notes: '',
+      scheduled_date: new Date().toISOString().split('T')[0],
       selectedProcesses: [],
     });
   };
+
 
   // Sync selectedOrder when orders change
   useEffect(() => {
@@ -377,6 +381,11 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
                       </div>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                         <span>Criada: {format(parseISO(order.created_at), "dd/MM/yyyy", { locale: ptBR })}</span>
+                        {order.scheduled_date && (
+                          <span className="text-primary font-medium">
+                            Programada: {format(parseISO(order.scheduled_date), "dd/MM/yyyy", { locale: ptBR })}
+                          </span>
+                        )}
                         {order.source_order?.due_date && (
                           <span className="text-amber-600 font-medium">
                             Entrega: {format(parseISO(order.source_order.due_date), "dd/MM/yyyy", { locale: ptBR })}
@@ -479,6 +488,18 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
                 />
               </div>
             </div>
+
+            <div>
+              <Label>Data Programada</Label>
+              <Input
+                type="date"
+                className="h-12"
+                value={newOrder.scheduled_date}
+                onChange={(e) => setNewOrder({ ...newOrder, scheduled_date: e.target.value })}
+              />
+            </div>
+
+
 
             <div>
               <Label>Processos *</Label>
@@ -611,6 +632,16 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
                         <span className="text-muted-foreground">Consolidado:</span>
                         <span className="font-bold text-lg">{calculateConsolidation(selectedOrder)}</span>
                       </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-muted-foreground">Data programada:</span>
+                        <Input
+                          type="date"
+                          className="h-10 w-[170px]"
+                          value={selectedOrder.scheduled_date?.slice(0, 10) || ''}
+                          onChange={(e) => updateOrder(selectedOrder.id, { scheduled_date: e.target.value || null })}
+                        />
+                      </div>
+
                     </CardContent>
                   </Card>
 
