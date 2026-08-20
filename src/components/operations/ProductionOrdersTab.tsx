@@ -632,6 +632,16 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
                         <span className="text-muted-foreground">Consolidado:</span>
                         <span className="font-bold text-lg">{calculateConsolidation(selectedOrder)}</span>
                       </div>
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-muted-foreground">Data programada:</span>
+                        <Input
+                          type="date"
+                          className="h-10 w-[170px]"
+                          value={selectedOrder.scheduled_date?.slice(0, 10) || ''}
+                          onChange={(e) => updateOrder(selectedOrder.id, { scheduled_date: e.target.value || null })}
+                        />
+                      </div>
+
                     </CardContent>
                   </Card>
 
