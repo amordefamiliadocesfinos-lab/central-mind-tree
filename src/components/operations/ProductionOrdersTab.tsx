@@ -485,6 +485,18 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
             </div>
 
             <div>
+              <Label>Data Programada</Label>
+              <Input
+                type="date"
+                className="h-12"
+                value={newOrder.scheduled_date}
+                onChange={(e) => setNewOrder({ ...newOrder, scheduled_date: e.target.value })}
+              />
+            </div>
+
+
+
+            <div>
               <Label>Processos *</Label>
               <p className="text-xs text-muted-foreground mb-2">
                 Selecione os processos obrigatórios para esta OP
