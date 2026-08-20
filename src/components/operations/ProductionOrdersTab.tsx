@@ -381,6 +381,11 @@ export function ProductionOrdersTab({ products }: ProductionOrdersTabProps) {
                       </div>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
                         <span>Criada: {format(parseISO(order.created_at), "dd/MM/yyyy", { locale: ptBR })}</span>
+                        {order.scheduled_date && (
+                          <span className="text-primary font-medium">
+                            Programada: {format(parseISO(order.scheduled_date), "dd/MM/yyyy", { locale: ptBR })}
+                          </span>
+                        )}
                         {order.source_order?.due_date && (
                           <span className="text-amber-600 font-medium">
                             Entrega: {format(parseISO(order.source_order.due_date), "dd/MM/yyyy", { locale: ptBR })}
