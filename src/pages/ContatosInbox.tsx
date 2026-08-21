@@ -426,12 +426,39 @@ export default function ContatosInbox() {
   const selected = items.find((i) => i.id === selectedId) || null;
 
   const openConversation = async (item: InboxItem) => {
+    // Contato sem conversa: cria o atendimento na hora para não existir cadastro
+    // "invisível" na caixa de entrada.
+    if (!item.conversation_id) {
+      const { data: created, error } = await supabase
+        .from('service_conversations')
+        .insert({
+          contact_id: item.id,
+          contact_name: item.name,
+          contact_handle: item.whatsapp || item.phone,
+          contact_avatar_url: item.photo_url,
+          funnel_stage: item.funnel_status,
+          channel: 'whatsapp',
+          status: 'open',
+          needs_reply: false,
+          unread_count: 0,
+        })
+        .select('id')
+        .maybeSingle();
+      if (error || !created) {
+        toast.error('Não foi possível abrir o atendimento deste contato.');
+        return;
+      }
+      setItems(current => current.map(row => row.id === item.id ? { ...row, conversation_id: created.id } : row));
+      setSelectedId(item.id);
+      return;
+    }
     setSelectedId(item.id);
     if (item.unread_count > 0) {
       setItems(current => current.map(row => row.id === item.id ? { ...row, unread_count: 0 } : row));
       await supabase.from('service_conversations').update({ unread_count: 0 }).eq('id', item.conversation_id);
     }
   };
+
 
   const updateAttendance = async (patch: Record<string, unknown>, successMessage: string) => {
     if (!selected) return;
