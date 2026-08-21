@@ -36,8 +36,12 @@ import {
   FileSpreadsheet,
   MessageCircle,
   ShoppingCart,
+  Users,
+  Inbox,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useContacts, Contact } from '@/hooks/useContacts';
+
 import { ContactFormDialog } from './ContactFormDialog';
 import { ContactOrderHistory } from './ContactOrderHistory';
 import { Skeleton } from '@/components/ui/skeleton';
