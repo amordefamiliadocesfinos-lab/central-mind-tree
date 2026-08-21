@@ -152,17 +152,21 @@ export default function ContatosInbox() {
 
     // Busca/estágio consultam o banco inteiro: leads antigos do Kanban não
     // podem ficar invisíveis só porque estão fora da janela recente da fila.
+    const CONTACT_FIELDS = 'id,name,type,whatsapp,phone,photo_url,funnel_status,temperatura_lead,ultimo_contato,next_action_date,next_contact_date,is_active';
     let scopedContactIds: string[] | null = null;
+    let scopedContacts: any[] = [];
     if (term || stageFilter !== 'all') {
-      let contactQuery = supabase.from('contacts').select('id').eq('is_active', true).limit(500);
+      let contactQuery = supabase.from('contacts').select(CONTACT_FIELDS).eq('is_active', true).limit(1000);
       if (stageFilter !== 'all') contactQuery = contactQuery.eq('funnel_status', stageFilter);
       if (term) {
         const like = `%${term}%`;
-        contactQuery = contactQuery.or(`name.ilike.${like},fantasy_name.ilike.${like},phone.ilike.${like},whatsapp.ilike.${like},email.ilike.${like}`);
+        contactQuery = contactQuery.or(`name.ilike.${like},fantasy_name.ilike.${like},phone.ilike.${like},whatsapp.ilike.${like},email.ilike.${like},document.ilike.${like}`);
       }
       const { data: matches } = await contactQuery;
-      scopedContactIds = (matches || []).map((m) => m.id as string);
+      scopedContacts = matches || [];
+      scopedContactIds = scopedContacts.map((m) => m.id as string);
     }
+
 
     let query = supabase
       .from('service_conversations')
@@ -191,23 +195,22 @@ export default function ContatosInbox() {
       return null;
     }
 
-    if (!conversations?.length) {
-      setItems([]);
-      setLoading(false);
-      return [];
-    }
+    const convList = conversations || [];
 
-    const ids = Array.from(new Set(conversations.map((c) => c.contact_id).filter(Boolean))) as string[];
-    const { data: contacts } = await supabase
-      .from('contacts')
-      .select('id,name,type,whatsapp,phone,photo_url,funnel_status,temperatura_lead,ultimo_contato,next_action_date,next_contact_date,is_active')
-      .in('id', ids);
+    const ids = Array.from(new Set(convList.map((c) => c.contact_id).filter(Boolean))) as string[];
+    const { data: contacts } = ids.length
+      ? await supabase
+          .from('contacts')
+          .select(CONTACT_FIELDS)
+          .in('id', ids)
+      : { data: [] as any[] };
     const contactsById = new Map((contacts || []).map((contact) => [contact.id, contact]));
+
 
     const now = Date.now();
     const seenContacts = new Set<string>();
     const merged: InboxItem[] = [];
-    for (const conversation of conversations) {
+    for (const conversation of convList) {
       if (!conversation.contact_id || seenContacts.has(conversation.contact_id)) continue;
       seenContacts.add(conversation.contact_id);
       const contact = contactsById.get(conversation.contact_id);
@@ -243,9 +246,42 @@ export default function ContatosInbox() {
       });
     }
 
+    // Cadastro e CRM são a mesma base: contatos encontrados na busca que ainda
+    // não possuem conversa aparecem na fila e criam o atendimento ao abrir.
+    for (const contact of scopedContacts) {
+      if (seenContacts.has(contact.id)) continue;
+      seenContacts.add(contact.id);
+      merged.push({
+        id: contact.id,
+        conversation_id: '',
+        name: contact.name || 'Sem nome',
+        type: contact.type || null,
+        whatsapp: contact.whatsapp || null,
+        phone: contact.phone || null,
+        photo_url: contact.photo_url || null,
+        funnel_status: normalizeCrmStage(contact.funnel_status),
+        temperatura_lead: contact.temperatura_lead || null,
+        ultimo_contato: contact.ultimo_contato || null,
+        last_summary: 'Sem conversa registrada — abrir para iniciar atendimento',
+        last_date: null,
+        unread_days: 999,
+        unread_count: 0,
+        needs_reply: false,
+        attendance_state: null,
+        assigned_to: null,
+        status: 'open',
+        last_inbound_at: null,
+        last_message_at: null,
+        return_at: null,
+        next_action_date: contact.next_action_date || null,
+        next_contact_date: contact.next_contact_date || null,
+      });
+    }
+
     setItems(merged);
     setLoading(false);
     return merged;
+
   }, [loadLimit, deferredSearch, stageFilter]);
 
   useEffect(() => {
@@ -355,11 +391,15 @@ export default function ContatosInbox() {
       // continuam acessíveis em "Hoje" enquanto tiverem return_at.
       const priority = getCrmPriority(toCrmPriorityInput(i), now);
       const supplier = isPureSupplier(i);
-      if (conversationScope === 'commercial') {
-        if (supplier && !['P0', 'P1'].includes(priority.level)) return false;
-      } else if (!supplier) {
-        return false;
+      // Na busca/estágio o cadastro inteiro fica visível (cliente ou fornecedor).
+      if (!searching) {
+        if (conversationScope === 'commercial') {
+          if (supplier && !['P0', 'P1'].includes(priority.level)) return false;
+        } else if (!supplier) {
+          return false;
+        }
       }
+
 
       // Buscando por nome/estágio, o lead sempre aparece: os chips de
       // prioridade organizam a fila, mas não podem esconder um lead existente.
@@ -386,12 +426,39 @@ export default function ContatosInbox() {
   const selected = items.find((i) => i.id === selectedId) || null;
 
   const openConversation = async (item: InboxItem) => {
+    // Contato sem conversa: cria o atendimento na hora para não existir cadastro
+    // "invisível" na caixa de entrada.
+    if (!item.conversation_id) {
+      const { data: created, error } = await supabase
+        .from('service_conversations')
+        .insert({
+          contact_id: item.id,
+          contact_name: item.name,
+          contact_handle: item.whatsapp || item.phone,
+          contact_avatar_url: item.photo_url,
+          funnel_stage: item.funnel_status,
+          channel: 'whatsapp',
+          status: 'open',
+          needs_reply: false,
+          unread_count: 0,
+        })
+        .select('id')
+        .maybeSingle();
+      if (error || !created) {
+        toast.error('Não foi possível abrir o atendimento deste contato.');
+        return;
+      }
+      setItems(current => current.map(row => row.id === item.id ? { ...row, conversation_id: created.id } : row));
+      setSelectedId(item.id);
+      return;
+    }
     setSelectedId(item.id);
     if (item.unread_count > 0) {
       setItems(current => current.map(row => row.id === item.id ? { ...row, unread_count: 0 } : row));
       await supabase.from('service_conversations').update({ unread_count: 0 }).eq('id', item.conversation_id);
     }
   };
+
 
   const updateAttendance = async (patch: Record<string, unknown>, successMessage: string) => {
     if (!selected) return;
