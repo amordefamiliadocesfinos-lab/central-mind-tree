@@ -152,17 +152,21 @@ export default function ContatosInbox() {
 
     // Busca/estágio consultam o banco inteiro: leads antigos do Kanban não
     // podem ficar invisíveis só porque estão fora da janela recente da fila.
+    const CONTACT_FIELDS = 'id,name,type,whatsapp,phone,photo_url,funnel_status,temperatura_lead,ultimo_contato,next_action_date,next_contact_date,is_active';
     let scopedContactIds: string[] | null = null;
+    let scopedContacts: any[] = [];
     if (term || stageFilter !== 'all') {
-      let contactQuery = supabase.from('contacts').select('id').eq('is_active', true).limit(500);
+      let contactQuery = supabase.from('contacts').select(CONTACT_FIELDS).eq('is_active', true).limit(1000);
       if (stageFilter !== 'all') contactQuery = contactQuery.eq('funnel_status', stageFilter);
       if (term) {
         const like = `%${term}%`;
-        contactQuery = contactQuery.or(`name.ilike.${like},fantasy_name.ilike.${like},phone.ilike.${like},whatsapp.ilike.${like},email.ilike.${like}`);
+        contactQuery = contactQuery.or(`name.ilike.${like},fantasy_name.ilike.${like},phone.ilike.${like},whatsapp.ilike.${like},email.ilike.${like},document.ilike.${like}`);
       }
       const { data: matches } = await contactQuery;
-      scopedContactIds = (matches || []).map((m) => m.id as string);
+      scopedContacts = matches || [];
+      scopedContactIds = scopedContacts.map((m) => m.id as string);
     }
+
 
     let query = supabase
       .from('service_conversations')
