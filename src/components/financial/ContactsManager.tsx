@@ -62,6 +62,8 @@ import {
 
 export function ContactsManager() {
   const { contacts, loading, fetchContacts, createContact, updateContact, deleteContact } = useContacts();
+  const navigate = useNavigate();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [showOnlyActive, setShowOnlyActive] = useState(true);
