@@ -571,7 +571,14 @@ export default function ContatosInbox() {
     setAttendanceBusy(true);
     try {
       const result = await applyCanonicalAttendanceResult({ contactId: selected.id, conversationId: selected.conversation_id, resultCode, scheduledFor });
-      toast.success(`${result.label}${result.returnAt ? ' · retorno agendado' : ''}`);
+      const stageSummary = result.stage.action === 'MOVE'
+        ? `Etapa: ${getCrmStageLabel(result.stage.previousStage)} → ${getCrmStageLabel(result.stage.nextStage)}`
+        : `Etapa: ${getCrmStageLabel(result.stage.previousStage)} — mantida`;
+      const nextActionSummary = result.nextActionLabel
+        ? `Próxima ação: ${result.nextActionLabel}${result.nextActionDate ? ` em ${format(parseISO(result.nextActionDate), 'dd/MM HH:mm')}` : ''}`
+        : 'Próxima ação: nenhuma ação comercial';
+      const conversationSummary = result.conversationResolved ? 'Conversa encerrada' : 'Conversa mantida aberta';
+      toast.success('Resultado registrado', { description: `${result.label} · ${stageSummary} · ${nextActionSummary} · ${conversationSummary}` });
       setSendConfirmation(false);
       await load();
       if (attendanceQueueScope.length > 0) await nextAttendance();

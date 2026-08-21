@@ -5,5 +5,6 @@ export * from './temporal';
 export * from './priority';
 export * from './events';
 export * from './transitions';
+export * from './funnelProgression';
 export * from './transitionAdapter';
 export * from './queueShadowObservation';

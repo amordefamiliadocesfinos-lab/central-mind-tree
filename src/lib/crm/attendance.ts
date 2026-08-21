@@ -5,6 +5,7 @@ import { isQueueShadowObservationEnabled, observeAttendanceOutcomeShadow } from 
 import { getCanonicalNextAction } from '@/lib/crm/canonical/nextActions';
 import { getCanonicalResult } from '@/lib/crm/canonical/results';
 import { getCrmTransition } from '@/lib/crm/canonical/transitions';
+import { resolveFunnelStageFromCanonicalResult } from '@/lib/crm/canonical/funnelProgression';
 import { canSetReturnAt } from '@/lib/crm/canonical/temporal';
 import type { CrmResultCode } from '@/lib/crm/canonical/types';
 
@@ -110,6 +111,20 @@ export async function applyCanonicalAttendanceResult(input: {
   const nextAction = getCanonicalNextAction(decision.nextAction.value);
   const shouldSchedule = Boolean(nextAction?.canBeFuture && scheduledAt);
   const returnAt = canSetReturnAt(decision.nextAction.value, shouldSchedule ? scheduledAt : null) ? scheduledAt : null;
+  const stageResolution = resolveFunnelStageFromCanonicalResult({
+    result: input.resultCode,
+    currentStage: contact.funnel_status,
+    decision,
+    hasLegitimateFutureReturn: Boolean(returnAt),
+  });
+
+  if (stageResolution.action === 'MOVE') {
+    const { error } = await supabase.from('contacts').update({
+      funnel_status: stageResolution.nextStage,
+      updated_at: now,
+    }).eq('id', input.contactId);
+    if (error) throw error;
+  }
 
   if (nextAction && shouldSchedule && scheduledAt) {
     await setCrmNextAction({
@@ -144,7 +159,7 @@ export async function applyCanonicalAttendanceResult(input: {
   }).eq('id', input.conversationId);
   if (conversationUpdateError) throw conversationUpdateError;
 
-  const { error: historyError } = await supabase.from('contact_history').insert({
+  const historyRows = [{
     contact_id: input.contactId,
     event_type: 'contact',
     interaction_type: 'contact',
@@ -160,16 +175,35 @@ export async function applyCanonicalAttendanceResult(input: {
     },
     description: `Resultado: ${canonicalResult.label}`,
     interaction_date: now,
-  });
+  }];
+  if (stageResolution.action === 'MOVE') {
+    historyRows.push({
+      contact_id: input.contactId,
+      event_type: 'stage_change',
+      interaction_type: 'sistema',
+      event_code: CRM_EVENT_CODES.STAGE_CHANGED,
+      event_metadata: {
+        source: 'inbox_canonical_result',
+        result_code: input.resultCode,
+        old_stage: stageResolution.previousStage,
+        new_stage: stageResolution.nextStage,
+      },
+      description: `Movido de "${stageResolution.previousStage}" para "${stageResolution.nextStage}" pelo resultado: ${canonicalResult.label}`,
+      interaction_date: now,
+    });
+  }
+  const { error: historyError } = await supabase.from('contact_history').insert(historyRows);
   if (historyError) throw historyError;
 
   return {
     label: canonicalResult.label,
     decision,
+    stage: stageResolution,
     nextActionLabel: nextAction?.label ?? null,
     nextActionDate: shouldSchedule ? scheduledAt : null,
     returnAt,
     handoffPending: decision.handoff.required,
+    conversationResolved: resolvesConversation,
   };
 }
 
