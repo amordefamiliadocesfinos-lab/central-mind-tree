@@ -2,17 +2,30 @@ import { useState } from 'react';
 import { CalendarClock, CheckCircle2, ChevronDown, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ATTENDANCE_OUTCOMES, type AttendanceOutcome } from '@/lib/crm/attendance';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { CRM_CANONICAL_RESULTS } from '@/lib/crm/canonical/results';
+import type { CrmResultCode } from '@/lib/crm/canonical/types';
 
 interface Props {
   busy?: boolean;
-  onOutcome: (outcome: AttendanceOutcome) => void | Promise<void>;
+  onOutcome: (resultCode: CrmResultCode, scheduledFor?: string | null) => void | Promise<void>;
   onSnooze: (when: number | string) => void | Promise<void>;
 }
 
 export function AttendanceActionBar({ busy = false, onOutcome, onSnooze }: Props) {
   const [mode, setMode] = useState<'outcome' | 'snooze' | null>(null);
   const [date, setDate] = useState('');
+  const [resultCode, setResultCode] = useState<CrmResultCode | ''>('');
+  const selectedResult = CRM_CANONICAL_RESULTS.find(result => result.code === resultCode);
+  const needsReturnDate = resultCode === 'CRM-RES-022';
+
+  const submitResult = async () => {
+    if (!resultCode || (needsReturnDate && !date)) return;
+    await onOutcome(resultCode, date || null);
+    setMode(null);
+    setResultCode('');
+    setDate('');
+  };
 
   return (
     <div className="rounded-lg border bg-muted/20 p-2 space-y-2">
@@ -26,12 +39,26 @@ export function AttendanceActionBar({ busy = false, onOutcome, onSnooze }: Props
         </Button>
       </div>
       {mode === 'outcome' && (
-        <div className="grid grid-cols-2 gap-1.5">
-          {ATTENDANCE_OUTCOMES.map(item => (
-            <Button key={item.key} size="sm" variant="ghost" className="h-auto min-h-8 justify-start whitespace-normal px-2 py-1 text-left text-[11px]" onClick={async () => { await onOutcome(item.key); setMode(null); }}>
-              {item.label}
-            </Button>
-          ))}
+        <div className="space-y-2 rounded-md border bg-background p-2">
+          <Select value={resultCode} onValueChange={value => setResultCode(value as CrmResultCode)}>
+            <SelectTrigger className="h-9 text-xs"><SelectValue placeholder="Selecione o resultado do atendimento" /></SelectTrigger>
+            <SelectContent className="max-h-72">
+              {CRM_CANONICAL_RESULTS.map(result => (
+                <SelectItem key={result.code} value={result.code} className="text-xs">
+                  {result.code.replace('CRM-RES-', '')} · {result.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {selectedResult && <p className="text-[11px] text-muted-foreground">{selectedResult.description}</p>}
+          {(needsReturnDate || date) && (
+            <Input type="date" className="h-8 text-xs" value={date} min={new Date().toISOString().slice(0, 10)} onChange={event => setDate(event.target.value)} />
+          )}
+          {needsReturnDate && <p className="text-[11px] text-amber-700 dark:text-amber-400">Informe a data combinada para o retorno.</p>}
+          <div className="flex justify-end gap-2">
+            <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => { setMode(null); setResultCode(''); setDate(''); }}>Cancelar</Button>
+            <Button size="sm" className="h-8 text-xs" disabled={!resultCode || (needsReturnDate && !date) || busy} onClick={() => void submitResult()}>Confirmar resultado</Button>
+          </div>
         </div>
       )}
       {mode === 'snooze' && (

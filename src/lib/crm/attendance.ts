@@ -1,7 +1,12 @@
 import { supabase } from '@/integrations/supabase/client';
-import { clearCrmNextAction, setCrmNextAction } from '@/lib/crm/nextAction';
+import { clearCrmNextAction, setCrmNextAction, syncCrmNextActionTask } from '@/lib/crm/nextAction';
 import { CRM_EVENT_CODES, normalizeCrmStage } from '@/lib/crm/model';
 import { isQueueShadowObservationEnabled, observeAttendanceOutcomeShadow } from '@/lib/crm/canonical/queueShadowObservation';
+import { getCanonicalNextAction } from '@/lib/crm/canonical/nextActions';
+import { getCanonicalResult } from '@/lib/crm/canonical/results';
+import { getCrmTransition } from '@/lib/crm/canonical/transitions';
+import { canSetReturnAt } from '@/lib/crm/canonical/temporal';
+import type { CrmResultCode } from '@/lib/crm/canonical/types';
 
 export type AttendanceOutcome =
   | 'awaiting_response' | 'proposal_sent' | 'negotiation' | 'sale_closed'
@@ -42,6 +47,130 @@ function dueInDays(days?: number) {
   if (days == null) return null;
   const due = new Date(); due.setDate(due.getDate() + days); due.setHours(9, 0, 0, 0);
   return due.toISOString();
+}
+
+function scheduledDateAtNine(date?: string | null) {
+  if (!date) return null;
+  const target = new Date(`${date}T09:00:00`);
+  if (Number.isNaN(target.getTime())) throw new Error('Data inválida para a próxima ação');
+  return target.toISOString();
+}
+
+/**
+ * Writer operacional da Inbox. A decisão pertence ao motor canônico; esta
+ * função só traduz a decisão para as estruturas já existentes do CRM.
+ */
+export async function applyCanonicalAttendanceResult(input: {
+  contactId: string;
+  conversationId: string;
+  resultCode: CrmResultCode;
+  scheduledFor?: string | null;
+}) {
+  const now = new Date().toISOString();
+  const canonicalResult = getCanonicalResult(input.resultCode);
+  if (!canonicalResult) throw new Error('Resultado canônico inválido');
+
+  const { data: contact, error: contactError } = await supabase
+    .from('contacts')
+    .select('funnel_status, next_action_text, next_action_date')
+    .eq('id', input.contactId)
+    .maybeSingle();
+  if (contactError || !contact) throw contactError || new Error('Contato não encontrado');
+
+  const { data: conversation, error: conversationError } = await supabase
+    .from('service_conversations')
+    .select('status, attendance_state, return_at, needs_reply')
+    .eq('id', input.conversationId)
+    .eq('contact_id', input.contactId)
+    .maybeSingle();
+  if (conversationError || !conversation) throw conversationError || new Error('Conversa não encontrada para este contato');
+
+  const scheduledAt = scheduledDateAtNine(input.scheduledFor);
+  const decision = getCrmTransition({
+    result: input.resultCode,
+    currentStage: normalizeCrmStage(contact.funnel_status),
+    // A representação legada armazena o texto, não o código canônico.
+    // Não inferimos código por texto: a decisão é tomada pelo resultado atual.
+    currentNextAction: null,
+    currentNextActionDate: contact.next_action_date,
+    currentReturnAt: conversation.return_at,
+    conversationStatus: conversation.status,
+    attendanceState: conversation.attendance_state,
+    needsReply: conversation.needs_reply ?? false,
+    operationalContext: {
+      hasLegitimateFutureReason: Boolean(scheduledAt),
+      hasConcreteReturnMoment: Boolean(scheduledAt),
+    },
+  });
+
+  if (decision.temporal.required && !scheduledAt) {
+    throw new Error('Este resultado exige uma data de retorno combinada');
+  }
+
+  const nextAction = getCanonicalNextAction(decision.nextAction.value);
+  const shouldSchedule = Boolean(nextAction?.canBeFuture && scheduledAt);
+  const returnAt = canSetReturnAt(decision.nextAction.value, shouldSchedule ? scheduledAt : null) ? scheduledAt : null;
+
+  if (nextAction && shouldSchedule && scheduledAt) {
+    await setCrmNextAction({
+      contactId: input.contactId,
+      title: nextAction.label,
+      dueAt: scheduledAt,
+      conversationId: input.conversationId,
+      syncConversationReturn: Boolean(returnAt),
+    });
+  } else if (nextAction) {
+    const { error } = await supabase.from('contacts').update({
+      next_action_text: nextAction.label,
+      next_action_date: null,
+      next_contact_date: null,
+      updated_at: now,
+    }).eq('id', input.contactId);
+    if (error) throw error;
+    await syncCrmNextActionTask(input.contactId, { title: null, dueAt: null });
+  } else {
+    await clearCrmNextAction(input.contactId);
+  }
+
+  const resolvesConversation = ['OUT_OF_ACTIVE_COMMERCIAL_QUEUE', 'CONTACT_RESTRICTED'].includes(decision.desiredOperationalState);
+  const attendanceState = resolvesConversation ? 'concluido' : returnAt ? 'retornar_em' : 'em_atendimento';
+  const { error: conversationUpdateError } = await supabase.from('service_conversations').update({
+    attendance_state: attendanceState,
+    status: resolvesConversation ? 'resolved' : 'open',
+    resolved_at: resolvesConversation ? now : null,
+    needs_reply: false,
+    unread_count: 0,
+    return_at: returnAt,
+  }).eq('id', input.conversationId);
+  if (conversationUpdateError) throw conversationUpdateError;
+
+  const { error: historyError } = await supabase.from('contact_history').insert({
+    contact_id: input.contactId,
+    event_type: 'contact',
+    interaction_type: 'contact',
+    event_code: CRM_EVENT_CODES.CONTACT_ATTEMPTED,
+    event_metadata: {
+      source: 'inbox_canonical_result',
+      result_code: input.resultCode,
+      next_action_code: decision.nextAction.value,
+      next_action_date: shouldSchedule ? scheduledAt : null,
+      return_at: returnAt,
+      operational_state: decision.desiredOperationalState,
+      handoff_required: decision.handoff.required,
+    },
+    description: `Resultado: ${canonicalResult.label}`,
+    interaction_date: now,
+  });
+  if (historyError) throw historyError;
+
+  return {
+    label: canonicalResult.label,
+    decision,
+    nextActionLabel: nextAction?.label ?? null,
+    nextActionDate: shouldSchedule ? scheduledAt : null,
+    returnAt,
+    handoffPending: decision.handoff.required,
+  };
 }
 
 export async function applyAttendanceOutcome(input: {

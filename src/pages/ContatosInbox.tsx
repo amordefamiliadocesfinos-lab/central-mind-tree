@@ -30,7 +30,8 @@ import { getCrmStageLabel, normalizeCrmStage } from '@/lib/crm/model';
 import { useActiveUser } from '@/hooks/useActiveUser';
 import { MetaWindowBadge } from '@/components/crm/MetaWindowBadge';
 import { AttendanceActionBar } from '@/components/crm/AttendanceActionBar';
-import { applyAttendanceOutcome, snoozeAttendance, ATTENDANCE_STATE_LABELS, type AttendanceOutcome } from '@/lib/crm/attendance';
+import { applyAttendanceOutcome, applyCanonicalAttendanceResult, snoozeAttendance, ATTENDANCE_STATE_LABELS } from '@/lib/crm/attendance';
+import type { CrmResultCode } from '@/lib/crm/canonical/types';
 import { compareCrmPriority, getCrmPriority, type CrmPriorityInput } from '@/lib/crm/priority';
 
 interface InboxItem {
@@ -565,14 +566,15 @@ export default function ContatosInbox() {
     await openConversation(next);
   };
 
-  const registerOutcome = async (outcome: AttendanceOutcome) => {
+  const registerOutcome = async (resultCode: CrmResultCode, scheduledFor?: string | null) => {
     if (!selected) return;
     setAttendanceBusy(true);
     try {
-      const result = await applyAttendanceOutcome({ contactId: selected.id, conversationId: selected.conversation_id, outcome });
+      const result = await applyCanonicalAttendanceResult({ contactId: selected.id, conversationId: selected.conversation_id, resultCode, scheduledFor });
       toast.success(`${result.label}${result.returnAt ? ' · retorno agendado' : ''}`);
       setSendConfirmation(false);
-      await nextAttendance();
+      await load();
+      if (attendanceQueueScope.length > 0) await nextAttendance();
     } catch (error) {
       console.error(error);
       toast.error('Não foi possível registrar o resultado do atendimento.');
