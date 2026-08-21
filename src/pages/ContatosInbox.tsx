@@ -195,18 +195,17 @@ export default function ContatosInbox() {
       return null;
     }
 
-    if (!conversations?.length) {
-      setItems([]);
-      setLoading(false);
-      return [];
-    }
+    const convList = conversations || [];
 
-    const ids = Array.from(new Set(conversations.map((c) => c.contact_id).filter(Boolean))) as string[];
-    const { data: contacts } = await supabase
-      .from('contacts')
-      .select('id,name,type,whatsapp,phone,photo_url,funnel_status,temperatura_lead,ultimo_contato,next_action_date,next_contact_date,is_active')
-      .in('id', ids);
+    const ids = Array.from(new Set(convList.map((c) => c.contact_id).filter(Boolean))) as string[];
+    const { data: contacts } = ids.length
+      ? await supabase
+          .from('contacts')
+          .select(CONTACT_FIELDS)
+          .in('id', ids)
+      : { data: [] as any[] };
     const contactsById = new Map((contacts || []).map((contact) => [contact.id, contact]));
+
 
     const now = Date.now();
     const seenContacts = new Set<string>();
