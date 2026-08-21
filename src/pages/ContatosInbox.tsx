@@ -210,43 +210,8 @@ export default function ContatosInbox() {
     const now = Date.now();
     const seenContacts = new Set<string>();
     const merged: InboxItem[] = [];
-    for (const conversation of conversations) {
-      if (!conversation.contact_id || seenContacts.has(conversation.contact_id)) continue;
-      seenContacts.add(conversation.contact_id);
-      const contact = contactsById.get(conversation.contact_id);
-      if (contact?.is_active === false) continue;
-      const lastDate = conversation.last_message_at || null;
-      const unreadDays = lastDate
-        ? Math.floor((now - new Date(lastDate).getTime()) / 86400000)
-        : 999;
-      merged.push({
-        id: conversation.contact_id,
-        conversation_id: conversation.id,
-        name: contact?.name || conversation.contact_name || 'Sem nome',
-        type: contact?.type || null,
-        whatsapp: contact?.whatsapp || conversation.contact_handle,
-        phone: contact?.phone || null,
-        photo_url: contact?.photo_url || conversation.contact_avatar_url,
-        funnel_status: normalizeCrmStage(contact?.funnel_status || conversation.funnel_stage),
-        temperatura_lead: contact?.temperatura_lead || null,
-        ultimo_contato: contact?.ultimo_contato || null,
-        last_summary: conversation.last_message_preview || null,
-        last_date: lastDate,
-        unread_days: unreadDays,
-        unread_count: conversation.unread_count,
-        needs_reply: conversation.needs_reply,
-        attendance_state: conversation.attendance_state,
-        assigned_to: conversation.assigned_to,
-        status: conversation.status || 'open',
-        last_inbound_at: conversation.last_inbound_at,
-        last_message_at: conversation.last_message_at ?? null,
-        return_at: conversation.return_at,
-        next_action_date: contact?.next_action_date || null,
-        next_contact_date: contact?.next_contact_date || null,
-      });
-    }
+    for (const conversation of convList) {
 
-    setItems(merged);
     setLoading(false);
     return merged;
   }, [loadLimit, deferredSearch, stageFilter]);
