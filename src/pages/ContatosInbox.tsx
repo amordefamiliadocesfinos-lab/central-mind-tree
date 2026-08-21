@@ -391,11 +391,15 @@ export default function ContatosInbox() {
       // continuam acessíveis em "Hoje" enquanto tiverem return_at.
       const priority = getCrmPriority(toCrmPriorityInput(i), now);
       const supplier = isPureSupplier(i);
-      if (conversationScope === 'commercial') {
-        if (supplier && !['P0', 'P1'].includes(priority.level)) return false;
-      } else if (!supplier) {
-        return false;
+      // Na busca/estágio o cadastro inteiro fica visível (cliente ou fornecedor).
+      if (!searching) {
+        if (conversationScope === 'commercial') {
+          if (supplier && !['P0', 'P1'].includes(priority.level)) return false;
+        } else if (!supplier) {
+          return false;
+        }
       }
+
 
       // Buscando por nome/estágio, o lead sempre aparece: os chips de
       // prioridade organizam a fila, mas não podem esconder um lead existente.
