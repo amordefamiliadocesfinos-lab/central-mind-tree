@@ -349,10 +349,19 @@ export function ContactsManager() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => navigate(`/contatos?contact=${contact.id}`)}>
+                            <Users className="h-4 w-4 mr-2" />
+                            Abrir no CRM
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => navigate(`/contatos/inbox?contact=${contact.id}`)}>
+                            <Inbox className="h-4 w-4 mr-2" />
+                            Abrir na Caixa de Entrada
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleHistoryClick(contact)}>
                             <ShoppingCart className="h-4 w-4 mr-2" />
                             Histórico de Pedidos
                           </DropdownMenuItem>
+
                           <DropdownMenuItem onClick={() => handleEditClick(contact)}>
                             <Edit className="h-4 w-4 mr-2" />
                             Editar
