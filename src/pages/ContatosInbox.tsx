@@ -211,9 +211,77 @@ export default function ContatosInbox() {
     const seenContacts = new Set<string>();
     const merged: InboxItem[] = [];
     for (const conversation of convList) {
+      if (!conversation.contact_id || seenContacts.has(conversation.contact_id)) continue;
+      seenContacts.add(conversation.contact_id);
+      const contact = contactsById.get(conversation.contact_id);
+      if (contact?.is_active === false) continue;
+      const lastDate = conversation.last_message_at || null;
+      const unreadDays = lastDate
+        ? Math.floor((now - new Date(lastDate).getTime()) / 86400000)
+        : 999;
+      merged.push({
+        id: conversation.contact_id,
+        conversation_id: conversation.id,
+        name: contact?.name || conversation.contact_name || 'Sem nome',
+        type: contact?.type || null,
+        whatsapp: contact?.whatsapp || conversation.contact_handle,
+        phone: contact?.phone || null,
+        photo_url: contact?.photo_url || conversation.contact_avatar_url,
+        funnel_status: normalizeCrmStage(contact?.funnel_status || conversation.funnel_stage),
+        temperatura_lead: contact?.temperatura_lead || null,
+        ultimo_contato: contact?.ultimo_contato || null,
+        last_summary: conversation.last_message_preview || null,
+        last_date: lastDate,
+        unread_days: unreadDays,
+        unread_count: conversation.unread_count,
+        needs_reply: conversation.needs_reply,
+        attendance_state: conversation.attendance_state,
+        assigned_to: conversation.assigned_to,
+        status: conversation.status || 'open',
+        last_inbound_at: conversation.last_inbound_at,
+        last_message_at: conversation.last_message_at ?? null,
+        return_at: conversation.return_at,
+        next_action_date: contact?.next_action_date || null,
+        next_contact_date: contact?.next_contact_date || null,
+      });
+    }
 
+    // Cadastro e CRM são a mesma base: contatos encontrados na busca que ainda
+    // não possuem conversa aparecem na fila e criam o atendimento ao abrir.
+    for (const contact of scopedContacts) {
+      if (seenContacts.has(contact.id)) continue;
+      seenContacts.add(contact.id);
+      merged.push({
+        id: contact.id,
+        conversation_id: '',
+        name: contact.name || 'Sem nome',
+        type: contact.type || null,
+        whatsapp: contact.whatsapp || null,
+        phone: contact.phone || null,
+        photo_url: contact.photo_url || null,
+        funnel_status: normalizeCrmStage(contact.funnel_status),
+        temperatura_lead: contact.temperatura_lead || null,
+        ultimo_contato: contact.ultimo_contato || null,
+        last_summary: 'Sem conversa registrada — abrir para iniciar atendimento',
+        last_date: null,
+        unread_days: 999,
+        unread_count: 0,
+        needs_reply: false,
+        attendance_state: null,
+        assigned_to: null,
+        status: 'open',
+        last_inbound_at: null,
+        last_message_at: null,
+        return_at: null,
+        next_action_date: contact.next_action_date || null,
+        next_contact_date: contact.next_contact_date || null,
+      });
+    }
+
+    setItems(merged);
     setLoading(false);
     return merged;
+
   }, [loadLimit, deferredSearch, stageFilter]);
 
   useEffect(() => {
