@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { clearCrmNextAction, setCrmNextAction } from '@/lib/crm/nextAction';
 import { CRM_EVENT_CODES, normalizeCrmStage } from '@/lib/crm/model';
+import { isQueueShadowObservationEnabled, observeAttendanceOutcomeShadow } from '@/lib/crm/canonical/queueShadowObservation';
 
 export type AttendanceOutcome =
   | 'awaiting_response' | 'proposal_sent' | 'negotiation' | 'sale_closed'
@@ -43,7 +44,13 @@ function dueInDays(days?: number) {
   return due.toISOString();
 }
 
-export async function applyAttendanceOutcome(input: { contactId: string; conversationId?: string | null; outcome: AttendanceOutcome; saleAlreadyRecorded?: boolean }) {
+export async function applyAttendanceOutcome(input: {
+  contactId: string;
+  conversationId?: string | null;
+  outcome: AttendanceOutcome;
+  saleAlreadyRecorded?: boolean;
+  observationSource?: 'queue';
+}) {
   const now = new Date().toISOString();
   const config = CONFIG[input.outcome];
   const { data: contact, error: contactError } = await supabase.from('contacts').select('funnel_status').eq('id', input.contactId).maybeSingle();
@@ -53,6 +60,26 @@ export async function applyAttendanceOutcome(input: { contactId: string; convers
   const requestedStage = config.stage ? normalizeCrmStage(config.stage) : currentStage;
   const nextStage = requestedStage === 'contato_realizado' && ['novo_lead', 'cadencia'].includes(currentStage) ? 'contato_realizado' : requestedStage;
   const returnAt = dueInDays(config.days);
+  const nextActionDate = config.action && returnAt ? returnAt : null;
+  // PO-2: stage and temporal intent are available. The Shadow runs only for the
+  // queue, behind an opt-in development flag, before the first operational write.
+  observeAttendanceOutcomeShadow({
+    source: input.observationSource ?? 'inbox',
+    legacyResult: input.outcome,
+    currentFunnelStatus: currentStage,
+    currentNextActionText: null,
+    currentNextActionDate: null,
+    legacyBehavior: {
+      stage: nextStage,
+      nextActionText: config.action ?? null,
+      nextActionDate,
+      returnAt: config.conversationReturn ? returnAt : null,
+      // Conversation and handoff are intentionally absent at PO-2: CONFIG only
+      // describes an intent and no physical conversation has been selected yet.
+    },
+  }, {
+    enabled: isQueueShadowObservationEnabled(import.meta.env.DEV, import.meta.env.VITE_CRM_SHADOW_QUEUE_OBSERVATION),
+  });
   const { error: updateError } = await supabase.from('contacts').update({ ultimo_contato: now.slice(0, 10), funnel_status: nextStage, updated_at: now }).eq('id', input.contactId);
   if (updateError) throw updateError;
 

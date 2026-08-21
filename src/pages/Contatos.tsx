@@ -831,7 +831,7 @@ export default function Contatos() {
 
     markContactedOptimistically(contact.id);
     try {
-      await applyAttendanceOutcome({ contactId: contact.id, outcome: outcome as AttendanceOutcome });
+      await applyAttendanceOutcome({ contactId: contact.id, outcome: outcome as AttendanceOutcome, observationSource: 'queue' });
     } catch {
       toast.error('Não foi possível registrar o resultado. O contato continuará na fila.');
       return false;
