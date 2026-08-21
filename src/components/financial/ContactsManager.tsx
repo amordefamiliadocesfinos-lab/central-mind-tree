@@ -36,8 +36,12 @@ import {
   FileSpreadsheet,
   MessageCircle,
   ShoppingCart,
+  Users,
+  Inbox,
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useContacts, Contact } from '@/hooks/useContacts';
+
 import { ContactFormDialog } from './ContactFormDialog';
 import { ContactOrderHistory } from './ContactOrderHistory';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -58,6 +62,8 @@ import {
 
 export function ContactsManager() {
   const { contacts, loading, fetchContacts, createContact, updateContact, deleteContact } = useContacts();
+  const navigate = useNavigate();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [showOnlyActive, setShowOnlyActive] = useState(true);
@@ -343,10 +349,19 @@ export function ContactsManager() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => navigate(`/contatos?contact=${contact.id}`)}>
+                            <Users className="h-4 w-4 mr-2" />
+                            Abrir no CRM
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => navigate(`/contatos/inbox?contact=${contact.id}`)}>
+                            <Inbox className="h-4 w-4 mr-2" />
+                            Abrir na Caixa de Entrada
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleHistoryClick(contact)}>
                             <ShoppingCart className="h-4 w-4 mr-2" />
                             Histórico de Pedidos
                           </DropdownMenuItem>
+
                           <DropdownMenuItem onClick={() => handleEditClick(contact)}>
                             <Edit className="h-4 w-4 mr-2" />
                             Editar
