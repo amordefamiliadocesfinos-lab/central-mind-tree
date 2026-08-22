@@ -31,7 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Plus, Trash2, Star, Check, Save, RotateCcw, Pencil, GripVertical, ChevronUp, ChevronDown, CalendarIcon, X, LayoutGrid, Table as TableIcon, FolderTree } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Star, Check, Save, RotateCcw, Pencil, GripVertical, ChevronUp, ChevronDown, CalendarIcon, X, LayoutGrid, Table as TableIcon, FolderTree, Link2 } from "lucide-react";
 import { SelectionSpreadsheetView } from "@/components/planejamento/SelectionSpreadsheetView";
 import { SortableList, SortableHandle } from "@/components/ui/sortable-list";
 import { toast } from "sonner";
@@ -46,6 +46,7 @@ import { DueDatePill } from "@/components/DueDatePill";
 import { useActiveUser } from "@/hooks/useActiveUser";
 import { loadWorkflowPlan, saveWorkflowPlan } from "@/lib/workflowPlan";
 import { GroupTasksDialog } from "@/components/planejamento/GroupTasksDialog";
+import { RelatedTasksDialog } from "@/components/planejamento/RelatedTasksDialog";
 import { NODE_FIELDS, buildNodePath } from "@/lib/tasks/taskGroups";
 
 interface Task {
@@ -113,6 +114,8 @@ const Planejamento = () => {
   const [pendingCapturesCount, setPendingCapturesCount] = useState(0);
   const [taskSearch, setTaskSearch] = useState("");
   const [isGroupDialogOpen, setIsGroupDialogOpen] = useState(false);
+  const [relatedBaseTask, setRelatedBaseTask] = useState<Task | null>(null);
+  const [groupInitialIds, setGroupInitialIds] = useState<string[] | null>(null);
   const [taskFilter, setTaskFilter] = useState<"all" | "attention" | "today" | "captures" | "crm">("all");
 
   // Template (customizable areas)
@@ -701,7 +704,7 @@ const Planejamento = () => {
                   <TableIcon className="h-4 w-4" />
                 </Button>
               </div>
-              <Button size="sm" variant="outline" onClick={() => setIsGroupDialogOpen(true)} className="h-9">
+              <Button size="sm" variant="outline" onClick={() => { setGroupInitialIds(null); setIsGroupDialogOpen(true); }} className="h-9">
                 <FolderTree className="h-4 w-4 sm:mr-1" />
                 <span className="hidden sm:inline">Agrupar</span>
               </Button>
@@ -771,6 +774,17 @@ const Planejamento = () => {
                           <DueDatePill dueDate={task.due_date || null} />
                         </div>
                         <div className="flex items-center gap-1 justify-end">
+                          {nodesMap[task.node_id]?.node_type !== "function" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setRelatedBaseTask(task)}
+                              className="h-9 w-9 p-0"
+                              title="Encontrar relacionadas"
+                            >
+                              <Link2 className="h-3 w-3" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="sm"
@@ -1014,8 +1028,17 @@ const Planejamento = () => {
         onOpenChange={setIsGroupDialogOpen}
         tasks={tasks}
         nodes={nodes}
-        initialTaskIds={currentPlan.selectedTaskIds}
+        initialTaskIds={groupInitialIds ?? currentPlan.selectedTaskIds}
         onGrouped={loadData}
+      />
+
+      <RelatedTasksDialog
+        open={!!relatedBaseTask}
+        onOpenChange={(open) => { if (!open) setRelatedBaseTask(null); }}
+        baseTask={relatedBaseTask}
+        tasks={tasks}
+        nodesMap={nodesMap}
+        onGroupSelected={(ids) => { setGroupInitialIds(ids); setRelatedBaseTask(null); setIsGroupDialogOpen(true); }}
       />
 
       <ResponsiveDialog 
