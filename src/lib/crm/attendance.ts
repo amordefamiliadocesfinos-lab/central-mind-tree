@@ -159,7 +159,7 @@ export async function applyCanonicalAttendanceResult(input: {
   }).eq('id', input.conversationId);
   if (conversationUpdateError) throw conversationUpdateError;
 
-  const historyRows: Record<string, unknown>[] = [{
+  const historyRows: { contact_id: string; description: string; [key: string]: unknown }[] = [{
     contact_id: input.contactId,
     event_type: 'contact',
     interaction_type: 'contact',
