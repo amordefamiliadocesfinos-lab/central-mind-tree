@@ -31,7 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Plus, Trash2, Star, Check, Save, RotateCcw, Pencil, GripVertical, ChevronUp, ChevronDown, CalendarIcon, X, LayoutGrid, Table as TableIcon } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Star, Check, Save, RotateCcw, Pencil, GripVertical, ChevronUp, ChevronDown, CalendarIcon, X, LayoutGrid, Table as TableIcon, FolderTree } from "lucide-react";
 import { SelectionSpreadsheetView } from "@/components/planejamento/SelectionSpreadsheetView";
 import { SortableList, SortableHandle } from "@/components/ui/sortable-list";
 import { toast } from "sonner";
@@ -45,6 +45,8 @@ import { DueDateBanner } from "@/components/DueDateBanner";
 import { DueDatePill } from "@/components/DueDatePill";
 import { useActiveUser } from "@/hooks/useActiveUser";
 import { loadWorkflowPlan, saveWorkflowPlan } from "@/lib/workflowPlan";
+import { GroupTasksDialog } from "@/components/planejamento/GroupTasksDialog";
+import { NODE_FIELDS, buildNodePath } from "@/lib/tasks/taskGroups";
 
 interface Task {
   id: string;
@@ -64,6 +66,8 @@ interface Node {
   id: string;
   title: string;
   color: string;
+  parent_id?: string | null;
+  node_type?: string | null;
 }
 
 interface AreaItem {
@@ -108,6 +112,7 @@ const Planejamento = () => {
   const [closingAction, setClosingAction] = useState<"keep" | "pending" | null>(null);
   const [pendingCapturesCount, setPendingCapturesCount] = useState(0);
   const [taskSearch, setTaskSearch] = useState("");
+  const [isGroupDialogOpen, setIsGroupDialogOpen] = useState(false);
   const [taskFilter, setTaskFilter] = useState<"all" | "attention" | "today" | "captures" | "crm">("all");
 
   // Template (customizable areas)
@@ -208,7 +213,7 @@ const Planejamento = () => {
         .select("id, title, status, updated_at")
         .eq("status", "concluído")
         .gte("updated_at", weekStart.toISOString()),
-      supabase.from("nodes").select("id, title, color"),
+      supabase.from("nodes").select(NODE_FIELDS),
       supabase.from("inbox_entries").select("id", { count: "exact", head: true }).in("status", ["nova", "decidindo", "aguardando_selecao"]),
     ]);
 
@@ -696,6 +701,10 @@ const Planejamento = () => {
                   <TableIcon className="h-4 w-4" />
                 </Button>
               </div>
+              <Button size="sm" variant="outline" onClick={() => setIsGroupDialogOpen(true)} className="h-9">
+                <FolderTree className="h-4 w-4 sm:mr-1" />
+                <span className="hidden sm:inline">Agrupar</span>
+              </Button>
               <Button size="sm" onClick={() => openNewTaskForm()} className="h-9">
                 <Plus className="h-4 w-4 sm:mr-1" />
                 <span className="hidden sm:inline">Nova tarefa</span>
@@ -735,7 +744,7 @@ const Planejamento = () => {
                       className="font-semibold px-2 py-1 rounded text-sm"
                       style={{ backgroundColor: node.color + "33" }}
                     >
-                      {node.title}
+                      {buildNodePath(nodesMap, nodeId)}
                     </h3>
                     <Button
                       variant="ghost"
@@ -1000,6 +1009,15 @@ const Planejamento = () => {
       <ReplanningBanner />
 
       {/* Task Form Dialog - Responsive */}
+      <GroupTasksDialog
+        open={isGroupDialogOpen}
+        onOpenChange={setIsGroupDialogOpen}
+        tasks={tasks}
+        nodes={nodes}
+        initialTaskIds={currentPlan.selectedTaskIds}
+        onGrouped={loadData}
+      />
+
       <ResponsiveDialog 
         open={isTaskFormOpen} 
         onOpenChange={setIsTaskFormOpen}

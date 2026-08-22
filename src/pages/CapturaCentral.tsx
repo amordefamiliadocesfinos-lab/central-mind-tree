@@ -171,7 +171,7 @@ export default function CapturaCentral() {
   useEffect(() => {
     document.title = "Captura Central — Caixa de Entrada";
     fetchEntries();
-    void supabase.from("nodes").select("id,title,color").order("title").then(({ data }) => setNodes((data || []) as NodeOption[]));
+    void supabase.from("nodes").select("id,title,color,parent_id,node_type").order("title").then(({ data }) => setNodes((data || []) as NodeOption[]));
     const channel = supabase
       .channel("inbox-entries-changes")
       .on(
@@ -1003,7 +1003,7 @@ export default function CapturaCentral() {
               <Label>Área relacionada</Label>
               <Select value={decisionForm.nodeId} onValueChange={nodeId => setDecisionForm(prev => ({ ...prev, nodeId }))}>
                 <SelectTrigger><SelectValue placeholder="Selecione a área" /></SelectTrigger>
-                <SelectContent>{nodes.map(node => <SelectItem key={node.id} value={node.id}>{node.title}</SelectItem>)}</SelectContent>
+                <SelectContent>{nodes.map(node => <SelectItem key={node.id} value={node.id}>{buildNodePath(nodesMapCaptura, node.id)}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">
