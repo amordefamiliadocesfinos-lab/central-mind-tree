@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Play, Pause, RotateCcw, ArrowLeft, CalendarCheck, Plus, X, Check, Clock, ExternalLink, AlertTriangle, Timer, GripVertical, LayoutGrid, Table as TableIcon, MoreHorizontal } from "lucide-react";
 import { TasksSpreadsheetView } from "@/components/foco/TasksSpreadsheetView";
 import { TaskContextPanel } from "@/components/foco/TaskContextPanel";
+import { buildNodePath, type NodeRef } from "@/lib/tasks/taskGroups";
 import { 
   DndContext, 
   closestCenter, 
@@ -53,6 +54,7 @@ interface Task {
 interface Node {
   id: string;
   title: string;
+  parent_id?: string | null;
 }
 
 const STORAGE_KEYS = {
@@ -419,10 +421,10 @@ export default function Foco() {
       setTasks(tasksData);
       const nodeIds = [...new Set(tasksData.map(t => t.node_id))];
       if (nodeIds.length > 0) {
+        // Carrega todos os nós para montar o contexto "Área › Projeto".
         const { data: nodesData } = await supabase
           .from('nodes')
-          .select('id, title')
-          .in('id', nodeIds);
+          .select('id, title, parent_id');
         if (nodesData) {
           setNodes(Object.fromEntries(nodesData.map(n => [n.id, n])));
         }
@@ -740,7 +742,7 @@ export default function Foco() {
                 </p>
                 {activeTask && (
                   <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                    <Badge variant="outline">Área: {nodes[activeTask.node_id]?.title || "Não informada"}</Badge>
+                    <Badge variant="outline">{buildNodePath(nodes as Record<string, NodeRef>, activeTask.node_id) || "Área não informada"}</Badge>
                     <Badge variant="secondary">Status: {activeTask.status}</Badge>
                     <Badge variant="outline">Fila: {Math.max(1, queue.indexOf(activeTask.id) + 1)} de {visibleQueue.length}</Badge>
                   </div>
@@ -818,7 +820,7 @@ export default function Foco() {
                 <button key={task.id} onClick={() => handleSelectTask(task.id)} className="flex w-full items-center gap-3 p-3 text-left hover:bg-muted/50">
                   <span className="text-xs font-semibold text-muted-foreground">{queue.indexOf(task.id) + 1}</span>
                   <span className="min-w-0 flex-1 truncate font-medium">{task.title}</span>
-                  <span className="hidden text-xs text-muted-foreground sm:inline">{nodes[task.node_id]?.title || 'Sem área'}</span>
+                  <span className="hidden text-xs text-muted-foreground sm:inline">{buildNodePath(nodes as Record<string, NodeRef>, task.node_id) || 'Sem área'}</span>
                 </button>
               ))}
             </Card>
@@ -889,7 +891,7 @@ export default function Foco() {
                       );
                     })()}
                     <p className="text-xs text-muted-foreground mt-2">
-                      {nodes[task.node_id]?.title || 'Nó desconhecido'}
+                      {buildNodePath(nodes as Record<string, NodeRef>, task.node_id) || 'Nó desconhecido'}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
