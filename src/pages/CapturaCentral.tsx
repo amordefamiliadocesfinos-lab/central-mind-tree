@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
+import { buildNodePath, type NodeRef } from "@/lib/tasks/taskGroups";
 import { useActiveUser } from "@/hooks/useActiveUser";
 import { getWeekStartISO } from "@/lib/dateUtils";
 import { loadWorkflowPlan, saveWorkflowPlan } from "@/lib/workflowPlan";
@@ -76,7 +77,7 @@ interface InboxEntry {
   estimated_minutes?: number | null;
 }
 
-interface NodeOption { id: string; title: string; color: string | null }
+interface NodeOption { id: string; title: string; color: string | null; parent_id?: string | null; node_type?: string | null }
 interface FocusOption { id: string; title: string }
 type EntryView = "decisao" | "planejadas" | "referencias" | "resolvidas" | "arquivadas";
 
@@ -161,6 +162,10 @@ export default function CapturaCentral() {
   const [deletingEntry, setDeletingEntry] = useState<InboxEntry | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [nodes, setNodes] = useState<NodeOption[]>([]);
+  const nodesMapCaptura = useMemo(
+    () => Object.fromEntries(nodes.map((node) => [node.id, { ...node, color: node.color || "" }])) as Record<string, NodeRef>,
+    [nodes],
+  );
   const [decisionEntry, setDecisionEntry] = useState<InboxEntry | null>(null);
   const [decisionMode, setDecisionMode] = useState<"fazer" | "planejar">("planejar");
   const [decisionSaving, setDecisionSaving] = useState(false);
