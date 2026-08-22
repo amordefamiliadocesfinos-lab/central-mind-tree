@@ -169,23 +169,23 @@ export default function ContatosInbox() {
     }
 
 
-    let query = supabase
-      .from('service_conversations')
-      .select(CONVERSATION_FIELDS)
-      .not('contact_id', 'is', null)
-      .order('last_message_at', { ascending: false })
-      .limit(loadLimit);
+    const conversationQuery = (limit = loadLimit) => supabase
+        .from('service_conversations')
+        .select(CONVERSATION_FIELDS)
+        .not('contact_id', 'is', null)
+        .order('last_message_at', { ascending: false })
+        .limit(limit);
 
-    if (scopedContactIds) {
-      if (scopedContactIds.length === 0) {
-        setItems([]);
-        setLoading(false);
-        return [];
-      }
-      query = query.in('contact_id', scopedContactIds);
+    if (scopedContactIds?.length === 0) {
+      setItems([]);
+      setLoading(false);
+      return [];
     }
 
-    const { data: conversations, error } = await query;
+    // O filtro pode conter centenas de contatos. Em vez de enviar todos os
+    // UUIDs em um único `in` (que excede o limite da URL), filtramos localmente
+    // as conversas recém-carregadas e preservamos os contatos sem conversa.
+    const { data: conversations, error } = await conversationQuery(scopedContactIds ? Math.max(loadLimit, 1000) : loadLimit);
 
 
     if (error) {
@@ -196,7 +196,8 @@ export default function ContatosInbox() {
       return null;
     }
 
-    const convList = conversations || [];
+    const scopedContactIdSet = scopedContactIds ? new Set(scopedContactIds) : null;
+    const convList = (conversations || []).filter((conversation) => !scopedContactIdSet || scopedContactIdSet.has(conversation.contact_id));
 
     const ids = Array.from(new Set(convList.map((c) => c.contact_id).filter(Boolean))) as string[];
     const { data: contacts } = ids.length
