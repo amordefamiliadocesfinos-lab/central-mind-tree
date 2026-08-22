@@ -150,7 +150,7 @@ const awaitingResponseFacts: AttendanceOutcomeShadowFacts = {
 assert(Object.hasOwn(awaitingResponseFacts.legacyBehavior, 'nextActionDate') && Object.hasOwn(awaitingResponseFacts.legacyBehavior, 'returnAt'), 'awaiting_response must observe both temporal dimensions separately.');
 assert(awaitingResponseFacts.legacyBehavior.nextActionDate === '2026-08-22T10:00:00.000Z', 'awaiting_response must preserve DATA_A in nextActionDate.');
 assert(awaitingResponseFacts.legacyBehavior.returnAt === '2026-08-22T14:30:00.000Z', 'awaiting_response must preserve DATA_B in returnAt.');
-assert(awaitingResponseFacts.legacyBehavior.nextActionDate !== awaitingResponseFacts.legacyBehavior.returnAt, 'nextActionDate and returnAt must remain distinct even when both are observed.');
+assert(String(awaitingResponseFacts.legacyBehavior.nextActionDate) !== String(awaitingResponseFacts.legacyBehavior.returnAt), 'nextActionDate and returnAt must remain distinct even when both are observed.');
 
 const noActionFacts: AttendanceOutcomeShadowFacts = {
   ...attendanceQueueFacts,
