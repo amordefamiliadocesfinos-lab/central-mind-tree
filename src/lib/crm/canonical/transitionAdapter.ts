@@ -130,12 +130,12 @@ function compareObservedLegacy(
   const missingDimensions = required.filter((dimension) => {
     if (!behavior) return true;
     if (dimension === 'temporal') {
-      return !Object.hasOwn(behavior, 'nextActionDate') || !Object.hasOwn(behavior, 'returnAt');
+      return !Object.prototype.hasOwnProperty.call(behavior, 'nextActionDate') || !Object.prototype.hasOwnProperty.call(behavior, 'returnAt');
     }
     const property = dimension === 'nextAction' ? 'nextActionText'
       : dimension === 'conversation' ? 'resolvesConversation'
           : dimension;
-    return !Object.hasOwn(behavior, property);
+    return !Object.prototype.hasOwnProperty.call(behavior, property);
   });
   if (missingDimensions.length) {
     return { status: 'INSUFFICIENT_CONTEXT', differences: ['Comportamento legado ainda nÃ£o foi observado em todas as dimensÃµes comparÃ¡veis.'], missingDimensions };

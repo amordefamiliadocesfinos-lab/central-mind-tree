@@ -111,8 +111,8 @@ const clientRepliedFacts = {
   legacyResult: 'client_replied',
   legacyBehavior: { stage: 'contato_realizado', nextActionText: 'Definir prÃ³ximo passo comercial', nextActionDate: '2026-09-01T09:00:00Z', returnAt: null },
 };
-assert(Object.hasOwn(clientRepliedFacts.legacyBehavior, 'nextActionDate') && clientRepliedFacts.legacyBehavior.nextActionDate !== null, 'client_replied must retain its planned next-action date.');
-assert(Object.hasOwn(clientRepliedFacts.legacyBehavior, 'returnAt') && clientRepliedFacts.legacyBehavior.returnAt === null, 'client_replied must observe absence of conversation return_at separately.');
+assert(Object.prototype.hasOwnProperty.call(clientRepliedFacts.legacyBehavior, 'nextActionDate') && clientRepliedFacts.legacyBehavior.nextActionDate !== null, 'client_replied must retain its planned next-action date.');
+assert(Object.prototype.hasOwnProperty.call(clientRepliedFacts.legacyBehavior, 'returnAt') && clientRepliedFacts.legacyBehavior.returnAt === null, 'client_replied must observe absence of conversation return_at separately.');
 assert(evaluateCanonicalTransitionShadow(clientRepliedFacts).legacyComparison.status === 'INSUFFICIENT_CONTEXT', 'conditional client_replied remains conditional and cannot gain MATCH.');
 
 const awaitingResponseFacts = {
