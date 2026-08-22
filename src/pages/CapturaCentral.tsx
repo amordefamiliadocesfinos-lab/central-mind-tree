@@ -1,5 +1,5 @@
 import { CapturaStateIndicator, type CapturaState } from "@/components/captura/CapturaStateIndicator";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
