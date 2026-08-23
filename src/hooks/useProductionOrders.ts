@@ -287,11 +287,19 @@ export function useProductionOrders() {
     const order = orders.find(o => o.id === orderId);
     if (!order || !order.product_id) return { success: false, shortages: [] };
 
+    // Guard: never re-process a terminal OP (evita crédito duplicado em estoque)
+    if (order.status === 'concluido' || order.status === 'cancelado') {
+      toast.error('Esta OP já está finalizada');
+      return { success: false, shortages: [] };
+    }
+
     const consolidatedQty = calculateConsolidation(order);
     if (consolidatedQty <= 0) {
       toast.error('Nenhuma quantidade consolidada para concluir');
       return { success: false, shortages: [] };
     }
+
+    const targetLocation = location && location.trim() !== '' ? location.trim() : 'Fábrica';
 
     // Get BOM and check for shortages
     const bomLines = await calculateBOM(order.product_id, consolidatedQty);
@@ -301,76 +309,35 @@ export function useProductionOrders() {
       return { success: false, shortages };
     }
 
-    // Create inventory movements for BOM consumption (from location)
+    // Consumo de matéria-prima (saldo por localização + histórico centralizados)
     for (const line of bomLines) {
-      // Get current stock at location
-      const { data: inv } = await supabase
-        .from('inventory')
-        .select('quantity')
-        .eq('product_id', line.component_id)
-        .eq('location', location)
-        .maybeSingle();
-      
-      const prevBalance = inv?.quantity || 0;
-      const newBalance = prevBalance - line.qty_needed;
-
-      await supabase
-        .from('inventory_movements')
-        .insert({
-          product_id: line.component_id,
-          quantity: -line.qty_needed,
-          previous_balance: prevBalance,
-          new_balance: newBalance,
-          movement_type: 'consume',
-          location,
-          reference_type: 'production_order',
-          reference_id: orderId,
-          notes: `Consumo OP ${order.order_number}`,
-        });
-
-      await supabase
-        .from('inventory')
-        .upsert({
-          product_id: line.component_id,
-          location,
-          quantity: newBalance,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'product_id,location' });
+      await applyStockDelta({
+        productId: line.component_id,
+        delta: -Math.abs(line.qty_needed),
+        movementType: 'consume',
+        location: targetLocation,
+        referenceType: 'production_order',
+        referenceId: orderId,
+        notes: `Consumo OP ${order.order_number}`,
+      });
     }
 
-    // Add finished product to stock at location
-    const { data: finishedInv } = await supabase
-      .from('inventory')
-      .select('quantity')
-      .eq('product_id', order.product_id)
-      .eq('location', location)
-      .maybeSingle();
-    
-    const prevFinished = finishedInv?.quantity || 0;
-    const newFinished = prevFinished + consolidatedQty;
+    // Entrada do produto acabado
+    const finishedOk = await applyStockDelta({
+      productId: order.product_id,
+      delta: consolidatedQty,
+      movementType: 'in',
+      location: targetLocation,
+      referenceType: 'production_order',
+      referenceId: orderId,
+      notes: `Entrada produção OP ${order.order_number}`,
+    });
 
-    await supabase
-      .from('inventory_movements')
-      .insert({
-        product_id: order.product_id,
-        quantity: consolidatedQty,
-        previous_balance: prevFinished,
-        new_balance: newFinished,
-        movement_type: 'in',
-        location,
-        reference_type: 'production_order',
-        reference_id: orderId,
-        notes: `Entrada produção OP ${order.order_number}`,
-      });
+    if (!finishedOk) {
+      toast.error('Falha ao creditar produto acabado no estoque');
+      return { success: false, shortages: [] };
+    }
 
-    await supabase
-      .from('inventory')
-      .upsert({
-        product_id: order.product_id,
-        location,
-        quantity: newFinished,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'product_id,location' });
 
     // Update order status
     await supabase
