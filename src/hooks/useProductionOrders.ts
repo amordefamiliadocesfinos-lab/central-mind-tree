@@ -366,7 +366,7 @@ export function useProductionOrders() {
         };
         const currentRank = STATUS_RANK[linkedOrder.status] ?? -1;
         const targetRank = STATUS_RANK['produzido'];
-        const noteLine = `[${new Date().toLocaleString('pt-BR')}] OP ${order.order_number} concluída — ${consolidatedQty} un. creditadas em ${location}`;
+        const noteLine = `[${new Date().toLocaleString('pt-BR')}] OP ${order.order_number} concluída — ${consolidatedQty} un. creditadas em ${targetLocation}`;
         const newNotes = linkedOrder.notes
           ? `${linkedOrder.notes}\n${noteLine}`
           : noteLine;
@@ -392,7 +392,7 @@ export function useProductionOrders() {
       }
     }
 
-    toast.success(`OP concluída! ${consolidatedQty} unidades produzidas em ${location}`);
+    toast.success(`OP concluída! ${consolidatedQty} unidades produzidas em ${targetLocation}`);
     fetchOrders();
     return { success: true, shortages: [], linkedOrderSynced };
   }, [orders, calculateConsolidation, calculateBOM, fetchOrders]);
