@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useBOM } from './useBOM';
+import { applyStockDelta } from '@/lib/inventoryOps';
 
 export interface ProductionOrderProcess {
   id: string;
