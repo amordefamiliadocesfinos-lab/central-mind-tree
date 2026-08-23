@@ -237,11 +237,29 @@ export function useProductionOrders() {
     return data;
   }, [orders, calculateConsolidation, fetchOrders]);
 
+  // Recalcula e persiste a quantidade consolidada da OP a partir dos lançamentos atuais
+  const recalcConsolidation = useCallback(async (productionOrderId: string) => {
+    const { data: fresh } = await supabase
+      .from('production_orders')
+      .select(`id, entries:production_entries(*), processes:production_order_processes(*)`)
+      .eq('id', productionOrderId)
+      .maybeSingle();
+
+    if (!fresh) return;
+    const consolidated = calculateConsolidation(fresh as unknown as ProductionOrder);
+    await supabase
+      .from('production_orders')
+      .update({ consolidated_quantity: consolidated })
+      .eq('id', productionOrderId);
+  }, [calculateConsolidation]);
+
   const updateEntry = useCallback(async (id: string, updates: Partial<ProductionEntry>) => {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('production_entries')
       .update(updates)
-      .eq('id', id);
+      .eq('id', id)
+      .select('production_order_id')
+      .maybeSingle();
 
     if (error) {
       console.error('Error updating entry:', error);
@@ -249,12 +267,20 @@ export function useProductionOrders() {
       return false;
     }
 
+    if (data?.production_order_id) await recalcConsolidation(data.production_order_id);
+
     toast.success('Lançamento atualizado');
     fetchOrders();
     return true;
-  }, [fetchOrders]);
+  }, [fetchOrders, recalcConsolidation]);
 
   const deleteEntry = useCallback(async (id: string) => {
+    const { data: existing } = await supabase
+      .from('production_entries')
+      .select('production_order_id')
+      .eq('id', id)
+      .maybeSingle();
+
     const { error } = await supabase
       .from('production_entries')
       .delete()
@@ -266,10 +292,13 @@ export function useProductionOrders() {
       return false;
     }
 
+    if (existing?.production_order_id) await recalcConsolidation(existing.production_order_id);
+
     toast.success('Lançamento excluído');
     fetchOrders();
     return true;
-  }, [fetchOrders]);
+  }, [fetchOrders, recalcConsolidation]);
+
 
   // Check BOM shortages for an order
   const checkBOMShortages = useCallback(async (orderId: string) => {
