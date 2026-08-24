@@ -17,7 +17,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Package, ShoppingCart, Factory, ArrowLeft, Trash2, AlertTriangle, Warehouse, DollarSign, ClipboardCheck, List, LayoutGrid, CalendarClock } from 'lucide-react';
+import { Plus, Package, ShoppingCart, Factory, ArrowLeft, Trash2, AlertTriangle, Warehouse, DollarSign, ClipboardCheck, List, LayoutGrid, CalendarClock, FileSpreadsheet } from 'lucide-react';
 import { cn, formatCurrency } from '@/lib/utils';
 import { ProductGallery } from '@/components/ProductGallery';
 import { ProductMovementHistory } from '@/components/ProductMovementHistory';
@@ -44,6 +44,7 @@ import { ProductionPlanningView } from '@/components/operations/ProductionPlanni
 import { ContactAutocomplete } from '@/components/operations/ContactAutocomplete';
 import { ProductCategoriesManager } from '@/components/operations/ProductCategoriesManager';
 import { StockOverviewViewer } from '@/components/operations/StockOverviewViewer';
+import { ShopeeOrdersImportDialog } from '@/components/operations/ShopeeOrdersImportDialog';
 import { useProductCategories } from '@/hooks/useProductCategories';
 import { useProductIdeas } from '@/hooks/useProductIdeas';
 import { usePlatforms } from '@/hooks/usePlatforms';
@@ -189,6 +190,7 @@ export default function Operacoes() {
   const [showProductDialog, setShowProductDialog] = useState(false);
   const [showOrderDialog, setShowOrderDialog] = useState(false);
   const [showSaleDialog, setShowSaleDialog] = useState(false);
+  const [showShopeeImport, setShowShopeeImport] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [editingOrder, setEditingOrder] = useState<Order | null>(null);
   const [movementProduct, setMovementProduct] = useState<{ id: string; name: string } | null>(null);
@@ -205,6 +207,11 @@ export default function Operacoes() {
     [allPlatforms]
   );
   const productCategories = dynamicCategories.length > 0 ? dynamicCategories : [...PRODUCT_CATEGORIES];
+  const shopeeAccountSuggestions = useMemo(() => Array.from(new Set(
+    rawOrders
+      .filter(order => order.channel === 'shopee' && order.marketplace_account)
+      .map(order => order.marketplace_account as string)
+  )), [rawOrders]);
   const { createContact } = useContacts();
   const { addEntry } = useContactHistory();
   const [crmContactId, setCrmContactId] = useState<string | null>(null);
@@ -530,6 +537,10 @@ export default function Operacoes() {
             <div className="flex justify-between items-center">
               <h2 className="text-lg font-semibold">Pedidos ({filteredOrders.length})</h2>
               <div className="flex gap-2">
+                <Button size="lg" variant="outline" className="h-12 px-5" onClick={() => setShowShopeeImport(true)}>
+                  <FileSpreadsheet className="h-5 w-5 mr-1" />
+                  Importar Pedidos
+                </Button>
                 <Button 
                   size="lg" 
                   variant="outline"
@@ -597,7 +608,7 @@ export default function Operacoes() {
                         </Select>
                         {newOrder.order_type === 'stock' && (
                           <p className="text-xs text-amber-600 mt-1">
-                            ⚠️ Este pedido consumirá direto do estoque acabado
+                            ℹ️ A baixa física será registrada somente na expedição
                           </p>
                         )}
                       </div>
@@ -1592,6 +1603,13 @@ export default function Operacoes() {
       <ProductCategoriesManager
         open={showCategoriesManager}
         onOpenChange={setShowCategoriesManager}
+      />
+
+      <ShopeeOrdersImportDialog
+        open={showShopeeImport}
+        onOpenChange={setShowShopeeImport}
+        products={rawProducts.map(product => ({ id: product.id, name: product.name, sku: product.sku }))}
+        accountSuggestions={shopeeAccountSuggestions}
       />
     </div>
   );
