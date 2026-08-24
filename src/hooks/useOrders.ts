@@ -4,6 +4,7 @@ import { applyStockDelta, resolveStockLocation } from '@/lib/inventoryOps';
 import { notifyInventoryChanged } from '@/hooks/useInventorySync';
 import { toast } from 'sonner';
 import { createUnifiedSale } from '@/lib/unifiedSales';
+import { transitionOrderStatusWithStock } from '@/lib/orderStock';
 
 export interface Product {
   id: string;
@@ -445,9 +446,7 @@ export function useOrders() {
         product_id: item.product_id || '', quantity: item.quantity || 1,
         unit_price: item.unit_price || 0, notes: item.notes,
       })));
-      toast.success(orderType === 'stock'
-        ? 'Venda, estoque e financeiro registrados!'
-        : 'Pedido, produção e financeiro registrados!');
+      toast.success('Pedido e financeiro registrados! Estoque será baixado na expedição.');
       fetchOrders();
       return { ...order, id: result.order_id, order_number: result.order_number, total_value: result.total_value } as Order;
     } catch (error: any) {
@@ -461,12 +460,10 @@ export function useOrders() {
     const currentOrder = orders.find(o => o.id === orderId);
     const isChangingToConcluido = status === 'concluido' && currentOrder?.status !== 'concluido';
 
-    const { error } = await supabase
-      .from('orders')
-      .update({ status })
-      .eq('id', orderId);
-
-    if (error) {
+    try {
+      await transitionOrderStatusWithStock(orderId, status);
+    } catch (error) {
+      console.error('Erro ao atualizar status do pedido:', error);
       toast.error('Erro ao atualizar status');
       return;
     }
@@ -544,6 +541,7 @@ export function useOrders() {
     // Get current order to check if order_number changed
     const currentOrder = orders.find(o => o.id === orderId);
     const orderNumberChanged = updates.order_number && currentOrder?.order_number !== updates.order_number;
+    const statusChanged = Boolean(updates.status && updates.status !== currentOrder?.status);
 
     const { error: orderError } = await supabase
       .from('orders')
@@ -553,7 +551,9 @@ export function useOrders() {
         customer_contact: updates.customer_contact,
         contact_id: updates.contact_id,
         channel: updates.channel,
-        status: updates.status,
+        // A mudança de status é feita pelo contrato após salvar os itens.
+        // Assim, editar um pedido para "Enviado" não contorna a baixa idempotente.
+        status: statusChanged ? currentOrder?.status : updates.status,
         order_date: updates.order_date,
         due_date: updates.due_date,
         notes: updates.notes,
@@ -596,6 +596,17 @@ export function useOrders() {
             notes: item.notes,
           }))
         );
+      }
+    }
+
+    if (statusChanged && updates.status) {
+      try {
+        await transitionOrderStatusWithStock(orderId, updates.status);
+      } catch (error) {
+        console.error('Erro ao aplicar estoque na atualização do pedido:', error);
+        toast.error('Pedido salvo, mas não foi possível alterar o status por causa do estoque');
+        fetchOrders();
+        return;
       }
     }
 
