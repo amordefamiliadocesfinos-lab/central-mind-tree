@@ -25,9 +25,11 @@ interface SummaryCardProps {
   title: string;
   value: number;
   count?: number;
+  subtitle?: string;
   icon: React.ReactNode;
   variant?: 'default' | 'success' | 'warning' | 'danger';
 }
+
 
 function SummaryCard({ title, value, count, icon, variant = 'default' }: SummaryCardProps) {
   const variants = {
