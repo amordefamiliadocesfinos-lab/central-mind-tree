@@ -430,12 +430,15 @@ export function FinancialDashboard(props: FinancialDashboardProps = {}) {
     <div className="space-y-3">
       <div className="grid gap-2 grid-cols-3">
         <SummaryCard title="Entradas (Período)" value={summary.totalEntradas}
+          subtitle={`Previsto ${formatCurrency(summary.previstoEntradas ?? summary.totalEntradas)} · Em aberto ${formatCurrency(summary.abertoEntradas ?? 0)}`}
           icon={<TrendingUp />} variant="success" />
         <SummaryCard title="Saídas (Período)" value={summary.totalSaidas}
+          subtitle={`Previsto ${formatCurrency(summary.previstoSaidas ?? summary.totalSaidas)} · Em aberto ${formatCurrency(summary.abertoSaidas ?? 0)}`}
           icon={<TrendingDown />} variant="danger" />
         <SummaryCard title="Saldo do Período" value={summary.saldo}
           icon={<Wallet />} variant={summary.saldo >= 0 ? 'success' : 'danger'} />
       </div>
+
       <div className="grid gap-2 grid-cols-3">
         <SummaryCard title="Marketplace bruto" value={settlementTotals.gross || marketplaceGross} icon={<TrendingUp />} />
         <SummaryCard title="Taxas de marketplace" value={settlementTotals.fees} icon={<TrendingDown />} variant="danger" />
