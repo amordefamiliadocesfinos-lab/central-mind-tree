@@ -31,7 +31,7 @@ interface SummaryCardProps {
 }
 
 
-function SummaryCard({ title, value, count, icon, variant = 'default' }: SummaryCardProps) {
+function SummaryCard({ title, value, count, subtitle, icon, variant = 'default' }: SummaryCardProps) {
   const variants = {
     default: 'bg-card',
     success: 'bg-emerald-500/10 border-emerald-500/20',
@@ -51,9 +51,11 @@ function SummaryCard({ title, value, count, icon, variant = 'default' }: Summary
           <div className="min-w-0">
             <p className="text-[11px] text-muted-foreground truncate">{title}</p>
             <p className="text-lg font-bold leading-tight">{formatCurrency(value)}</p>
+            {subtitle && <p className="text-[10px] text-muted-foreground truncate">{subtitle}</p>}
             {count !== undefined && <p className="text-[10px] text-muted-foreground">{count} lançamento(s)</p>}
           </div>
           <div className={`${iconVariants[variant]} [&_svg]:h-4 [&_svg]:w-4`}>{icon}</div>
+
         </div>
       </CardContent>
     </Card>
