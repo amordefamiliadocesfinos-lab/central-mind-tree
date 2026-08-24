@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useBOM } from './useBOM';
+import { applyStockDelta } from '@/lib/inventoryOps';
 
 export interface ProductionOrderProcess {
   id: string;
@@ -236,11 +237,29 @@ export function useProductionOrders() {
     return data;
   }, [orders, calculateConsolidation, fetchOrders]);
 
+  // Recalcula e persiste a quantidade consolidada da OP a partir dos lançamentos atuais
+  const recalcConsolidation = useCallback(async (productionOrderId: string) => {
+    const { data: fresh } = await supabase
+      .from('production_orders')
+      .select(`id, entries:production_entries(*), processes:production_order_processes(*)`)
+      .eq('id', productionOrderId)
+      .maybeSingle();
+
+    if (!fresh) return;
+    const consolidated = calculateConsolidation(fresh as unknown as ProductionOrder);
+    await supabase
+      .from('production_orders')
+      .update({ consolidated_quantity: consolidated })
+      .eq('id', productionOrderId);
+  }, [calculateConsolidation]);
+
   const updateEntry = useCallback(async (id: string, updates: Partial<ProductionEntry>) => {
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('production_entries')
       .update(updates)
-      .eq('id', id);
+      .eq('id', id)
+      .select('production_order_id')
+      .maybeSingle();
 
     if (error) {
       console.error('Error updating entry:', error);
@@ -248,12 +267,20 @@ export function useProductionOrders() {
       return false;
     }
 
+    if (data?.production_order_id) await recalcConsolidation(data.production_order_id);
+
     toast.success('Lançamento atualizado');
     fetchOrders();
     return true;
-  }, [fetchOrders]);
+  }, [fetchOrders, recalcConsolidation]);
 
   const deleteEntry = useCallback(async (id: string) => {
+    const { data: existing } = await supabase
+      .from('production_entries')
+      .select('production_order_id')
+      .eq('id', id)
+      .maybeSingle();
+
     const { error } = await supabase
       .from('production_entries')
       .delete()
@@ -265,10 +292,13 @@ export function useProductionOrders() {
       return false;
     }
 
+    if (existing?.production_order_id) await recalcConsolidation(existing.production_order_id);
+
     toast.success('Lançamento excluído');
     fetchOrders();
     return true;
-  }, [fetchOrders]);
+  }, [fetchOrders, recalcConsolidation]);
+
 
   // Check BOM shortages for an order
   const checkBOMShortages = useCallback(async (orderId: string) => {
@@ -287,11 +317,19 @@ export function useProductionOrders() {
     const order = orders.find(o => o.id === orderId);
     if (!order || !order.product_id) return { success: false, shortages: [] };
 
+    // Guard: never re-process a terminal OP (evita crédito duplicado em estoque)
+    if (order.status === 'concluido' || order.status === 'cancelado') {
+      toast.error('Esta OP já está finalizada');
+      return { success: false, shortages: [] };
+    }
+
     const consolidatedQty = calculateConsolidation(order);
     if (consolidatedQty <= 0) {
       toast.error('Nenhuma quantidade consolidada para concluir');
       return { success: false, shortages: [] };
     }
+
+    const targetLocation = location && location.trim() !== '' ? location.trim() : 'Fábrica';
 
     // Get BOM and check for shortages
     const bomLines = await calculateBOM(order.product_id, consolidatedQty);
@@ -301,76 +339,35 @@ export function useProductionOrders() {
       return { success: false, shortages };
     }
 
-    // Create inventory movements for BOM consumption (from location)
+    // Consumo de matéria-prima (saldo por localização + histórico centralizados)
     for (const line of bomLines) {
-      // Get current stock at location
-      const { data: inv } = await supabase
-        .from('inventory')
-        .select('quantity')
-        .eq('product_id', line.component_id)
-        .eq('location', location)
-        .maybeSingle();
-      
-      const prevBalance = inv?.quantity || 0;
-      const newBalance = prevBalance - line.qty_needed;
-
-      await supabase
-        .from('inventory_movements')
-        .insert({
-          product_id: line.component_id,
-          quantity: -line.qty_needed,
-          previous_balance: prevBalance,
-          new_balance: newBalance,
-          movement_type: 'consume',
-          location,
-          reference_type: 'production_order',
-          reference_id: orderId,
-          notes: `Consumo OP ${order.order_number}`,
-        });
-
-      await supabase
-        .from('inventory')
-        .upsert({
-          product_id: line.component_id,
-          location,
-          quantity: newBalance,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: 'product_id,location' });
+      await applyStockDelta({
+        productId: line.component_id,
+        delta: -Math.abs(line.qty_needed),
+        movementType: 'consume',
+        location: targetLocation,
+        referenceType: 'production_order',
+        referenceId: orderId,
+        notes: `Consumo OP ${order.order_number}`,
+      });
     }
 
-    // Add finished product to stock at location
-    const { data: finishedInv } = await supabase
-      .from('inventory')
-      .select('quantity')
-      .eq('product_id', order.product_id)
-      .eq('location', location)
-      .maybeSingle();
-    
-    const prevFinished = finishedInv?.quantity || 0;
-    const newFinished = prevFinished + consolidatedQty;
+    // Entrada do produto acabado
+    const finishedOk = await applyStockDelta({
+      productId: order.product_id,
+      delta: consolidatedQty,
+      movementType: 'in',
+      location: targetLocation,
+      referenceType: 'production_order',
+      referenceId: orderId,
+      notes: `Entrada produção OP ${order.order_number}`,
+    });
 
-    await supabase
-      .from('inventory_movements')
-      .insert({
-        product_id: order.product_id,
-        quantity: consolidatedQty,
-        previous_balance: prevFinished,
-        new_balance: newFinished,
-        movement_type: 'in',
-        location,
-        reference_type: 'production_order',
-        reference_id: orderId,
-        notes: `Entrada produção OP ${order.order_number}`,
-      });
+    if (!finishedOk) {
+      toast.error('Falha ao creditar produto acabado no estoque');
+      return { success: false, shortages: [] };
+    }
 
-    await supabase
-      .from('inventory')
-      .upsert({
-        product_id: order.product_id,
-        location,
-        quantity: newFinished,
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'product_id,location' });
 
     // Update order status
     await supabase
@@ -398,7 +395,7 @@ export function useProductionOrders() {
         };
         const currentRank = STATUS_RANK[linkedOrder.status] ?? -1;
         const targetRank = STATUS_RANK['produzido'];
-        const noteLine = `[${new Date().toLocaleString('pt-BR')}] OP ${order.order_number} concluída — ${consolidatedQty} un. creditadas em ${location}`;
+        const noteLine = `[${new Date().toLocaleString('pt-BR')}] OP ${order.order_number} concluída — ${consolidatedQty} un. creditadas em ${targetLocation}`;
         const newNotes = linkedOrder.notes
           ? `${linkedOrder.notes}\n${noteLine}`
           : noteLine;
@@ -424,7 +421,7 @@ export function useProductionOrders() {
       }
     }
 
-    toast.success(`OP concluída! ${consolidatedQty} unidades produzidas em ${location}`);
+    toast.success(`OP concluída! ${consolidatedQty} unidades produzidas em ${targetLocation}`);
     fetchOrders();
     return { success: true, shortages: [], linkedOrderSynced };
   }, [orders, calculateConsolidation, calculateBOM, fetchOrders]);

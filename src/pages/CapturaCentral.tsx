@@ -1,8 +1,9 @@
 import { CapturaStateIndicator, type CapturaState } from "@/components/captura/CapturaStateIndicator";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
+import { buildNodePath, type NodeRef } from "@/lib/tasks/taskGroups";
 import { useActiveUser } from "@/hooks/useActiveUser";
 import { getWeekStartISO } from "@/lib/dateUtils";
 import { loadWorkflowPlan, saveWorkflowPlan } from "@/lib/workflowPlan";
@@ -76,7 +77,7 @@ interface InboxEntry {
   estimated_minutes?: number | null;
 }
 
-interface NodeOption { id: string; title: string; color: string | null }
+interface NodeOption { id: string; title: string; color: string | null; parent_id?: string | null; node_type?: string | null }
 interface FocusOption { id: string; title: string }
 type EntryView = "decisao" | "planejadas" | "referencias" | "resolvidas" | "arquivadas";
 
@@ -161,6 +162,10 @@ export default function CapturaCentral() {
   const [deletingEntry, setDeletingEntry] = useState<InboxEntry | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [nodes, setNodes] = useState<NodeOption[]>([]);
+  const nodesMapCaptura = useMemo(
+    () => Object.fromEntries(nodes.map((node) => [node.id, { ...node, color: node.color || "" }])) as Record<string, NodeRef>,
+    [nodes],
+  );
   const [decisionEntry, setDecisionEntry] = useState<InboxEntry | null>(null);
   const [decisionMode, setDecisionMode] = useState<"fazer" | "planejar">("planejar");
   const [decisionSaving, setDecisionSaving] = useState(false);
@@ -171,7 +176,7 @@ export default function CapturaCentral() {
   useEffect(() => {
     document.title = "Captura Central — Caixa de Entrada";
     fetchEntries();
-    void supabase.from("nodes").select("id,title,color").order("title").then(({ data }) => setNodes((data || []) as NodeOption[]));
+    void supabase.from("nodes").select("id,title,color,parent_id,node_type").order("title").then(({ data }) => setNodes((data || []) as NodeOption[]));
     const channel = supabase
       .channel("inbox-entries-changes")
       .on(
@@ -1003,7 +1008,7 @@ export default function CapturaCentral() {
               <Label>Área relacionada</Label>
               <Select value={decisionForm.nodeId} onValueChange={nodeId => setDecisionForm(prev => ({ ...prev, nodeId }))}>
                 <SelectTrigger><SelectValue placeholder="Selecione a área" /></SelectTrigger>
-                <SelectContent>{nodes.map(node => <SelectItem key={node.id} value={node.id}>{node.title}</SelectItem>)}</SelectContent>
+                <SelectContent>{nodes.map(node => <SelectItem key={node.id} value={node.id}>{buildNodePath(nodesMapCaptura, node.id)}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="grid grid-cols-2 gap-3">

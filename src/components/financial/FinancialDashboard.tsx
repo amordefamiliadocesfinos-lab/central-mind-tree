@@ -25,11 +25,13 @@ interface SummaryCardProps {
   title: string;
   value: number;
   count?: number;
+  subtitle?: string;
   icon: React.ReactNode;
   variant?: 'default' | 'success' | 'warning' | 'danger';
 }
 
-function SummaryCard({ title, value, count, icon, variant = 'default' }: SummaryCardProps) {
+
+function SummaryCard({ title, value, count, subtitle, icon, variant = 'default' }: SummaryCardProps) {
   const variants = {
     default: 'bg-card',
     success: 'bg-emerald-500/10 border-emerald-500/20',
@@ -49,9 +51,11 @@ function SummaryCard({ title, value, count, icon, variant = 'default' }: Summary
           <div className="min-w-0">
             <p className="text-[11px] text-muted-foreground truncate">{title}</p>
             <p className="text-lg font-bold leading-tight">{formatCurrency(value)}</p>
+            {subtitle && <p className="text-[10px] text-muted-foreground truncate">{subtitle}</p>}
             {count !== undefined && <p className="text-[10px] text-muted-foreground">{count} lançamento(s)</p>}
           </div>
           <div className={`${iconVariants[variant]} [&_svg]:h-4 [&_svg]:w-4`}>{icon}</div>
+
         </div>
       </CardContent>
     </Card>
@@ -426,12 +430,15 @@ export function FinancialDashboard(props: FinancialDashboardProps = {}) {
     <div className="space-y-3">
       <div className="grid gap-2 grid-cols-3">
         <SummaryCard title="Entradas (Período)" value={summary.totalEntradas}
+          subtitle={`Previsto ${formatCurrency(summary.previstoEntradas ?? summary.totalEntradas)} · Em aberto ${formatCurrency(summary.abertoEntradas ?? 0)}`}
           icon={<TrendingUp />} variant="success" />
         <SummaryCard title="Saídas (Período)" value={summary.totalSaidas}
+          subtitle={`Previsto ${formatCurrency(summary.previstoSaidas ?? summary.totalSaidas)} · Em aberto ${formatCurrency(summary.abertoSaidas ?? 0)}`}
           icon={<TrendingDown />} variant="danger" />
         <SummaryCard title="Saldo do Período" value={summary.saldo}
           icon={<Wallet />} variant={summary.saldo >= 0 ? 'success' : 'danger'} />
       </div>
+
       <div className="grid gap-2 grid-cols-3">
         <SummaryCard title="Marketplace bruto" value={settlementTotals.gross || marketplaceGross} icon={<TrendingUp />} />
         <SummaryCard title="Taxas de marketplace" value={settlementTotals.fees} icon={<TrendingDown />} variant="danger" />

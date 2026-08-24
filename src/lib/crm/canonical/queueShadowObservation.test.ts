@@ -31,8 +31,8 @@ const built = buildQueueResultShadowInput(queueWriterFacts);
 assert(built.legacyResult === 'no_interest', 'the selected legacy result must be passed through unchanged.');
 assert(built.legacyBehavior?.stage === 'negociacao', 'the observed legacy stage must be retained.');
 assert(built.returnAt === null, 'the writer has no return_at effect to infer.');
-assert(!Object.hasOwn(built.legacyBehavior ?? {}, 'resolvesConversation'), 'a writer that does not decide conversation must leave it unobserved.');
-assert(!Object.hasOwn(built.legacyBehavior ?? {}, 'handoff'), 'a writer that does not decide handoff must leave it unobserved.');
+assert(!Object.prototype.hasOwnProperty.call(built.legacyBehavior ?? {}, 'resolvesConversation'), 'a writer that does not decide conversation must leave it unobserved.');
+assert(!Object.prototype.hasOwnProperty.call(built.legacyBehavior ?? {}, 'handoff'), 'a writer that does not decide handoff must leave it unobserved.');
 
 const logs: Array<{ message: string; detail?: unknown }> = [];
 const queueObservation = observeQueueResultShadow(queueWriterFacts, {
@@ -106,8 +106,8 @@ const attendanceQueueFacts: AttendanceOutcomeShadowFacts = {
 const attendanceQueue = observeAttendanceOutcomeShadow(attendanceQueueFacts, { enabled: true, log: () => undefined });
 assert(attendanceQueue?.source === 'applyAttendanceOutcome:queue', 'attendance observation must identify the authorized queue source.');
 assert(attendanceQueue?.classification === 'INSUFFICIENT_CONTEXT', 'attendance writer must not force MATCH while handoff is unobserved.');
-assert(!Object.hasOwn(attendanceQueueFacts.legacyBehavior, 'resolvesConversation'), 'CONFIG intent must not be treated as observed conversation behavior.');
-assert(!Object.hasOwn(attendanceQueueFacts.legacyBehavior, 'handoff'), 'attendance writer must not manufacture a handoff decision.');
+assert(!Object.prototype.hasOwnProperty.call(attendanceQueueFacts.legacyBehavior, 'resolvesConversation'), 'CONFIG intent must not be treated as observed conversation behavior.');
+assert(!Object.prototype.hasOwnProperty.call(attendanceQueueFacts.legacyBehavior, 'handoff'), 'attendance writer must not manufacture a handoff decision.');
 
 let inboxEvaluationRan = false;
 const attendanceInbox = observeAttendanceOutcomeShadow({ ...attendanceQueueFacts, source: 'inbox' }, {
@@ -147,10 +147,10 @@ const awaitingResponseFacts: AttendanceOutcomeShadowFacts = {
   legacyResult: 'awaiting_response',
   legacyBehavior: { stage: 'contato_realizado', nextActionText: 'Verificar resposta do cliente', nextActionDate: '2026-08-22T10:00:00.000Z', returnAt: '2026-08-22T14:30:00.000Z' },
 };
-assert(Object.hasOwn(awaitingResponseFacts.legacyBehavior, 'nextActionDate') && Object.hasOwn(awaitingResponseFacts.legacyBehavior, 'returnAt'), 'awaiting_response must observe both temporal dimensions separately.');
+assert(Object.prototype.hasOwnProperty.call(awaitingResponseFacts.legacyBehavior, 'nextActionDate') && Object.prototype.hasOwnProperty.call(awaitingResponseFacts.legacyBehavior, 'returnAt'), 'awaiting_response must observe both temporal dimensions separately.');
 assert(awaitingResponseFacts.legacyBehavior.nextActionDate === '2026-08-22T10:00:00.000Z', 'awaiting_response must preserve DATA_A in nextActionDate.');
 assert(awaitingResponseFacts.legacyBehavior.returnAt === '2026-08-22T14:30:00.000Z', 'awaiting_response must preserve DATA_B in returnAt.');
-assert(awaitingResponseFacts.legacyBehavior.nextActionDate !== awaitingResponseFacts.legacyBehavior.returnAt, 'nextActionDate and returnAt must remain distinct even when both are observed.');
+assert(String(awaitingResponseFacts.legacyBehavior.nextActionDate) !== String(awaitingResponseFacts.legacyBehavior.returnAt), 'nextActionDate and returnAt must remain distinct even when both are observed.');
 
 const noActionFacts: AttendanceOutcomeShadowFacts = {
   ...attendanceQueueFacts,
