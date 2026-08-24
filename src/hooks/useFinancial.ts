@@ -410,15 +410,30 @@ export function useFinancial() {
     const pagar = getSummary('pagar');
     const receber = getSummary('receber');
 
+    const sumBy = (type: 'pagar' | 'receber', field: 'value' | 'value_paid') =>
+      entries.filter(e => e.type === type).reduce((sum, e) => sum + Number(e[field] || 0), 0);
+
+    // Caixa real do período: tudo que foi efetivamente pago/recebido,
+    // incluindo pagamentos parciais (antes só lançamentos 100% quitados entravam).
+    const recebido = sumBy('receber', 'value_paid');
+    const pago = sumBy('pagar', 'value_paid');
+    const previstoEntradas = sumBy('receber', 'value');
+    const previstoSaidas = sumBy('pagar', 'value');
+
     return {
       pagar,
       receber,
-      totalEntradas: receber.total_paid,
-      totalSaidas: pagar.total_paid,
-      saldo: receber.total_paid - pagar.total_paid,
+      totalEntradas: recebido,
+      totalSaidas: pago,
+      saldo: recebido - pago,
+      previstoEntradas,
+      previstoSaidas,
+      abertoEntradas: Math.max(0, previstoEntradas - recebido),
+      abertoSaidas: Math.max(0, previstoSaidas - pago),
       totalAccountsBalance: accounts.reduce((sum, a) => sum + a.current_balance, 0),
     };
-  }, [getSummary, accounts]);
+  }, [getSummary, accounts, entries]);
+
 
   // Export to CSV
   const exportToCSV = useCallback((type?: 'pagar' | 'receber') => {
