@@ -1610,6 +1610,7 @@ export default function Operacoes() {
         onOpenChange={setShowShopeeImport}
         products={rawProducts.map(product => ({ id: product.id, name: product.name, sku: product.sku }))}
         accountSuggestions={shopeeAccountSuggestions}
+        onImported={refetch}
       />
     </div>
   );
