@@ -65,7 +65,7 @@ interface DashboardData {
   ordersThisMonth: number;
   ordersPending: number;
   overdueOrders: number;
-  ordersValue: number;
+  realizedRevenue: number;
   lowStockCount: number;
   // Digital
   ideasInProgress: number;
@@ -188,7 +188,7 @@ export default function Dashboard() {
     ordersThisMonth: 0,
     ordersPending: 0,
     overdueOrders: 0,
-    ordersValue: 0,
+    realizedRevenue: 0,
     lowStockCount: 0,
     ideasInProgress: 0,
     variationsScheduled: 0,
@@ -229,6 +229,7 @@ export default function Dashboard() {
       ideasResult,
       variationsResult,
       entriesResult,
+      realizedRevenueResult,
       accountsResult,
       conversationsResult,
     ] = await Promise.all([
@@ -248,6 +249,8 @@ export default function Dashboard() {
       supabase.from('digital_variations').select('id, status, scheduled_date'),
       // Financial entries
       supabase.from('financial_entries').select('id, type, value, value_paid, due_date, payment_date').gte('due_date', OPERATIONAL_START_DATE),
+      // Receita realizada no mês: somente movimentações financeiras efetivamente recebidas.
+      supabase.from('financial_movements').select('value, financial_entries!inner(type)').eq('financial_entries.type', 'receber').gte('movement_date', monthStart).lte('movement_date', monthEnd),
       // Accounts
       supabase.from('financial_accounts').select('id, current_balance').eq('is_active', true),
       // Reuse the Inbox priority rule instead of creating a Dashboard-specific CRM score.
@@ -262,6 +265,7 @@ export default function Dashboard() {
     const ideas = ideasResult.data || [];
     const variations = variationsResult.data || [];
     const entries = entriesResult.data || [];
+    const realizedRevenueMovements = realizedRevenueResult.data || [];
     const accounts = accountsResult.data || [];
     const conversations = conversationsResult.data || [];
 
@@ -281,7 +285,7 @@ export default function Dashboard() {
 
     // Orders
     const ordersPending = orders.filter(o => ['rascunho', 'pendente', 'producao'].includes(o.status)).length;
-    const ordersValue = orders.reduce((sum, o) => sum + (o.total_value || 0), 0);
+    const realizedRevenue = realizedRevenueMovements.reduce((sum, movement) => sum + Number(movement.value || 0), 0);
 
     // Digital
     const ideasInProgress = ideas.filter(i => i.status === 'andamento').length;
@@ -344,7 +348,7 @@ export default function Dashboard() {
       ordersThisMonth: orders.length,
       ordersPending,
       overdueOrders: overdueOrders.length,
-      ordersValue,
+      realizedRevenue,
       lowStockCount: kpis.lowStock.length,
       ideasInProgress,
       variationsScheduled,
@@ -509,8 +513,8 @@ export default function Dashboard() {
             <StatItem label="Pedidos (mês)" value={data.ordersThisMonth} />
             <StatItem label="Em produção/pendentes" value={data.ordersPending} icon={Clock} />
             <StatItem 
-              label="Faturamento" 
-              value={formatCurrency(data.ordersValue, { compact: true })} 
+              label="Receita realizada" 
+              value={formatCurrency(data.realizedRevenue, { compact: true })} 
               variant="success" 
             />
             <StatItem 
