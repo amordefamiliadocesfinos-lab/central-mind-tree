@@ -394,11 +394,13 @@ export function useFinancial() {
 
   const getSummary = useCallback((type: 'pagar' | 'receber'): FinancialSummary => {
     const typeEntries = entries.filter(e => e.type === type);
+    const realizedEntries = typeEntries.filter(e => Number(e.value_paid || 0) > 0);
     
     return {
       total_open: typeEntries.filter(e => getEntryStatus(e) === 'em_aberto').reduce((sum, e) => sum + (e.value - e.value_paid), 0),
       total_overdue: typeEntries.filter(e => getEntryStatus(e) === 'atrasada').reduce((sum, e) => sum + (e.value - e.value_paid), 0),
-      total_paid: typeEntries.filter(e => getEntryStatus(e) === 'pago').reduce((sum, e) => sum + e.value, 0),
+      // Resultado realizado inclui somente baixas efetivas, inclusive parciais.
+      total_paid: realizedEntries.reduce((sum, e) => sum + Number(e.value_paid || 0), 0),
       count_open: typeEntries.filter(e => getEntryStatus(e) === 'em_aberto').length,
       count_overdue: typeEntries.filter(e => getEntryStatus(e) === 'atrasada').length,
       count_paid: typeEntries.filter(e => getEntryStatus(e) === 'pago').length,
