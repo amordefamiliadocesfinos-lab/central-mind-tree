@@ -69,6 +69,8 @@ export interface Order {
   discount_amount?: number;
   shipping_amount?: number;
   marketplace_account?: string | null;
+  delivery_snapshot?: Record<string, unknown> | null;
+  marketplace_metadata?: Record<string, unknown> | null;
   notes: string | null;
   order_type: OrderType;
   created_at: string;

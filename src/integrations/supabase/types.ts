@@ -2914,6 +2914,7 @@ export type Database = {
           customer_contact: string | null
           customer_name: string | null
           deleted_at: string | null
+          delivery_snapshot: Json
           delivery_date: string | null
           discount_amount: number
           due_date: string | null
@@ -2921,6 +2922,7 @@ export type Database = {
           financial_due_date: string | null
           id: string
           marketplace_account: string | null
+          marketplace_metadata: Json
           notes: string | null
           order_date: string
           order_number: string | null
@@ -2941,6 +2943,7 @@ export type Database = {
           customer_contact?: string | null
           customer_name?: string | null
           deleted_at?: string | null
+          delivery_snapshot?: Json
           delivery_date?: string | null
           discount_amount?: number
           due_date?: string | null
@@ -2948,6 +2951,7 @@ export type Database = {
           financial_due_date?: string | null
           id?: string
           marketplace_account?: string | null
+          marketplace_metadata?: Json
           notes?: string | null
           order_date?: string
           order_number?: string | null
@@ -2968,6 +2972,7 @@ export type Database = {
           customer_contact?: string | null
           customer_name?: string | null
           deleted_at?: string | null
+          delivery_snapshot?: Json
           delivery_date?: string | null
           discount_amount?: number
           due_date?: string | null
@@ -2975,6 +2980,7 @@ export type Database = {
           financial_due_date?: string | null
           id?: string
           marketplace_account?: string | null
+          marketplace_metadata?: Json
           notes?: string | null
           order_date?: string
           order_number?: string | null

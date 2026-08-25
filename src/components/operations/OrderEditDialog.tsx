@@ -14,6 +14,15 @@ import { formatCurrency } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { ContactAutocomplete } from './ContactAutocomplete';
 
+const asRecord = (value: unknown): Record<string, string> =>
+  value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, string> : {};
+
+const maskDocument = (value?: string) => {
+  const digits = (value || '').replace(/\D/g, '');
+  if (digits.length < 5) return value || '';
+  return `${digits.slice(0, 3)}.***.***-${digits.slice(-2)}`;
+};
+
 const ORDER_TYPE_LABELS: Record<OrderType, { label: string; icon: typeof Factory; className: string }> = {
   stock: { label: 'Venda de Estoque', icon: Package, className: 'border-green-500 text-green-600' },
   production: { label: 'Produção', icon: Factory, className: 'border-amber-500 text-amber-600' },
@@ -132,6 +141,10 @@ export function OrderEditDialog({
 
   if (!order) return null;
 
+  const delivery = asRecord(order.delivery_snapshot);
+  const marketplace = asRecord(order.marketplace_metadata);
+  const isShopee = order.channel === 'shopee';
+
   return (
     <FullScreenDialog 
       open={open} 
@@ -158,6 +171,15 @@ export function OrderEditDialog({
               </div>
             );
           })()}
+
+          {isShopee && (
+            <Card className="border-emerald-200 bg-emerald-50/40">
+              <CardContent className="grid gap-3 pt-4 text-sm md:grid-cols-2">
+                <div><Label>Entrega</Label><div className="mt-1 font-medium">{delivery.recipient_name || order.customer_name || 'Destinatário não informado'}</div><div className="text-muted-foreground">{[delivery.phone || order.customer_contact, delivery.document ? `Documento ${maskDocument(delivery.document)}` : ''].filter(Boolean).join(' · ')}</div><div className="text-muted-foreground">{[delivery.address, delivery.number, delivery.complement, delivery.neighborhood, [delivery.city, delivery.state].filter(Boolean).join('/') , delivery.zip_code].filter(Boolean).join(' · ') || 'Endereço não informado'}</div></div>
+                <div><Label>Shopee / logística</Label><div className="mt-1 font-medium">Shopee · {marketplace.account || order.marketplace_account || 'Conta não informada'}</div><div className="text-muted-foreground">Usuário: {marketplace.buyer_username || 'Não informado'}</div><div className="text-muted-foreground">Rastreio: {marketplace.tracking_number || 'Não informado'}</div><div className="text-muted-foreground">Pagamento: {marketplace.paid_at || 'Não informado'} · Envio: {marketplace.shipping_at || order.delivery_date || 'Não informado'}</div></div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Editable Order Number */}
           <div>
