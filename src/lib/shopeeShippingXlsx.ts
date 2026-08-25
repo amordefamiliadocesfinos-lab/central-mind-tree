@@ -65,7 +65,7 @@ const HEADER_ALIASES = {
   product: ['nome do produto', 'product name', 'produto'],
   variation: ['nome da variacao', 'nome da variação', 'variation name', 'variacao', 'variação'],
   quantity: ['quantidade', 'quantity', 'qty'],
-  unitPrice: ['preco', 'preço', 'unit price', 'preco unitario', 'preço unitário'],
+  unitPrice: ['preco', 'preço', 'unit price', 'preco unitario', 'preço unitário', 'preco acordado', 'preço acordado', 'preco original', 'preço original'],
   subtotal: ['subtotal', 'total do produto', 'product subtotal'],
   // The delivery recipient is the operational name shown on the order. The
   // buyer username is marketplace metadata and must not replace it.
