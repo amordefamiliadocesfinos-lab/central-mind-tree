@@ -150,7 +150,7 @@ export async function applyCanonicalAttendanceResult(input: {
   const resolvesConversation = ['OUT_OF_ACTIVE_COMMERCIAL_QUEUE', 'CONTACT_RESTRICTED'].includes(decision.desiredOperationalState);
   // Resultados que encerram a interação atual sem próxima ação não encerram
   // a conversa nem mudam a etapa: apenas aguardam nova iniciativa do cliente.
-  const waitingForCustomer = ['CRM-RES-003', 'CRM-RES-008', 'CRM-RES-026'].includes(input.resultCode)
+  const waitingForCustomer = ['CRM-RES-003', 'CRM-RES-008', 'CRM-RES-013', 'CRM-RES-026'].includes(input.resultCode)
     && !nextAction;
   const attendanceState = resolvesConversation
     ? 'concluido'
