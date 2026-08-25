@@ -2296,6 +2296,7 @@ export type Database = {
         Row: {
           created_at: string
           created_by: string | null
+          event_key: string | null
           from_location: string | null
           id: string
           location: string | null
@@ -2312,6 +2313,7 @@ export type Database = {
         Insert: {
           created_at?: string
           created_by?: string | null
+          event_key?: string | null
           from_location?: string | null
           id?: string
           location?: string | null
@@ -2328,6 +2330,7 @@ export type Database = {
         Update: {
           created_at?: string
           created_by?: string | null
+          event_key?: string | null
           from_location?: string | null
           id?: string
           location?: string | null
@@ -2425,6 +2428,53 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_product_mappings: {
+        Row: {
+          created_at: string
+          external_item_key: string
+          external_product_title: string | null
+          external_variation: string | null
+          id: string
+          marketplace: string
+          marketplace_account: string
+          physical_multiplier: number
+          product_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          external_item_key: string
+          external_product_title?: string | null
+          external_variation?: string | null
+          id?: string
+          marketplace: string
+          marketplace_account: string
+          physical_multiplier?: number
+          product_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          external_item_key?: string
+          external_product_title?: string | null
+          external_variation?: string | null
+          id?: string
+          marketplace?: string
+          marketplace_account?: string
+          physical_multiplier?: number
+          product_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_product_mappings_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
@@ -5003,6 +5053,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_order_stock_event: {
+        Args: { p_event: string; p_order_id: string }
+        Returns: Json
+      }
       approve_campaign: {
         Args: { _campaign_id: string }
         Returns: {
@@ -5104,6 +5158,10 @@ export type Database = {
       reconcile_marketplace_settlement: {
         Args: { p_entry_ids: string[]; p_payload: Json }
         Returns: string
+      }
+      transition_order_status_with_stock: {
+        Args: { p_order_id: string; p_status: string }
+        Returns: Json
       }
     }
     Enums: {
