@@ -384,9 +384,10 @@ export default function Contatos() {
 
   // ── Organismo único: contatos com overlay otimista + inteligência de atenção ──
   const leadsPanelContacts = useMemo(() => {
-    if (recentlyContacted.size === 0) return contacts;
+    const crmContacts = contacts.filter(contact => !!contact.funnel_status);
+    if (recentlyContacted.size === 0) return crmContacts;
     const today = getTodayISO();
-    return contacts.map(contact => (
+    return crmContacts.map(contact => (
       recentlyContacted.has(contact.id)
         ? { ...contact, ultimo_contato: today, ...recentlyContacted.get(contact.id) }
         : contact
@@ -607,9 +608,9 @@ export default function Contatos() {
     const groups: Record<string, Contact[]> = {};
     FUNNEL_STAGES.forEach(s => { groups[s.key] = []; });
     filteredContacts.forEach(c => {
-      const key = c.funnel_status || 'novo_lead';
+      const key = c.funnel_status;
+      if (!key) return;
       if (groups[key]) groups[key].push(c);
-      else groups['novo_lead'].push(c);
     });
     Object.keys(groups).forEach(key => {
       groups[key] = prioritySortContacts(groups[key]);
@@ -712,7 +713,8 @@ export default function Contatos() {
         await addEntry(editingContact.id, 'follow_up', desc, new Date().toISOString(), CRM_EVENT_CODES.FOLLOW_UP_SCHEDULED);
       }
     } else {
-      const newContact = await createContact(data);
+      // This screen is an explicit commercial action: creating here creates a lead.
+      const newContact = await createContact({ ...data, funnel_status: data.funnel_status || 'novo_lead' });
       if (newContact?.id) {
         await addEntry(newContact.id, 'lead_criado', 'Lead criado', new Date().toISOString(), CRM_EVENT_CODES.LEAD_CREATED);
       }

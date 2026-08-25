@@ -76,7 +76,8 @@ export interface Contact {
   sales_channels?: Array<{ platform_id: string; added_at: string }>;
   
   // Funnel
-  funnel_status: string;
+  // A contact can be a canonical customer/supplier without participating in CRM.
+  funnel_status?: string | null;
   temperatura_lead?: string; // 'frio' | 'morno' | 'quente'
   valor_estimado?: number;
   ultimo_contato?: string;
@@ -141,7 +142,8 @@ export function useContacts() {
       }
       const normalized = all.map(contact => ({
         ...contact,
-        funnel_status: normalizeCrmStage(contact.funnel_status),
+        // Do not turn a purely cadastral contact into a lead while reading it.
+        funnel_status: contact.funnel_status ? normalizeCrmStage(contact.funnel_status) : null,
       })) as unknown as Contact[];
       // Troca a base de uma vez para impedir indicadores parciais durante a paginação.
       setContacts(normalized);
@@ -239,7 +241,9 @@ export function useContacts() {
         notes: cleanValue(contact.notes),
         next_action_text: cleanValue(contact.next_action_text),
         next_action_date: cleanValue(contact.next_action_date),
-        funnel_status: normalizeCrmStage(contact.funnel_status),
+        // Only CRM flows explicitly pass a stage. Financial/operational
+        // registrations remain outside the funnel.
+        funnel_status: contact.funnel_status ? normalizeCrmStage(contact.funnel_status) : null,
         next_contact_date: cleanValue(contact.next_contact_date),
         temperatura_lead: contact.temperatura_lead || 'morno',
         valor_estimado: cleanNumber(contact.valor_estimado),

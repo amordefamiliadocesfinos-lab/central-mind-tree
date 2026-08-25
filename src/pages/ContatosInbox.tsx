@@ -42,7 +42,7 @@ interface InboxItem {
   whatsapp: string | null;
   phone: string | null;
   photo_url: string | null;
-  funnel_status: string;
+  funnel_status: string | null;
   temperatura_lead: string | null;
   ultimo_contato: string | null;
   last_summary: string | null;
@@ -84,7 +84,7 @@ function toCrmPriorityInput(item: InboxItem): CrmPriorityInput {
     ultimo_contato: item.ultimo_contato,
     last_inbound_at: item.last_inbound_at,
     last_message_at: item.last_date,
-    is_lead_or_quote: ['novo_lead', 'contato_realizado', 'proposta_enviada', 'negociacao'].includes(item.funnel_status),
+    is_lead_or_quote: ['novo_lead', 'contato_realizado', 'proposta_enviada', 'negociacao'].includes(item.funnel_status || ''),
   };
 }
 
@@ -216,7 +216,7 @@ export default function ContatosInbox() {
       if (!conversation.contact_id || seenContacts.has(conversation.contact_id)) continue;
       seenContacts.add(conversation.contact_id);
       const contact = contactsById.get(conversation.contact_id);
-      if (contact?.is_active === false) continue;
+      if (contact?.is_active === false || !contact?.funnel_status) continue;
       const lastDate = conversation.last_message_at || null;
       const unreadDays = lastDate
         ? Math.floor((now - new Date(lastDate).getTime()) / 86400000)
@@ -229,7 +229,7 @@ export default function ContatosInbox() {
         whatsapp: contact?.whatsapp || conversation.contact_handle,
         phone: contact?.phone || null,
         photo_url: contact?.photo_url || conversation.contact_avatar_url,
-        funnel_status: normalizeCrmStage(contact?.funnel_status || conversation.funnel_stage),
+        funnel_status: normalizeCrmStage(contact.funnel_status),
         temperatura_lead: contact?.temperatura_lead || null,
         ultimo_contato: contact?.ultimo_contato || null,
         last_summary: conversation.last_message_preview || null,
@@ -252,6 +252,7 @@ export default function ContatosInbox() {
     // não possuem conversa aparecem na fila e criam o atendimento ao abrir.
     for (const contact of scopedContacts) {
       if (seenContacts.has(contact.id)) continue;
+      if (!contact.funnel_status) continue;
       seenContacts.add(contact.id);
       merged.push({
         id: contact.id,
@@ -324,6 +325,20 @@ export default function ContatosInbox() {
       if (contactError || !contact) {
         toast.error('Contato não encontrado.');
         return;
+      }
+
+      // Opening a contact in the Inbox is an explicit commercial action.
+      // Promote only then; passive financial/operational registrations stay out.
+      if (!contact.funnel_status) {
+        const { error: stageError } = await supabase
+          .from('contacts')
+          .update({ funnel_status: 'novo_lead', updated_at: new Date().toISOString() })
+          .eq('id', contact.id);
+        if (stageError) {
+          toast.error('Não foi possível iniciar o contato no CRM.');
+          return;
+        }
+        contact.funnel_status = 'novo_lead';
       }
 
       const { data: existing } = await supabase
