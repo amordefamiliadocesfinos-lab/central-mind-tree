@@ -21,7 +21,19 @@ export interface ShopeeShippingOrder {
   paidAt: string;
   shippingAt: string;
   customerName: string;
+  buyerUsername: string;
+  document: string;
+  customerContact: string;
   address: string;
+  addressNumber: string;
+  addressComplement: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  commercialTotal: number;
+  sellerDiscount: number;
+  shippingFee: number;
   items: ShopeeShippingItem[];
 }
 
@@ -47,16 +59,28 @@ const HEADER_ALIASES = {
   orderId: ['id do pedido', 'order id', 'numero do pedido', 'número do pedido'],
   status: ['status do pedido', 'order status', 'status'],
   tracking: ['numero de rastreamento', 'número de rastreamento', 'tracking number', 'numero de tracking'],
-  createdAt: ['data de criacao', 'data de criação', 'created time', 'data do pedido'],
-  paidAt: ['data de pagamento', 'paid time', 'payment time'],
-  shippingAt: ['data de envio', 'shipping time', 'prazo de envio'],
+  createdAt: ['data de criacao', 'data de criação', 'created time', 'data do pedido', 'data de criação do pedido'],
+  paidAt: ['data de pagamento', 'paid time', 'payment time', 'hora do pagamento do pedido'],
+  shippingAt: ['data de envio', 'shipping time', 'prazo de envio', 'tempo de envio', 'data prevista de envio'],
   product: ['nome do produto', 'product name', 'produto'],
   variation: ['nome da variacao', 'nome da variação', 'variation name', 'variacao', 'variação'],
   quantity: ['quantidade', 'quantity', 'qty'],
   unitPrice: ['preco', 'preço', 'unit price', 'preco unitario', 'preço unitário'],
   subtotal: ['subtotal', 'total do produto', 'product subtotal'],
-  customer: ['comprador', 'buyer username', 'nome do comprador', 'cliente'],
-  address: ['endereco', 'endereço', 'shipping address'],
+  customer: ['comprador', 'buyer username', 'nome do comprador', 'cliente', 'nome do destinatário'],
+  buyerUsername: ['nome de usuário comprador', 'nome de usuario comprador', 'buyer username', 'comprador'],
+  document: ['cpf do comprador', 'cpf', 'documento', 'document number'],
+  phone: ['telefone', 'phone', 'telefone do comprador'],
+  address: ['endereco', 'endereço', 'shipping address', 'endereço de entrega'],
+  addressNumber: ['numero', 'número', 'número do endereço', 'numero do endereço'],
+  addressComplement: ['complemento', 'address complement'],
+  neighborhood: ['bairro', 'neighborhood'],
+  city: ['cidade 1', 'cidade', 'city'],
+  state: ['uf', 'estado', 'state'],
+  zipCode: ['cep', 'zip code', 'postal code'],
+  commercialTotal: ['valor total', 'order total', 'total value'],
+  sellerDiscount: ['desconto do vendedor', 'seller discount'],
+  shippingFee: ['taxa de envio pagas pelo comprador', 'shipping fee paid by buyer'],
   sku: ['numero de referencia sku', 'número de referência sku', 'sku reference no.', 'sku', 'no de referencia sku', 'nº de referencia do sku principal', 'nº de referência do sku principal'],
 };
 
@@ -113,7 +137,14 @@ export function normalizeShopeeShippingRows(rows: Record<string, unknown>[], acc
       externalStatus: findValue(row, HEADER_ALIASES.status), trackingNumber: findValue(row, HEADER_ALIASES.tracking),
       createdAt: findValue(row, HEADER_ALIASES.createdAt), paidAt: findValue(row, HEADER_ALIASES.paidAt),
       shippingAt: findValue(row, HEADER_ALIASES.shippingAt), customerName: findValue(row, HEADER_ALIASES.customer),
-      address: findValue(row, HEADER_ALIASES.address), items: [],
+      buyerUsername: findValue(row, HEADER_ALIASES.buyerUsername), document: findValue(row, HEADER_ALIASES.document),
+      customerContact: findValue(row, HEADER_ALIASES.phone), address: findValue(row, HEADER_ALIASES.address),
+      addressNumber: findValue(row, HEADER_ALIASES.addressNumber), addressComplement: findValue(row, HEADER_ALIASES.addressComplement),
+      neighborhood: findValue(row, HEADER_ALIASES.neighborhood), city: findValue(row, HEADER_ALIASES.city),
+      state: findValue(row, HEADER_ALIASES.state), zipCode: findValue(row, HEADER_ALIASES.zipCode),
+      commercialTotal: parseShopeeNumber(findValue(row, HEADER_ALIASES.commercialTotal)),
+      sellerDiscount: parseShopeeNumber(findValue(row, HEADER_ALIASES.sellerDiscount)),
+      shippingFee: parseShopeeNumber(findValue(row, HEADER_ALIASES.shippingFee)), items: [],
     };
     current.items.push({ rowNumber: index + 2, externalItemKey: buildShopeeExternalItemKey(productTitle, variation, sku), productTitle, variation, sku, quantity, unitPrice: parseShopeeNumber(findValue(row, HEADER_ALIASES.unitPrice)), subtotal: parseShopeeNumber(findValue(row, HEADER_ALIASES.subtotal)) });
     grouped.set(externalOrderId, current);

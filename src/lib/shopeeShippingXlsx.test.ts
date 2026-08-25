@@ -3,13 +3,15 @@ import { buildShopeePreview, normalizeShopeeShippingRows } from './shopeeShippin
 function expect(value: unknown, message: string): asserts value { if (!value) throw new Error(message); }
 
 const rows = [
-  { 'ID do pedido': '2608220THGM468', 'Nome do produto': 'Trufa SH-002-040', 'Nome da variação': 'Morango', Quantidade: 3 },
+  { 'ID do pedido': '2608220THGM468', 'Nome do produto': 'Trufa SH-002-040', 'Nome da variação': 'Morango', Quantidade: 3, 'Nome do destinatário': 'Comprador Shopee', 'Valor Total': '21.00', CEP: '12345000' },
   { 'ID do pedido': '2608220THGM468', 'Nome do produto': 'Trufa SH-002-040', 'Nome da variação': 'Maracujá', Quantidade: 1 },
   { 'ID do pedido': '2608220THGM469', 'Nome do produto': 'Trufa SH-002-009', Quantidade: 2 },
 ];
 const orders = normalizeShopeeShippingRows(rows, 'Conta teste');
 expect(orders.length === 2, 'IDs distintos devem permanecer pedidos separados');
 expect(orders[0].items.length === 2, 'Linhas do mesmo ID devem formar um pedido com dois itens');
+expect(orders[0].customerName === 'Comprador Shopee', 'Nome do destinatário deve enriquecer o pedido');
+expect(orders[0].commercialTotal === 21, 'Valor comercial do pedido deve ser preservado');
 const preview = buildShopeePreview(orders, [{ external_item_key: orders[0].items[0].externalItemKey, product_id: 'produto-1', physical_multiplier: 7 }], new Set(['2608220THGM469']));
 expect(preview[0].items[0].physicalQuantity === 21, '3 x 7 deve resultar em 21 unidades físicas');
 expect(preview[0].items[1].mappingStatus === 'needs_mapping', 'Item sem mapa deve pedir associação');
