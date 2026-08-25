@@ -109,7 +109,7 @@ function TypeSummary({ title, summary, type }: { title: string; summary: Financi
 
 type GroupBy = 'category' | 'contact' | 'account' | 'channel' | 'channel_account' | 'type' | 'status';
 type ChartKind = 'pie' | 'bar';
-type ValueMode = 'value' | 'value_paid' | 'value_open';
+type ValueMode = 'value_paid';
 
 const PALETTE = [
   '#10b981', '#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6', '#ec4899',
@@ -123,11 +123,13 @@ function InteractiveBreakdown({ entries }: { entries: FinancialEntry[] }) {
   const [typeFilter, setTypeFilter] = useState<'all' | 'pagar' | 'receber'>('all');
   const [groupBy, setGroupBy] = useState<GroupBy>('category');
   const [chartKind, setChartKind] = useState<ChartKind>('pie');
-  const [valueMode, setValueMode] = useState<ValueMode>('value');
+  const valueMode: ValueMode = 'value_paid';
 
   const filteredList = useMemo(() => {
     const s = search.trim().toLowerCase();
     return entries.filter((e) => {
+      // O dashboard analítico representa resultado realizado, não previsão.
+      if (Number(e.value_paid || 0) <= 0) return false;
       if (typeFilter !== 'all' && e.type !== typeFilter) return false;
       if (!s) return true;
       return (
@@ -146,9 +148,7 @@ function InteractiveBreakdown({ entries }: { entries: FinancialEntry[] }) {
   }, [filteredList, selected]);
 
   const getValue = (e: FinancialEntry) => {
-    if (valueMode === 'value_paid') return e.value_paid || 0;
-    if (valueMode === 'value_open') return Math.max(0, (e.value || 0) - (e.value_paid || 0));
-    return e.value || 0;
+    return Number(e.value_paid || 0);
   };
 
   const groupKey = (e: FinancialEntry): string => {
@@ -227,12 +227,10 @@ function InteractiveBreakdown({ entries }: { entries: FinancialEntry[] }) {
               <SelectItem value="receber">A Receber</SelectItem>
             </SelectContent>
           </Select>
-          <Select value={valueMode} onValueChange={(v: ValueMode) => setValueMode(v)}>
+          <Select value={valueMode} disabled>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="value">Valor total</SelectItem>
-              <SelectItem value="value_paid">Valor pago</SelectItem>
-              <SelectItem value="value_open">Valor em aberto</SelectItem>
+              <SelectItem value="value_paid">Valor efetivado</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -411,7 +409,6 @@ export function FinancialDashboard(props: FinancialDashboardProps = {}) {
   const sales = entries.filter(e => e.type === 'receber');
   const withoutChannel = sales.filter(e => !e.sales_channel).length;
   const marketplace = sales.filter(e => ['shopee', 'mercado_livre', 'marketplace', 'ecommerce'].includes(e.sales_channel || ''));
-  const marketplaceGross = marketplace.reduce((sum, e) => sum + Number(e.value || 0), 0);
   useEffect(() => {
     if (props.filters?.salesChannel && !['shopee', 'mercado_livre', 'marketplace', 'ecommerce'].includes(props.filters.salesChannel)) {
       setSettlementTotals({ gross: 0, fees: 0, net: 0 }); return;
@@ -429,18 +426,19 @@ export function FinancialDashboard(props: FinancialDashboardProps = {}) {
   return (
     <div className="space-y-3">
       <div className="grid gap-2 grid-cols-3">
-        <SummaryCard title="Entradas (Período)" value={summary.totalEntradas}
-          subtitle={`Previsto ${formatCurrency(summary.previstoEntradas ?? summary.totalEntradas)} · Em aberto ${formatCurrency(summary.abertoEntradas ?? 0)}`}
+        <SummaryCard title="Entradas realizadas" value={summary.totalEntradas}
+          subtitle="Somente valores efetivamente recebidos"
           icon={<TrendingUp />} variant="success" />
-        <SummaryCard title="Saídas (Período)" value={summary.totalSaidas}
-          subtitle={`Previsto ${formatCurrency(summary.previstoSaidas ?? summary.totalSaidas)} · Em aberto ${formatCurrency(summary.abertoSaidas ?? 0)}`}
+        <SummaryCard title="Saídas realizadas" value={summary.totalSaidas}
+          subtitle="Somente valores efetivamente pagos"
           icon={<TrendingDown />} variant="danger" />
-        <SummaryCard title="Saldo do Período" value={summary.saldo}
+        <SummaryCard title="Resultado realizado" value={summary.saldo}
+          subtitle="Entradas realizadas menos saídas realizadas"
           icon={<Wallet />} variant={summary.saldo >= 0 ? 'success' : 'danger'} />
       </div>
 
       <div className="grid gap-2 grid-cols-3">
-        <SummaryCard title="Marketplace bruto" value={settlementTotals.gross || marketplaceGross} icon={<TrendingUp />} />
+        <SummaryCard title="Marketplace bruto conciliado" value={settlementTotals.gross} icon={<TrendingUp />} />
         <SummaryCard title="Taxas de marketplace" value={settlementTotals.fees} icon={<TrendingDown />} variant="danger" />
         <SummaryCard title="Marketplace líquido" value={settlementTotals.net} icon={<CheckCircle />} variant="success" />
       </div>
