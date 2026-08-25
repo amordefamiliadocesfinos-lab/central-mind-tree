@@ -10,6 +10,7 @@ export type CrmPriorityReason =
   | 'cooling'
   | 'normal'
   | 'future'
+  | 'waiting_customer'
   | 'resolved';
 
 export interface CrmPriorityInput {
@@ -46,6 +47,7 @@ const LABELS: Record<CrmPriorityReason, string> = {
   cooling: 'Esfriando',
   normal: 'Fila normal',
   future: 'Ação futura',
+  waiting_customer: 'Aguardando cliente',
   resolved: 'Conversa resolvida',
 };
 
@@ -89,6 +91,12 @@ export function getCrmPriority(input: CrmPriorityInput, now = new Date()): CrmPr
   if (input.no_response_status === 'follow_up_urgente') return result('P0', 'follow_up_urgent', lastMessageAt);
   if (validReturn && returnAt < end) return result('P1', 'return_today', returnAt);
   if (nextActionAt !== null && nextActionAt < end) return result('P1', 'next_action_today', nextActionAt);
+
+  // Depois de uma mensagem enviada ou de um resultado sem resposta, a
+  // conversa só volta à fila quando houver resposta ou retorno devido.
+  if (input.attendance_state === 'aguardando_cliente') {
+    return result('P4', 'waiting_customer', lastMessageAt, false);
+  }
 
   const lastContactAt = asTime(input.ultimo_contato);
   const tenDaysAgo = start - (10 * 86400000);
