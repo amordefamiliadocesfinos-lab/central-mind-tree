@@ -150,7 +150,7 @@ export async function applyCanonicalAttendanceResult(input: {
   const resolvesConversation = ['OUT_OF_ACTIVE_COMMERCIAL_QUEUE', 'CONTACT_RESTRICTED'].includes(decision.desiredOperationalState);
   // Silêncio não encerra nem muda a etapa comercial: apenas coloca o
   // atendimento na espera do cliente, fora da fila de ação imediata.
-  const waitingForCustomer = input.resultCode === 'CRM-RES-003';
+  const waitingForCustomer = ['CRM-RES-003', 'CRM-RES-008'].includes(input.resultCode);
   const attendanceState = resolvesConversation
     ? 'concluido'
     : waitingForCustomer
