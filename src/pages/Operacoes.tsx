@@ -40,6 +40,7 @@ import { ProductionTab } from '@/components/operations/ProductionTab';
 import { OperationsCalendarTab } from '@/components/operations/OperationsCalendarTab';
 import { MRPTab } from '@/components/operations/MRPTab';
 import { ProductCostEditor } from '@/components/operations/ProductCostEditor';
+import { ProductVariantsPanel } from '@/components/operations/ProductVariantsPanel';
 import { ProductionPlanningView } from '@/components/operations/ProductionPlanningView';
 import { ContactAutocomplete } from '@/components/operations/ContactAutocomplete';
 import { ProductCategoriesManager } from '@/components/operations/ProductCategoriesManager';
@@ -1338,6 +1339,8 @@ export default function Operacoes() {
                   }))}
                 />
               </div>
+
+              <ProductVariantsPanel product={editingProduct} />
               
               <div className="grid grid-cols-2 gap-3">
                 <div>

@@ -3902,6 +3902,68 @@ export type Database = {
         }
         Relationships: []
       }
+      product_variants: {
+        Row: {
+          attributes: Json
+          cost_override: number | null
+          created_at: string
+          height_cm: number | null
+          id: string
+          is_active: boolean
+          length_cm: number | null
+          price_override: number | null
+          product_id: string
+          sku: string
+          unit: string | null
+          updated_at: string
+          variant_name: string
+          weight_g: number | null
+          width_cm: number | null
+        }
+        Insert: {
+          attributes?: Json
+          cost_override?: number | null
+          created_at?: string
+          height_cm?: number | null
+          id?: string
+          is_active?: boolean
+          length_cm?: number | null
+          price_override?: number | null
+          product_id: string
+          sku: string
+          unit?: string | null
+          updated_at?: string
+          variant_name: string
+          weight_g?: number | null
+          width_cm?: number | null
+        }
+        Update: {
+          attributes?: Json
+          cost_override?: number | null
+          created_at?: string
+          height_cm?: number | null
+          id?: string
+          is_active?: boolean
+          length_cm?: number | null
+          price_override?: number | null
+          product_id?: string
+          sku?: string
+          unit?: string | null
+          updated_at?: string
+          variant_name?: string
+          weight_g?: number | null
+          width_cm?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       routine_blocks: {
         Row: {
           actual_end: string | null
