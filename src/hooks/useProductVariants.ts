@@ -86,7 +86,7 @@ export function useProductVariants(productId: string | null) {
       product_id: productId,
       sku: input.sku.trim(),
       variant_name: input.variant_name.trim(),
-    });
+    } as any);
 
     if (error) {
       console.error('Erro ao criar variação:', error);
@@ -106,7 +106,7 @@ export function useProductVariants(productId: string | null) {
       ...input,
       sku: input.sku.trim(),
       variant_name: input.variant_name.trim(),
-    }).eq('id', variantId);
+    } as any).eq('id', variantId);
 
     if (error) {
       console.error('Erro ao atualizar variação:', error);
