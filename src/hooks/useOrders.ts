@@ -68,6 +68,7 @@ export interface Order {
   financial_account_id?: string | null;
   discount_amount?: number;
   shipping_amount?: number;
+  channel_account_id?: string | null;
   marketplace_account?: string | null;
   delivery_snapshot?: Record<string, unknown> | null;
   marketplace_metadata?: Record<string, unknown> | null;

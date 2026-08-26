@@ -53,6 +53,9 @@ interface InboxItem {
   attendance_state: string | null;
   assigned_to: string | null;
   status: string;
+  channel: string | null;
+  platform_name: string | null;
+  platform_icon: string | null;
   last_inbound_at: string | null;
   last_message_at: string | null;
   return_at: string | null;
@@ -148,7 +151,7 @@ export default function ContatosInbox() {
 
   const load = useCallback(async (): Promise<InboxItem[] | null> => {
     setLoading(true);
-    const CONVERSATION_FIELDS = 'id,contact_id,contact_name,contact_handle,contact_avatar_url,last_message_preview,last_message_at,last_inbound_at,return_at,unread_count,needs_reply,attendance_state,assigned_to,funnel_stage,status';
+    const CONVERSATION_FIELDS = 'id,contact_id,contact_name,contact_handle,contact_avatar_url,last_message_preview,last_message_at,last_inbound_at,return_at,unread_count,needs_reply,attendance_state,assigned_to,funnel_stage,status,channel,platform_id,platform:digital_platforms(name,icon)';
     const term = deferredSearch.trim();
 
     // Busca/estágio consultam o banco inteiro: leads antigos do Kanban não
@@ -238,6 +241,9 @@ export default function ContatosInbox() {
         unread_count: conversation.unread_count,
         needs_reply: conversation.needs_reply,
         attendance_state: conversation.attendance_state,
+        channel: conversation.channel || null,
+        platform_name: (conversation as any).platform?.name || null,
+        platform_icon: (conversation as any).platform?.icon || null,
         assigned_to: conversation.assigned_to,
         status: conversation.status || 'open',
         last_inbound_at: conversation.last_inbound_at,
@@ -810,6 +816,9 @@ export default function ContatosInbox() {
                       <Badge variant="outline" className="text-[9px] h-4 px-1.5">
                         {getCrmStageLabel(item.funnel_status)}
                       </Badge>
+                      <Badge variant="outline" className="text-[9px] h-4 px-1.5">
+                        {[item.platform_icon, item.platform_name || item.channel || 'Canal não informado'].filter(Boolean).join(' ')}
+                      </Badge>
                       {isPureSupplier(item) && (
                         <Badge variant="outline" className="text-[9px] h-4 px-1.5">
                           Fornecedor
@@ -872,7 +881,7 @@ export default function ContatosInbox() {
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-sm truncate">{selected.name}</div>
                   <div className="text-[11px] text-muted-foreground truncate">
-                    {selected.whatsapp || selected.phone || 'Sem telefone'} · {getCrmStageLabel(selected.funnel_status)}
+                    {selected.whatsapp || selected.phone || 'Sem telefone'} · {getCrmStageLabel(selected.funnel_status)} · {[selected.platform_icon, selected.platform_name || selected.channel || 'Canal não informado'].filter(Boolean).join(' ')}
                   </div>
                 </div>
                 <div className="flex gap-1">

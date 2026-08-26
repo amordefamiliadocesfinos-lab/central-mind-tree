@@ -209,11 +209,6 @@ export default function Operacoes() {
     [allPlatforms]
   );
   const productCategories = dynamicCategories.length > 0 ? dynamicCategories : [...PRODUCT_CATEGORIES];
-  const shopeeAccountSuggestions = useMemo(() => Array.from(new Set(
-    rawOrders
-      .filter(order => order.channel === 'shopee' && order.marketplace_account)
-      .map(order => order.marketplace_account as string)
-  )), [rawOrders]);
   const { createContact } = useContacts();
   const { addEntry } = useContactHistory();
   const [crmContactId, setCrmContactId] = useState<string | null>(null);
@@ -1616,7 +1611,6 @@ export default function Operacoes() {
         open={showShopeeImport}
         onOpenChange={setShowShopeeImport}
         products={rawProducts.map(product => ({ id: product.id, name: product.name, sku: product.sku }))}
-        accountSuggestions={shopeeAccountSuggestions}
         onImported={refetch}
       />
     </div>
