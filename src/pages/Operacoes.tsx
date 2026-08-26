@@ -41,6 +41,7 @@ import { OperationsCalendarTab } from '@/components/operations/OperationsCalenda
 import { MRPTab } from '@/components/operations/MRPTab';
 import { ProductCostEditor } from '@/components/operations/ProductCostEditor';
 import { ProductVariantsPanel } from '@/components/operations/ProductVariantsPanel';
+import { ProductCatalogImportExport } from '@/components/operations/ProductCatalogImportExport';
 import { ProductionPlanningView } from '@/components/operations/ProductionPlanningView';
 import { ContactAutocomplete } from '@/components/operations/ContactAutocomplete';
 import { ProductCategoriesManager } from '@/components/operations/ProductCategoriesManager';
@@ -1038,8 +1039,10 @@ export default function Operacoes() {
               onChange={setProductsSubFilter}
             />
 
-            <div className="flex justify-between items-center">
+            <div className="flex flex-wrap justify-between items-center gap-2">
               <h2 className="text-lg font-semibold">Produtos ({productsTabList.length})</h2>
+              <div className="flex flex-wrap items-center gap-2">
+              <ProductCatalogImportExport products={rawProducts as Product[]} categories={productCategories} onImported={refetch} />
               <Dialog open={showProductDialog} onOpenChange={setShowProductDialog}>
                 <DialogTrigger asChild>
                   <Button size="lg" className="h-12 px-6">
@@ -1158,6 +1161,7 @@ export default function Operacoes() {
                   </div>
                 </DialogContent>
               </Dialog>
+              </div>
             </div>
 
             <div className="grid gap-3 grid-cols-1">

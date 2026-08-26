@@ -5121,6 +5121,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_product_catalog_import: {
+        Args: { p_products?: Json; p_variants?: Json }
+        Returns: Json
+      }
       apply_order_stock_event: {
         Args: { p_event: string; p_order_id: string }
         Returns: Json

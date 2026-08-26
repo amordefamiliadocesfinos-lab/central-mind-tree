@@ -20,6 +20,7 @@ export function formatVariantAttributes(attributes: Record<string, unknown> | nu
 
   return Object.entries(attributes)
     .filter(([, value]) => value !== null && value !== undefined && String(value).trim() !== '')
+    .sort(([left], [right]) => left.localeCompare(right))
     .map(([key, value]) => `${key}=${String(value)}`)
     .join('; ');
 }
