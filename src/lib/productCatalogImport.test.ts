@@ -11,6 +11,8 @@ const blankPreserves = analyzeProductCatalog([row({ preco: '', descricao: '' })]
 expect(blankPreserves.changes === 0, 'células vazias devem preservar valores existentes');
 const changed = analyzeProductCatalog([row({ preco: '6,50' })], [product], [variant], ['Doces']);
 expect(changed.changes === 1 && changed.payload.products[0].price === 6.5, 'preço deve gerar alteração explícita');
+const lineBreakOnly = analyzeProductCatalog([row({ descricao: 'Original\r\ncom quebra' })], [{ ...product, description: 'Original\ncom quebra' }], [variant], ['Doces']);
+expect(lineBreakOnly.changes === 0, 'CRLF e LF na descrição devem ser semanticamente equivalentes');
 const newMasterWithVariant = analyzeProductCatalog([row({ rowNumber: 2, produto_id: '', produto_sku: 'NOVO-01', produto_nome: 'Novo', custo: '', preco: '' }), row({ rowNumber: 3, tipo_registro: 'VARIACAO', produto_id: '', produto_sku: 'NOVO-01', produto_nome: 'Novo', variante_id: '', variante_sku: 'NOVO-01-A', variante_nome: 'A', variante_atributos: 'peso=40g; sabor=morango', variante_status: 'Ativo' })], [product], [variant], ['Doces']);
 expect(newMasterWithVariant.errors === 0 && newMasterWithVariant.changes === 2 && newMasterWithVariant.payload.variants[0].product_sku === 'NOVO-01', 'novo mestre e variação devem compor lote atômico');
 const duplicate = analyzeProductCatalog([row({}), row({ rowNumber: 3, produto_id: '', produto_nome: 'Duplicado' })], [product], [variant], ['Doces']);
