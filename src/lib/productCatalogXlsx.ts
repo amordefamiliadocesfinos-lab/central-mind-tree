@@ -25,5 +25,5 @@ export async function parseProductCatalogXlsx(file: File): Promise<ProductCatalo
   const headers = Object.keys(rows[0]);
   const missing = PRODUCT_CATALOG_HEADERS.filter(header => !headers.includes(header));
   if (missing.length) throw new Error(`Arquivo incompatível: faltam colunas obrigatórias (${missing.slice(0, 4).join(', ')}${missing.length > 4 ? '…' : ''}).`);
-  return rows.map((source, index) => Object.fromEntries(PRODUCT_CATALOG_HEADERS.map(header => [header, String(source[header] ?? '').trim()])) as ProductCatalogRow).map((row, index) => ({ ...row, rowNumber: index + 2 }));
+  return rows.map(source => Object.fromEntries(PRODUCT_CATALOG_HEADERS.map(header => [header, String(source[header] ?? '')])) as ProductCatalogRow).map((row, index) => ({ ...row, rowNumber: index + 2 }));
 }
