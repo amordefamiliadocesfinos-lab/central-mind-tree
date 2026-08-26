@@ -27,6 +27,13 @@ export interface UnifiedSaleInput {
   financial_account_id?: string | null;
   payment_date?: string | null;
   marketplace_account?: string | null;
+  channel_account_id?: string | null;
+  /** Identifica a origem sem criar uma segunda entidade de Venda. */
+  sale_origin?: string | null;
+  /** Chave opcional para retries/dobro clique do mesmo comando comercial. */
+  sale_request_key?: string | null;
+  /** Quando a venda nasce no CRM, registra o fato canônico Pedido confirmado. */
+  crm_order_confirmed?: boolean;
 }
 
 export interface UnifiedSaleResult {
@@ -34,6 +41,7 @@ export interface UnifiedSaleResult {
   order_number: string;
   financial_entry_id: string;
   total_value: number;
+  already_registered?: boolean;
 }
 
 export async function createUnifiedSale(order: UnifiedSaleInput, items: UnifiedSaleItem[]) {

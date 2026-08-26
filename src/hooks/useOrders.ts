@@ -445,6 +445,8 @@ export function useOrders() {
         payment_method: order.payment_method,
         financial_account_id: order.financial_account_id,
         marketplace_account: order.marketplace_account,
+        channel_account_id: order.channel_account_id,
+        sale_origin: 'operacoes',
       }, items.map(item => ({
         product_id: item.product_id || '', quantity: item.quantity || 1,
         unit_price: item.unit_price || 0, notes: item.notes,

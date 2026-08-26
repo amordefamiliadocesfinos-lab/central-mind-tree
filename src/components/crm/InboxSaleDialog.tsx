@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,6 +52,7 @@ export function InboxSaleDialog({ open, onOpenChange, contactId, contactName, co
   const [accounts, setAccounts] = useState<Array<{ id: string; name: string }>>([]);
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
+  const saleRequestKeyRef = useRef<string | null>(null);
 
   const subtotal = useMemo(() => items.reduce((acc, item) => acc + (item.quantity || 0) * (item.unit_price || 0), 0), [items]);
   const total = Math.max(0, subtotal - discount + shipping);
@@ -60,6 +61,7 @@ export function InboxSaleDialog({ open, onOpenChange, contactId, contactName, co
     if (!open) return;
     supabase.from('financial_accounts').select('id,name').eq('is_active', true).order('name')
       .then(({ data }) => setAccounts(data || []));
+    saleRequestKeyRef.current = crypto.randomUUID();
   }, [open]);
 
   const addItem = () => setItems((current) => [...current, { product_id: '', quantity: 1, unit_price: 0 }]);
@@ -149,14 +151,12 @@ export function InboxSaleDialog({ open, onOpenChange, contactId, contactName, co
         payment_method: paymentMethod || null, financial_account_id: accountId || null,
         payment_date: paymentStatus === 'pago' ? new Date().toISOString().slice(0, 10) : null,
         marketplace_account: marketplaceAccount || null,
+        sale_origin: 'crm_inbox', sale_request_key: saleRequestKeyRef.current,
+        crm_order_confirmed: true,
       }, validItems);
-      await supabase.from('contact_history').insert({
-        contact_id: contactId, event_type: 'sale_won', interaction_type: 'venda', event_code: 'sale_won',
-        description: `Venda registrada — pedido ${result.order_number} · ${formatCurrency(total)}`,
-        interaction_date: new Date().toISOString(),
-      });
-      await supabase.from('contacts').update({ funnel_status: 'fechado', updated_at: new Date().toISOString() }).eq('id', contactId);
-      toast.success(`Venda, operação e financeiro registrados · ${result.order_number}`);
+      toast.success(result.already_registered
+        ? `Venda já registrada · ${result.order_number}`
+        : `Venda, operação e financeiro registrados · ${result.order_number}`);
       setItems([]); setNotes(''); setDueDate('');
       setFinancialDueDate(new Date().toISOString().slice(0, 10));
       setPaymentStatus('pendente'); setPaymentMethod(''); setAccountId('');
