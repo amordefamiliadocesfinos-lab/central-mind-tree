@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, CheckCircle2, FileSpreadsheet, Link2, Loader2, Pencil, Upload } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
@@ -14,14 +14,17 @@ type ProductOption = { id: string; name: string; sku: string };
 type DraftMapping = { productId: string; multiplier: string };
 type ImportFailure = { orderNumber: string; reason: string };
 type ImportSummary = { processed: number; created: number; alreadyImported: number; movementCount: number; failures: ImportFailure[] };
+type ChannelAccount = { id: string; name: string };
 
-interface Props { open: boolean; onOpenChange: (open: boolean) => void; products: ProductOption[]; accountSuggestions: string[]; onImported?: () => void; }
+interface Props { open: boolean; onOpenChange: (open: boolean) => void; products: ProductOption[]; onImported?: () => void; }
 
 const validMultiplier = (value: string) => { const number = Number(value); return Number.isFinite(number) && number > 0 ? number : null; };
 
-export function ShopeeOrdersImportDialog({ open, onOpenChange, products, accountSuggestions, onImported }: Props) {
+export function ShopeeOrdersImportDialog({ open, onOpenChange, products, onImported }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
-  const [account, setAccount] = useState('');
+  const [accounts, setAccounts] = useState<ChannelAccount[]>([]);
+  const [accountId, setAccountId] = useState('');
+  const [accountsLoading, setAccountsLoading] = useState(false);
   const [fileName, setFileName] = useState('');
   const [orders, setOrders] = useState<ShopeeShippingOrder[]>([]);
   const [mappings, setMappings] = useState<ShopeeProductMapping[]>([]);
@@ -34,6 +37,8 @@ export function ShopeeOrdersImportDialog({ open, onOpenChange, products, account
   const [showConfirm, setShowConfirm] = useState(false);
   const [summary, setSummary] = useState<ImportSummary | null>(null);
   const [error, setError] = useState('');
+  const selectedAccount = accounts.find(account => account.id === accountId) || null;
+  const account = selectedAccount?.name || '';
 
   const preview = useMemo(() => buildShopeePreview(orders, mappings, existingIds), [orders, mappings, existingIds]);
   const items = preview.flatMap(order => order.items.map(item => ({ order, item })));
@@ -41,26 +46,67 @@ export function ShopeeOrdersImportDialog({ open, onOpenChange, products, account
   const pending = items.length - recognized;
   const duplicates = preview.filter(order => order.duplicateStatus === 'already_imported').length;
   const newOrders = preview.filter(order => order.duplicateStatus === 'new');
-  const ready = Boolean(account.trim() && preview.length && pending === 0);
+  const ready = Boolean(selectedAccount && preview.length && pending === 0);
 
-  const loadPreviewContext = async (parsed: ShopeeShippingOrder[], selectedAccount: string) => {
+  useEffect(() => {
+    if (!open) return;
+    const loadAccounts = async () => {
+      setAccountsLoading(true);
+      setError('');
+      try {
+        const { data: platforms, error: platformsError } = await supabase
+          .from('digital_platforms')
+          .select('id')
+          .eq('group_type', 'marketplace')
+          .eq('is_active', true)
+          .is('parent_id', null)
+          .ilike('name', 'shopee%')
+          .limit(2);
+        if (platformsError) throw platformsError;
+        if ((platforms || []).length !== 1) throw new Error('Plataforma Shopee canônica não disponível para seleção.');
+
+        const { data, error: accountsError } = await (supabase as any)
+          .from('channel_accounts')
+          .select('id,name')
+          .eq('platform_id', platforms![0].id)
+          .eq('is_active', true)
+          .order('name');
+        if (accountsError) throw accountsError;
+        setAccounts((data || []) as ChannelAccount[]);
+      } catch (reason: any) {
+        setAccounts([]);
+        setError(reason?.message || 'Não foi possível carregar as contas Shopee canônicas.');
+      } finally {
+        setAccountsLoading(false);
+      }
+    };
+    loadAccounts();
+  }, [open]);
+
+  const loadPreviewContext = async (parsed: ShopeeShippingOrder[], selected: ChannelAccount) => {
     const keys = [...new Set(parsed.flatMap(order => order.items.map(item => item.externalItemKey)))];
     const ids = parsed.map(order => order.externalOrderId);
-    const [maps, existing] = await Promise.all([
-      (supabase as any).from('marketplace_product_mappings').select('external_item_key,product_id,physical_multiplier').eq('marketplace', 'shopee').eq('marketplace_account', selectedAccount).in('external_item_key', keys),
+    const [canonicalMaps, legacyMaps, existing] = await Promise.all([
+      (supabase as any).from('marketplace_product_mappings').select('external_item_key,product_id,physical_multiplier').eq('marketplace', 'shopee').eq('channel_account_id', selected.id).in('external_item_key', keys),
+      (supabase as any).from('marketplace_product_mappings').select('external_item_key,product_id,physical_multiplier').eq('marketplace', 'shopee').is('channel_account_id', null).eq('marketplace_account', selected.name).in('external_item_key', keys),
       supabase.from('orders').select('order_number,channel,marketplace_account').in('order_number', ids).is('deleted_at', null),
     ]);
-    if (maps.error) throw maps.error;
+    if (canonicalMaps.error) throw canonicalMaps.error;
+    if (legacyMaps.error) throw legacyMaps.error;
     if (existing.error) throw existing.error;
-    setMappings((maps.data || []) as ShopeeProductMapping[]);
-    setExistingIds(new Set((existing.data || []).filter((order: any) => order.channel === 'shopee' && order.marketplace_account === selectedAccount).map((order: any) => order.order_number)));
+    const byExternalKey = new Map<string, ShopeeProductMapping>();
+    (legacyMaps.data || []).forEach((mapping: ShopeeProductMapping) => byExternalKey.set(mapping.external_item_key, mapping));
+    (canonicalMaps.data || []).forEach((mapping: ShopeeProductMapping) => byExternalKey.set(mapping.external_item_key, mapping));
+    setMappings([...byExternalKey.values()]);
+    const normalizedAccount = selected.name.trim().toLocaleLowerCase();
+    setExistingIds(new Set((existing.data || []).filter((order: any) => order.channel === 'shopee' && String(order.marketplace_account || '').trim().toLocaleLowerCase() === normalizedAccount).map((order: any) => order.order_number)));
   };
 
   const handleFile = async (file?: File) => {
     if (!file) return;
-    if (!account.trim()) { setError('Informe a conta Shopee antes de ler o arquivo.'); return; }
+    if (!selectedAccount) { setError('Selecione uma conta Shopee cadastrada na fonte canônica antes de ler o arquivo.'); return; }
     setLoading(true); setError(''); setSummary(null); setEditingKey(null);
-    try { const parsed = await parseShopeeShippingXlsx(file, account.trim()); await loadPreviewContext(parsed, account.trim()); setOrders(parsed); setFileName(file.name); setDrafts({}); }
+    try { const parsed = await parseShopeeShippingXlsx(file, selectedAccount.name); await loadPreviewContext(parsed, selectedAccount); setOrders(parsed); setFileName(file.name); setDrafts({}); }
     catch (reason: any) { setOrders([]); setFileName(''); setError(reason?.message || 'Não foi possível ler o arquivo Shopee.'); }
     finally { setLoading(false); }
   };
@@ -79,7 +125,8 @@ export function ShopeeOrdersImportDialog({ open, onOpenChange, products, account
     setSavingKey(key); setError('');
     (async () => {
       try {
-        const { data, error: saveError } = await (supabase as any).from('marketplace_product_mappings').upsert({ marketplace: 'shopee', marketplace_account: account.trim(), external_item_key: key, external_product_title: source.productTitle || null, external_variation: source.variation || null, product_id: draft.productId, physical_multiplier: multiplier, updated_at: new Date().toISOString() }, { onConflict: 'marketplace,marketplace_account,external_item_key' }).select('external_item_key,product_id,physical_multiplier').single();
+        if (!selectedAccount) throw new Error('Conta Shopee canônica não selecionada.');
+        const { data, error: saveError } = await (supabase as any).from('marketplace_product_mappings').upsert({ marketplace: 'shopee', marketplace_account: selectedAccount.name, channel_account_id: selectedAccount.id, external_item_key: key, external_product_title: source.productTitle || null, external_variation: source.variation || null, product_id: draft.productId, physical_multiplier: multiplier, updated_at: new Date().toISOString() }, { onConflict: 'marketplace,marketplace_account,external_item_key' }).select('external_item_key,product_id,physical_multiplier').single();
         if (saveError) throw saveError;
         setMappings(current => [...current.filter(mapping => mapping.external_item_key !== key), data as ShopeeProductMapping]);
         setDrafts(current => { const next = { ...current }; delete next[key]; return next; }); setEditingKey(null);
@@ -94,19 +141,20 @@ export function ShopeeOrdersImportDialog({ open, onOpenChange, products, account
     const result: ImportSummary = { processed: newOrders.length, created: 0, alreadyImported: duplicates, movementCount: 0, failures: [] };
     for (const order of newOrders) {
       try {
-        const { data, error: importError } = await (supabase.rpc as any)('import_shopee_order_with_stock', { p_order: { external_order_id: order.externalOrderId, marketplace_account: account.trim(), external_status: order.externalStatus, tracking_number: order.trackingNumber, order_date: order.createdAt, paid_at: order.paidAt, shipping_at: order.shippingAt, customer_name: order.customerName, buyer_username: order.buyerUsername, customer_contact: order.customerContact, document: order.document, address: order.address, address_number: order.addressNumber, address_complement: order.addressComplement, neighborhood: order.neighborhood, city: order.city, state: order.state, zip_code: order.zipCode, commercial_total: order.commercialTotal, seller_discount: order.sellerDiscount, shipping_fee: order.shippingFee }, p_items: order.items.map(item => ({ product_id: item.masterProductId, quantity: item.physicalQuantity, commercial_quantity: item.quantity, physical_multiplier: item.physicalMultiplier, unit_price: item.unitPrice, external_item_key: item.externalItemKey, product_title: item.productTitle, variation: item.variation })) });
+        if (!selectedAccount) throw new Error('Conta Shopee canônica não selecionada.');
+        const { data, error: importError } = await (supabase.rpc as any)('import_shopee_order_with_stock', { p_order: { external_order_id: order.externalOrderId, channel_account_id: selectedAccount.id, marketplace_account: selectedAccount.name, external_status: order.externalStatus, tracking_number: order.trackingNumber, order_date: order.createdAt, paid_at: order.paidAt, shipping_at: order.shippingAt, customer_name: order.customerName, buyer_username: order.buyerUsername, customer_contact: order.customerContact, document: order.document, address: order.address, address_number: order.addressNumber, address_complement: order.addressComplement, neighborhood: order.neighborhood, city: order.city, state: order.state, zip_code: order.zipCode, commercial_total: order.commercialTotal, seller_discount: order.sellerDiscount, shipping_fee: order.shippingFee }, p_items: order.items.map(item => ({ product_id: item.masterProductId, quantity: item.physicalQuantity, commercial_quantity: item.quantity, physical_multiplier: item.physicalMultiplier, unit_price: item.unitPrice, external_item_key: item.externalItemKey, product_title: item.productTitle, variation: item.variation })) });
         if (importError) throw importError;
         if (data?.already_imported) result.alreadyImported += 1; else { result.created += 1; result.movementCount += Number(data?.movement_count || 0); }
       } catch (reason: any) { result.failures.push({ orderNumber: order.externalOrderId, reason: reason?.message || 'Erro inesperado ao importar.' }); }
     }
-    setSummary(result); setShowConfirm(false); setConfirming(false); await loadPreviewContext(orders, account.trim()); onImported?.();
+    setSummary(result); setShowConfirm(false); setConfirming(false); if (selectedAccount) await loadPreviewContext(orders, selectedAccount); onImported?.();
   };
 
   const close = (next: boolean) => { if (!next) { setOrders([]); setFileName(''); setError(''); setSummary(null); setEditingKey(null); } onOpenChange(next); };
 
   return <><Dialog open={open} onOpenChange={close}><DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
     <DialogHeader><DialogTitle>Importar pedidos Shopee</DialogTitle><DialogDescription>Revise os itens antes de confirmar. A baixa física será feita pelo contrato oficial Pedido → Estoque.</DialogDescription></DialogHeader>
-    <div className="grid gap-3 md:grid-cols-[1fr_auto]"><div><Label>Conta Shopee</Label><Input list="shopee-accounts" value={account} onChange={event => setAccount(event.target.value)} placeholder="Ex.: Shopee Viviane" disabled={Boolean(orders.length)} /><datalist id="shopee-accounts">{accountSuggestions.map(value => <option key={value} value={value} />)}</datalist></div><div className="flex items-end"><Button type="button" variant="outline" onClick={() => inputRef.current?.click()} disabled={loading || confirming}><Upload className="mr-2 h-4 w-4" />{loading ? 'Lendo...' : 'Selecionar XLSX'}</Button><Input ref={inputRef} className="hidden" type="file" accept=".xlsx" onChange={event => handleFile(event.target.files?.[0])} /></div></div>
+    <div className="grid gap-3 md:grid-cols-[1fr_auto]"><div><Label>Conta Shopee</Label><Select value={accountId} onValueChange={value => { setAccountId(value); setOrders([]); setFileName(''); setMappings([]); setExistingIds(new Set()); setSummary(null); setError(''); }} disabled={Boolean(orders.length) || accountsLoading}><SelectTrigger><SelectValue placeholder={accountsLoading ? 'Carregando contas...' : 'Selecione uma conta Shopee'} /></SelectTrigger><SelectContent>{accounts.map(option => <SelectItem key={option.id} value={option.id}>{option.name}</SelectItem>)}</SelectContent></Select>{!accountsLoading && accounts.length === 0 && <p className="mt-1 text-xs text-destructive">Conta Shopee não cadastrada na fonte canônica.</p>}</div><div className="flex items-end"><Button type="button" variant="outline" onClick={() => inputRef.current?.click()} disabled={loading || confirming || !selectedAccount}><Upload className="mr-2 h-4 w-4" />{loading ? 'Lendo...' : 'Selecionar XLSX'}</Button><Input ref={inputRef} className="hidden" type="file" accept=".xlsx" onChange={event => handleFile(event.target.files?.[0])} /></div></div>
     {fileName && <div className="flex items-center gap-2 text-sm text-muted-foreground"><FileSpreadsheet className="h-4 w-4" />{fileName}</div>}
     {error && <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm text-destructive"><AlertTriangle className="mr-2 inline h-4 w-4" />{error}</div>}
     {preview.length > 0 && <><div className="grid grid-cols-2 gap-2 text-sm md:grid-cols-5"><Badge variant="secondary" className="justify-center py-2">{preview.length} pedidos</Badge><Badge variant="secondary" className="justify-center py-2">{items.length} itens</Badge><Badge className="justify-center py-2 bg-emerald-600">{recognized} reconhecidos</Badge><Badge variant="outline" className="justify-center py-2">{pending} para associar</Badge><Badge variant="outline" className="justify-center py-2">{duplicates} já importados</Badge></div>
