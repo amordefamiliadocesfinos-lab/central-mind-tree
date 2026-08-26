@@ -786,6 +786,15 @@ export function PlatformsManager() {
               variant="ghost"
               size="icon"
               className="h-8 w-8"
+              onClick={() => setAccountsPlatform(platform)}
+              title="Contas/Lojas"
+            >
+              <Store className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
               onClick={() => handleDuplicate(platform)}
               title="Duplicar"
             >
