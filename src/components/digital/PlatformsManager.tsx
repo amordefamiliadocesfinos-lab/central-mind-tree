@@ -12,8 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { ResponsiveDialog } from '@/components/ui/responsive-dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-import { Plus, Edit2, Trash2, ChevronDown, ChevronUp, Settings2, Sparkles, Loader2, GripVertical, Type, AlignLeft, ChevronRight, Copy, FolderPlus, Wand2, Check, RotateCcw, ImagePlus, Upload, Undo2, FolderOpen } from 'lucide-react';
+import { Plus, Edit2, Trash2, ChevronDown, ChevronUp, Settings2, Sparkles, Loader2, GripVertical, Type, AlignLeft, ChevronRight, Copy, FolderPlus, Wand2, Check, RotateCcw, ImagePlus, Upload, Undo2, FolderOpen, Store } from 'lucide-react';
 import { CustomFieldsDefinition } from './CustomFieldsDefinition';
+import { ChannelAccountsDialog } from './ChannelAccountsDialog';
 import { MediaLibrary } from './MediaLibrary';
 import { PlatformHierarchicalPicker } from './PlatformHierarchicalPicker';
 import { PlatformsHealthPanel } from './PlatformsHealthPanel';
@@ -209,6 +210,7 @@ export function PlatformsManager() {
 
   const [showDialog, setShowDialog] = useState(false);
   const [showGroupDialog, setShowGroupDialog] = useState(false);
+  const [accountsPlatform, setAccountsPlatform] = useState<Platform | null>(null);
   const [editingPlatform, setEditingPlatform] = useState<Platform | null>(null);
   const [editingGroup, setEditingGroup] = useState<PlatformGroup | null>(null);
   const [formData, setFormData] = useState<PlatformFormData>({
