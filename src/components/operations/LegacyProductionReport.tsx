@@ -26,7 +26,7 @@ import {
   Filter,
   TrendingUp
 } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subDays, parseISO } from 'date-fns';
+import { addDays, format, startOfMonth, endOfMonth, startOfWeek, endOfWeek, subDays, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 
@@ -56,6 +56,11 @@ interface EmployeeSummary {
   processes: Record<string, { quantity: number; value: number }>;
 }
 
+interface CompletedProductionOrder {
+  id: string;
+  consolidated_quantity: number;
+}
+
 const PERIOD_PRESETS = [
   { label: 'Hoje', getValue: () => ({ start: new Date(), end: new Date() }) },
   { label: 'Esta Semana', getValue: () => ({ start: startOfWeek(new Date(), { weekStartsOn: 1 }), end: endOfWeek(new Date(), { weekStartsOn: 1 }) }) },
@@ -69,6 +74,7 @@ export function LegacyProductionReport() {
   const [startDate, setStartDate] = useState<Date>(startOfMonth(new Date()));
   const [endDate, setEndDate] = useState<Date>(new Date());
   const [entries, setEntries] = useState<ProductionEntry[]>([]);
+  const [completedOrders, setCompletedOrders] = useState<CompletedProductionOrder[]>([]);
   const [loading, setLoading] = useState(false);
   const [filterEmployee, setFilterEmployee] = useState('all');
   const [filterProcess, setFilterProcess] = useState('all');
@@ -86,6 +92,7 @@ export function LegacyProductionReport() {
     setLoading(true);
     const startStr = format(startDate, 'yyyy-MM-dd');
     const endStr = format(endDate, 'yyyy-MM-dd');
+    const nextDayStr = format(addDays(endDate, 1), 'yyyy-MM-dd');
 
     // Fetch legacy production_logs
     const { data: legacyData, error: legacyError } = await supabase
@@ -106,8 +113,18 @@ export function LegacyProductionReport() {
       .lte('date', endStr)
       .order('date', { ascending: true });
 
+    // A conclusão da OP é o fato estrutural de produto acabado. Os lançamentos
+    // por processo continuam sendo usados apenas para produtividade/remuneração.
+    const { data: completedOrdersData, error: completedOrdersError } = await supabase
+      .from('production_orders')
+      .select('id, consolidated_quantity')
+      .eq('status', 'concluido')
+      .gte('completed_at', startStr)
+      .lt('completed_at', nextDayStr);
+
     if (legacyError) console.error('Legacy error:', legacyError);
     if (opError) console.error('OP error:', opError);
+    if (completedOrdersError) console.error('Completed production orders error:', completedOrdersError);
 
     // Convert legacy logs
     const legacyEntries: ProductionEntry[] = (legacyData || []).map((log: any) => {
@@ -146,6 +163,10 @@ export function LegacyProductionReport() {
     );
 
     setEntries(combined);
+    setCompletedOrders((completedOrdersData || []).map((order) => ({
+      id: order.id,
+      consolidated_quantity: Number(order.consolidated_quantity) || 0,
+    })));
     setLoading(false);
   };
 
@@ -172,6 +193,13 @@ export function LegacyProductionReport() {
       return matchEmployee && matchProcess;
     });
   }, [entries, filterEmployee, filterProcess]);
+
+  // Quantidade física concluída: uma OP concluída credita exatamente sua
+  // consolidated_quantity como produto acabado. Não soma etapas intermediárias.
+  const totalProduced = useMemo(
+    () => completedOrders.reduce((total, order) => total + Math.max(0, order.consolidated_quantity), 0),
+    [completedOrders]
+  );
 
   // Calculate summaries
   const summaries = useMemo(() => {
@@ -245,7 +273,8 @@ export function LegacyProductionReport() {
     });
 
     rows.push([]);
-    rows.push(['TOTAL GERAL', '', '', summaries.totalQuantity.toString(), '', summaries.totalValue.toFixed(2), '']);
+    rows.push(['TOTAL DE LANÇAMENTOS PROCESSADOS', '', '', summaries.totalQuantity.toString(), '', summaries.totalValue.toFixed(2), '']);
+    rows.push(['TOTAL DE PRODUTOS CONCLUÍDOS (OP)', '', '', totalProduced.toString(), '', '', '']);
 
     const csv = [headers, ...rows].map(row => 
       row.map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(',')
@@ -340,8 +369,9 @@ export function LegacyProductionReport() {
         <Card>
           <CardContent className="pt-4 text-center">
             <Factory className="h-5 w-5 mx-auto text-primary mb-1" />
-            <p className="text-2xl font-bold">{summaries.totalQuantity.toLocaleString('pt-BR')}</p>
+            <p className="text-2xl font-bold">{totalProduced.toLocaleString('pt-BR')}</p>
             <p className="text-xs text-muted-foreground">Total Produzido</p>
+            <p className="text-[10px] text-muted-foreground mt-1">Conclusões de OP no período</p>
           </CardContent>
         </Card>
         <Card>
@@ -400,6 +430,12 @@ export function LegacyProductionReport() {
           Exportar CSV
         </Button>
       </div>
+
+      {(filterEmployee !== 'all' || filterProcess !== 'all') && (
+        <p className="text-xs text-muted-foreground">
+          Os filtros de funcionário e processo continuam aplicados aos lançamentos e resumos. O Total Produzido considera somente as OPs concluídas no período, para não confundir etapa executada com produto acabado.
+        </p>
+      )}
 
       {/* Summary by Process */}
       <Card>
