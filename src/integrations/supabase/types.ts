@@ -1931,6 +1931,7 @@ export type Database = {
         Row: {
           account_id: string | null
           category_id: string | null
+          channel_account_id: string | null
           competence_date: string | null
           conciliated_at: string | null
           contact_id: string | null
@@ -1955,6 +1956,7 @@ export type Database = {
           parent_entry_id: string | null
           payment_date: string | null
           payment_method: string | null
+          platform_id: string | null
           recurrence_day: number | null
           recurrence_end_date: string | null
           recurrence_sequence: number | null
@@ -1970,6 +1972,7 @@ export type Database = {
         Insert: {
           account_id?: string | null
           category_id?: string | null
+          channel_account_id?: string | null
           competence_date?: string | null
           conciliated_at?: string | null
           contact_id?: string | null
@@ -1994,6 +1997,7 @@ export type Database = {
           parent_entry_id?: string | null
           payment_date?: string | null
           payment_method?: string | null
+          platform_id?: string | null
           recurrence_day?: number | null
           recurrence_end_date?: string | null
           recurrence_sequence?: number | null
@@ -2009,6 +2013,7 @@ export type Database = {
         Update: {
           account_id?: string | null
           category_id?: string | null
+          channel_account_id?: string | null
           competence_date?: string | null
           conciliated_at?: string | null
           contact_id?: string | null
@@ -2033,6 +2038,7 @@ export type Database = {
           parent_entry_id?: string | null
           payment_date?: string | null
           payment_method?: string | null
+          platform_id?: string | null
           recurrence_day?: number | null
           recurrence_end_date?: string | null
           recurrence_sequence?: number | null
@@ -2061,6 +2067,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "financial_entries_channel_account_id_fkey"
+            columns: ["channel_account_id"]
+            isOneToOne: false
+            referencedRelation: "channel_accounts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "financial_entries_contact_id_fkey"
             columns: ["contact_id"]
             isOneToOne: false
@@ -2079,6 +2092,13 @@ export type Database = {
             columns: ["parent_entry_id"]
             isOneToOne: false
             referencedRelation: "financial_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_entries_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "digital_platforms"
             referencedColumns: ["id"]
           },
         ]
@@ -2577,6 +2597,7 @@ export type Database = {
       }
       marketplace_settlements: {
         Row: {
+          channel_account_id: string | null
           created_at: string
           fee_value: number
           financial_account_id: string | null
@@ -2586,11 +2607,13 @@ export type Database = {
           marketplace_account: string | null
           net_value: number
           notes: string | null
+          platform_id: string | null
           settlement_date: string
           status: string
           updated_at: string
         }
         Insert: {
+          channel_account_id?: string | null
           created_at?: string
           fee_value?: number
           financial_account_id?: string | null
@@ -2600,11 +2623,13 @@ export type Database = {
           marketplace_account?: string | null
           net_value?: number
           notes?: string | null
+          platform_id?: string | null
           settlement_date: string
           status?: string
           updated_at?: string
         }
         Update: {
+          channel_account_id?: string | null
           created_at?: string
           fee_value?: number
           financial_account_id?: string | null
@@ -2614,16 +2639,31 @@ export type Database = {
           marketplace_account?: string | null
           net_value?: number
           notes?: string | null
+          platform_id?: string | null
           settlement_date?: string
           status?: string
           updated_at?: string
         }
         Relationships: [
           {
+            foreignKeyName: "marketplace_settlements_channel_account_id_fkey"
+            columns: ["channel_account_id"]
+            isOneToOne: false
+            referencedRelation: "channel_accounts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "marketplace_settlements_financial_account_id_fkey"
             columns: ["financial_account_id"]
             isOneToOne: false
             referencedRelation: "financial_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_settlements_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "digital_platforms"
             referencedColumns: ["id"]
           },
         ]
@@ -2983,6 +3023,8 @@ export type Database = {
           payment_status: string
           production_date: string | null
           production_notes: string | null
+          sale_origin: string | null
+          sale_request_key: string | null
           shipping_amount: number
           status: string
           total_value: number | null
@@ -3013,6 +3055,8 @@ export type Database = {
           payment_status?: string
           production_date?: string | null
           production_notes?: string | null
+          sale_origin?: string | null
+          sale_request_key?: string | null
           shipping_amount?: number
           status?: string
           total_value?: number | null
@@ -3043,6 +3087,8 @@ export type Database = {
           payment_status?: string
           production_date?: string | null
           production_notes?: string | null
+          sale_origin?: string | null
+          sale_request_key?: string | null
           shipping_amount?: number
           status?: string
           total_value?: number | null
