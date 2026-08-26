@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
+    PostgrestVersion: "14.17"
   }
   public: {
     Tables: {
@@ -595,6 +595,47 @@ export type Database = {
             columns: ["execution_id"]
             isOneToOne: false
             referencedRelation: "campaign_executions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      channel_accounts: {
+        Row: {
+          created_at: string
+          external_identifier: string | null
+          id: string
+          is_active: boolean
+          metadata: Json
+          name: string
+          platform_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          external_identifier?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          name: string
+          platform_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          external_identifier?: string | null
+          id?: string
+          is_active?: boolean
+          metadata?: Json
+          name?: string
+          platform_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "channel_accounts_platform_id_fkey"
+            columns: ["platform_id"]
+            isOneToOne: false
+            referencedRelation: "digital_platforms"
             referencedColumns: ["id"]
           },
         ]
@@ -2434,6 +2475,7 @@ export type Database = {
       }
       marketplace_product_mappings: {
         Row: {
+          channel_account_id: string | null
           created_at: string
           external_item_key: string
           external_product_title: string | null
@@ -2446,6 +2488,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          channel_account_id?: string | null
           created_at?: string
           external_item_key: string
           external_product_title?: string | null
@@ -2458,6 +2501,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          channel_account_id?: string | null
           created_at?: string
           external_item_key?: string
           external_product_title?: string | null
@@ -2470,6 +2514,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "marketplace_product_mappings_channel_account_id_fkey"
+            columns: ["channel_account_id"]
+            isOneToOne: false
+            referencedRelation: "channel_accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "marketplace_product_mappings_product_id_fkey"
             columns: ["product_id"]
@@ -2909,13 +2960,14 @@ export type Database = {
       orders: {
         Row: {
           channel: string | null
+          channel_account_id: string | null
           contact_id: string | null
           created_at: string
           customer_contact: string | null
           customer_name: string | null
           deleted_at: string | null
-          delivery_snapshot: Json
           delivery_date: string | null
+          delivery_snapshot: Json
           discount_amount: number
           due_date: string | null
           financial_account_id: string | null
@@ -2938,13 +2990,14 @@ export type Database = {
         }
         Insert: {
           channel?: string | null
+          channel_account_id?: string | null
           contact_id?: string | null
           created_at?: string
           customer_contact?: string | null
           customer_name?: string | null
           deleted_at?: string | null
-          delivery_snapshot?: Json
           delivery_date?: string | null
+          delivery_snapshot?: Json
           discount_amount?: number
           due_date?: string | null
           financial_account_id?: string | null
@@ -2967,13 +3020,14 @@ export type Database = {
         }
         Update: {
           channel?: string | null
+          channel_account_id?: string | null
           contact_id?: string | null
           created_at?: string
           customer_contact?: string | null
           customer_name?: string | null
           deleted_at?: string | null
-          delivery_snapshot?: Json
           delivery_date?: string | null
+          delivery_snapshot?: Json
           discount_amount?: number
           due_date?: string | null
           financial_account_id?: string | null
@@ -2995,6 +3049,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_channel_account_id_fkey"
+            columns: ["channel_account_id"]
+            isOneToOne: false
+            referencedRelation: "channel_accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "orders_contact_id_fkey"
             columns: ["contact_id"]
@@ -3533,6 +3594,68 @@ export type Database = {
           },
         ]
       }
+      product_variants: {
+        Row: {
+          attributes: Json
+          cost_override: number | null
+          created_at: string
+          height_cm: number | null
+          id: string
+          is_active: boolean
+          length_cm: number | null
+          price_override: number | null
+          product_id: string
+          sku: string
+          unit: string | null
+          updated_at: string
+          variant_name: string
+          weight_g: number | null
+          width_cm: number | null
+        }
+        Insert: {
+          attributes?: Json
+          cost_override?: number | null
+          created_at?: string
+          height_cm?: number | null
+          id?: string
+          is_active?: boolean
+          length_cm?: number | null
+          price_override?: number | null
+          product_id: string
+          sku: string
+          unit?: string | null
+          updated_at?: string
+          variant_name: string
+          weight_g?: number | null
+          width_cm?: number | null
+        }
+        Update: {
+          attributes?: Json
+          cost_override?: number | null
+          created_at?: string
+          height_cm?: number | null
+          id?: string
+          is_active?: boolean
+          length_cm?: number | null
+          price_override?: number | null
+          product_id?: string
+          sku?: string
+          unit?: string | null
+          updated_at?: string
+          variant_name?: string
+          weight_g?: number | null
+          width_cm?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       production_closing_items: {
         Row: {
           closing_id: string
@@ -3901,68 +4024,6 @@ export type Database = {
           width_cm?: number | null
         }
         Relationships: []
-      }
-      product_variants: {
-        Row: {
-          attributes: Json
-          cost_override: number | null
-          created_at: string
-          height_cm: number | null
-          id: string
-          is_active: boolean
-          length_cm: number | null
-          price_override: number | null
-          product_id: string
-          sku: string
-          unit: string | null
-          updated_at: string
-          variant_name: string
-          weight_g: number | null
-          width_cm: number | null
-        }
-        Insert: {
-          attributes?: Json
-          cost_override?: number | null
-          created_at?: string
-          height_cm?: number | null
-          id?: string
-          is_active?: boolean
-          length_cm?: number | null
-          price_override?: number | null
-          product_id: string
-          sku: string
-          unit?: string | null
-          updated_at?: string
-          variant_name: string
-          weight_g?: number | null
-          width_cm?: number | null
-        }
-        Update: {
-          attributes?: Json
-          cost_override?: number | null
-          created_at?: string
-          height_cm?: number | null
-          id?: string
-          is_active?: boolean
-          length_cm?: number | null
-          price_override?: number | null
-          product_id?: string
-          sku?: string
-          unit?: string | null
-          updated_at?: string
-          variant_name?: string
-          weight_g?: number | null
-          width_cm?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "product_variants_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       routine_blocks: {
         Row: {
@@ -5121,12 +5182,12 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      apply_product_catalog_import: {
-        Args: { p_products?: Json; p_variants?: Json }
-        Returns: Json
-      }
       apply_order_stock_event: {
         Args: { p_event: string; p_order_id: string }
+        Returns: Json
+      }
+      apply_product_catalog_import: {
+        Args: { p_products?: Json; p_variants?: Json }
         Returns: Json
       }
       approve_campaign: {
@@ -5209,6 +5270,10 @@ export type Database = {
         Returns: Json
       }
       current_app_user_id: { Args: never; Returns: string }
+      import_shopee_order_with_stock: {
+        Args: { p_items: Json; p_order: Json }
+        Returns: Json
+      }
       link_order_to_existing_financial_entry: {
         Args: {
           p_allocated_value: number
