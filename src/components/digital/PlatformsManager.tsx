@@ -1467,6 +1467,13 @@ export function PlatformsManager() {
         </div>
       </ResponsiveDialog>
 
+      {/* Contas/Lojas canônicas da Plataforma (channel_accounts) */}
+      <ChannelAccountsDialog
+        platform={accountsPlatform}
+        open={!!accountsPlatform}
+        onOpenChange={(open) => { if (!open) setAccountsPlatform(null); }}
+      />
+
       {/* Delete Platform Confirmation */}
       <AlertDialog open={!!deleteConfirm} onOpenChange={(open) => { if (!open) { setDeleteConfirm(null); setDeleteCascade(false); } }}>
         <AlertDialogContent>
