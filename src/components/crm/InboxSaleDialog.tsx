@@ -75,68 +75,6 @@ export function InboxSaleDialog({ open, onOpenChange, contactId, contactName, co
     updateItem(index, { product_id: productId, unit_price: product?.price ?? 0 });
   };
 
-  const legacyHandleSave = async () => {
-    const validItems = items.filter((item) => item.product_id && item.quantity > 0);
-    if (validItems.length === 0) {
-      toast.error('Adicione ao menos um produto para registrar a venda.');
-      return;
-    }
-    setSaving(true);
-    try {
-      const { data: order, error } = await supabase
-        .from('orders')
-        .insert({
-          order_number: `PED-${Date.now()}`,
-          customer_name: contactName,
-          customer_contact: contactHandle || null,
-          contact_id: contactId,
-          channel,
-          status: 'pendente',
-          total_value: total,
-          order_date: new Date().toISOString().split('T')[0],
-          due_date: dueDate || null,
-          notes: notes || null,
-          order_type: orderType,
-        })
-        .select('id, order_number')
-        .single();
-      if (error || !order) throw error;
-
-      const { error: itemsError } = await supabase.from('order_items').insert(
-        validItems.map((item) => ({
-          order_id: order.id,
-          product_id: item.product_id,
-          quantity: item.quantity,
-          unit_price: item.unit_price,
-        })),
-      );
-      if (itemsError) throw itemsError;
-
-      await supabase.from('contact_history').insert({
-        contact_id: contactId,
-        event_type: 'sale_won',
-        interaction_type: 'venda',
-        event_code: 'sale_won',
-        description: `💰 Venda registrada — pedido ${order.order_number} · ${formatCurrency(total)}`,
-        interaction_date: new Date().toISOString(),
-      });
-
-      await supabase.from('contacts').update({ funnel_status: 'fechado', updated_at: new Date().toISOString() }).eq('id', contactId);
-
-      toast.success(`Venda registrada · pedido ${order.order_number}`);
-      setItems([]);
-      setNotes('');
-      setDueDate('');
-      onOpenChange(false);
-      onCreated?.();
-    } catch (e) {
-      console.error(e);
-      toast.error('Não foi possível registrar a venda.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const handleSave = async () => {
     const validItems = items.filter(item => item.product_id && item.quantity > 0);
     if (!validItems.length) return toast.error('Adicione ao menos um produto para registrar a venda.');
