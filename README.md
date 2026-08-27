@@ -85,3 +85,11 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+
+## Nota técnica de migrations históricas
+
+`20260818153044_3fdf19ec-3f55-4012-9ff2-14e5f27324a7.sql` é uma regularização
+histórica, já executada no ambiente de origem, para o produto
+`d3065783-10c7-42c3-88c7-41366aa8c5ba`. O arquivo deve permanecer imutável no
+histórico. Em bancos clonados, derivados ou criados por baseline, a versão deve
+ser registrada como aplicada sem reexecutar seu conteúdo específico de estoque.
